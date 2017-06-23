@@ -1,0 +1,624 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% aeb_mlink.sty package,          2015-10-28           %%
+%% Copyright (C) 2006--2015  D. P. Story                %%
+%%   dpstory@acrotex.net                                %%
+%%   storyd@owc.edu                                     %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{aeb_mlink}
+%<package> [2016/02/16 v2.0 AeB MLink (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\pdfstringdefDisableCommands{\let\\\textbackslash}%
+\EnableCrossrefs \CodelineIndex
+\OnlyDescription  % comment out for implementation details
+\begin{document}
+  \GetFileInfo{aeb_mlink.sty}
+  \title{The \textsf{aeb\_mlink} Package\texorpdfstring{\\}{: }
+  A member of the AeB Pro family}
+  \author{D. P. Story\\
+    Email: \texttt{storyd@owc.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{aeb_mlink.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+% \section{Introduction}
+% This package creates \underbar{m}ultiline-\underbar{links}.
+% The package \textsf{hyperref} does create links, but generally
+% these links cannot be broken across lines, unless \textsf{pdflatex}
+% is used to create a PDF.
+%
+% This package uses the \texttt{QuadPoints} entry in the link annotation to create
+% a bounding region; consequently, this package requires \textbf{Acrobat Distiller}
+% to create a PDF. \texttt{QuadPoints} is a PDF 1.6 feature, so these multiline links
+% will work in Adobe Reader 7.0 or later. If viewed in a version of Adobe Reader previous
+% to 7.0, the viewer will use the underlying bounding box.
+%
+% LaTeX package requirements are the \textsf{eForms} and \textsf{hyperref}. Only the use
+% of \textsf{dvips} and \textsf{dvipsone} is supported.
+%
+%The key to creating a multi-line is contained in Table~8.24 of the
+%PDF Reference. The description of \texttt{QuadPoints} in the PDF Reference
+%is as follows:
+%
+%\begin{quote}\small
+%(Optional; PDF 1.6) An array of $8 \times n$ numbers specifying the
+%coordinates of $n$ quadrilaterals in default user space that comprise
+%the region in which the link should be activated. The coordinates
+%for each quadrilateral are given in the order
+%$$
+%        x_1\ y_1\ x_2\ y_2\ x_3\ y_3\ x_4\ y_4
+%$$
+%specifying the four vertices of the quadrilateral in
+%counterclockwise order. For orientation purposes, such as when
+%applying an underline border style, the bottom of a quadrilateral is
+%the line formed by $(x_1 , y_1)$ and $(x_2 , y_2)$. If this entry is not
+%present or the viewer application does not recognize it, the region
+%specified by the \texttt{Rect} entry should be used. \texttt{QuadPoints} should be
+%ignored if any coordinate in the array lies outside the region
+%specified by \texttt{Rect}.
+%\end{quote}
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%    \begin{macrocode}
+\RequirePackage{ifpdf}[2006/02/20]
+\RequirePackage{ifxetex}[2006/08/21]
+\newif\if@ml@dvips \@ml@dvipstrue
+%    \end{macrocode}
+%    \begin{macro}{dvipsone}
+% Set the driver for \texttt{dvipsone}
+%    \begin{macrocode}
+\DeclareOption{dvipsone}{\def\eq@drivernum{0}\@ml@dvipsfalse
+    \PassOptionsToPackage{dvipsone}{eforms}
+    \PassOptionsToPackage{dvipsone}{hyperref} %,colorlinks
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{dvips}
+% Set the driver for \texttt{dvips}
+%    \begin{macrocode}
+\DeclareOption{dvips}{\def\eq@drivernum{0}\@ml@dvipstrue
+    \PassOptionsToPackage{dvips}{eforms}
+    \PassOptionsToPackage{dvips}{hyperref} %,colorlinks
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+\def\ml@err@msg{This package requires the driver dvips and\MessageBreak
+    Adobe Distiller as the PDF creator}
+\ifpdf\PackageError{aeb_mlink}{\ml@err@msg}\else
+    \ifxetex\PackageError{aeb_mlink}{\ml@err@msg}\else
+        \InputIfFileExists{web.cfg}{}{}
+\fi\fi
+\ProcessOptions
+%    \end{macrocode}
+% We require hyperref, eforms and soul.  For eforms, a recent version is needed,
+% \texttt{2008/03/14} or later.
+%    \begin{macrocode}
+\RequirePackage{hyperref}
+\RequirePackage{eforms}[2008/03/14]
+\RequirePackage{soul}
+%    \end{macrocode}
+%
+% \section{Driver Dependent Code}
+%
+% Driver dependent definitions for dvipsone and dvips.
+%    \begin{macrocode}
+\def\ps@mark{[\space}
+\if@ml@dvips
+%    \end{macrocode}
+% This next \cs{special} defines some standard conversion
+% formulas, {\TeX} to PDF and PDF to {\TeX} for \textsf{dvips}.
+%    \begin{macrocode}
+\special{!userdict begin
+   /TeXtoPDF {65536 div DVImag mul} def         % sp to pts
+   /PDFtoDvips {72.27 div Resolution mul} def   % points to dots
+   /PDFtoVDvips {72.27 div VResolution mul} def % points to dots
+   /DvipstoPDF {72.27 mul Resolution div} def   % dots to points
+   /HTeXtoDvips {TeXtoPDF PDFtoDvips} def       % sp to dots
+   /VTeXtoDvips {TeXtoPDF PDFtoVDvips} def end} % sp to dots
+%    \end{macrocode}
+% This command calculates the \cs{QuadPoints} array
+% when we are using the \textsf{dvips} driver.
+%    \begin{macrocode}
+\def\setQuadBox{%
+    currentpoint DvipstoPDF \aeb@bbox@dp\space TeXtoPDF add
+    neg vsize add 72 sub                                % y1
+    exch DvipstoPDF 72 add exch                         % x1
+    2 copy exch \aeb@bbox@wd\space TeXtoPDF add exch    % x2
+    2 copy \aeb@bbox@ht\space TeXtoPDF add              % y3
+    2 copy exch \aeb@bbox@wd\space TeXtoPDF sub exch    % x4
+}
+%    \end{macrocode}
+% For the bounding rectangle, we just enclose the entire page. This
+% simplifies things greatly.
+%    \begin{macrocode}
+\def\par@@Rect
+{%
+    72 neg PDFtoDvips vsize 72 sub PDFtoVDvips
+    hsize 72 sub PDFtoDvips 72 neg PDFtoVDvips
+}
+%    \end{macrocode}
+% This next \cs{special} defines some standard conversion
+% formulas, {\TeX} to PDF and PDF to {\TeX} in the YandY TeX System.
+%    \begin{macrocode}
+\else
+\special{!/TeXtoPDF {65536 div mag 1000 div mul} def
+/PDFtoTeX {65536 mul mag 1000 div div} def}
+%    \end{macrocode}
+% This command calculates the \cs{QuadPoints} array
+% when we are using the \textsf{dvipsone} driver.
+%    \begin{macrocode}
+\def\setQuadBox{%
+   currentpoint \aeb@bbox@dp\space add TeXtoPDF
+   neg PageHeight add 72 sub                            % y1
+   exch TeXtoPDF 72 add  exch                           % x1
+   2 copy exch \aeb@bbox@wd\space TeXtoPDF add exch     % x2
+   2 copy \aeb@bbox@ht\space TeXtoPDF add               % y3
+   2 copy exch \aeb@bbox@wd\space TeXtoPDF sub exch     % x4
+}
+%    \end{macrocode}
+% For the bounding rectangle, we just enclose the entire page. This
+% simplifies things greatly.
+%    \begin{macrocode}
+\def\par@@Rect
+{%
+    72 neg PDFtoTeX PageHeight 72 sub PDFtoTeX
+    PageWidth 72 sub PDFtoTeX 72 neg PDFtoTeX
+}
+\fi
+%    \end{macrocode}
+%
+% \section{The Multi-line Linking Commands}
+%
+% We use a box, and two counters for this package.
+%    \begin{macrocode}
+\newbox\aeb@bbox
+\newcount\aeb@arrayIndx \aeb@arrayIndx=0
+\newcount\aeb@mLinkCnt \aeb@mLinkCnt=0
+%    \end{macrocode}
+%    \begin{macro}{\mlhypertext}
+%
+% This is a general purpose hypertext link. Not only is it
+% a fine stand-alone linking command, but it also serves
+% as a building block to some convenience commends that follow.
+%
+% The commands takes two arguments, the first an optional one the second
+% one requires.
+% \begin{enumerate}
+%   \item[\texttt{[\#1]}] A standard optional argument for eForms, to change
+%       the appearance of the link and/or to include actions.
+%   \item[\texttt{\#2}] The text to be enclosed in a link.
+% \end{enumerate}
+%    \begin{macrocode}
+\def\CurrentBorderColor{\@linkbordercolor}
+\def\ml@nocolorHighlight{I}
+\def\ml@nocolorLineStyle{S}
+\def\ml@nocolorLineWidth{1}
+\def\ml@setnocolorDefaults{%
+\def\ml@nocolor@defaults{\H{\ml@nocolorHighlight}%
+    \S{\ml@nocolorLineStyle}\W{\ml@nocolorLineWidth}%
+    \Color{\CurrentBorderColor}}%
+}
+\ifHy@colorlinks
+    \let\ml@nocolor@defaults\@empty
+\else
+    \ml@setnocolorDefaults
+\fi
+\def\ml@earlyExecProps#1{%
+    \eq@setWidgetProps\relax{#1}%
+}
+\let\mlh@preambleCmdInsert\relax
+\newcommand{\mlhypertext}[1][]{\global\aeb@arrayIndx=0\relax
+    \global\advance\aeb@mLinkCnt1\relax
+%    \end{macrocode}
+% We do something different, we process the options early, mostly
+% to get any change in \texttt{linktxtcolor}, but only if the user-friendly \texttt{ui} is
+% present.
+%    \begin{macrocode}
+    \special{ps: \ps@mark/_objdef {mLink\the\aeb@mLinkCnt}
+        /type /array /OBJ pdfmark}%
+    \def\mlh@preambleCmdInsert{\ml@earlyExecProps{#1}}%
+    \def\mlh@postambleCmd{\setLinkPbox{\S{S}\W{0}%
+        \presets{\ml@nocolor@defaults}%
+        \QuadPoints{mLink\the\aeb@mLinkCnt}#1}\endgroup}%
+    \aeb@mlh
+}
+\def\mlh@setQuadSyllable#1{%
+    \setbox\aeb@bbox=\hbox{\strut#1}%
+    {%
+        \count\z@=\ht\aeb@bbox\xdef\aeb@bbox@ht{\the\count\z@}%
+        \count\z@=\wd\aeb@bbox\xdef\aeb@bbox@wd{\the\count\z@}%
+        \dp\aeb@bbox=1pt\relax
+        \count\z@=\dp\aeb@bbox\xdef\aeb@bbox@dp{\the\count\z@}%
+    }%
+    \special{ps: \ps@mark{mLink\the\aeb@mLinkCnt}
+        \the\aeb@arrayIndx\space [\setQuadBox]
+            \space /PUTINTERVAL pdfmark}%
+    \global\advance\aeb@arrayIndx8\relax
+}
+%    \end{macrocode}
+%    \end{macro}
+% The next four commands are used internally, though \cs{aebnameref},
+% \cs{labelRef} and \cs{atPage} are public, and can be used.
+%    \begin{macrocode}
+\def\aeb@exiii{\expandafter\expandafter\expandafter}
+\def\aebnameref#1{\@ifundefined{r@#1}{??}
+    {\aeb@exiii\@thirdoffive\csname r@#1\endcsname}}
+\def\labelRef#1{\@ifundefined{r@#1}{Doc-Start}
+   {\aeb@exiii\@fourthoffive\csname r@#1\endcsname}}
+\def\atPage#1{\@ifundefined{r@#1}{1}
+    {\aeb@exiii\@secondoffive\csname r@#1\endcsname}}
+%    \end{macrocode}
+%    \begin{macro}{\mlhyperlink}
+%    \begin{macro}{\mlhyperref}
+%    \begin{macro}{\mlnameref}
+%    \begin{macro}{\mlNameref}
+% These four commands mimic the hyperref commands of the same root name.
+% The commands \cs{mlhyperlink} and \cs{mlhyperref} take three
+% parameters (the first one optional). The optional parameter
+% modifies the appearance of the link, the second is the
+% target/destination of the link, the third is the text the link is
+% wrapped around. In the case of \cs{mlhyperlink} that target is a
+% defined by \cs{hypertarget}; for \cs{mlhyperref} the target is a
+% latex label.
+%
+% The commands \cs{mlnameref} and \cs{mlNameref} take two parameters
+% (the first is optional). As before, the first modifies the
+% appearance of the link, the second is the target, a latex label.
+%    \begin{macrocode}
+\newcommand\mlhyperlink[3][]{%
+    \mlhypertext[#1\A{/S/GoTo/D (#2)}]{#3}}
+\newcommand\mlhyperref[3][]{%
+    \mlhypertext[#1\A{/S/GoTo/D (\labelRef{#2})}]{#3}}
+\newcommand\mlnameref[2][]{\protected@edef\ml@temp{\aebnameref{#2}}%
+    \def\ml@tempi{\mlhypertext[#1\A{/S/GoTo/D (\labelRef{#2})}]}%
+    \expandafter\ml@tempi\expandafter{\ml@temp}}
+%    \end{macrocode}
+% We use a work around to a |\relax| problem encountered in the
+% |\mlNameRef| command. {\LaTeX} inserts a |relax| at the end of label
+% titles, which stops soul. We insert |\let\SOUL@stop\ml@SOUL@stop|,
+% this seems to work, no guarantees.
+%    \begin{macrocode}
+\newcommand\mlNameref[2][]{\let\SOUL@stop\ml@SOUL@stop
+     \protected@edef\ml@temp{`\aebnameref{#2}' on page~\atPage{#2}}%
+    \def\ml@tempi{\mlhypertext[#1\A{/S/GoTo/D (\labelRef{#2})}]}%
+    \expandafter\ml@tempi\expandafter{\ml@temp}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\mlhref}
+% This command is similar to \cs{href}. This command also takes
+% three arguments, one optional. The first is usual optional argument
+% that allow one to modify the appearance of the link, the second one
+% is the URL that we are linking to, the third is the text that we are
+% wrapping this link around.
+%
+% The next three commands are modifications some low hyperref commands
+% found in the \texttt{pdfmark.def} file. Depending on the parsing,
+% \cs{href} calls one of these three; we intercept them, and insert
+% our own command \cs{mlhypertext} so the link string gets wrapped around
+% if needed.
+%    \begin{macrocode}
+\def\ml@hyper@linkurl#1#2{\hyper@chars
+    \let\ef@thislinkcolor\@urlcolor
+    \let\CurrentBorderColor\@urlbordercolor
+    \mlhypertext[\presets{\mlhref@args}\A{/S/URI/URI(#2)}]{#1}%
+    \endgroup
+}%
+\def\ml@hyper@linkfile#1#2#3{%
+    \let\ef@thislinkcolor\@filecolor
+    \let\CurrentBorderColor\@filebordercolor
+    \def\theView{[0 \@pdfstartview]}%
+    \@ifundefined{ifHy@pdfnewwindow}
+    {\ifHy@newwindow}{\ifHy@pdfnewwindow}%
+        \def\isWindow{/NewWindow true}\else
+        \let\isWindow\@empty\fi
+    \mlhypertext[\presets{\mlhref@args}\A{/S/GoToR \isWindow
+        /F (#2) /D \ifx\\#3\\\theView\else(#3)\fi}]{#1}%
+    \endgroup
+}
+\def\ml@hyper@launch run:#1\\#2#3{%
+    \let\ef@thislinkcolor\@filecolor
+    \let\CurrentBorderColor\@runbordercolor
+        \@ifundefined{ifHy@pdfnewwindow}
+    {\ifHy@newwindow}{\ifHy@pdfnewwindow}%
+        \def\isWindow{/NewWindow true}\else
+        \let\isWindow\@empty\fi
+    \mlhypertext[\presets{\mlhref@args}\A{/S/Launch\isWindow
+       /F (#1) \ifx\\#3\\\else /Win << /P (#3) /F (#1) >> \fi}]{#2}%
+    \endgroup
+}
+%    \end{macrocode}
+% Below is the code for \cs{mlhref}. We first let the old commands found in \texttt{pdfmark.def}
+% equal to the new versions, then we call \cs{href} to do all the parsing. Things
+% eventually comes back to the above three commands.
+%    \begin{macrocode}
+\let\aeb@saved@href\href
+\newcommand{\mlhref}[1][]{%
+    \begingroup
+        \def\mlhref@args{#1}%
+        \let\hyper@linkurl\ml@hyper@linkurl
+        \let\hyper@linkfile\ml@hyper@linkfile
+        \let\@hyper@launch\ml@hyper@launch
+        \aeb@saved@href
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\mlurl}
+% The multi-line version of Donald Arseneau's url package. There
+% are problems with this one, will continue to work on it.
+% \changes{v2.0}{2016/02/16}{Added support for the \cs{url} command.}
+%
+% The problem is not as ``easy'' as the previous cases. Arseneau places the URL in math mode
+% and it does not reconstruct (\texttt{soul} terminology) as it should. Our solution is to
+% hijack three commands of \texttt{soul} \cs{SOUL@doword}, \cs{SOUL@analyze}, and \cs{SOUL@dosyllable},
+% and modify them to do the work on an URL.
+%    \begin{macrocode}
+\newbox\ml@urlbuild
+\setbox\ml@urlbuild\hbox{}
+%    \end{macrocode}
+% We modify \cs{SOUL@doword} and name it \cs{ml@SOUL@doword}.
+%    \begin{macrocode}
+\def\ml@SOUL@doword{%
+    \global\setbox\ml@urlbuild\hbox{}%
+    \edef\x{\the\SOUL@word}%
+    \ifx\x\empty
+    \else
+        \SOUL@buffer={}%
+        \setbox\z@\vbox{%
+            \SOUL@tt
+            \hyphenchar\font`\-
+            \hfuzz\maxdimen
+            \hbadness\@M
+            \pretolerance\m@ne
+            \tolerance\@M
+            \leftskip\z@
+            \rightskip\z@
+            \hsize1sp
+            \everypar{}%
+            \parfillskip\z@\@plus1fil
+            \hyphenpenalty-\@M
+            \noindent
+            \hskip\z@
+            \relax
+            \the\SOUL@word}%
+%    \end{macrocode}
+% We don't do the reconstruction, so no need for the message.
+%    \begin{macrocode}
+        \let\SOUL@errmsg\relax
+%        \let\SOUL@errmsg\SOUL@error
+        \let\-\relax
+        \count@\m@ne
+%    \end{macrocode}
+% Here is the first major change, rather than splitting off to \cs{SOUL@analyze}, we go
+% to our modified version, \cs{ml@SOUL@analyze}.
+%    \begin{macrocode}
+        \ml@SOUL@analyze
+        \SOUL@word={}%
+    \fi
+}
+%    \end{macrocode}
+% We modify \cs{SOUL@analyze} and name it \cs{ml@SOUL@analyze}.
+%    \begin{macrocode}
+\def\ml@SOUL@analyze{{%
+    \setbox\z@\vbox{%
+        \unvcopy\z@
+        \unskip
+        \unpenalty
+        \global\setbox\@ne=\lastbox}%
+    \ifvoid\@ne
+    \else
+        \setbox\@ne\hbox{\unhbox\@ne}%
+%    \end{macrocode}
+% If we say \verb!\mlurl{http://www.math.uakron.edu/~dpstory}!, then the \cs{box\cs{z@}} above contains
+% the following tokens, listed at their breakpoints:\goodbreak
+% \begin{flushleft}
+% \texttt{http:}\\
+% \texttt{\string\\}\\
+% \texttt{www.}\\
+% \texttt{math.}\\
+% \texttt{uakron.}\\
+% \texttt{edu/}\\
+% \texttt{\string~dpstory}
+% \end{flushleft}
+% The idea is to get each of these using \verb~\global\setbox\@ne=\lastbox~ (bottom to top)
+% and to build the URL with the quad points calculated. Each new token is added in front
+% of the URL as we build it. Results are held in \cs{ml@urlbuild}. We insert \cs{penalty0} to
+% promote a break point between components, as each component is enclosed in an \cs{hbox} now.
+%    \begin{macrocode}
+        \global\setbox\ml@urlbuild=\hbox{%
+            \mlh@setQuadSyllable{\unhcopy\@ne}%
+            \hbox{\unhcopy\@ne}\penalty0\unhcopy\ml@urlbuild}%
+        \SOUL@syllgoal=\wd\@ne
+        \advance\count@\@ne
+%    \end{macrocode}
+% We get the tokens recursively, be we jump back to \cs{ml@SOUL@analyze} not
+% \cs{SOUL@analyze}.
+%    \begin{macrocode}
+        \ml@SOUL@analyze
+        \SOUL@syllwidth\z@
+        \SOUL@syllable={}%
+        \ifnum\count@>\z@
+            \advance\SOUL@syllgoal-\SOUL@ttwidth
+%    \end{macrocode}
+% At this point, we jump to \cs{ml@SOUL@dosyllable} rather than
+% \cs{SOUL@dosyllable}.
+%    \begin{macrocode}
+            \ml@SOUL@dosyllable
+            \SOUL@getkern{\the\SOUL@lasttoken}{\SOUL@hyphkern}%
+                {\SOUL@sethyphenchar}%
+            \SOUL@everyhyphen
+        \else
+%    \end{macrocode}
+% Use \cs{ml@SOUL@dosyllable} not \cs{SOUL@dosyllable}.
+%    \begin{macrocode}
+            \ml@SOUL@dosyllable
+        \fi
+    \fi
+}}
+%    \end{macrocode}
+% We modify \cs{SOUL@dosyllable} and name it \cs{ml@SOUL@dosyllable}.
+%    \begin{macrocode}
+\def\ml@SOUL@dosyllable{%
+    \SOUL@gettoken
+    \SOUL@eventuallyexhyphen{\the\SOUL@token}%
+    \edef\x{\the\SOUL@token}%
+    \ifx\x\SOUL@hyphenhintM
+        \let\SOUL@n\ml@SOUL@dosyllable
+    \else\ifx\x\SOUL@lowerthanM
+        \SOUL@gettoken
+        \SOUL@getkern{\the\SOUL@lasttoken}{\SOUL@charkern}
+            {\the\SOUL@token}%
+        \SOUL@everylowerthan
+        \SOUL@puttoken
+        \let\SOUL@n\ml@SOUL@dosyllable
+    \else\ifdim\SOUL@syllwidth=\SOUL@syllgoal
+        \SOUL@everysyllable
+        \SOUL@puttoken
+        \let\SOUL@n\relax
+    \else
+    \ifx\x\SOUL@stopM
+        \SOUL@errmsg
+        \global\let\SOUL@errmsg\relax
+        \let\SOUL@n\relax
+    \else
+        \setbox\tw@\hbox{\SOUL@tt\the\SOUL@token}%
+        \advance\SOUL@syllwidth\wd\tw@
+        \global\SOUL@lasttoken=\SOUL@token
+        \SOUL@gettoken
+        \SOUL@getkern{\the\SOUL@lasttoken}{\SOUL@charkern}
+            {\the\SOUL@token}%
+        \SOUL@puttoken
+        \global\SOUL@token=\SOUL@lasttoken
+        \SOUL@everytoken
+        \edef\x{\SOUL@syllable={\the\SOUL@syllable\the\SOUL@token}}\x
+%    \end{macrocode}
+% Here is the only change, we direct flow back to \cs{ml@SOUL@dosyllable}
+%    \begin{macrocode}
+        \let\SOUL@n\ml@SOUL@dosyllable
+    \fi\fi\fi\fi
+    \SOUL@n
+}
+%    \end{macrocode}
+% After the above preliminaries, we finally define \DescribeMacro{\mlurl}\cmd{\mlurl}.
+%    \begin{macrocode}
+\newcommand{\mlurl}{\begingroup\def~{\string~}%
+    \ef@sanitize@toks\mlurl@}
+%    \end{macrocode}
+% After sanitizing, we save the URL (\texttt{\#2}) an a macro
+% \cs{ml@url} using the \cs{urldef} command, defined in the \textsf{url} package.
+%    \begin{macrocode}
+\newcommand{\mlurl@}[2][]{\urldef\ml@url\nolinkurl{#2}%
+\def\SOUL@mlhpreamble{%\begingroup
+    \mlh@preambleCmdInsert\ef@colorthislink}\hyper@chars
+    \let\ef@thislinkcolor\@urlcolor
+    \let\CurrentBorderColor\@urlbordercolor
+%    \end{macrocode}
+% Within this group, we direct the \textsf{soul} package to our customized versions of the
+% commands.
+%    \begin{macrocode}
+    \let\ml@SOUL@doword@SAVE\SOUL@doword
+    \let\SOUL@doword\ml@SOUL@doword
+%    \end{macrocode}
+% The next several lines are taken from the definition of \cs{mlhypertext}, the basic command
+% for construction many of the `\cs{ml}' commands of this package.
+%    \begin{macrocode}
+    \global\aeb@arrayIndx=0\relax
+    \global\advance\aeb@mLinkCnt1\relax
+    \special{ps: \ps@mark/_objdef {mLink\the\aeb@mLinkCnt}%
+        /type /array /OBJ pdfmark}%
+    \def\mlh@preambleCmdInsert{\ml@earlyExecProps{#1}}%
+    \def\mlh@postambleCmd{\setLinkPbox{\S{S}\W{0}\A{\URI{#2}}%
+        \presets{\ml@nocolor@defaults}
+        \QuadPoints{mLink\the\aeb@mLinkCnt}#1}\expandafter
+%    \end{macrocode}
+% The coloring of the hypertext does not work unless we make the definition
+% global, so we do so and hope this does not mess other things up.
+%    \begin{macrocode}
+        \gdef\expandafter\ef@thislinkcolor
+             \expandafter{\ef@thislinkcolor}}%
+%    \end{macrocode}
+% Finally, we call \cs{aeb@mlh} which starts \textsf{soul} with \cs{SOUL@}.
+% This does this analysis, the custom command build the url in \cs{ml@urlbuild}, which
+% we then unbox.
+%    \begin{macrocode}
+    \aeb@mlh\ml@url\ef@colorthislink\unhcopy\ml@urlbuild\endgroup
+}
+%    \end{macrocode}
+%    \end{macro}
+% \section{Macros used by the SOUL Interface}
+%    \begin{macrocode}
+\ifHy@colorlinks
+    \def\ef@colorthislink{\color{\ef@thislinkcolor}}
+\else
+    \let\ef@colorthislink\relax
+\fi
+%    \end{macrocode}
+% I've inserted \verb|\let\protect\@empty| to make |mlnameref| and |mlNameref| work.
+%    \begin{macrocode}
+\def\ml@SOUL@stop{\relax}
+\def\SOUL@mlhpreamble{\begingroup
+%    \end{macrocode}
+% (2011/12/27) Originally, I had \verb|\let\protect\@empty| here, but removing this
+% seems to do no harm, so, we'll go for it.
+%    \begin{macrocode}
+%    \mlh@preambleCmdInsert\ef@colorthislink\let\protect\@empty}
+    \mlh@preambleCmdInsert\ef@colorthislink}
+\def\SOUL@mlheverysyllable{%
+    \mlh@setQuadSyllable{\the\SOUL@syllable}%
+    \the\SOUL@syllable%
+    \SOUL@setkern\SOUL@charkern}%
+%\def\SOUL@mlheveryspace#1{%
+%    \mlh@setQuadSyllable{ #1\space\hskip\spaceskip}%
+%    #1\space\hskip\spaceskip}%
+\def\SOUL@mlheveryspace#1{#1\space\hskip\spaceskip}%
+\def\SOUL@mlheveryhyphen{%
+    \discretionary{%
+           \unkern
+            \SOUL@setkern\SOUL@hyphkern
+            \SOUL@sethyphenchar
+    }{}{}%
+}
+\def\SOUL@mlheveryexhyphen#1{%
+    \mlh@setQuadSyllable{\SOUL@setkern\SOUL@hyphkern#1}%
+    \SOUL@setkern\SOUL@hyphkern#1%
+    \discretionary{}{}{%
+        \SOUL@setkern\SOUL@charkern
+    }%
+}
+\def\mlh@postambleCmd{\relax}
+\def\SOUL@mlhpostamble{\mlh@postambleCmd}
+\def\SOUL@mlhsetup{\SOUL@setup
+    \let\SOUL@preamble\SOUL@mlhpreamble
+    \let\SOUL@everysyllable\SOUL@mlheverysyllable
+    \let\SOUL@everyspace\SOUL@mlheveryspace
+    \let\SOUL@everyhyphen\SOUL@mlheveryhyphen
+    \let\SOUL@everyexhyphen\SOUL@mlheveryexhyphen
+    \def\SOUL@postamble{\SOUL@mlhpostamble}%
+}
+\DeclareRobustCommand*\aeb@mlh{\SOUL@mlhsetup\SOUL@}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+%  \Finale
+\endinput

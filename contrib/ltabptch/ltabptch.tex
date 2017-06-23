@@ -1,0 +1,219 @@
+\documentclass[DIV=9, parskip=half, pagesize=auto]{scrartcl}
+
+\usepackage{fixltx2e}
+\usepackage{etex}
+\usepackage{xspace}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcommand*{\pkg}[1]{\textsf{#1}}
+\newcommand*{\cs}[1]{\texttt{\textbackslash#1}}
+\makeatletter
+\newcommand*{\cmd}[1]{\cs{\expandafter\@gobble\string#1}}
+\makeatother
+\newcommand*{\env}[1]{\texttt{#1}}
+\newcommand*{\meta}[1]{\textlangle\textsl{#1}\textrangle}
+
+\addtokomafont{title}{\rmfamily}
+
+\title{The \pkg{ltabptch} package\thanks{This manual corresponds to \pkg{ltabptch}~v1.74d, dated~2005/01/10.}}
+\subtitle{patch for \pkg{Longtable}}
+\author{Uwe Lück}
+\date{2005/01/10}
+
+
+\begin{document}
+
+\maketitle
+
+For David Carlisle's \pkg{Longtable.sty}, version 4.11 \\
+Fixes \texttt{tools/3180} (Sebastian Rahtz) and \texttt{tools/3485}: 
+missing/wrong interline glues above/below table. 
+  
+\begin{quote}
+  \small
+  Copyright \textcopyright\ 2002--2004 Uwe Lück, 
+  \url{http://www.contact-ednotes.sty.de.vu}. 
+  
+  Usage, no warranty, distribution as in \texttt{lppl.txt} on CTAN 
+  (\href{http://www.ctan.org/pub/tex-archive/macros/latex/base/lppl.txt}{\texttt{macros\slash latex\slash base\slash lppl.txt}}).
+\end{quote}
+
+
+\minisec{The problem(s):}
+
+\renewcommand*{\labelenumi}{(\theenumi)}
+
+Sebastian Rahtz (\texttt{tools/3180}) observed 2000/03/05 that there be 
+a ``spurios blank line'' below the \env{longtable}. This impression 
+may have been due to two spacing problems: 
+%
+\begin{enumerate}
+\item There is \cmd{\parskip} and some interline glue below \env{longtable}, 
+  while there is no \cmd{\parskip} and no interline glue above 
+  (without head as specified by \cmd{\endhead} or \cmd{\firstendhead}) 
+  or just \cmd{\lineskip} 0.0\,pt (with head---\cmd{\endhead}, \cmd{\endfirsthead}). 
+\item After \env{longtable}, \cmd{\prevdepth} is the depth of the last line 
+  before the \env{longtable} (if there is no head) or the depth of the 
+  head (otherwise). So \cmd{\prevdepth} may be 0\,pt. By contrast, the 
+  last table row has depth of at least \verb+\dp\@arstrutbox+---which 
+  should rather matter, and this is 3.6\,pt or more. 
+\end{enumerate}
+%
+---\,I have reported something like this as \texttt{tools/3485}, not 
+entirely correctly. Details are presented below. 
+
+
+\minisec{Solution presented:}
+
+\begin{enumerate}
+\item I think there should be \cmd{\parskip} and usual interline glue 
+  above, since the same would happen with a table in a center 
+  environment (e.\,g.)\@. 
+  \cmd{\noindent} seems to work fatally; moreover, \cmd{\LT@start}'s decision 
+  whether to enter a new page would ignore \cmd{\parskip} and interline 
+  glue still needed. 
+  So emulate interline glue calculation according to \TeX book~p.~80 
+  and add it by \cmd{\vskip}, along with \cmd{\parskip}. 
+  (This is rather a hack---a proper correction should perhaps not 
+  ``emulate'' but place the interlineglue changes of \cmd{\LT@array} inside 
+  the \cmd{\vbox} \cmd{\LT@bchunk} starts and treat glue between chunks in a 
+  new way.) 
+\item Set \cmd{\prevdepth} to depth of box~0 before the latter is 
+  \cmd{\unvbox}'ed (which leaves \cmd{\prevdepth} untouched, \TeX book~p.~ 282) 
+  in \cmd{\endlongtable}. 
+\end{enumerate}
+%
+I thought David Carlisle would change \pkg{Longtable} according to my 
+suggestions. By e-mail from 2003/04/07 however, he finds it 
+better not to change \pkg{Longtable}, in order not to change layouts 
+of works that have been made using \pkg{Longtable} so far 
+(e-Mail 2003/04/08).
+
+
+\minisec{By the way:}
+
+\renewcommand*{\labelenumi}{\theenumi.)}
+
+\begin{enumerate}
+\item There are two successive lines in the \pkg{Longtable} code (v4.11) 
+  together saying:
+  % 
+\begin{verbatim}
+\prevdepth\z@\global 
+\global\let\LT@setprevdepth\relax 
+\end{verbatim}
+  % 
+  Isn't the first \cmd{\global} just a typo? 
+  --Yes--this is David Carlisle's answer in his e-mail 
+  dating from 2004/05/14. 
+\item Couldn't the one-column restriction easily be removed 
+  by using \cmd{\columnwidth} instead of \cmd{\hsize}? 
+\end{enumerate}
+
+
+\minisec{Detailed diagnosis:}
+
+\renewcommand*{\theenumi}{(\Alph{enumi})}
+\renewcommand*{\labelenumi}{\theenumi}
+
+Concerning the question of ``bugs'' vs.\ ``features'', you might 
+reason what features should be aimed at. 
+%
+\begin{enumerate}
+\item \label{item:A} If there is \cmd{\parskip} below a \env{longtable}, there should 
+  be \cmd{\parskip} above as well--shouldn't it? 
+\item \label{item:B} Interline glue above should (in general) depend on the 
+  same values of \cmd{\base\-line\-skip} and \cmd{\lineskip} as below---OK? 
+\item \label{item:C} Interline glue below a \env{longtable} should depend on the 
+  depth of the last row, not on the depth of the head or of the 
+  last line above the \env{longtable}--OK? 
+\end{enumerate}
+%
+The recent versions of \pkg{longtable.sty} have not satisfied any 
+of these three demands. 
+Concerning~\ref{item:A}, \cmd{\parskip} appears below the \env{longtable}, but not 
+above. 
+Concerning~\ref{item:B}, (i)~no interline glue appears above if there 
+is no head, (ii)~otherwise, only zero interline glue appears.
+Concerning~\ref{item:C}, the interline glue below the \env{longtable} is 
+calculated using the depth of (i)~the last line above the 
+\env{longtable} as \cmd{\prevdepth} when there is no head or of (ii)~the 
+head otherwise. (Thus I was wrong earlier when I claimed that 
+\cmd{\prevdepth} were 0\,pt after \env{longtable}. This only holds in the 
+previous case (i)~when the last line above the \env{longtable} has 
+zero depth.)
+
+You can observe this by playing with the demonstration file 
+\texttt{ltabptch.tex} in CTAN folder \href{http://www.ctan.org/pub/tex-archive/macros/latex/contrib/ltabptch/}{\texttt{macros/latex/contrib/ltabptch}}.
+
+Reasons: For contributing a head to the main vertical list, 
+\env{longtable} uses \cmd{\copy} or \cmd{\box}, which yields a \meta{box} according 
+to \TeX book~p.~278. Rows are contributed by \cmd{\unvbox}. Now, 
+violation of~\ref{item:A} is due to the fact that neither \cmd{\copy} or 
+\cmd{\box} of the head nor the \cmd{\unvbox} for table rows leads to 
+execution of an \cmd{\indent} or \cmd{\noindent} (\TeX book~pp.~282\,f.,\ see 
+also \meta{horizontal command}). 
+Violation of~\ref{item:B} is due either to (i)~the fact that \cmd{\unvbox} 
+is no \meta{box} (\TeX book~p.~282/278) or to (ii)~the fact that at 
+\cmd{\copy} or \cmd{\box} \cmd{\baselineskip} and \cmd{\lineskip} are 0\,pt. 
+Violation of~\ref{item:C} is due to the fact that \cmd{\unvbox} does not 
+change \cmd{\prevdepth} (\TeX book~p.~282). 
+
+As to recognizable effects: 
+%
+\begin{itemize}
+\item Violation of~\ref{item:A}, of course, has very little effect in 
+  general since \cmd{\parskip} is \texttt{0pt plus 1pt} usually. This is hardly 
+  recognizable in the presence of the \cmd{\bigskipamount} above and 
+  below a \env{longtable}. 
+  
+\item Violation of~\ref{item:B} results in missing appropriate interline 
+  glue above, which often should be 3.6\,pt or more. This may 
+  rather be recognizable and may contribute to the impression 
+  that there even is a spurious blank line below the \env{longtable} 
+  (this is what Sebastion Rahtz reported in \texttt{tools/3180}). 
+  
+\item For the previous as well as for the details and the 
+  effects of violation of~\ref{item:C}, consider the algorithm for 
+  calculating interline glue on p.~80 of the \TeX book. If there 
+  is no head, and the depth of the last line before the 
+  \env{longtable} is 0\,pt, the interline glue below the \env{longtable} is 
+  \cmd{\baselineskip} minus the height of the first line after the 
+  \env{longtable}. The interline glue \emph{should be} \cmd{\baselineskip} minus 
+  height of following line \emph{minus} depth of last table row--if 
+  this depth is not too large (depending on \cmd{\lineskiplimit}). 
+  This depth is at least 3.6\,pt. So the interline glue is often 
+  by 3.6\,pt or more greater than is appropriate. Considering the 
+  missing interline glue above the \env{longtable} and the \cmd{\parskip}
+  below, the glue after the \env{longtable} is by 6.2\,pt (or more) plus 
+  1\,pt larger than the glue before. Due to the shrink component 
+  of the surrounding \cmd{\bigskipamount}, the glue following the 
+  \env{longtable} may be nearly twice as large as the glue before.
+  ---\,Usually, violation of~\ref{item:C} has no effect at all. Namely, 
+  there is a head usually, and its depth is usually the same as 
+  the depth of the last row, namely \verb+\dp\@arstrutbox+. 
+\end{itemize}
+
+
+\minisec{Version history:}
+
+\begin{tabular}{@{}lr>{\raggedright\arraybackslash}p{93mm}@{}}
+  v1.7   & 2003/01/07   & Sent around 2003/01/13 with first release of \pkg{ednotes.sty}. Sent to David Carlisle. Earlier versions were sent to Frank Mittelbach and the team. \\
+  v1.71  & 2003/01/22   & Added version history.                                                                                                                               \\
+  v1.72  & 2003/01/27   & Changed copyright notice.                                                                                                                            \\
+  v1.73  & 2004/05/13   & Adapted to \pkg{Longtable}~v4.11; new copyright; \pkg{longtable} $\to$ \pkg{Longtable} (selectively). Added `I have \ldots \texttt{3485}'.                                      \\
+  v1.74  & 2004/08/05   & Added `---Yes---\ldots'.                                                                                                                             \\
+         & 2004/08/21   & Typo fix for `problem'; added report on 2003/04/08.                                                                                                  \\
+         & 2004/08/23   & Corrected and extended diagnosis, sent to CTAN.                                                                                                      \\
+  v1.74b & \ldots/08/23 & `---' $\to$ `--'; added that~\ref{item:C} usually doesn't matter.                                                                                    \\
+  v1.74c & \ldots/08/31 & `author-maintained'.                                                                                                                                 \\
+  v1.74d & 2005/01/10   & Contact via \textsc{http}.
+\end{tabular}
+
+\end{document}

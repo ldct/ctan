@@ -1,0 +1,2186 @@
+%\iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% fc_arith.sty package,                                %%
+%% Copyright (C) 1999-2017  D. P. Story                 %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1.2 of    %%
+%% the License, or (at your option) any later version.  %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+%<package>\ProvidesPackage{fc_arith}
+%<package> [2017/01/16 v1.0f fc_arith: PDF flash cards for arithmetic drill (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex=false]{hyperref}
+%\def\texorpdfstring#1#2{#1}
+%\pdfstringdefDisableCommands{\let\\\textbackslash}
+\OnlyDescription  % comment out for implementation details
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{fc_arith}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{fc_arith}{aebdocfmt.def cannot be found}}
+\begin{document}
+\def\CMD#1{\textbackslash#1}
+  \GetFileInfo{fc_arith.sty}
+  \title{fc\_arith: Flash Cards for Arithmetic}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \DocInput{fc_arith.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o fc\_arith.ind fc\_arith.idx} on the command line and recompile
+    \texttt{fc\_arith.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o fc\_arith.gls fc\_arith.glo} on the command line and recompile
+    \texttt{fc\_arith.dtx}.}
+\end{document}
+%</driver>
+% \fi
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{web}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{web}{cannot find aebdonotindex.def}}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%\section{Package Options}
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+\RequirePackage{ifxetex}
+\RequirePackage{calc}
+\let\fc@YES=y \let\fc@NO=n
+%    \end{macrocode}
+% The original\IndexOpt{allownegsub} arithmetic flash cards did not allow a negative difference,
+% if this option is used, the differences are allowed to be negative.
+% \changes{v1.0}{2016/12/03}{Put Allow Subtraction in Options menu}
+% \changes{v1.0f}{2017/01/16}{Incorporated \string\cs{olBdry} into code, using eforms dated 2017/01/15}
+%    \begin{macrocode}
+\DeclareOptionX{allownegsub}{\def\fcAllowNegSub{true}}
+\def\fcAllowNegSub{false}
+%    \end{macrocode}
+%    \begin{macro}{nomenu}
+% The menu allows to user to change the range of the numbers, using this
+% option removes the menu.
+%    \begin{macrocode}
+\DeclareOptionX{nomenu}{\let\fc@usemenu\fc@NO}
+\let\fc@usemenu\fc@YES
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{operations}
+% Give the ability to declare what operations FC should show. Supported operations
+% are add, sub, mul, div. The default is all operations.
+%    \begin{macrocode}
+\DeclareOptionX{operations}[add,sub,mul,div]{\def\fc@operations{#1}}
+\def\fc@operations{add,sub,mul,div}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{showkeypadlink}
+% If the \texttt{nomenu} option is taken, you can select the \texttt{showkepadlink} so the
+% user can toggle the keypad.
+%    \begin{macrocode}
+\DeclareOptionX{showkeypadlink}{\let\fc@keypadlink\fc@YES}
+\let\fc@keypadlink\fc@NO
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{notimedscores}
+% Do not tally timed scores. Some may not want the pressure!
+%    \begin{macrocode}
+\DeclareOptionX{notimedscores}{%
+    \def\fcTimedScores{false}
+    \let\fc@timedscores\fc@NO
+}
+\def\fcTimedScores{true}
+\let\fc@timedscores\fc@YES
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+\ProcessOptionsX
+\RequirePackage{eforms}[2017/01/15]
+\RequirePackage{popupmenu}
+%    \end{macrocode}
+%\section{Main Code}
+%    \begin{macrocode}
+\newdimen\fcWidth
+%    \end{macrocode}
+% The keys for the \texttt{fcopera} family are defined here. These are used
+% with the \texttt{operations} option. These define the \texttt{add},
+% \texttt{sub}, \texttt{mul}, and \texttt{div} operations.
+%    \begin{macrocode}
+\define@boolkey{fcopera}{add}[true]{}
+\define@boolkey{fcopera}{sub}[true]{}
+\define@boolkey{fcopera}{mul}[true]{}
+\define@boolkey{fcopera}{div}[true]{}
+%    \end{macrocode}
+% We take the macro \cs{fc@operations} defined by the \texttt{operations} option, set
+% the corresponding keys for the \texttt{fcopera} family.
+%    \begin{macrocode}
+\edef\fc@expand{\noexpand\setkeys{fcopera}{\fc@operations}}\fc@expand
+%    \end{macrocode}
+%    \begin{macro}{\DeclareArithParams}
+% The builder of this arithmetic flash cards can hard-wire the ranges. Here is an
+% example of usage:
+%\begin{verbatim}
+%\DeclareArithParams
+%{%
+%    addT={[2,20]},addB={[5,30]},
+%    addDecT=none,addDecB=2,
+%    subT={[1,5]},subB={[5,10]},
+%    subDecT=1,subDecB=2,
+%    mulT={[1,12]},mulB={[1,10]},
+%    mulDecT=1,mulDecB=2,
+%    divQ={[1,4]},divB={[1,10]},
+%    divDecQ=1,divDecB=2
+%}
+%\end{verbatim}
+% Below are defined the keys used by \cs{DeclareArithParams}.
+%    \begin{macrocode}
+\define@key{fcarithparams}{addT}[{[0,100]}]{\def\fcAddTParams{#1}}
+\define@key{fcarithparams}{addB}[{[0,100]}]{\def\fcAddBParams{#1}}
+\define@choicekey{fcarithparams}{addDecT}[\val\nr]{none,1,2}[none]{%
+    \edef\fcaddDecT{\nr}}{}
+\define@choicekey{fcarithparams}{addDecB}[\val\nr]{none,1,2}[none]{%
+    \edef\fcaddDecB{\nr}}{}
+\define@key{fcarithparams}{subT}[{[0,100]}]{\def\fcSubTParams{#1}}
+\define@key{fcarithparams}{subB}[{[0,100]}]{\def\fcSubBParams{#1}}
+\define@choicekey{fcarithparams}{subDecT}[\val\nr]{none,1,2}[none]{%
+    \edef\fcsubDecT{\nr}}{}
+\define@choicekey{fcarithparams}{subDecB}[\val\nr]{none,1,2}[none]{%
+    \edef\fcsubDecB{\nr}}{}
+\define@key{fcarithparams}{mulT}[{[0,100]}]{\def\fcMulTParams{#1}}
+\define@key{fcarithparams}{mulB}[{[0,10]}]{\def\fcMulBParams{#1}}
+\define@choicekey{fcarithparams}{mulDecT}[\val\nr]{none,1,2}[none]{%
+    \edef\fcmulDecT{\nr}}{}
+\define@choicekey{fcarithparams}{mulDecB}[\val\nr]{none,1,2}[none]{%
+    \edef\fcmulDecB{\nr}}{}
+\define@key{fcarithparams}{divQ}[{[0,10]}]{\def\fcDivQParams{#1}}
+\define@key{fcarithparams}{divB}[{[0,10]}]{\def\fcDivBParams{#1}}
+\define@choicekey{fcarithparams}{divDecQ}[\val\nr]{none,1,2}[none]{%
+    \edef\fcdivDecQ{\nr}}{}
+\define@choicekey{fcarithparams}{divDecB}[\val\nr]{none,1,2}[none]{%
+    \edef\fcdivDecB{\nr}}{}
+%    \end{macrocode}
+% We set the defaults for these keys.
+%    \begin{macrocode}
+\setkeys{fcarithparams}{addT,addB,subT,subB,mulT,mulB,divQ,divB,%
+    addDecT,addDecB,subDecT,subDecB,mulDecT,mulDecB,divDecQ,divDecB}
+\newcommand{\DeclareArithParams}[1]{\setkeys{fcarithparams}{#1}}
+\@onlypreamble\DeclareArithParams
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\timeUpMsg}
+%    \begin{macro}{\rightMsg}
+%    \begin{macro}{\wrongMsg}
+%    \begin{macro}{\startAgainMsg}
+%    \begin{macro}{\newCardMsg}
+% Strings that can be redefined; the meanings are obvious.
+%    \begin{macrocode}
+\newcommand{\timeUpMsg}{Your Time is UP!}
+\newcommand{\rightMsg}{Right!}
+\newcommand{\wrongMsg}{Wrong!}
+\newcommand{\startAgainMsg}{Start Again}
+\newcommand{\newCardMsg}{New Card}
+\newcommand{\toggleKeypad}{Toggle Keypad}
+\newcommand{\operation}{Operation}
+\newcommand{\numCorrect}{Number Correct}
+\newcommand{\numAttempted}{Number Attempted}
+\newcommand{\percentCorrect}{Percentage Correct}
+\newcommand{\timedScores}{Timed Scores}
+\newcommand{\fmtAnswer}{Answer:}
+\newcommand{\kpDec}{.}
+\newcommand{\kpMinus}{-}
+\newcommand{\kpBack}{Back}
+\newcommand{\kpEnter}{Enter}
+\newcommand{\fcNoTiming}{No Timing}
+\newcommand{\fcAddition}{Addition}
+\newcommand{\fcSubtraction}{Subtraction}
+\newcommand{\fcMultiplication}{Multiplication}
+\newcommand{\fcDivision}{Division}
+\newcommand{\fcSettings}{Settings}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\FCMenu}
+% This is the menu system, it is normally placed in the running header
+% on the left, though this can be changed.
+%    \begin{macrocode}
+\newcommand{\fcSettingsColor}{0 0 0}
+\newcommand{\fcSettingsTooltip}{Click for a dropdown menu
+    of menu choices}
+\newcommand{\FCMenu}{\smash{\hbox{\pushButton[\textSize{8}\H{O}
+    \textColor{\fcSettingsColor}
+    \CA{\fcSettings\space}\S{S}\BC{}\BG{}\TU{\fcSettingsTooltip}
+    \A{\JS{processFcMenu();}}]{fcSettingsBtn}{}{11bp}\kern0pt}}}
+%\newcommand{\FCMenu}{\mbox{\setLinkText[\linktxtcolor{\fcSettingsColor}
+%   \A{\JS{processFcMenu();}}]{\fcSettings}}}
+    \ifx\fc@usemenu\fc@YES\lheader{\FCMenu}\rheader{}\else
+\lheader{}\rheader{}\fi
+%    \end{macrocode}
+%    \begin{environment}{MenuFC}
+%    We set up a \texttt{fcMenu} environment for specifying menu items. This is to be sure
+%    the name of the popup menu is correct, we expect a name of `fcMenu'
+%    as the argument of \texttt{popupmenu} environment.
+%    \changes{v0.99}{2016/12/02}{Added new environment}
+%    \begin{macrocode}
+\newenvironment{MenuFC}{\begin{popupmenu}{fcMenu}}
+{\end{popupmenu}}
+\def\fcMenu{// No menu items selected in the MenuFC environment}
+%    \end{macrocode}
+%    \end{environment}
+%    We set up some standard menu items, these are referred by their command names:
+%\begin{verbatim}
+%   \begin{fcMenu}
+%        \fcOptionsMenuItem
+%        \fcToggleKeypadMenuItem
+%        \fcMouseKPMenuItem
+%        \fcTouchKPMenuItem
+%        \fcAboutFC
+%   \end{fcMenu}
+%\end{verbatim}
+%The five commands listed above and defined below should not be redefined; however their
+%title fields are accessible through the commands ending in `\texttt{Title}' below.
+%\changes{v0.99}{2016/12/02}{Add commands to customize the menu}
+%    \begin{macrocode}
+\def\fcOptionsMenuItem{\item{title=\fcOptionsMenuItemTitle,return=0}}
+%    \end{macrocode}
+%    \DescribeMacro{\fcOptionsMenuItemTitle} is the title for the `Options' menu item
+%    \begin{macrocode}
+\newcommand\fcOptionsMenuItemTitle{Options}
+\def\fcToggleKeypadMenuItem{\item{title=\fcToggleKeypadMenuItemTitle,%
+    marked=false,return=1}}
+%    \end{macrocode}
+%    \DescribeMacro{\fcToggleKeypadMenuItemTitle} is the title for the `Keypad' menu item
+%    \begin{macrocode}
+\newcommand\fcToggleKeypadMenuItemTitle{Toggle Keypad}
+\def\fcTouchKPMenuItem{\item{title=\fcTouchKPMenuItemTitle,%
+    marked=false,enabled=false,return=3}}
+%    \end{macrocode}
+%    \DescribeMacro{\fcTouchKPMenuItemTitle} is the title for the `Touch keypad' menu item
+%    \begin{macrocode}
+\newcommand\fcTouchKPMenuItemTitle{Touch Friendly Keypad}
+\def\fcMouseKPMenuItem{\item{title=\fcMouseKPMenuItemTitle,%
+    marked=true,enabled=false,return=4}}
+%    \end{macrocode}
+%    \DescribeMacro{\fcMouseKPMenuItemTitle} is the title for the `Mouse keypad' menu item
+%    \begin{macrocode}
+\newcommand\fcMouseKPMenuItemTitle{Mouse Friendly Keypad}
+\def\fcAboutFC{\item{title=\fcAboutFCTitle, return=2}}
+%    \end{macrocode}
+%    \DescribeMacro{\fcAboutFCTitle} is the title for the `About' menu item
+%    \begin{macrocode}
+\newcommand\fcAboutFCTitle{About PDF Flash Cards}
+%    \end{macrocode}
+%    \end{macro}
+% \subsection{The form fields}
+%    \begin{macro}{\tBGNoBorder}
+%    \begin{macro}{\tBGNoBorderI}
+%    \begin{macro}{\cBGNoBorder}
+%    \begin{macro}{\cBGBorder}
+%    \begin{macro}{\myNumPad}
+% Some preset formatting for the various fields. May be redefined.
+%    \begin{macrocode}
+\newcommand{\tBGNoBorder}{\BC{}\BG{}\autoCenter{n}\textSize{0}
+    \textColor{1 0 0}\Ff\FfReadOnly}
+\newcommand{\tBGNoBorderI}{\BC{}\BG{}\autoCenter{n}\textSize{0}
+    \textColor{0 0 0}}
+\newcommand{\cBGNoBorder}{\Q{1}\BC{}\BG{}\autoCenter{n}\textSize{0}
+    \textColor{0 0 0}\BG{.75 .75 .75}\Ff\FfReadOnly}
+\newcommand{\cBGBorder}{\BC{0 0 0}\BG{.75 .75 .75}\autoCenter{n}
+    \textSize{0}\textColor{0 0 0}}
+\newcommand{\myNumPadI}{\F\FHidden\autoCenter{n}\textSize{8}
+    \textFont{\fieldFont}\S{S}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\setDimOf}
+%    \begin{macro}{\monoSpaceFont}
+%    \begin{macro}{\fieldFont}
+% The following are some customization commands, used for setting field properties that
+% are not included in the presets.
+%    \begin{macrocode}
+\newcommand{\setDimOf}[3]{\@namedef{widthOf#1}{#2}%
+    \@namedef{heightOf#1}{#3}}
+\newcommand{\monoSpaceFont}{CoBo}
+\newcommand{\fieldFont}{Helv}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\arithProb}
+% \cs{arithProb} consists of three fields: \texttt{top}, \texttt{operation}, and \texttt{bottom},
+% these three fields are bundled together as a single unit. We use \textbf{courier-bold} for the \texttt{top} and \texttt{bottom}
+% so we can align the decimal points, if there are any.
+%    \begin{macrocode}
+\setDimOf{top}{1in}{0.62in}
+\setDimOf{operation}{.38in}{.62in}
+\setDimOf{bottom}{1in}{0.62in}
+\newcommand{\arithProb}{\mbox{\vbox{\offinterlineskip
+    \hbox{\hspace*{\@nameuse{widthOfoperation}}%
+        \textField[\presets{\tBGNoBorder}
+            \textFont{\monoSpaceFont}\Q{2}]{top}%
+            {\@nameuse{widthOf\Fld@name}}{\@nameuse{heightOf\Fld@name}}%
+        }%
+    \hbox{%
+        \textField[\presets{\tBGNoBorder}
+            \textSize{25}\Q{1}]{operation}{\@nameuse{widthOf\Fld@name}}%
+            {\@nameuse{heightOf\Fld@name}}%
+        \textField[\presets{\tBGNoBorder}
+            \textFont{\monoSpaceFont}\Q{2}]{bottom}%
+            {\@nameuse{widthOf\Fld@name}}{\@nameuse{heightOf\Fld@name}}%
+    }}}%
+}
+%    \end{macrocode}
+%    \end{macro}
+% More components of these flash cards and can be placed anywhere.
+%    \begin{macro}{\alertbox}
+% displays the ``Right/Wrong'' message;
+%    \begin{macro}{\startAgain}
+% is a button for starting all over again, it takes an icon;
+%    \begin{macro}{\inputRegion}
+% is where the user inputs his/her answer;
+%    \begin{macro}{\newCard}
+% is a push button for randomly geneating a new problem. These different elements
+%    \begin{macrocode}
+\setDimOf{alertbox}{.88in}{.62in}
+\setDimOf{StartAgain}{0.88in}{0.62in}
+\setDimOf{result}{1.38in}{0.62in}
+\setDimOf{NewProblem}{0.88in}{0.62in}
+\newcommand{\alertbox}[1][]{\hbox{\textField[\presets{\tBGNoBorder}
+    \textSize{0}#1]{alertbox}{\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}}}
+\@ifundefined{if@useacrobat}{\let\placeImageOpts\@empty}
+{\def\placeImageOpts{\FB{false}\I{null}\TP{2}}}
+\newcommand{\startAgain}[1][]{\hbox{%
+    \expandafter\pushButton\expandafter[\placeImageOpts
+    \presets{\tBGNoBorderI}\textFont{\fieldFont}\S{S}
+    \textSize{12}\CA{\startAgainMsg}\AC{\startAgainMsg}#1
+    \A{\JS{startAgain();}}]{StartAgain}{\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}}}
+\newcommand{\inputRegion}[1][]{\hbox{\textField[\presets{\cBGNoBorder}
+    \Ff{-\FfReadOnly}\Q{2}#1\AA{\AAValidate{validateResult();}
+    \AAKeystroke{fcNumber_Keystroke(numDecimals,1,0,0,"",true);}
+    \AAFormat{try{%
+        fcNumber_Format(numDecimals,1,0,0,"",true);}catch(e){}}}
+    ]{result}{\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}}}
+\newcommand{\newCard}[1][]{\hbox{%
+    \expandafter\pushButton\expandafter[\placeImageOpts
+    \textSize{12}\presets{\tBGNoBorderI}\textFont{\fieldFont}\S{S}
+    \CA{\newCardMsg}\AC{\newCardMsg}#1\A{\JS{newCard();}}
+    ]{NewProblem}{\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\cbTiming}
+%    \begin{macro}{\ansField}
+%    \begin{macro}{\cbOperation}
+% \cs{cbTiming} is a dropdown menu for timing; \cs{ansField} is a text field where
+% the correct answers are written; \cs{cbOperation} is a dropdown menu of operations.
+% \changes{v0.99}{2016/12/02}{Corrected problem with \string\cs{cbOperation} due to
+% changes in \string\textsf{eforms}.}
+%    \begin{macrocode}
+% {\@nameuse{widthOf\Fld@name}}{\@nameuse{heightOf\Fld@name}}
+\setDimOf{TimeDelay}{0.9in}{0.24in}
+\setDimOf{ansregion}{.87in+10bp}{.24in}
+\setDimOf{ChooseOperation}{1.38in-10bp}{0.24in}
+\edef\isReadOnlyTiming{\ifx\fc@timedscores\fc@NO
+    \noexpand\Ff{\FfReadOnly}\fi}
+\newcommand{\cbTimingToolip}{Select a time challenge
+    from the dropdown menu}
+\newcommand{\cbTiming}[1][]{\hbox{%
+    \expandafter\comboBox\expandafter[\isReadOnlyTiming
+        \presets{\cBGBorder}\textFont{\fieldFont}\V{600000}\DV{600000}#1
+        \TU{\cbTimingToolip}\AA{\AAKeystroke{%
+        if (!event.willCommit) timelimit=event.changeEx;}}
+    ]{TimeDelay}{\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}{%
+    [(600000)(\fcNoTiming)][(30)(30 sec)][(25)(25 sec)][(20)(20 sec)]%
+    [(15)(15 sec)][(10)(10 sec)][(5)(\space\space 5 sec)]}}%
+}
+\newcommand{\ansField}[1][]{\hbox{\textField[\presets{\cBGNoBorder}\Q{2}
+    #1\AA{\AAFormat{%
+        if (event.value!="") {\r
+        try{fcNumber_Format(numDecimals,1,0,0,"",true);\r
+        event.value=("\fmtAnswer\space")+event.value;}catch(e){};}}}
+    ]{ansregion}{\@nameuse{widthOf\Fld@name}}%
+     {\@nameuse{heightOf\Fld@name}}}%
+}
+%    \end{macrocode}
+% \DescribeMacro{\cbOpDefault} is used to set the default operation
+% correct values are \texttt{a}, \texttt{s}, \texttt{m}, \texttt{d}
+%    \begin{macrocode}
+\let\fc@addAbbr=a\let\fc@subAbbr=s
+\let\fc@mulAbbr=m\let\fc@divAbbr=d
+\newcommand{\cbOpDefault}[1]{\def\cbOpDef@ult{#1}%
+    \if\cbOpDef@ult\fc@addAbbr\else\if\cbOpDef@ult\fc@subAbbr\else
+    \if\cbOpDef@ult\fc@mulAbbr\else\if\cbOpDef@ult\fc@divAbbr\else
+        \ifKV@fcopera@add\def\cbOpDef@ult{a}\else
+        \ifKV@fcopera@sub\def\cbOpDef@ult{s}\else
+        \ifKV@fcopera@mul\def\cbOpDef@ult{m}\else
+        \ifKV@fcopera@div\def\cbOpDef@ult{d}\else
+        \PackageError{fc_arith}{There are no selected arithmetic
+        operations}{}\fi\fi\fi\fi
+    \PackageWarning{fc_arith}{Value of \string\cbOpDefault\space
+    not recognized,\MessageBreak will use `\cbOpDef@ult'}%
+    \fi\fi\fi\fi
+}
+\cbOpDefault{a}
+\newcommand{\cbOperationTooltip}{Choose an arithmetic operation
+    to practice}
+\newcommand{\cbOperation}[1][]{%
+    \edef\cbvOptChoices{\ifKV@fcopera@add[(a)(\fcAddition)]\fi
+     \ifKV@fcopera@sub[(s)(\fcSubtraction)]\fi
+     \ifKV@fcopera@mul[(m)(\fcMultiplication)]\fi
+     \ifKV@fcopera@div[(d)(\fcDivision)]\fi}%
+    \hbox{\comboBox[\presets{\cBGBorder}\textFont{\fieldFont}
+    \TU{\cbOperationTooltip}
+    \V{\cbOpDef@ult}\DV{\cbOpDef@ult}#1]{ChooseOperation}%
+    {\@nameuse{widthOf\Fld@name}}%
+    {\@nameuse{heightOf\Fld@name}}{\cbvOptChoices}}%
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+% \cs{szNum} is the width and height of a keypad button.
+%    \begin{macrocode}
+\newcommand{\szNum}{14bp}
+%    \end{macrocode}
+%    \begin{macro}{\Keypad}
+% A keypad for the user to enter responses using the mouse only. Cool!
+%    \begin{macrocode}
+\newcommand\toggleKeyPadBtnColor{0 0 1}
+\newcommand\toggleKeyPadBtnTooltip{Click to toggle keypad, shift-click
+    to toggle between mouse and touch keypads}
+\def\toggleKeyPadBtn{\pushButton[\textSize{6}\CA{\toggleKeypad}\H{O}
+    \TU{\toggleKeyPadBtnTooltip}\textColor{\toggleKeyPadBtnColor}
+    \S{S}\BC{}\BG{}\A{\JS{%
+        if (event.shift)\r\t
+            if (bTouchFriendly)\r\t\t
+                makeMouseFriendly();\r\t
+            else\r\t\t
+                makeTouchFriendly();\r\t
+        else\r\t
+            ToggleKeyPad();\r
+}}]{toggleKeyPadBtn}{}{8bp}}%
+\newcommand{\Keypad}{%
+    \vbox{\offinterlineskip\ifx\fc@keypadlink\fc@YES
+    \setlength{\fcWidth}{4bp+\szNum*4}%
+    \hbox to\fcWidth{\hfill\toggleKeyPadBtn\hfill}\vskip2bp\fi
+    \hbox{\pushButton[\presets{\myNumPadI}\CA{7}
+            \A{\JS{addDigit(7)}}]{num7}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{8}
+            \A{\JS{addDigit(8)}}]{num8}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{9}
+            \A{\JS{addDigit(9)}}]{num9}{\szNum}{\szNum}}\olBdry
+    \hbox{\pushButton[\presets{\myNumPadI}\CA{4}
+            \A{\JS{addDigit(4)}}]{num4}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{5}
+            \A{\JS{addDigit(5)}}]{num5}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{6}
+        \A{\JS{addDigit(6)}}]{num6}{\szNum}{\szNum}}\olBdry
+    \hbox{\pushButton[\presets{\myNumPadI}\CA{1}
+            \A{\JS{addDigit(1)}}]{num1}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{2}
+            \A{\JS{addDigit(2)}}]{num2}{\szNum}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{3}
+            \A{\JS{addDigit(3)}}]{num3}{\szNum}{\szNum}}\olBdry
+    \hbox{\edef\w@dj{\ifmakeXasPD1bp\else\ifxetex-1bp\else-1bp\fi\fi}%
+        \pushButton[\presets{\myNumPadI}\CA{0}
+            \A{\JS{addDigit(0)}}]{num0}{\w@dj+\szNum*2}{\szNum}\olBdry
+        \pushButton[\presets{\myNumPadI}\CA{\kpDec}
+                \A{\JS{addDigit("Dec")}}]{Dec}{\szNum}{\szNum}\olBdry
+    \smash{\vbox{\edef\w@dj{\ifmakeXasPD1bp\else\ifxetex-1bp\else-1bp\fi\fi}%
+            \hbox{\pushButton[\presets{\myNumPadI}\CA{\kpMinus}
+                \A{\JS{addDigit("Minus")}}
+                ]{Minus}{\szNum}{\szNum}}\olBdry
+            \hbox{\pushButton[\presets{\myNumPadI}\CA{\kpBack}
+                \textSize{0}\A{\JS{addDigit("Back")}}
+                ]{Back}{\szNum}{\szNum}}\olBdry
+            \hbox{\pushButton[\presets{\myNumPadI}\CA{\kpEnter}
+                \textSize{0}\A{\JS{addDigit("Enter")}}
+                ]{Enter}{\szNum}{\w@dj+\szNum*2}}%
+    }}}}%
+}
+%    \end{macrocode}
+%    \end{macro}
+% \cs{fcSep} is a standard separation between elements.
+%    \begin{macrocode}
+\def\fcSep{\quad}
+%    \end{macrocode}
+%    \begin{macro}{\statsFields}
+% A collection of fields that summarize the attempts at responding to the arithmetic
+% problem.
+%    \begin{macrocode}
+\setDimOf{fcSF}{0.37in}{0.25in}
+\newcommand{\statsFieldOpColor}{1 0 0}
+\newcommand{\statsFieldColor}{blue}
+\newcommand{\timeScoresTooltip}{Click to see how points are assigned}
+%    \end{macrocode}
+%    \begin{macrocode}
+\newcommand{\statsFields}{%
+%    \end{macrocode}
+% The Addition column
+%    \begin{macrocode}
+\ifKV@fcopera@add
+    \vbox{\offinterlineskip
+    \hbox{\textField[\presets{\cBGNoBorder}
+        \textColor{\statsFieldOpColor}\V{+}\DV{+}\Q{1}
+        ]{AddScore1}{\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}
+        ]{AddScore2}{\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}
+        ]{AddScore3}{\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}
+        ]{AddScore4}{\widthOffcSF}{\heightOffcSF}}%
+\ifx\fc@timedscores\fc@YES\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}
+        ]{AddScore5}{\widthOffcSF}{\heightOffcSF}}%
+\fi
+    }\fcSep
+\fi
+%    \end{macrocode}
+% The Subtraction column
+%    \begin{macrocode}
+\ifKV@fcopera@sub
+\vbox{\offinterlineskip
+    \hbox{\textField[\presets{\cBGNoBorder}
+        \textColor{\statsFieldOpColor}\V{-}\DV{-}\Q{1}
+        ]{SubScore1}{\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{SubScore2}%
+        {\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{SubScore3}%
+        {\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{SubScore4}{\widthOffcSF}%
+        {\heightOffcSF}}
+\ifx\fc@timedscores\fc@YES\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{SubScore5}{\widthOffcSF}%
+        {\heightOffcSF}}
+\fi
+    }\fcSep
+\fi
+%    \end{macrocode}
+% The Multiplication column
+%    \begin{macrocode}
+\ifKV@fcopera@mul
+\vbox{\offinterlineskip
+    \hbox{\textField[\presets{\cBGNoBorder}
+        \textColor{\statsFieldOpColor}\V{x}\DV{x}\Q{1}
+        ]{MulScore1}{\widthOffcSF}{\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{MulScore2}{\widthOffcSF}%
+        {\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{MulScore3}{\widthOffcSF}%
+        {\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{MulScore4}{\widthOffcSF}%
+        {\heightOffcSF}}
+\ifx\fc@timedscores\fc@YES\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{MulScore5}{\widthOffcSF}%
+        {\heightOffcSF}}
+\fi
+    }\fcSep
+\fi
+%    \end{macrocode}
+% The Division column
+%    \begin{macrocode}
+\ifKV@fcopera@div
+\vbox{\offinterlineskip
+    \hbox{\textField[\presets{\cBGNoBorder}
+        \textColor{\statsFieldOpColor}
+        \uV{FEFF00F7}\uDV{FEFF00F7}\Q{1}
+    ]{DivScore1}{\widthOffcSF}%
+        {\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{DivScore2}{\widthOffcSF}%
+        {\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{DivScore3}{\widthOffcSF}%
+        {\heightOffcSF}}\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{DivScore4}{\widthOffcSF}%
+        {\heightOffcSF}}
+\ifx\fc@timedscores\fc@YES\olBdry
+    \hbox{\textField[\presets{\cBGNoBorder}]{DivScore5}{\widthOffcSF}%
+        {\heightOffcSF}}
+\fi
+    }\fcSep
+\fi
+%    \end{macrocode}
+% Description column
+%    \begin{macrocode}
+\vbox{\offinterlineskip
+    \hbox{\parbox[b][.25in][c]{.75in}{%
+        \textcolor{blue}{\operation}\hfill}}
+    \hbox{\parbox[b][.25in][c]{1.25in}{%
+        \textcolor{blue}{\numCorrect}\hfill}}
+    \hbox{\parbox[b][.25in][c]{1.25in}{%
+        \textcolor{blue}{\numAttempted}\hfill}}
+    \hbox{\parbox[b][.25in][c]{1.25in}{%
+        \textcolor{blue}{\percentCorrect}\hfill}}
+\ifx\fc@timedscores\fc@YES
+    \hbox{\textField[\presets{\cBGNoBorder}
+        \textColor{\statsFieldOpColor}
+        ]{ScoreTotal}{.51in}{.25in}\kern1bp
+        \makebox[0pt][l]{\pushButton[\presets{\tBGNoBorder}
+        \Ff{-\FfReadOnly}\S{S}\H{I}\textSize{10}
+        \TU{\timeScoresTooltip}
+        \A{\JS{docTimeScores();}}]{Descrip5}{1in}{.25in}}%
+        \parbox[b][.25in][c]{1in}{%
+            \centering\textcolor{blue}{\timedScores}}}%
+\fi
+    }%
+}
+%    \end{macrocode}
+%    \end{macro}
+%\section{JavaScript Code}
+%    \begin{macrocode}
+\edef\bFCa{/\ifKV@fcopera@add/\else*\fi}
+\edef\eFCa{\ifKV@fcopera@add/\else*\fi/}
+\edef\bFCs{/\ifKV@fcopera@sub/\else*\fi}
+\edef\eFCs{\ifKV@fcopera@sub/\else*\fi/}
+\edef\bFCm{/\ifKV@fcopera@mul/\else*\fi}
+\edef\eFCm{\ifKV@fcopera@mul/\else*\fi/}
+\edef\bFCd{/\ifKV@fcopera@div/\else*\fi}
+\edef\eFCd{\ifKV@fcopera@div/\else*\fi/}
+%    \end{macrocode}
+%    Language localizations for \cs{fcTimedScoresDialog}
+%    \begin{macrocode}
+\def\fctCharWidth{22}
+\def\fctInstr{"Points are awarded, based on time,
+    for successfully solving a problem:"}
+\def\fctTimeElapsed{"Time elapsed"}
+\def\fctPoints{"Points"}
+\def\fctLessThanV{"Less than 5 sec"}
+\def\fctLessThanVPoints{6}
+\def\fctBtwnVAndX{"Between 5 and 10 sec"}
+\def\fctBtwnVAndXPoints{5}
+\def\fctBtwnXAndXV{"Between 10 and 15 sec"}
+\def\fctBtwnXAndXVPoints{4}
+\def\fctBtwnXVAndXX{"Between 15 and 20 sec"}
+\def\fctBtwnXVAndXXPoints{3}
+\def\fctBtwnXXAndXXV{"Between 20 and 25 sec"}
+\def\fctBtwnXXAndXXVPoints{2}
+\def\fctGtrXXV{"Greater than 25 sec"}
+\def\fctGtrXXVPoints{1}
+%    \end{macrocode}
+%    \DescribeMacro{\amtChngMoToTou} is the amount of increase on dimensions of the transition
+%    from the mouse keypad to the touch keypad.
+%    \begin{macrocode}
+\newcommand\amtChngMouToTou{5}
+%    \end{macrocode}
+%    Language localizations for \texttt{fcDialog}.
+%    \begin{macrocode}
+\newcommand\fcOptTextWidth{80}
+\newcommand\fcOptTopRange{Range Top}
+\newcommand\fcOptBottomRange{Range Bottom}
+\newcommand\fcOptTopRangeDiv{Range Quotient}
+\newcommand\fcOptBottomRangeDiv{Range Divisor}
+\newcommand\fcOptTo{ to }
+\newcommand\fcOptAllowNegNumber{Allow Negative Subtraction}
+\newcommand\fcOptDecimal{Decimals:}
+\newcommand\fcOptDecimalNone{none}
+%    \end{macrocode}
+%    \begin{macrocode}
+\newcommand\fcMenuFCMsg{No menu items to display}
+%    \end{macrocode}
+%    Cluster names
+%    \begin{macrocode}
+\newcommand\fcAdditionName{\fcAddition}
+\newcommand\fcSubtractionName{\fcSubtraction}
+\newcommand\fcMultiplicationName{\fcMultiplication}
+\newcommand\fcDivisionName{\fcDivision}
+%    \end{macrocode}
+%    Now for the \textbf{Document JavaScript} for this document
+%    \begin{macrocode}
+\begin{insDLJS*}{fcjs}
+\begin{newsegment}{data}
+var _loadfcjs=true;
+var t, b, o, r, c, oAlert;
+function getFieldObjects()
+{
+    t=this.getField("top");
+    b=this.getField("bottom");
+    o=this.getField("operation");
+    r=this.getField("result");
+    c=this.getField("ChooseOperation");
+    oAlert=this.getField("alertbox");
+    useKeyPad = (this.getField("Enter").display==display.visible);
+}
+var turnoff=false;
+var bUpdateField=true;
+var timedScores=\fcTimedScores;
+var fcAllowNegSub=\fcAllowNegSub;
+var useKeyPad = false;
+var decimalPressed = false;
+var keypadInput=false;
+var operand='a';
+var NumAddCorr=0;
+var NumAddTried=0;
+var NumSubCorr=0;
+var NumSubTried=0;
+var NumMulCorr=0;
+var NumMulTried=0;
+var NumDivCorr=0;
+var NumDivTried=0;
+timelimit=600000;
+var mybegin;
+getFieldObjects();
+var numDecimals=0;
+var addDecT = \fcaddDecT, addDecB = \fcaddDecB;
+var addT_a = Number(\fcAddTParams[0]);
+var addT_b = Number(\fcAddTParams[1]);
+var addB_a = Number(\fcAddBParams[0]);
+var addB_b = Number(\fcAddBParams[1]);
+var subDecT = \fcsubDecT, subDecB = \fcsubDecB;
+var subT_a = Number(\fcSubTParams[0]);
+var subT_b = Number(\fcSubTParams[1]);
+var subB_a = Number(\fcSubBParams[0]);
+var subB_b = Number(\fcSubBParams[1]);
+var mulDecT = \fcmulDecT, mulDecB = \fcmulDecB;
+var mulT_a = Number(\fcMulTParams[0]);
+var mulT_b = Number(\fcMulTParams[1]);
+var mulB_a = Number(\fcMulBParams[0]);
+var mulB_b = Number(\fcMulBParams[1]);
+%    \end{macrocode}
+%   Here, Q corresponds to the quotient, and B corresponds to the divisor
+%    \begin{macrocode}
+var divDecQ = \fcdivDecQ, divDecB = \fcdivDecB;
+var divQ_a = Number(\fcDivQParams[0]);
+var divQ_b = Number(\fcDivQParams[1]);
+var divB_a = Number(\fcDivBParams[0]);
+var divB_b = Number(\fcDivBParams[1]);
+\end{newsegment}
+\begin{newsegment}{updatescore}
+function updatescore(f,t) {
+    // console.println(t);
+     var points=0;
+     if(t<=5) points=6;
+     if((t>5)&&(t<=10)) points=5;
+     if((t>10)&&(t<=15)) points=4;
+     if((t>15)&&(t<=20)) points=3;
+     if((t>20)&&(t<=25)) points=2;
+     if(t>25) points=1;
+     var oField=this.getField(f);
+     if ( oField != null ) {
+        oField.value+=points;
+        this.getField("ScoreTotal").value+=points;
+     }
+}
+function docTimeScores() {
+    app.execDialog(fcTimedScoresDialog);
+}
+var fcTimedScoresDialog =
+{
+    // set a default value for radio button field
+    initialize: function(dialog) {
+    },
+    // when user presses "Ok", this handler will execute first
+    commit: function(dialog) {
+    },
+    // The Dialog Description
+    description:
+    {
+        name: "PDF Flash Cards - Timed Scores",
+        align_children: "align_left",
+        elements:
+        [
+            {
+                type: "view",
+                align_children: "align_left",
+                elements:
+                [
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "instr",
+                                name: \fctInstr
+                            }
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "gap",
+                                width: 10
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "hr01",
+                                char_width: \fctCharWidth,
+                                font: "dialog",
+                                bold: true,
+                                name: \fctTimeElapsed
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "hr02",
+                                font: "dialog",
+                                bold: true,
+                                name: \fctPoints
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "gap",
+                                width: 10
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st11",
+                                char_width: \fctCharWidth,
+                                name: \fctLessThanV
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st12",
+                                name: "   \fctLessThanVPoints"
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "gap",
+                                width: 10
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st21",
+                                char_width: \fctCharWidth,
+                                name: \fctBtwnVAndX
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st22",
+                                name: "   \fctBtwnVAndXPoints"
+                            },
+                        ]
+                    },
+//---
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "gap",
+                                width: 10
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st31",
+                                char_width: \fctCharWidth,
+                                name: \fctBtwnXAndXV
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st32",
+                                name: "   \fctBtwnXAndXVPoints"
+                            },
+                        ]
+                    },
+//---
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "gap",
+                                width: 10
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st41",
+                                char_width: \fctCharWidth,
+                                name: \fctBtwnXVAndXX
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "st42",
+                                name: "   \fctBtwnXVAndXXPoints"
+                            },
+                        ]
+                    },
+                ]
+            },
+//---
+            {
+                type: "view",
+                align_children: "align_row",
+                elements:
+                [
+                    {
+                        type: "gap",
+                        width: 10
+                    },
+                    {
+                        type: "static_text",
+                        item_id: "st51",
+                        char_width: \fctCharWidth,
+                        name: \fctBtwnXXAndXXV
+                    },
+                    {
+                        type: "static_text",
+                        item_id: "st52",
+                        name:  "   \fctBtwnXXAndXXVPoints"
+                    },
+                ]
+            },
+//---
+            {
+                type: "view",
+                align_children: "align_row",
+                elements:
+                [
+                    {
+                        type: "gap",
+                        width: 10
+                    },
+                    {
+                        type: "static_text",
+                        item_id: "st61",
+                        char_width: \fctCharWidth,
+                        name: \fctGtrXXV
+                    },
+                    {
+                        type: "static_text",
+                        item_id: "st62",
+                        name: "   \fctGtrXXVPoints"
+                    },
+                ]
+            },
+//---
+            {
+                type: "view",
+                align_children: "align_row",
+                elements:
+                [
+                    {
+                        alignment: "align_right",
+                        type: "ok",
+                    }
+                ]
+            }
+        ]
+    }
+}
+function validateResult()
+{
+    var oField, MsgFlag, calculation;
+    if (!turnoff && !keypadInput) {
+        MsgFlag=false;
+        this.delay=true;
+        var mynow=new Date();
+        var elapsedtime = (Date.parse(mynow)-Date.parse(mybegin))/1000;
+        var timeelapsed = (elapsedtime>timelimit);
+        switch (operand) {
+        case 'a':
+            oField = this.getField("AddScore2");
+            bUpdateField = ( oField != null );
+            calculation=util.printf("\%."+numDecimals+"f",%
+(t.value+b.value));
+%            calculation=t.value+b.value;
+%            calculation=Number(t.value)+Number(b.value);
+            if(timeelapsed) {
+                if (timedScores) app.alert("\timeUpMsg",3);
+                if (bUpdateField) oField.value=NumAddCorr;
+            } else {
+%                if(Number(event.value)==calculation) {
+                if((1*event.value)==calculation) {
+                    MsgFlag=true;
+                    if ( bUpdateField ) {
+                        oField.value=++NumAddCorr;
+                        updatescore("AddScore5",elapsedtime);
+                    }
+                }
+                else
+                    if ( bUpdateField ) oField.value=NumAddCorr;
+            }
+            oField = this.getField("AddScore3");
+            if (oField != null ) oField.value=++NumAddTried;
+            oField = this.getField("AddScore4");
+            if (oField != null ) oField.value = util.printf("\%.0f",%
+(NumAddCorr/NumAddTried)*100);
+            break;
+        case 's':
+            oField=this.getField("SubScore2");
+            bUpdateField = ( oField != null );
+            calculation=util.printf("\%."+numDecimals+"f",
+                (t.value-b.value));
+%            calculation=t.value-b.value;
+%            calculation=Number(t.value)-Number(b.value);
+            if(timeelapsed) {
+                if (timedScores) app.alert("\timeUpMsg",3);
+                if (bUpdateField) oField.value=NumSubCorr;
+            } else {
+%                if(Number(event.value)==calculation) {
+                if((1*event.value)==calculation) {
+                    MsgFlag=true;
+                    if ( bUpdateField ) {
+                        oField.value=++NumSubCorr;
+                        updatescore("SubScore5",elapsedtime);
+                    }
+                } else
+                    if ( bUpdateField ) oField.value=NumSubCorr;
+            }
+            oField=this.getField("SubScore3");
+            if (oField != null) oField.value=++NumSubTried;
+            oField=this.getField("SubScore4");
+            if (oField != null) oField.value=util.printf("\%.0f",%
+(NumSubCorr/NumSubTried)*100);
+            break;
+        case 'm':
+            oField=this.getField("MulScore2");
+            bUpdateField = ( oField != null );
+            calculation=util.printf("\%."+numDecimals+"f",%
+(t.value*b.value));
+            if(timeelapsed) {
+                if (timedScores) app.alert("\timeUpMsg",3);
+                if (bUpdateField) oField.value=NumMulCorr;
+            } else {
+                if((1*event.value)==calculation) {
+%                if(Number(event.value)==Number(calculation)) {
+                MsgFlag=true;
+                if (bUpdateField) {
+                    oField.value=++NumMulCorr;
+                    updatescore("MulScore5",elapsedtime);
+                }
+            } else
+                if (bUpdateField) oField.value=NumMulCorr;
+            }
+            oField=this.getField("MulScore3");
+            if (oField != null)  oField.value=++NumMulTried;
+            oField=this.getField("MulScore4");
+            if (oField != null) oField.value=util.printf("\%.0f",%
+(NumMulCorr/NumMulTried)*100);
+            break;
+        case 'd':
+            oField=this.getField("DivScore2");
+            bUpdateField = ( oField != null );
+%            calculation=t.value/b.value;
+            calculation=util.printf("\%."+numDecimals+"f",%
+t.value/b.value);
+             if(timeelapsed) {
+                 if (timedScores) app.alert("\timeUpMsg",3);
+                 if (bUpdateField) oField.value=NumDivCorr;
+             } else {
+%                if(Number(event.value)==Number(calculation)) {
+                if((1*event.value)==calculation) {
+                MsgFlag=true;
+                if (bUpdateField) {
+                    oField.value=++NumDivCorr;
+                    updatescore("DivScore5",elapsedtime);
+                }
+             } else
+                 if ( bUpdateField ) oField.value=NumDivCorr;
+             }
+             oField = this.getField("DivScore3");
+             if (oField != null) oField.value=++NumDivTried;
+             oField = this.getField("DivScore4");
+             if (oField != null) oField.value=util.printf("\%.0f",%
+(NumDivCorr/NumDivTried)*100);
+             break;
+        }
+        if(!timeelapsed) {
+            if(MsgFlag) {
+                oAlert.textColor=color.blue;
+                oAlert.value="\rightMsg";
+            } else {
+                oAlert.textColor=color.red;
+                oAlert.value="\wrongMsg";
+            }
+        }
+        this.getField("ansregion").value=calculation;
+        this.getField("NewProblem").setFocus() ;
+        this.delay=false;
+    }
+}
+function startAgain() {
+    getFieldObjects();
+    turnoff=true;
+    this.resetForm();
+%    \end{macrocode}
+%    (2016/12/10) Added \texttt{timelimit} to list of variables to reset
+%    \changes{v1.0e}{2016/12/10}{Added \string\texttt{timelimit} to list of variables to reset}
+%    \begin{macrocode}
+    timelimit=600000;
+    event.rc=false;
+    operand='+';
+    NumAddCorr=0;
+    NumAddTried=0;
+    NumSubCorr=0;
+    NumSubTried=0;
+    NumMulCorr=0;
+    NumMulTried=0;
+    NumDivCorr=0;
+    NumDivTried=0;
+}
+function newCard() {
+    turnoff=true;
+    this.resetForm(["result","top","bottom","ansregion","alertbox"]);
+    operand = c.value;
+    switch (operand)
+    {
+        case 'a':
+        {
+             o.value='+'; // addDecT
+             numDecimals = Math.max(addDecT,addDecB);
+             var topTemplate = "\%."+addDecT+"f";
+             var botTemplate = "\%."+addDecB+"f";
+             var matchTemplate = "\%."+ numDecimals +"f";
+             var m=util.printf(topTemplate,%
+(addT_b-addT_a)*Math.random()+addT_a);
+             var n=util.printf(botTemplate,%
+(addB_b-addB_a)*Math.random()+addB_a);
+             m=util.printf(matchTemplate,m);
+             n=util.printf(matchTemplate,n);
+             var nWidth=(m.length < n.length) ? n.length : m.length;
+             var commonTemplate = "\%"+nWidth+"."+numDecimals+"f";
+             t.value=util.printf(commonTemplate,m);
+             b.value=util.printf(commonTemplate,n);
+             break;
+        }
+        case 's':
+        {
+            o.value="-";
+            numDecimals = Math.max(subDecT,subDecB);
+            var topTemplate = "\%."+subDecT+"f";
+            var botTemplate = "\%."+subDecB+"f";
+            var matchTemplate = "\%."+ numDecimals +"f";
+            var m=util.printf(topTemplate,%
+(subT_b-subT_a)*Math.random()+subT_a);
+            var n=util.printf(botTemplate,%
+(subB_b-subB_a)*Math.random()+subB_a);
+            m=util.printf(matchTemplate,m);
+            n=util.printf(matchTemplate,n);
+            var nWidth=(m.length < n.length) ? n.length : m.length;
+            var commonTemplate = "\%"+nWidth+"."+numDecimals+"f";
+            var bSwitch=( (!fcAllowNegSub) && (n-m>0) );
+            t.value=util.printf(commonTemplate,(bSwitch)?n:m);
+            b.value=util.printf(commonTemplate,(bSwitch)?m:n);
+            break;
+        }
+        case 'm':
+        {
+            o.value='x';
+            numDecimals=Math.max(mulDecT,mulDecB);
+            var topTemplate = "\%."+mulDecT+"f";
+            var botTemplate = "\%."+mulDecB+"f";
+            var matchTemplate = "\%."+ numDecimals +"f";
+            var m=util.printf(topTemplate,%
+(mulT_b-mulT_a)*Math.random()+mulT_a);
+            var n=util.printf(botTemplate,%
+(mulB_b-mulB_a)*Math.random()+mulB_a);
+            m=util.printf(matchTemplate,m);
+            n=util.printf(matchTemplate,n);
+            var nWidth=(m.length < n.length) ? n.length : m.length;
+            var commonTemplate = "\%"+nWidth+"."+numDecimals+"f";
+            t.value=util.printf(commonTemplate,m);
+            b.value=util.printf(commonTemplate,n);
+            numDecimals = mulDecT + mulDecB;
+            break;
+        }
+        case 'd':
+        {
+            o.value='\string\367'
+            numDecimals=divDecQ+divDecB;
+%            numDecimals=Math.max(divDecQ,divDecB);
+            var topTemplate = "\%."+divDecQ+"f";
+            var botTemplate = "\%."+divDecB+"f";
+            var matchTemplate = "\%."+ numDecimals +"f";
+            var n,m;
+            var quotient=util.printf(topTemplate,%
+divQ_a + (divQ_b-divQ_a)*Math.random());
+            for(n=util.printf(botTemplate,%
+divB_a + (divB_b-divB_a)*Math.random());
+                n==0; n=util.printf("\%.0f",%
+divB_a + (divB_b-divB_a)*Math.random()));
+            m=util.printf(matchTemplate,quotient*n);
+            n=util.printf(matchTemplate,n);
+            var nWidth=(m.length < n.length) ? n.length : m.length;
+            var commonTemplate = "\%"+nWidth+"."+numDecimals+"f";
+            t.value=util.printf(commonTemplate,m);
+            b.value=util.printf(commonTemplate,n);
+            numDecimals = divDecQ;
+            break;
+        }
+    }
+    // console.println("operation = " + o.value);
+    turnoff=false;
+    if (!useKeyPad) r.readonly=false;
+    mybegin=new Date();
+    try{ r.setFocus(); } catch(e) {}
+}
+function addDigit(n) {
+    if (oAlert.value != "") return;
+    switch (n) {
+        case "Enter":
+            var tmp_value=r.valueAsString;
+            this.resetForm(["result"]);
+            keypadInput=false;
+            r.value = tmp_value;
+            break;
+        case "Back":
+            keypadInput=true;
+            var tmp_value=r.valueAsString;
+            if (tmp_value != "")
+                r.value = tmp_value.substring(0,tmp_value.length-1);
+            break;
+        case "Dec":
+            keypadInput=true;
+            var v=r.valueAsString;
+            v = v + ".";
+            r.value = v;
+            break;
+        case "Minus":
+            keypadInput=true;
+            var v=r.valueAsString;
+            if (r.value < 0 ) {
+                v = String(Math.abs(v));
+            } else v = "-" + v;
+            r.value = v;
+            break;
+        default:
+            keypadInput=true;
+            v=r.valueAsString;
+            v = v + String(n);
+            r.value = v;
+    }
+}
+function ToggleKeyPad() {
+    useKeyPad = !useKeyPad;
+    if ( typeof fcMenu == "object") {
+        for (var i=0; i<fcMenu.length; i++) {
+            if (fcMenu[i].cReturn=="1") fcMenu[i].bMarked=useKeyPad;
+            if (fcMenu[i].cReturn=="3") fcMenu[i].bEnabled=useKeyPad;
+            if (fcMenu[i].cReturn=="4") fcMenu[i].bEnabled=useKeyPad;
+        }
+    }
+    this.delay=true;
+    if (useKeyPad) {
+        for (var i=0; i<= 9; i++)
+            this.getField("num"+i).display=display.visible;
+        this.getField("Back").display=display.visible;
+        this.getField("Enter").display=display.visible;
+        this.getField("Dec").display=display.visible;
+        this.getField("Minus").display=display.visible;
+        this.getField("result").readonly=true;
+    } else {
+        for (var i=0; i<= 9; i++)
+            this.getField("num"+i).display=display.hidden;
+        this.getField("Back").display=display.hidden;
+        this.getField("Enter").display=display.hidden;
+        this.getField("Dec").display=display.hidden;
+        this.getField("Minus").display=display.hidden;
+        this.getField("result").readonly=false;
+    }
+    this.delay=false;
+    getFieldObjects();
+
+}
+\end{newsegment}
+\begin{newsegment}{Custom Keystroke for Numbers}
+function fcNumber_Keystroke(nDec,sepStyle,negStyle,currStyle,
+    strCurrency,bCurrencyPrepend) {
+    if (turnoff) return;
+    var v = t.valueAsString;
+    if ( v == "")
+        { event.rc=false; this.resetForm(["result"]); }
+    else
+        if ( event.value != "-" && event.value != ".")
+            AFNumber_Keystroke(nDec,sepStyle,negStyle,currStyle,
+                strCurrency,bCurrencyPrepend);
+}
+function fcNumber_Format(nDec,sepStyle,negStyle,currStyle,
+    strCurrency,bCurrencyPrepend) {
+    if ( !useKeyPad && event.value != "-" && event.value != ".")
+        AFNumber_Format(nDec,sepStyle,negStyle,currStyle,
+            strCurrency,bCurrencyPrepend);
+}
+\end{newsegment}
+\begin{newsegment}{Touch or Mouse Friendly}
+var aKPFieldNames=new Array ("num0",
+    "num1","num4","num7","Dec","Enter",
+    "num2","num5","num8","num3","num6","num9",
+    "Back","Minus");
+var _tDlt=\amtChngMouToTou;
+var bTouchFriendly=false;
+function makeTouchFriendly() {
+    if (!useKeyPad||bTouchFriendly) return;
+    bTouchFriendly=true;
+    var indexTouch=-1, indexMouse;
+    if ( typeof fcMenu == "object") {	
+        for ( var i=0; i<fcMenu.length; i++) {
+            if (fcMenu[i].cReturn=="3") indexTouch=i;
+            if (fcMenu[i].cReturn=="4") indexMouse=i;
+        }
+        if (indexTouch!=-1) {
+            fcMenu[indexTouch].bMarked=bTouchFriendly;
+            fcMenu[indexMouse].bMarked=!bTouchFriendly;
+        }
+    }
+    var r;
+    this.delay=true;
+    var TKP=this.getField("toggleKeyPadBtn");
+    var bMovTKP=(TKP!=null);
+    if (bMovTKP) {
+        var tkpRect=TKP.rect;
+        tkpRect=[tkpRect[0]+2*_tDlt,tkpRect[1]+%
+4*_tDlt,tkpRect[2]+2*_tDlt,tkpRect[3]+4*_tDlt];
+        TKP.rect=tkpRect;
+    }
+    for (var i=0; i<aKPFieldNames.length; i++) {
+        f=this.getField(aKPFieldNames[i]);
+        r=f.rect;
+        switch(i) {
+            case 0:
+                r=[r[0],r[1]+_tDlt,r[2]+2*_tDlt,r[3]];
+                break;
+            case 1: // num1 left edge
+                r=[r[0],r[1]+2*_tDlt,r[2]+_tDlt,r[3]+_tDlt];
+                break;
+            case 2: // num4 left edge
+                r=[r[0],r[1]+3*_tDlt,r[2]+_tDlt,r[3]+2*_tDlt];
+                break;
+            case 3: // num7 left edge
+                r=[r[0],r[1]+4*_tDlt,r[2]+_tDlt,r[3]+3*_tDlt];
+                break;
+            case 4: // Dec
+                r=[r[0]+2*_tDlt,r[1]+_tDlt,r[2]+3*_tDlt,r[3]];
+                break;
+            case 5: // Enter lower edge
+                r=[r[0]+3*_tDlt,r[1]+2*_tDlt,r[2]+4*_tDlt,r[3]];
+                break;
+            case 6: // num2
+                r=[r[0]+_tDlt,r[1]+2*_tDlt,r[2]+2*_tDlt,r[3]+_tDlt];
+                break;
+            case 7: // num5
+                r=[r[0]+_tDlt,r[1]+3*_tDlt,r[2]+2*_tDlt,r[3]+2*_tDlt];
+                break;
+            case 8: // num8
+                r=[r[0]+_tDlt,r[1]+4*_tDlt,r[2]+2*_tDlt,r[3]+3*_tDlt];
+                break;
+            case 9: // num2
+                r=[r[0]+2*_tDlt,r[1]+2*_tDlt,r[2]+3*_tDlt,r[3]+_tDlt];
+                break;
+            case 10:  // num6
+                r=[r[0]+2*_tDlt,r[1]+3*_tDlt,r[2]+3*_tDlt,r[3]+2*_tDlt];
+                break;
+            case 11: // num9
+                r=[r[0]+2*_tDlt,r[1]+4*_tDlt,r[2]+3*_tDlt,r[3]+3*_tDlt];
+                break;
+            case 12: // Back (right edge)
+                r=[r[0]+3*_tDlt,r[1]+3*_tDlt,r[2]+4*_tDlt,r[3]+2*_tDlt];
+                break;
+            case 13: // Minus (right edge)
+                r=[r[0]+3*_tDlt,r[1]+4*_tDlt,r[2]+4*_tDlt,r[3]+3*_tDlt];
+                break;
+        }
+        f.rect=r;
+    }
+    this.delay=false;
+}
+function makeMouseFriendly() {
+    if (!useKeyPad||!bTouchFriendly) return;
+    bTouchFriendly=false;
+    var indexTouch=-1, indexMouse;
+    if ( typeof fcMenu == "object") {
+        for ( var i=0; i<fcMenu.length; i++) {
+            if (fcMenu[i].cReturn=="3") indexTouch=i;
+            if (fcMenu[i].cReturn=="4") indexMouse=i;
+        }
+        if (indexTouch != -1) {
+            fcMenu[indexTouch].bMarked=bTouchFriendly;
+            fcMenu[indexMouse].bMarked=!bTouchFriendly;
+        }
+    }
+    var r;
+    this.delay=true;
+    var TKP=this.getField("toggleKeyPadBtn");
+    var bMovTKP=(TKP!=null);
+    if (bMovTKP) {
+        var tkpRect=TKP.rect;
+        tkpRect=[tkpRect[0]-2*_tDlt,tkpRect[1]-%
+4*_tDlt,tkpRect[2]-2*_tDlt,tkpRect[3]-4*_tDlt];
+        TKP.rect=tkpRect;
+    }
+    for (var i=0; i<aKPFieldNames.length; i++) {
+        f=this.getField(aKPFieldNames[i]);
+        r=f.rect;
+        switch(i) {
+            case 0: // 0
+                r=[r[0],r[1]-_tDlt,r[2]-2*_tDlt,r[3]];
+                break;
+            case 1: // num1 left edge
+                r=[r[0],r[1]-2*_tDlt,r[2]-_tDlt,r[3]-_tDlt];
+                break;
+            case 2: // num4 left edge
+                r=[r[0],r[1]-3*_tDlt,r[2]-_tDlt,r[3]-2*_tDlt];
+                break;
+            case 3: // num7 left edge
+                r=[r[0],r[1]-4*_tDlt,r[2]-_tDlt,r[3]-3*_tDlt];
+                break;
+            case 4:  // Dec
+                r=[r[0]-2*_tDlt,r[1]-_tDlt,r[2]-3*_tDlt,r[3]];
+                break;
+            case 5: // Enter lower edge
+                r=[r[0]-3*_tDlt,r[1]-2*_tDlt,r[2]-4*_tDlt,r[3]];
+                break;
+            case 6: // num2
+                r=[r[0]-_tDlt,r[1]-2*_tDlt,r[2]-2*_tDlt,r[3]-_tDlt];
+                break;
+            case 7: // num5
+                r=[r[0]-_tDlt,r[1]-3*_tDlt,r[2]-2*_tDlt,r[3]-2*_tDlt];
+                break;
+            case 8: // num8
+                r=[r[0]-_tDlt,r[1]-4*_tDlt,r[2]-2*_tDlt,r[3]-3*_tDlt];
+                break;
+            case 9: // num2
+                r=[r[0]-2*_tDlt,r[1]-2*_tDlt,r[2]-3*_tDlt,r[3]-_tDlt];
+                break;
+            case 10: // num6
+                r=[r[0]-2*_tDlt,r[1]-3*_tDlt,r[2]-3*_tDlt,r[3]-2*_tDlt];
+                break;
+            case 11:  // num9
+                r=[r[0]-2*_tDlt,r[1]-4*_tDlt,r[2]-3*_tDlt,r[3]-3*_tDlt];
+                break;
+            case 12:   // Back (right edge)
+                r=[r[0]-3*_tDlt,r[1]-3*_tDlt,r[2]-4*_tDlt,r[3]-2*_tDlt];
+                break;
+            case 13: // Minus (right edge)
+                r=[r[0]-3*_tDlt,r[1]-4*_tDlt,r[2]-4*_tDlt,r[3]-3*_tDlt];
+                break;
+        }
+        f.rect=r;
+    }
+    this.delay=false;
+%    getFieldObjects();
+}
+\end{newsegment}
+\begin{newsegment}{Option Dialog Box}
+var fcDialog =
+{
+    // set a default value for radio button field
+    initialize: function(dialog) {
+        var addDT="AT0" + String(addDecT);
+        var addDB="AB0" + String(addDecB);
+        var subDT="ST0" + String(subDecT);
+        var subDB="SB0" + String(subDecB);
+        var mulDT="MT0" + String(mulDecT);
+        var mulDB="MB0" + String(mulDecB);
+        var divDQ="DQ0" + String(divDecQ);
+        var divDB="DB0" + String(divDecB);
+        var radioString = addDT +": true, " + addDB +": true, "
+            + subDT + ": true, " + subDB + ": true, "
+            + mulDT + ": true, " + mulDB + ": true, "
+            + divDQ + ": true, " + divDB + ": true ";
+//console.println("radioString="+radioString);
+        eval("dialog.load({" + radioString + "})");
+        dialog.load({
+            // Populate the addition first
+            "aT_a": util.printf("\%.0f",addT_a),
+            "aT_b": util.printf("\%.0f",addT_b),
+            "aB_a": util.printf("\%.0f",addB_a),
+            "aB_b": util.printf("\%.0f",addB_b),
+            // subtraction
+            "sT_a": util.printf("\%.0f",subT_a),
+            "sT_b": util.printf("\%.0f",subT_b),
+            "sB_a": util.printf("\%.0f",subB_a),
+            "sB_b": util.printf("\%.0f",subB_b),
+            "nsCB": fcAllowNegSub,
+            // multiplication
+            "mT_a": util.printf("\%.0f",mulT_a),
+            "mT_b": util.printf("\%.0f",mulT_b),
+            "mB_a": util.printf("\%.0f",mulB_a),
+            "mB_b": util.printf("\%.0f",mulB_b),
+            // division
+            "dQ_a": util.printf("\%.0f",divQ_a),
+            "dQ_b": util.printf("\%.0f",divQ_b),
+            "dB_a": util.printf("\%.0f",divB_a),
+            "dB_b": util.printf("\%.0f",divB_b)
+        });
+    },
+    // when user presses "Ok", this handler will execute first
+    commit: function(dialog) {
+        var results = dialog.store();
+        addT_a = Math.round(results["aT_a"]);
+        addT_b = Math.round(results["aT_b"]);
+        addB_a = Math.round(results["aB_a"]);
+        addB_b = Math.round(results["aB_b"]);
+        for (var i=0; i < 3; i++)
+            if (results["AT0"+i]) { addDecT = i; break; }
+        for (var i=0; i < 3; i++)
+            if (results["AB0"+i]) { addDecB = i; break; }
+        // subtraction
+        subT_a = Math.round(results["sT_a"]);
+        subT_b = Math.round(results["sT_b"]);
+        subB_a = Math.round(results["sB_a"]);
+        subB_b = Math.round(results["sB_b"]);
+        for (var i=0; i < 3; i++)
+            if (results["ST0"+i]) { subDecT = i; break; }
+        for (var i=0; i < 3; i++)
+            if (results["SB0"+i]) { subDecB = i; break; }
+        fcAllowNegSub = results["nsCB"];
+        // multiplication
+        mulT_a = Math.round(results["mT_a"]);
+        mulT_b = Math.round(results["mT_b"]);
+        mulB_a = Math.round(results["mB_a"]);
+        mulB_b = Math.round(results["mB_b"]);
+        for (var i=0; i < 3; i++)
+            if (results["MT0"+i]) { mulDecT = i; break; }
+        for (var i=0; i < 3; i++)
+            if (results["MB0"+i]) { mulDecB = i; break; }
+        // division
+        divQ_a = Math.round(results["dQ_a"]);
+        divQ_b = Math.round(results["dQ_b"]);
+        divB_a = Math.round(results["dB_a"]);
+        divB_b = Math.round(results["dB_b"]);
+        for (var i=0; i < 3; i++)
+            if (results["DQ0"+i]) { divDecQ = i; break; }
+        for (var i=0; i < 3; i++)
+            if (results["DB0"+i]) { divDecB = i; break; }
+    },
+    // The Dialog Description
+    description:
+    {
+        name: "PDF Flash Cards - Options",
+        align_children: "align_left",
+        elements:
+        [
+\bFCa
+            {  // The Addition Cluster
+                type: "cluster",
+                name: "\fcAdditionName",
+                item_id: "add",
+                align_children: "align_left",
+                elements:
+                [
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "addRngT",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptTopRange"
+                            },
+                            {
+                                item_id: "aT_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "addRngToT",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "aT_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "aDcT",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AT00",
+                                        group_id: "AddT",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AT01",
+                                        group_id: "AddT",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AT02",
+                                        group_id: "AddT",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "addRngB",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptBottomRange"
+                            },
+                            {
+                                item_id: "aB_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "addRngToB",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "aB_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "aDcB",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AB00",
+                                        group_id: "AddB",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AB01",
+                                        group_id: "AddB",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "AB02",
+                                        group_id: "AddB",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    }
+                ]
+            }, // End Addition Cluster
+\eFCa
+\bFCs
+            {  // The Subtraction Cluster
+                type: "cluster",
+                name: "\fcSubtractionName",
+                item_id: "sub",
+                align_children: "align_left",
+                elements:
+                [
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "subRngT",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptTopRange"
+                            },
+                            {
+                                item_id: "sT_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "subRngToT",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "sT_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "sDT",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "ST00",
+                                        group_id: "SubT",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "ST01",
+                                        group_id: "SubT",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "ST02",
+                                        group_id: "SubT",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "subRngB",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptBottomRange"
+                            },
+                            {
+                                item_id: "sB_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "subRngToB",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "sB_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "sDcB",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "SB00",
+                                        group_id: "SubB",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "SB01",
+                                        group_id: "SubB",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "SB02",
+                                        group_id: "SubB",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+//--
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "nSub",
+                                name: "\fcOptAllowNegNumber"
+                            },
+                            {
+                                type:"check_box",
+                                item_id: "nsCB"
+                            }
+                        ]
+                    }
+//--
+                ]
+            }, // End Subtraction Cluster
+\eFCs
+\bFCm
+            {  // The Multiplication Cluster
+                type: "cluster",
+                name: "\fcMultiplicationName",
+                item_id: "mul",
+                align_children: "align_left",
+                elements:
+                [
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "mulRngT",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptTopRange"
+                            },
+                            {
+                                item_id: "mT_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "mulRngToT",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "mT_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "mDcT",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MT00",
+                                        group_id: "MulT",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MT01",
+                                        group_id: "MulT",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MT02",
+                                        group_id: "MulT",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "mulRngB",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptBottomRange"
+                            },
+                            {
+                                item_id: "mB_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "mulRngToB",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "mB_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "mDcB",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MB00",
+                                        group_id: "MulB",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MB01",
+                                        group_id: "MulB",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "MB02",
+                                        group_id: "MulB",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    }
+                ]
+            }, // End Multiplication Cluster
+\eFCm
+\bFCd
+            {  // The Division Cluster
+                type: "cluster",
+                name: "\fcDivisionName",
+                item_id: "div",
+                align_children: "align_left",
+                elements:
+                [
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "divRngQ",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptTopRangeDiv"
+                            },
+                            {
+                                item_id: "dQ_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "divRngToT",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "dQ_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "dDcQ",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DQ00",
+                                        group_id: "DivQ",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DQ01",
+                                        group_id: "DivQ",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DQ02",
+                                        group_id: "DivQ",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        type: "view",
+                        align_children: "align_row",
+                        elements:
+                        [
+                            {
+                                type: "static_text",
+                                item_id: "divRngB",
+                                width: \fcOptTextWidth,
+                                name: "\fcOptBottomRangeDiv"
+                            },
+                            {
+                                item_id: "dB_a",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "static_text",
+                                item_id: "divRngToB",
+                                name: "\fcOptTo"
+                            },
+                            {
+                                item_id: "dB_b",
+                                type: "edit_text",
+                                alignment: "align_fill",
+                                width: 40,
+                                height: 20
+                            },
+                            {
+                                type: "view",
+                                align_children: "align_distribute",
+                                elements:
+                                [
+                                    {
+                                        type: "static_text",
+                                        item_id: "dDcB",
+                                        name: "\fcOptDecimal"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DB00",
+                                        group_id: "DivB",
+                                        name: "\fcOptDecimalNone"
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DB01",
+                                        group_id: "DivB",
+                                        name: "1",
+                                    },
+                                    {
+                                        type: "radio",
+                                        item_id: "DB02",
+                                        group_id: "DivB",
+                                        name: "2",
+                                    },
+                                ]
+                            },
+                        ]
+                    }
+                ]
+            }, // End Division Cluster
+\eFCd
+            {
+                type: "view",
+                align_children: "align_row",
+                elements:
+                [
+                    {
+                        alignment: "align_right",
+                        type: "ok_cancel",
+                    }
+                ]
+            }
+        ]
+    }
+}
+\end{newsegment}
+\end{insDLJS*}
+\begin{insDLJS}[fcMenu]{fcmd}{Menu Data}
+\fcMenu
+function processFcMenu() {
+    if ( (typeof fcMenu == "object") && fcMenu.length!=0 ) {
+        var cChoice = \popUpMenu(fcMenu);
+        if ( cChoice != null ) {
+            switch(cChoice) {
+                case "0": app.execDialog(fcDialog);
+                        break;
+                case "1": ToggleKeyPad();
+                        break;
+                case "2": app.execMenuItem("GeneralInfo");
+                        break;
+                case "3": makeTouchFriendly();
+                        break;
+                case "4": makeMouseFriendly();
+                        break;
+                default:
+                    if ( typeof processCustomFcMenu == "function" )
+                        processCustomFcMenu(cChoice);
+                        return;
+            }
+        }
+    } else app.alert("\fcMenuFCMsg");
+}
+\end{insDLJS}
+%    \end{macrocode}
+%    \begin{macrocode}
+\InputIfFileExists{fc_custom.def}{}{}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}

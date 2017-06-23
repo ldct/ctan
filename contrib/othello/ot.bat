@@ -1,0 +1,1 @@
+mf286  &plain \mode=hplaser; input ot1bla15gftopk ot1bla15.300mf286  &plain \mode=hplaser; input ot2bla15gftopk ot2bla15.300mf286  &plain \mode=hplaser; input ot1whi15gftopk ot1whi15.300mf286  &plain \mode=hplaser; input ot2whi15gftopk ot2whi15.300mf286  &plain \mode=hplaser; input ot15gftopk ot15.300

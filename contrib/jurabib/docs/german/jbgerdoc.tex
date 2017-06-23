@@ -1,0 +1,2422 @@
+\documentclass[a4paper]{ltxdoc}
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{ae}
+\usepackage[commabeforerest,titleformat=commasep]{jurabib}
+\usepackage{german}
+\interfootnotelinepenalty=10000
+\raggedbottom
+\newif\ifHtml
+\newcommand{\mymarginpar}[1]{\marginpar{\raggedleft\textsf{#1}}}
+\newcommand{\NEW}[1]{\marginpar{\raggedleft\textsf{#1~{\large NEU\,!}}}}
+\newcommand{\CH} [1]{\marginpar{\raggedleft\textsf{#1~{\large ÄNDERUNG\,!}}}}
+\newcommand{\REM}[1]{\marginpar{\raggedleft\textsf{#1~{\large ENTFERNT\,!}}}}
+\makeatletter
+ \@ifundefined{pdfoutput}{%
+   \let\pdfoutput\@undefined
+   \ExecuteOptions{dvips}%
+ }{%
+   \ifcase\pdfoutput
+   \let\pdfoutput\@undefined
+   \ExecuteOptions{dvips}%
+   \else
+       \usepackage[pdftex,colorlinks=true]{hyperref}%
+       \hypersetup{%
+         pdftitle={Documentation for jurabib package},%
+         pdfauthor={Jens Berger},%
+   }%
+   \fi
+ }%
+\makeatother \pagestyle{headings}
+\providecommand\mymarg[1]{{\unskip\ttfamily\char`\{}{\ttfamily#1}{\ttfamily\char`\}}}
+\newcommand\bibentry[1]{\par\medskip{\renewcommand\jbauthorfont{\textbf}\renewcommand\jbauthorfnfont{\textbf}\noindent\qquad\fullcite{#1}}\par\medskip}
+\AtEndDocument{\bibliography{jbtest,jbtesthu}}
+\renewcommand{\contentsname}{Inhalt}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand\href[2]{#2}
+\providecommand\texorpdfstring[2]{#1}
+\newenvironment{bibexample}{%
+      \begin{description}%
+           \setlength{\itemindent}{-2.5em}
+           \setlength{\leftmargin}{2.5em}
+      }{\end{description}}
+\newenvironment{Options}{\begin{list}{}{%
+   \renewcommand{\makelabel}[1]{\texttt{##1}\hfill}%
+   \setlength{\itemsep}{-.5\parsep}
+   \settowidth{\labelwidth}{\texttt{xxx\space}}%
+   \setlength{\leftmargin}{\labelwidth}%
+   \addtolength{\leftmargin}{\labelsep}}%
+}{\end{list}}
+\def\jbfileversion{v0.6}
+\def\jbfiledate{\today}
+\title{Das \textsf{jurabib}-Paket}
+\author{{\Large Jens Berger}\\
+        \href{mailto:jb@jurabib.org}{\texttt{jb@jurabib.org}}\\[1.8ex]
+        {\small Stefan Ulrich}}
+\date{\jbfiledate \qquad \textsf{\jbfileversion}\\[1ex]
+  {\footnotesize CTAN:
+   \href{ftp://ftp.dante.de/tex-archive/macros/latex/contrib/supported/jurabib/}%
+  {\texttt{macros/latex/contrib/supported/jurabib/}}}%
+}%
+\begin{document}
+   \ifHtml
+      \renewcommand{\href}[2]{\HCode{<a href=#1>}#2\HCode{</a>}}
+      \makeatletter
+      \let\DescribeMacro\@gobble
+      \let\NEW\@gobble
+      \let\CH\@gobble
+      \let\REM\@gobble
+      \let\mymarginpar\@gobble
+      \let\marginpar\@gobble
+      \makeatother
+   \fi
+
+\maketitle
+\begin{abstract}
+\noindent Dieses Paket ermöglicht die automatisierte Erstellung in der
+Rechtswissenschaft und in den Geisteswissenschaften üblicher Zitate mittels
+\BibTeX. Es stellt Befehle zur Verfügung, die es Juristen ermöglichen, Bearbeiter in
+Kommentaren komfortabel anzugeben. Desweiteren wird eine vereinfachte
+Formatierung sowohl der Zitate als auch der Einträge im Literaturverzeichnis
+unterstützt. Außerdem ist es möglich, den (Kurz)Titel eines Werkes erst im
+Zitat erscheinen zu lassen, wenn ein Autor mehrfach mit verschiedenen Werken
+zitiert wurde. Die Verwendung eines Vollzitates, welches identisch mit dem
+Eintrag im Literaturverzeichnis ist, wird ebenfalls unterstützt. Es sind
+diverse Optionen verfügbar, die insbesondere für Nicht-Juristen interessant
+sind -- so z.\,B. die Möglichkeit, verschieden ausführliche Wiederholungszitate
+ausgeben zu lassen. Desweiteren läßt sich die Formatierung von Namen und
+Vornamen der Autoren bezüglich der Reihenfolge sehr einfach verändern. Es sind
+Querverweise auf andere Fußnoten möglich. Eine sprachspezifische Behandlung von
+Literatureinträgen ist über das \texttt{language}-Feld zugänglich.
+\end{abstract}
+
+\tableofcontents
+
+\section{Einleitung}\setcounter{page}{1}
+
+Bislang gab es für Juristen als Unterstützung der juristischen Zitierweise nur die
+Umgebung \texttt{jurabibliography} aus \textsf{jura.cls}. Diese ist jedoch
+nicht auf eine Zusammenarbeit mit \BibTeX{} ausgelegt. Dieses Problem wird von
+\textsf{jurabib.sty} behoben.
+
+\textsf{jurabib.sty} definiert \cs{[foot]cite} so (um), daß es nun zwei
+optionale Argumente besitzt, so daß die Angabe eines evtl. Bearbeiters über
+dieses zweite optionale Argument erfolgen kann. Außerdem werden von den
+dazugehörigen \BibTeX-Stilen (\texttt{jurabib.bst}, \texttt{jurunsrt.bst},
+\texttt{jureco.bst} und \texttt{jox.bst})
+Funktionen bereitgestellt, die es ermöglichen, daß
+\begin{enumerate}
+\item das Paket selbständig die Nachnamen der Autoren erkennt und daraus die
+      übliche Kurzform für das Zitat generiert.
+\item für Zitate aus Zeitschriften und Periodika zudem automatisch das
+      übliche Kürzel aus Zeitschriftentitel und Jahr generiert wird.
+\item in der \texttt{.bib}-Datei trotzdem eine explizite Angabe der zu
+      verwendenden Abkürzung sowohl des Autorennamens als auch des
+      Titels gemacht werden kann.
+\item ein Kurztitel erst dann im Zitat erscheint, wenn der Autor mit mehr als
+      einem Werk zitiert wurde.
+\end{enumerate}
+Alle Funktionen werden \emph{ausschließlich} von o.g. \BibTeX-Stilen unterstützt.
+
+\section{Startvorbereitungen}
+
+Nachdem Sie \texttt{jurabib.ins} mit \LaTeX{} bearbeitet haben, entstehen im
+wesentlichen folgende Dateien:
+
+\begin{itemize}
+ \item \texttt{jurabib.sty}
+ \item \texttt{jurabib.bst}
+ \item \texttt{jureco.bst}
+ \item \texttt{jurunsrt.bst}
+ \item \texttt{jox.bst}
+ \item \texttt{jbtesthu.bib}
+ \item \texttt{jbtest.bib}
+ \item \texttt{jurabib.cfg}
+ \item diverse \texttt{.ldf} Dateien
+ \item diverse \texttt{jbtest*.tex} Dateien
+\end{itemize}
+In einem TDS-konformen \TeX-System sollten \texttt{.sty}-Dateien und
+\texttt{.ldf}-Dateien in \texttt{\slash [local]texmf\slash tex\slash
+latex\slash jurabib} liegen, die \texttt{.bst}-Datei in \texttt{\slash
+[local]texmf\slash bibtex\slash bst\slash jurabib} und \texttt{.bib}-Dateien in
+\texttt{\slash [local]texmf\slash bibtex\slash bib\slash jurabib}. Je nach
+verwendetem System kann es erforderlich sein, eine eventuell vorhandene
+"`Filename Database"' zu aktualisieren. Wenn Sie teTeX verwenden, müssen Sie
+\texttt{texhash}, bei MiKTeX \texttt{initexmf -u} oder die jeweiligen
+graphischen Pendants benutzen. Alle genannten Dateien können auch im aktuellen
+Arbeitsverzeichnis liegen. Die Dateien \texttt{jbtest.tex} und
+\texttt{jbtest.bib} sollen die Verwendung des \textsf{jurabib}-Paketes
+demonstrieren.
+
+\texttt{jbtestbt.tex} dient der Demonstration von \textsf{jurabib.sty} mit
+\textsf{bibtopic.sty} zur Erzeugung gegliederter Literaturverzeichnisse.
+
+\texttt{jbtestmb.tex} dient der Demonstration von \textsf{jurabib.sty} mit
+\textsf{multibib.sty} zur Erzeugung mehrerer Literaturverzeichnisse.
+
+\texttt{jbtestcb.tex} dient der Demonstration von \textsf{jurabib.sty} mit
+\textsf{chapterbib.sty} zur Erzeugung von Kapitel-Literaturverzeichnissen.
+
+\texttt{jbtestbu.tex} dient ebenfalls der Demonstration von \textsf{jurabib.sty} mit
+\textsf{bibunits.sty} zur Erzeugung untergliederter Literaturverzeichnisse.
+
+\bigskip
+
+Das Paket wird folgendermaßen eingebunden:
+
+\begin{quote}
+\cs{usepackage}\oarg{Optionen}\texttt{\{jurabib\}}
+
+\noindent Ein kleiner Vorgriff:
+
+\noindent{\footnotesize Optionen lassen sich via \cs{jurabibsetup} in der Präambel
+oder in der Konfigurationsdatei ablegen:
+\begin{verbatim}
+  \jurabibsetup{
+    authorformat=smallcaps,
+    commabeforerest,
+    titleformat=colonsep,
+    bibformat=tabular
+  }
+\end{verbatim}
+Sie können verschiedene Werte für dieselbe Option
+zusammenfassen:
+\begin{verbatim}
+  \jurabibsetup{bibformat={tabular,ibidem,numbered}}
+\end{verbatim}}
+\end{quote}
+
+An der Stelle, wo später Ihr Literaturverzeichnis erscheinen soll, muß
+folgendes stehen:
+
+\begin{quote}
+   \cs{bibliography}\marg{Datenbank}
+\end{quote}
+gefolgt von
+\begin{quote}
+   \cs{bibliographystyle}\mymarg{jurabib}
+\end{quote}
+
+Damit ist das Paket einsatzbereit. Sollten Sie bislang nicht mit \BibTeX{}
+gearbeitet haben, beachten Sie bitte, daß zu einer korrekten Auflösung aller
+Referenzen einmal \LaTeX{} aufgerufen werden muß, dann einmal \BibTeX{} und im
+Anschluß noch zweimal \LaTeX:
+
+\begin{verbatim}
+    latex datei
+   bibtex datei
+    latex datei
+    latex datei
+\end{verbatim}
+
+\subsection{Wenn Sie eine Windows-Distribution verwenden}
+Sie müssen hier eine große Bib\TeX-Version (|bibtex8|) verwenden, bei der
+der \marginpar{\raggedleft\textsf{\Huge !!!}} Speicher von vornherein sehr groß
+oder zur Laufzeit erweiterbar ist. Anderenfalls werden Sie in etwa folgende
+Fehlermeldung erhalten:
+\begin{verbatim}
+   The style file: jurabib.bst
+   5017: Sorry---you've exceeded BibTeX's wizard-defined function space 3000
+   (That was a fatal error)
+\end{verbatim}
+Dieses Problem beheben Sie durch Angabe des Parameters \texttt{--big} (bzw.
+\texttt{--huge} oder \texttt{--wolfgang}), so daß Ihr BibTeX-Aufruf ungefähr so
+aussehen sollte:
+\begin{verbatim}
+   bibtex8 --wolfgang datei
+\end{verbatim}
+
+\subsection{Wenn Sie eine Unix/Linux-Distribution verwenden}
+Hier ist bei Verwendung von aktuellen te\TeX- oder \TeX Live-Distributionen keine Verwendung von 
+|bibtex8| nötig, da sie mit ausreichend großem Speicher kompiliert wurden. Trotzdem möchte die 
+Verwendung von |bibtex8| empfehlen, da es die korrekte Sortierung von Einträgen mit Umlauten 
+ermöglicht, ohne daß man diese in eine dem normalen Bib\TeX{} genehme Form (|{\"u}|) etc. bringen 
+muss. Dies ist demzufolge bei Verwendung des normalen Bib\TeX{} nötig\,! Leider ist bislang 
+|bibtex8| nur in der \TeX Live-Distribution enthalten, bei te\TeX{} fehlt es. Dort müssen Sie 
+sich die Sourcen selbst übersetzen, Sie finden sie im CTAN.
+
+\section[Ein Beispiel]{Ein Beispiel\footnotemark[1]}
+\footnotetext[1]{Für alle Beispiele sind -- sofern nicht anders angegeben --
+die Optionen \texttt{titleformat=commasep} und \texttt{commabeforerest} sowie
+der Befehl \cs{cite} verwendet worden.}
+
+Ein Werk soll zitiert werden. Dazu fügen Sie dieses Werk der
+Literaturdatenbank hinzu:
+
+\begin{verbatim}
+  @BOOK{kkstrr,
+    author      = {Kurt Kodal and Joachim Krämer},
+    title       = {Straßenrecht},
+    shortauthor = {Kodal/Krämer},
+    shorttitle  = {StrR},
+    year        = 1995,
+    address     = {München},
+    edition     = {5.},
+    pages       = {30--34, \S~24}
+  }
+\end{verbatim}
+Man beachte die Felder \texttt{shortauthor} und \texttt{shorttitle}. Sie werden
+von dem zum \textsf{jurabib}-Paket gehörenden \BibTeX-Stil bereitgestellt. Dort
+werden die gewünschten Kurzformen von Autor und Titel eingetragen (siehe dazu
+auch Abschnitt~\ref{auto} auf Seite~\pageref{auto}).
+
+\section{Das Werkzeug}
+
+\subsection{Die \texorpdfstring{\cs{cite}}{cite}-Befehle}
+
+\DescribeMacro{\cite} 
+Ein Zitat wird wie gewohnt angegeben:
+\begin{verbatim}
+   \cite[\S~12]{kkstrr}
+\end{verbatim}
+Anstelle dieses Erscheinungsbildes:
+
+\medskip	
+
+[1, \S~12]
+
+\medskip
+
+\noindent sieht das Ergebnis nun so aus:
+
+\medskip
+
+\cite[\S~12]{kkstrr}
+
+\medskip
+
+\noindent Die Kurzform des Titels (StrR) würde hier erst zitiert werden, wenn Kodal und
+Krämer mit einem anderen Werk zitiert werden. Dann sähe das Ganze so aus:
+
+\medskip
+
+\citetitle[\S~12]{kkstrr}
+
+\medskip
+
+\noindent Da der Befehl \cs{cite} durch \textsf{jurabib.sty} umdefiniert wird, besitzt er
+jetzt statt einem optionalen Argument derer zwei:
+
+\medskip
+
+\noindent\CH{0.6}
+\fbox{\begin{minipage}{\textwidth}
+{\Large\itshape Achtung: Mit Version 0.6 ist die Reihenfolge der optionalen Argumente geändert worden\,!}
+\begin{quote}
+\cs{cite}\oarg{Fundstelle}\marg{Kürzel}\\
+\cs{cite}\oarg{Bearbeiter}{\ttfamily[]}\marg{Kürzel}\\
+\cs{cite}\oarg{Bearbeiter}\oarg{Fundstelle}\marg{Kürzel}\\
+bzw. (mit \texttt{see})\\
+\cs{cite}{\ttfamily[Vgl.]}\oarg{Fundstelle}\marg{Kürzel}
+\end{quote}
+Zur Abwärtskompatibilität wird mit der Option \texttt{jurabiborder} die alte Reihenfolge der optionalen
+Argumente wiederhergestellt:
+\begin{quote}
+\cs{cite}\oarg{Fundstelle}\marg{Kürzel}\\
+\cs{cite}{\ttfamily[]}\oarg{Bearbeiter}\marg{Kürzel}\\
+\cs{cite}\oarg{Fundstelle}\oarg{Bearbeiter}\marg{Kürzel}\\
+bzw. (mit \texttt{see})\\
+\cs{cite}\oarg{Fundstelle}{\ttfamily[Vgl.]}\marg{Kürzel}
+\end{quote}
+\end{minipage}}
+
+\medskip
+
+\noindent Hier eine kleine Übersicht der ab Version 0.6 geltenden Verhältnisse:
+
+\medskip
+
+{\small
+\begin{tabular}{ll}
+\hline
+Quellcode & Ausgabe\\
+\hline
+|\cite{broxbgb}| & \cite{broxbgb}\\
+|\cite[S.~12]{broxbgb}| & \cite[S.~12]{broxbgb}\\
+|\cite[Bassenge][]{broxbgb}| & \cite[Bassenge][]{broxbgb}\\
+|\cite[Bassenge][S.~12]{broxbgb}| & \cite[Bassenge][S.~12]{broxbgb}\\
+\hline
+\end{tabular}}
+
+\bigskip
+
+\noindent Ein eventuell vorhandener Bearbeiter wird also nun folgendermaßen angegeben:
+\begin{verbatim}
+  \cite[Bassenge][\S~12]{kkstrr}
+\end{verbatim}
+Daraus würde --~eine mehrfache Zitierung von Kodal und Krämer vorausgesetzt~--
+folgendes Zitat entstehen:
+
+\medskip
+
+\cite[Bassenge][\S~12]{kkstrr} % Kodal/Krämer/Bassenge, StrR, \S~12.
+
+\medskip
+
+\noindent Der dazugehörige Eintrag im Literaturverzeichnis wäre dann:
+
+\bibentry{kkstrr}
+
+Möchten Sie ibn einem Zitat keine Seitenzahlen, Randnummern oder ähnliches,
+jedoch einen Bearbeiter angeben, müssen Sie das zweite (neu\,!) optionale Argument von
+\cs{cite} leer lassen:
+
+\begin{verbatim}
+   \cite[Bassenge][]{kkstrr}% vor 0.6:  \cite[][Bassenge]{kkstrr}
+\end{verbatim}
+
+  \DescribeMacro{\citetitle}
+Der Befehl \cs{citetitle} verhält sich prinzipiell wie \cs{cite}, kann aber
+dazu benutzt werden, ein Werk explizit mit dem Kurztitel zu zitieren,
+unabhängig davon, ob ein weiteres Werk dieses Autors zitiert wird. Ansonsten
+gilt für diesen Befehl das zu \cs{cite} Gesagte.
+
+  \DescribeMacro{\cite*}
+Diese Sternform des \cs{cite}-Befehls zitiert \emph{grundsätzlich ohne} Titel.
+Es ist dabei völlig unerheblich, ob das \texttt{shorttitle}-Feld besetzt ist.
+Auch die Option \texttt{citefull=all} (siehe Abschnitt~\ref{opt}) zeigt hier
+keinerlei Wirkung. Zu beachten ist hierbei jedoch, daß hierdurch bei Zitierung
+mehrerer verschiedener Werke eines Autors
+\emph{zweideutige\mymarginpar{\hfill\Large!} Zitate} entstehen können, da auch
+das Feature des automatischen Setzens des Kurztitels/Volltitels für dieses
+Zitat deaktiviert wird. Von daher sollte die Benutzung dieses Befehls die
+Ausnahme sein und mit Bedacht gewählt werden.
+
+\DescribeMacro{\citetitlefortype}
+Auf mehrfachen Wunsch hin ist nun mit diesem
+Befehl die Angabe der Publikationstypen möglich, bei denen der Titel immer
+erscheinen soll:
+\begin{verbatim}
+    \citetitlefortype{article,commented, ... }
+\end{verbatim}
+Dies kann zum Beispiel sinnvoll sein, wenn man (nur) bei Aufsätzen den Titel
+des Journals angeben möchte und ansonsten \textsf{jurabib} die Entscheidung
+überlassen möchte, wann es den Titel eines Werkes setzt (nämlich erst, wenn ein
+Zitat mehrdeutig zu werden droht). \DescribeMacro{\citenotitlefortype} Falls es
+viele (aber eben nicht alle) Publikationstypen sind, bei denen Sie den Titel
+auszugeben wünschen, können Sie nach Setzen der Option \texttt{titleformat=all}
+mit
+\begin{verbatim}
+    \citenotitlefortype{article,commented, ... }
+\end{verbatim}
+diejenigen Typen deklarieren, bei denen der Titel nicht erscheinen soll.
+
+\subsection{Die \texorpdfstring{\cs{footcite}}{footcite}-Befehle}
+\DescribeMacro{\footcite} \DescribeMacro{\footcite*}
+\DescribeMacro{\footcitetitle} Sie unterscheiden sich lediglich dadurch von den
+\cs{cite}-Befehlen, daß sie automatisch eine Fußnote generieren und dabei am
+Ende der Fußnote einen Punkt setzen. Ein Leerzeichen vor den
+\cs{footcite}-Befehlen wird ignoriert:
+\begin{verbatim}
+  ...  Annahme. \footcite[Rn.~357]{medicus}
+  ...  Annahme.\footcite[Rn.~357]{medicus}
+\end{verbatim}
+erzeugt in beiden Fällen:
+
+\medskip
+\dots{}~Annahme.\footcite[Rn.~357]{medicus}
+\medskip
+
+\noindent Eine Zusammenfassung mehrerer Zitate innerhalb einer Fußnote erfolgt
+jedoch wie bisher:
+\begin{verbatim}
+    \footnote{\cite[S.~13--34]{brox:bgb}; \cite[S.~24]{canaris}.}
+\end{verbatim}
+Dieses liefert uns:
+
+\medskip
+\dots{}~Annahme.\footnote{\cite[S.~13--34]{broxbgb}; \cite[S.~24]{canaris}.} Hier muß man
+leider selbst an den Punkt denken.
+
+Sollten Sie mehrere |\footcite|- oder |\footnote|-Befehle 
+unmittelbar hintereinander benutzen, ist \textsf{jurabib} in Verbindung 
+mit dem \textsf{footmisc}-Paket und dessen |multiple|-Option in der Lage,
+automatisch ein Komma zwischen die Fußnotenmarken zu setzen. Ein Beispiel:
+
+\begin{verbatim}
+   ... zu finden\footcite{broxbgb}\footcite{broxschr}\footcite{broxja}
+\end{verbatim}
+erzeugt:
+
+\medskip
+\dots{}~zu finden \textsuperscript{1,2,3}
+
+
+\subsection{Die \texorpdfstring{\cs{fullcite}}{fullcite}-Befehle}
+  \DescribeMacro{\fullcite}
+  \DescribeMacro{\footfullcite}
+Diese Befehle generieren ein Vollzitat, d.\,h. hier wird der komplette Eintrag
+aus dem Literaturverzeichnis als Zitat verwendet. Ein eventuell vorhandener
+Bearbeiter wird vor dem Zitat plaziert und mit "`in"' vom Autor
+getrennt.\footnote{Dies entspricht der automatischen Aktivierung der Option
+\texttt{annotatorfirstsep=in} für \emph{dieses} Zitat.} Die Fundstelle wird am Ende
+angefügt.
+
+\subsection{Die \texorpdfstring{\cs{nextcite}}{nextcite}-Befehle}
+  \DescribeMacro{\nextciteshort}
+  \DescribeMacro{\nextcitefull}
+Mit Hilfe dieser Befehle können Sie für bestimmte Werke festlegen, ob sie im
+Weiteren in der Kurzform bzw. der Langform erscheinen sollen. Dazu können Sie
+einfach eine kommaseparierte Liste (\emph{ohne Leerzeichen\,!}) als Argument
+dieser Kommandos angeben:
+\begin{verbatim}
+    \nextciteshort{brox:bgb,canaris, ... }
+\end{verbatim}
+läßt ab sofort \texttt{brox:bgb} und \texttt{canaris} als Kurzzitat erscheinen.
+\begin{verbatim}
+    \nextcitefull{brox:bgb,canaris, ... }
+\end{verbatim}
+läßt alle weiteren Zitate von \texttt{brox:bgb} und \texttt{canaris} als
+Vollzitat erscheinen.
+
+\begin{verbatim}
+    \nextcitenotitle{brox:bgb,canaris, ... }
+\end{verbatim}
+läßt alle weiteren Zitate von \texttt{brox:bgb} und \texttt{canaris} als Zitat
+ohne Titel erscheinen. \emph{Den drei Kommandos ist gemein, daß sie die
+\cs{fullcite}- und \cs{cite*}-Befehle  übersteuern!}
+
+\smallskip
+\noindent Mit \DescribeMacro{\nextcitereset}
+\begin{verbatim}
+    \nextcitereset{brox:bgb,canaris, ... }
+\end{verbatim}
+schalten Sie für die angegebenen Werke wieder auf normale Zitierweise zurück.
+
+\DescribeMacro{\citeswithoutentry} Das neue Kommando \cs{citeswithoutentry} ist
+eng verwandt mit den \cs{nextcite}-Befehlen. Mit ihm können Sie am Anfang des
+Dokumentes die Werke angeben, die \emph{nicht} im Literaturverzeichnis
+erscheinen sollen. Die Verwendung erfolgt analog zu den \cs{nextcite}-Befehlen.
+Allerdings wirkt sich hier -- aus verständlichen Gründen~-- der
+\cs{nextcitereset}-Befehl nicht aus.
+
+\subsection{Der \texorpdfstring{\cs{citefield}}{citefield}-Befehl}
+Mit diesem Befehl haben Sie Zugriff auf den Inhalt der Felder \texttt{author},
+\texttt{shortauthor}, \texttt{title}, \texttt{shorttitle}, \texttt{url}, \texttt{apy}
+(Address-Publisher-Year) und \texttt{year}.
+Diesen Feldnamen (\emph{der in Kleinschreibung anzugeben ist\,!}) geben Sie als erstes obligatorisches Argument an, das Kürzel als zweites obligatorisches Argument. Die Angabe einer Fundstelle ist über den
+optionalen Parameter möglich:
+\begin{quote}
+   {\small\cs{citefield}\oarg{Fundstelle}\marg{Feldname}\marg{Kürzel}}
+\end{quote}
+Mit folgendem Eintrag
+\begin{verbatim}
+   @BOOK{broxbgb,
+    author      = {Hans Brox},
+    title       = {Allgemeiner Teil des Bürgerlichen Gesetzbuches},
+    shorttitle  = {BGB~AT},
+    year        = 1996,
+    language    = {german},
+    address     = {Köln, Berlin, Bonn, München},
+    edition     = 20
+   }
+\end{verbatim}
+liefert uns ein \verb+\citefield{title}{broxbgb}+: Allgemeiner Teil des
+Bürgerlichen Gesetzbuches. \verb+\citefield[\S~23]{shorttitle}{broxbgb}+
+liefert: BGB~AT, \S~23.
+
+Dieser Befehl ist in erster Linie für Nicht-Juristen vorgesehen. Er ist von
+allen \textsf{jurabib}-spezifischen Automatismen unabhängig, d.\,h. er wird
+u.a. nicht von den \texttt{ibidem}-Optionen erfaßt, da er lediglich dazu dient,
+auf einzelne Felder zuzugreifen.
+
+Bei Verwendung des \textsf{hyperref}-Paketes erzeugt dieser Befehl
+jedoch einen Link ins Literaturverzeichnis.
+
+\textsf{jurabib} beherrscht auch einige grundlegende Befehle aus dem \textsf{natbib}-Paket:
+
+\medskip
+
+\begin{tabular}{@{}lll@{}}\hline\\[-2ex]
+|\[foot]citep{Kraft74}|               & $\rightarrow$ & \citep{Kraft74}\\
+|\[foot]citep{Kraft74,helm82}|        & $\rightarrow$ & \citep{Kraft74,helm82}\\
+|\[foot]citep[][S.~34]{Kraft74}|      & $\rightarrow$ & \citep[][S.~34]{Kraft74}\\
+|\[foot]citep[Vgl.][S.~34]{Kraft74}|  & $\rightarrow$ & \citep[Vgl.][S.~34]{Kraft74}\\
+|\[foot]citet{Kraft74}|               & $\rightarrow$ & \citet{Kraft74}\\
+|\[foot]citet{Kraft74,helm82}|        & $\rightarrow$ & \citet{Kraft74,helm82}\\
+|\[foot]citealt{Kraft74}|             & $\rightarrow$ & \citealt{Kraft74}\\
+|\[foot]citealt{Kraft74,helm82}|      & $\rightarrow$ & \citealt{Kraft74,helm82}\\
+|\[foot]citealp{Kraft74}|             & $\rightarrow$ & \citealp{Kraft74}\\
+|\[foot]citealp{Kraft74,helm82}|      & $\rightarrow$ & \citealp{Kraft74,helm82}\\
+|\[foot]citeauthor{Kraft74}|          & $\rightarrow$ & \citeauthor{Kraft74}\\
+\hline
+\end{tabular}
+
+\section{Automatisierungen}\label{auto}
+
+\subsection{Leeres \texttt{shortauthor}-Feld}
+
+Bei einem nicht besetzten oder fehlenden \texttt{shortauthor}-Feld ist
+\textsf{jurabib} in der Lage, die Nachnamen der Autoren selbständig zu erkennen
+und als Ersatz zu verwenden. Dabei werden bis zu drei Autoren ausgeschrieben,
+getrennt durch einen Schrägstrich. Bei mehr als drei Autoren wird der erste
+Autor mit dem Kürzel "`et\,al."' versehen verwendet. Angenommen, in unserem
+obigen Beispiel lassen wir das \texttt{shortauthor}-Feld weg und fügen einen
+dritten Autor hinzu:
+\begin{verbatim}
+@BOOK{LunWalThis99,
+  editor      = {Lundin, Roger and Walhout, Clarence and Thiselton, Anthony C.},
+  gender      = {pm},
+  year        = 1999,
+  title       = {The Promise of Hermeneutics},
+  publisher   = {Eerdmans},
+  address     = {Grand Rapids},
+}
+\end{verbatim}
+dann sieht das Zitat folgendermaßen aus:
+
+\par\medskip
+\cite{LunWalThis99}
+\par\medskip
+
+\noindent Dabei lassen sich die Separationszeichen an eigene Vorstellungen
+anpassen.
+\begin{verbatim}
+ \renewcommand*{\jbbtasep}{ und } % bta  = between two authors sep
+ \renewcommand*{\jbbfsasep}{, }   % bfsa = between first and second author sep
+ \renewcommand*{\jbbstasep}{ und }% bsta = between second and third author sep
+\end{verbatim}
+
+\noindent Die Separation der Autoren im Literaturverzeichnis bleibt davon
+unberührt. Sie läßt sich über die folgenden Befehle beeinflussen:
+\begin{verbatim}
+ \renewcommand*{\bibbtasep}{ und } % bta  = between two authors sep
+ \renewcommand*{\bibbfsasep}{, }   % bfsa = between first and second author sep
+ \renewcommand*{\bibbstasep}{ und }% bsta = between second and third author sep
+ ... und für die Herausgeber:
+ \renewcommand*{\bibbtesep}{ und } % bte  = between two editors sep
+ \renewcommand*{\bibbfsesep}{, }   % bfse = between first and second editor sep
+ \renewcommand*{\bibbstesep}{ und }% bste = between second and third editor sep
+\end{verbatim}
+
+Fügen wir einen vierten Autor hinzu (den Quellcode dazu sparen wir uns), ändert
+sich das Erscheinungsbild nochmals:
+\par\medskip
+\qquad Lundin~et\,al.
+
+\subsection{Leeres \texttt{shorttitle}-Feld}
+Für ein leeres \texttt{shorttitle}-Feld gilt folgendes: Es wird als Ersatz der
+\emph{volle} Inhalt des \texttt{title}-Feldes verwendet\footnote{Davon
+ausgenommen sind Einträge des \texttt{@ARTICLE}- und \texttt{@PERIODICAL}
+Typs.},
+ sofern entweder (lokal) der Befehl \cs{[foot]citetitle} oder (global) die Option
+\texttt{citefull=all} verwendet wird \emph{oder der betreffende Verfasser mit
+noch weiteren Werken zitiert wird}.
+
+Möchte man, daß bei einem bestimmten Werk immer -- egal welche Optionen
+aktiviert sind -- lediglich der Autorenname erscheint, dann ist der Befehl
+\cs{[foot]cite*} zu verwenden. Allerdings kann dies zu zweideutigen Zitaten
+führen. Sie werden jedoch dazu eine Warnung in der \texttt{.log}-Datei finden.
+
+\begin{verbatim}
+  @BOOK{kkstrr,
+    author      = {Kurt Kodal and Joachim Krämer
+                   and Hans Mustermann},
+    title       = {Straßenrecht},
+    year        = 1995,
+    address     = {München},
+    edition     = {5.},
+    pages       = {30--34, \S~24}
+  }
+\end{verbatim}
+Ergebnis:
+\par\medskip
+\qquad Kodal/Krämer/Mustermann, Straßenrecht, \S~12.
+\par\medskip
+
+Eine Erleichterung sollte auch die Tatsache sein, daß \textsf{jurabib} in
+der Lage ist, die bei Artikeln und Periodika übliche Zitierung (\meta{journal}
+\meta{year}) zu automatisieren. Daher ist eine Angabe von \texttt{shorttitle}
+nunmehr nur noch nötig, wenn man davon abweichende Vorstellungen hat. Im folgenden
+Beispiel ist weder \texttt{shortauthor} noch \texttt{shorttitle} angegeben:
+\begin{verbatim}
+   @ARTICLE{broxja,
+     author      = {Hans Brox},
+     title       = {Die Anfechtung bei der Stellvertretung},
+     journal     = {JA},
+     year        = 1980,
+     pages       = {449ff},
+     address     = {München}
+   }
+\end{verbatim}
+Trotzdem erhält man mit \cs{citetitle}\verb+{brox:ja}+ folgendes Zitat:
+\par\medskip
+\qquad Brox, JA 1980.
+\par\medskip
+\noindent Möchte man dagegen etwas anderes verwenden, benutzt man die
+\texttt{jura*}-Felder:
+\begin{verbatim}
+   @ARTICLE{broxja,
+     author      = {Hans Brox},
+     title       = {Die Anfechtung bei der Stellvertretung},
+     journal     = {JA},
+     shortauthor = {Hans Brox},
+     shorttitle  = {JA},
+     year        = 1980,
+     pages       = {449ff},
+     address     = {München}
+   }
+\end{verbatim}
+und man erhält:
+\par\medskip
+\qquad Hans Brox, JA.
+\par\medskip
+
+\DescribeMacro{author = } Es ist zu beachten, daß das dynamische Setzen des
+juristischen Kurztitels nur unterstützt werden kann, wenn die Inhalte der
+\texttt{author}-Felder in der \texttt{.bib}-Datei \emph{absolut identisch}
+sind! Angenommen, \textsc{Kodal} und \textsc{Krämer} haben ein zweites Werk
+verfaßt, dann sollten die Einträge in der Literaturdatenbank so aussehen:
+\begin{verbatim}
+   @BOOK{kkstrr,
+      author     = {Kurt Kodal and Joachim Krämer},
+      title      = {Straßenrecht}
+   }
+\end{verbatim}
+
+\begin{verbatim}
+  @BOOK{kkirgendwas,
+      author     = {Kurt Kodal and Joachim Krämer},
+      title      = {irgendwas}
+   }
+\end{verbatim}
+
+\section{Optionen}\label{opt}
+Folgendes Erscheinungsbild ist voreingestellt: Die Autoren und Bearbeiter im
+Zitat werden in Standardschrift, im Literaturverzeichnis fett gesetzt. Der
+Bearbeiter ist dem Autor nachgestellt, die Trennung erfolgt durch einen
+Schrägstrich. Diese Formatierungen lassen sich über Optionen beeinflussen.
+
+\subsection{Möglichkeiten der Formatierung des Zitates}
+
+\subsubsection{Formatierung von Autor und Bearbeiter}
+
+ \begin{Options}
+  \item[authorformat=smallcaps] setzt Autoren (und Bearbeiter) in Kapitälchen:
+              \textsc{Kodal\slash Krämer\slash Bassenge}, StrR, \S~12
+  \item[authorformat=italic] setzt Autoren (und Bearbeiter) kursiv:
+              \textit{Kodal}\slash\textit{Krämer}\slash\textit{Bassenge}, StrR, \S~12
+  \item[authorformat=dynamic] die Autoren erhalten einen Schrift"-schnitt, der davon
+              beeinflußt wird, ob ein Bearbeiter angegeben wurde oder nicht.
+              Sofern kein Bearbeiter angegeben ist, erhalten die Autoren über den Befehl
+              \cs{jbactualauthorfont} den Font \cs{textit} (voreingestellt) zugewiesen:
+              \textit{Kodal\slash Krämer}, StrR, \S~12.
+              Ist ein Bearbeiter angegeben worden, erhält \emph{dieser} nun die
+              aktuelle Bedeutung
+              von \cs{jbactualauthorfont}, und die Autoren werden über den Befehl
+              \cs{jbauthorfontifcoauthor} formatiert (Voreinstellung \cs{normalfont}):
+              Kodal\slash Krämer\slash\textit{Bassenge}, StrR, \S~12.
+  \item[authorformat=citationreversed]   Hier erscheinen \emph{im Zitat} bei den Optionen
+              \texttt{citefull=first}, \texttt{ibidem=name} und
+              \texttt{ibidem=name\&title} die Vornamen vor den Nachnamen:
+              Hans \textsc{Brox}: BGB~AT, S.~23. statt \textsc{Brox}, Hans: BGB~AT, S.~23.
+  \item[authorformat=allreversed]   Mit dieser Option erstreckt sich obiges Verhalten auch auf
+              das Literaturverzeichnis.
+  \item[authorformat=firstnotreversed] Hiermit hat man die Möglichkeit, alle
+               Autorennamen \emph{nach} dem ersten Autor in der Form \meta{Vorname}
+               \meta{Name} zu setzen: \textsc{Kodal}, Kurt/Joachim
+               \textsc{Krämer}/Hans \textsc{Mustermann}.
+  \item[authorformat=reducedifibidem]   Hier wird bei aktivierter Option \texttt{ibidem=name} im
+              Wiederholungszitat nur der Nachname ausgegeben.
+  \item[authorformat=and] Statt der voreingestellten Schrägstriche  werden die Autoren
+              nun mit "`,"' und "`und"' getrennt.
+  \item[authorformat=year] Nach den Autoren wird die Jahreszahl ausgegeben.
+              Eine Formatierung ist möglich über \cs{jbcitationyearformat}:
+   \begin{verbatim}
+    \renewcommand*{\jbcitationyearformat}[1]{(#1)}
+   \end{verbatim}
+  Diese Option ist vorrangig für die Benutzung mit \texttt{jureco.bst} gedacht.
+  \item[authorformat=indexed] führt automatisch \emph{alle}  Autoren unabhängig
+              voneinander im Index auf. Voraussetzung ist eine korrekte
+              Verwendung des \textsf{makeidx}-Paketes.
+   \begin{verbatim}
+    \usepackage{makeidx}
+    \makeindex
+    \begin{document}
+     ...
+    \printindex
+    \end{document}
+   \end{verbatim}
+   Eine Indizierung ist  auch bei Verwendung des Befehls |\nobibliography| möglich.
+
+   \emph{Nur} im Literaturverzeichnis genannte Autoren tauchen per Voreinstellung
+      nicht im Index auf. Möchte man dies ändern, benutzt man den Befehl
+      \cs{jbindexbib} am Anfang des Dokumentes.
+
+ Um die Autoren im Index hervorzuheben ist es möglich, ihnen über den Befehl |\jbauthorindexfont| einen Font zuzuweisen:
+  \begin{verbatim}
+    \renewcommand{\jbauthorindexfont}{\textit}% oder \textsf, \textsc, \textbf
+  \end{verbatim}
+ Falls Sie eine angepasste |.ist|-Datei (|makeindex| style file) benutzen, kann es nötig sein,
+ den |makeindex|-eigenen `actual' operator über |\jbmakeindexactual| anzupassen. Die (englische)
+ Voreinstellung ist |@|. Sollte Ihre |.ist|-Datei folgende Zeile enthalten:
+  \begin{verbatim}
+     actual '='
+  \end{verbatim}
+ sollten Sie folgendes benutzen:
+  \begin{verbatim}
+     \renewcommand{\jbmakeindexactual}{\=}%
+  \end{verbatim}
+Es wurde vielfach der Wunsch geäußert, die \NEW{0.6} Indizierung genauer steuern zu können. Die folgenden Befehle leisten das hoffentlich:
+
+{\small\begin{tabular}{ll}
+\hline
+|\jbdonotindexeditors| & Herausgeber nicht indizieren\\
+|\jbdonotindexauthors| & Autoren nicht indizieren\\
+|\jbdonotindexorganizations| & Organisationen nicht indizieren\\
+|\jbindexolyfirsteditors| &  Herausgeber nur für Erstzitat indizieren\\
+|\jbindexonlyfirstauthors| &  Autoren nur für Erstzitat indizieren\\
+|\jbindexolyfirstorganizations| & Organisationen nur für Erstzitat indizieren\\
+\hline
+\end{tabular}}
+
+\medskip
+
+% Ich weiß leider momentan noch nicht, warum ausgerechnet bei diesem Zeichen ein
+% backslash nötig ist, da |makeindex| ohne ihn bei mir abstürzt (Mik\TeX{} 2.1).
+% Über Meldungen, wie das unter anderen Systemen ist, würde ich mich freuen.
+
+  \item[authorformat=abbrv] Abkürzung der Vornamen.
+  \item[annotatorformat=italic (früher: coauthorformat=italic)] setzt den Bearbeiter\CH{0.6} kursiv:
+        Kodal\slash Krämer\slash \textit{Bassenge}.
+  \item[annotatorformat=normal (früher: coauthorformat=normal)] setzt Bearbeiter\CH{0.6} aufrecht:
+        \textit{Kodal}\slash \textit{Krämer}\slash\/Bassenge.
+  \item[round] runde Klammern für das Zitat: (\textsc{Kodal}\slash
+        \textsc{Krämer}\slash\/\textsc{Bassenge}).
+  \item[square]  setzt das Zitat in eckige Klammern: [\textsc{Kodal}\slash
+        \textsc{Krämer}\slash\/\textsc{Bassenge}].
+  \item[superscriptedition=all] Hiermit  wird die Auflage bei allen Werken
+        als hochgestellte Zahl ausgegeben, wobei dies nicht für Vollzitate gilt.
+Hier ein paar Beispiele:
+\par
+Kodal/Krämer$^{3}$, \S~12.\\
+Kodal/Krämer, Straßenrecht$^{3}$, \S~12.\\
+Kodal/Krämer--Bassenge, Straßenrecht$^{3}$, \S~12.\\
+Bassenge in Kodal/Krämer$^{3}$, \S~12.
+\par\medskip
+  \item[superscriptedition=commented] Damit  schränkt man oben genanntes Verhalten
+        auf Publikationen vom Typ \texttt{@COMMENTED} ein.
+  \item[superscriptedition=switch] Man kann hiermit für jedes
+        Werk individuell angeben, ob die Auflage hochgestellt erscheinen soll.
+        Dazu dient das ebenfalls neu geschaffene \texttt{ssedition}-Feld, das
+        analog zum \texttt{howcited}-Feld mit dem Wert \texttt{1} als Schalter
+        fungiert:
+   \begin{verbatim}
+   @COMMENTED{soergel,
+      author      = {Hans Theodor Soergel},
+      title       = {Kommentar zum Bürgerlichen Gesetzbuch},
+      address     = {Stuttgart, Berlin, Köln, Mainz},
+      year        = 1987,
+      edition     = 12,
+      ssedition   = 1,
+   }
+   \end{verbatim}
+
+% \item[superscriptedition=kerning] Die den hochgestellten Auflagen folgenden Zeichen werden
+% unterschnitten:
+%
+% Kodal/Krämer$^{3}$\kern-1ex, \S~12.\\
+% Kodal/Krämer, Straßenrecht$^{3}$\kern-1ex, \S~12.\\
+% Kodal/Krämer$^{3}$--Bassenge, \S~12.\\
+% Kodal/Krämer--Bassenge, Straßenrecht$^{3}$\kern-1ex, \S~12.\\
+% Bassenge in Kodal/Krämer$^{3}$\kern-1ex, \S~12.
+% \par\medskip
+
+\item[superscriptedition=bib/address] Hochgestellte Auflagen im Literaturverzeichnis
+    (vor address), für Nicht-Juristen.
+\item[superscriptedition=year] Hochgestellte Auflagen im Literaturverzeichnis
+    (vor year), für Nicht-Juristen.
+\item[superscriptedition=multiple] Mit Hilfe dieser Option wird die hochgestellte Auflage
+nur dann ausgegeben, wenn von ein und demselben Werk (vorzugsweise juristische Kommentare) mehrere verschiedene Auflagen
+zitiert werden. Bei diesen Fällen wird dann auf die Ausgabe des Kurz- oder Volltitels verzichtet, da dies hinreichend
+eindeutig ist und für den Leser kein Problem darstellt.
+
+Sollte ein Bearbeiter angegeben worden sein, erscheint die hochgestellte
+Auflage hinter dem Bearbeiter, sofern die Voreinstellung oder eine der
+|annotatorlastsep|-Optionen benutzt wird:
+
+\medskip
+
+Kodal/Krämer--Bassenge$^{3}$, \S~12.
+
+\medskip
+
+Möchten sie dies ändern, so daß die hochgestellte Auflage direkt hinter
+dem Autor erscheint, verwenden Sie folgendes in Ihrer Präambel
+oder Konfigurationsdatei:
+
+\begin{verbatim}
+    \jbsuperscripteditionafterauthor
+\end{verbatim}
+
+Dann sollten Sie folgendes Ergebnis erhalten:
+
+\medskip
+
+Kodal/Krämer$^{3}$--Bassenge, \S~12.
+%\end{Options}
+%
+%\begin{Options}
+\item[biblikecite] Die Formatierung des Literaturverzeichnisses  folgt
+    (soweit wie möglich) automatisch der Formatierung der Zitate.
+\item[edby] (Nur in \texttt{@INCOLLECTION}!) Die  Sequenz "`Lipcoll,
+    David~J. (Hrsg.)"' wird geändert zu "`hrsg. v. Lipcoll, David~J."'\par
+Anpassungen sind möglich über:
+   \begin{verbatim}
+   \AddTo\bibsgerman{%
+       \def\edbyname{herausgegeben von}%
+    }
+   \end{verbatim}
+\item[endnote] Der Inhalt des \texttt{note}-Feldes erscheint am Ende des bibliographischen Eintrags und wenn Sie
+ |dotafter=bibentry| benutzen, \emph{nach} dem abschließenden Punkt.
+\end{Options}
+
+  \DescribeMacro{\jbauthorfont}
+  \DescribeMacro{\jbcoauthorfont}
+Sollten diese Optionen nicht das Gewünschte leisten, besteht die Möglichkeit,
+das angestrebte Ergebnis durch Umdefinieren von diversen Befehlen zu erreichen.
+
+Die Schriftarten der Autoren und Bearbeiter werden durch die Befehle
+\cs{jbauthorfont} und \cs{jbcoauthorfont} bestimmt und können folgendermaßen
+verändert werden (der typographische Wert dieser Beispiele geht gegen Null):
+\begin{verbatim}
+   \renewcommand*{\jbauthorfont}{\textit}
+   \renewcommand*{\jbcoauthorfont}{\textsl}
+\end{verbatim}
+  \DescribeMacro{\jbactualauthorfont}
+  \DescribeMacro{\jbauthorfontifcoauthor}
+Analoges gilt für die folgenden Befehle, die \emph{nur} in Verbindung mit der
+Option \texttt{authorformat=dynamic} wirksam sind:
+\begin{verbatim}
+  \renewcommand*{\jbactualauthorfont}{\textsc}
+  \renewcommand*{\jbauthorfontifcoauthor}{\textsl}
+\end{verbatim}
+
+Diese Redefinitionen sind in der Präambel vor \cs{begin}\verb+{document}+
+unterzubringen. Dabei ist zu beachten, daß Fontbefehle benutzt werden, die mit
+\cs{text} beginnen (Fontwechselbefehle mit Argumenten, z.\,B. \cs{textit},
+\cs{textbf} usw.), und \emph{nicht} solche, die mit \texttt{series},
+\texttt{family} oder \texttt{shape} enden (Deklarationsform, z.\,B.
+\cs{bfseries}, \cs{slshape}, \cs{sffamily})!
+
+\subsubsection{Formatierung des Titels}
+ \begin{Options}
+   \item[titleformat=italic]   setzt Titel kursiv: Kodal\slash Krämer\slash Bassenge, \textit{StrR}, \S~12.
+   \item[titleformat=all]   Mit dieser Option  werden bei \emph{allen} Zitaten die
+              Kurztitel gesetzt, unabhängig davon, ob ein Autor mit verschiedenen
+              Werken zitiert wurde oder nicht.
+   \item[titleformat=colonsep]   Diese Option plaziert einen Doppelpunkt zwischen Autor und Titel
+                      (sofern ein Titel zitiert wird):
+                      Kodal\slash Krämer\slash Bassenge: StrR, \S~12.
+   \item[titleformat=commasep]   Diese Option plaziert ein Komma zwischen Autor und Titel:
+                      Kodal\slash Krämer\slash Bassenge, StrR, \S~12.
+   \item[titleformat=noreplace] Auf mehrfachen Wunsch hin habe ich diese Option geschaffen, mit der sich
+                     das Ersetzen eines fehlenden \texttt{shorttitle}s durch den Inhalt des
+                     \texttt{title}-Feldes global unterbinden läßt. Siehe dazu auch die
+                     \cs{cite*}- und die \cs{nextcitenotitle}-Befehle.
+ \end{Options}
+\DescribeMacro{\jbtitlefont} Für eine Veränderung des Schriftschnittes des
+Kurztitels steht der Befehl \cs{jbtitlefont} zur Verfügung, der ganz analog an
+eigene Bedürfnisse angepaßt werden kann:
+
+\begin{verbatim}
+   \renewcommand*{\jbtitlefont}{\textit}
+\end{verbatim}
+
+  \DescribeMacro{\jbhowsepbeforetitle}
+Für die Optionen \texttt{titleformat=commasep} und
+\texttt{titleformat=colonsep} ist eine individuelle Formatierung des
+Separationszeichens möglich mit
+\begin{verbatim}
+   \renewcommand*{\jbhowsepbeforetitle}{; } .
+            Leerzeichen!  ---------------^
+\end{verbatim}
+Eine der beiden vorgenannten Optionen sollte dann allerdings aktiv sein.
+
+\subsubsection{Separation des Bearbeiters}
+
+Wie bereits erwähnt, ist das Erscheinen des Bearbeiters nach dem Autor\slash
+den Autoren als auch die Trennung durch den Schrägstrich voreingestellt. Dies
+läßt sich über Optionen ändern.
+
+ \begin{Options}
+   \item[annotatorlastsep=divis (früher: colastsep=divis)]   Diese Option ändert das voreingestellte Erscheinungsbild,
+                      so daß der Schrägstrich durch einen Bindestrich ersetzt
+                      wird: Kodal\slash Krämer--Bassenge StrR, \S~12.
+   \item[annotatorfirstsep=in (früher: cofirstsep=in)]   Der Bearbeiter erscheint im Zitat zuerst, die Trennung erfolgt
+                      durch "` in "'\,: Bassenge in Kodal\slash Krämer StrR, \S~12.
+   \item[annotatorfirstsep=comma (früher: cofirstsep=comma)]   Diese Option wirkt wie \texttt{annotatorfirstsep=in}, allerdings
+                      wird das "` in "' durch ein Komma ersetzt:
+                      Bassenge, Kodal\slash Krämer StrR, \S~12.
+  \end{Options}
+
+
+\subsubsection{Verhalten bei Wiederholungszitaten}
+
+ \begin{Options}
+ \item[\texttt{ibidem} oder \texttt{ibidem=strict}] Sollte ein Autor mehrfach
+nacheinander zitiert werden, kann es erwünscht sein, die Wiederholung des
+Zitates durch das Kürzel "`a.\,a.\,O."' ersetzen zu lassen. \emph{Die
+Verwendung dieses und ähnlicher Kürzel ist umstritten und man sollte, wenn
+irgend möglich, auf die Verwendung dieser Option verzichten, da sie nicht dazu
+angetan ist, Lesbarkeit oder Übersichtlichkeit zu verbessern.} Dabei ist
+\textsf{jurabib} aus gutem Grund so konfiguriert, daß das Zitat nur dann durch
+"`a.\,a.\,O."' ersetzt wird, wenn die Wiederholung unmittelbar auf das
+Erstzitat folgt und wenn das Wiederholungszitat \emph{nicht} das erste auf der
+aktuellen Seite ist (siehe Beispiele).
+
+\item[ibidem=nostrict] Möchte man obiges
+Verhalten unterdrücken, bietet sich diese Option an, die es zuläßt, daß ein
+Wiederholungszitat -- auch wenn es das Erste auf der Seite ist -- durch
+"`a.\,a.\,O\kern-1.2pt."' ersetzt wird. Der Einsatz dieser Option sollte
+wohlüberlegt sein. Er ist nur dann sinnvoll, wenn man im Dokument im
+Wesentlichen einen Autor zitiert und der Leser somit durchaus weiß, wer sich
+zuletzt hinter "`a.\,a.\,O\kern-1.2pt."' verbarg.
+
+\item[ibidem=strictdoublepage]  Zugebenermaßen ist diese Option, sagen wir,
+"`akademisch"', weil sie sehr spitzfindig unterscheidet, ob Erstzitat (bzw.
+volles Wiederholungszitat) und potentiell abgekürztes Wiederholungszitat auf
+gegenüberliegenden Seiten zu liegen kommen (Vielen Dank an \textsc{Stefan
+\mbox{Ulrich}}). Sollte das der Fall sein, wird "`a.\,a.\,O\kern-1.2pt."' im
+ersten Zitat auf der neuen (rechten) Seite zugelassen. Liegt ein Umbruch von
+einer ungeraden (rechten) Seite auf eine gerade (linke) Seite vor, verhält sich
+die Option wie \texttt{ibidem/ibidem=strict}. Dies ist selbstverständlich nur
+bei zweiseitigem Druck von Interesse, also bei Benutzung einer
+\texttt{book}-Klasse oder der Klassenoption \texttt{twoside}. Vergleichen Sie
+in der folgenden Übersicht. \end{Options}%
+
+\begin{center}
+\noindent{\small
+\begin{tabular}{@{}llll@{}}\hline\\[-2ex]
+{\footnotesize\cs{footcite}\texttt{..}}& {\footnotesize\texttt{ibidem}/\texttt{ibidem=strict}}& {\footnotesize\texttt{ibidem=strictdoublepage}} & {\footnotesize\texttt{ibidem=nostrict}}\\\hline\\[-2ex]
+\texttt{..[S.~12]\mymarg{erm}} & $^{1}$\textsc{Erman}, S.\,12.       & $^{1}$\textsc{Erman}, S.\,12.                                & $^{1}$\textsc{Erman}, S.\,12.                             \\
+\texttt{..[S.\,12]\mymarg{erm}} & $^{2}$a.\,a.\,O\kern-1.2pt.        & $^{2}$a.\,a.\,O\kern-1.2pt.                                 & $^{2}$a.\,a.\,O\kern-1.2pt.                              \\
+\texttt{..[S.\,20]\mymarg{erm}} & $^{3}$a.\,a.\,O\kern-1.2pt., S.\,20.& $^{3}$a.\,a.\,O\kern-1.2pt., S.\,20.                         & $^{3}$a.\,a.\,O\kern-1.2pt., S.\,20.                      \\
+\texttt{..\mymarg{mueko}}      & $^{4}$\textsc{MüKo}.              & $^{4}$\textsc{MüKo}.                                       & $^{4}$\textsc{MüKo}.                                    \\
+\texttt{..[S.\,12]\mymarg{erm}} & $^{5}$\textsc{Erman}, S.\,12.       & $^{5}$\textsc{Erman}, S.\,12.                                & $^{5}$\textsc{Erman}, S.\,12.                             \\
+\texttt{..[S.\,12]\mymarg{erm}} & $^{6}$a.\,a.\,O\kern-1.2pt.        & $^{6}$a.\,a.\,O\kern-1.2pt.                                 & $^{6}$a.\,a.\,O\kern-1.2pt.                              \\[.8ex]
+\multicolumn{4}{@{}c@{}}{\emph{Seitenumbruch von ungerade (rechts) auf gerade (links)}}\\[1.6ex]
+\texttt{..[S.\,12]\mymarg{erm}} & $^{7}$\textsc{Erman}, S.\,12.       & $^{7}$\textsc{Erman}, S.\,12. $\longleftarrow$ \textsf{!!!}  & $^{7}$a.\,a.\,O\kern-1.2pt. $\longleftarrow$ \textsf{!!!}\\
+\texttt{..[S.\,12]\mymarg{erm}} & $^{8}$a.\,a.\,O\kern-1.2pt.        & $^{8}$a.\,a.\,O\kern-1.2pt.                                 & $^{8}$a.\,a.\,O\kern-1.2pt.                              \\[.8ex]
+\multicolumn{4}{@{}c@{}}{\emph{Seitenumbruch von gerade (links) auf ungerade (rechts) = gegenüberliegende Seiten}}\\[1.6ex]
+\texttt{..[S.\,12]\mymarg{erm}} & $^{9}$\textsc{Erman}, S.\,12.       & $^{9}$a.\,a.\,O\kern-1.2pt. $\longleftarrow$ \textsf{!!!}   & $^{9}$a.\,a.\,O\kern-1.2pt. $\longleftarrow$ \textsf{!!!}\\
+\texttt{..[S.\,12]\mymarg{erm}} & $^{10}$a.\,a.\,O\kern-1.2pt.       & $^{10}$a.\,a.\,O\kern-1.2pt.                               & $^{10}$a.\,a.\,O\kern-1.2pt.                              \\
+\hline
+\end{tabular}}
+\end{center}
+
+\DescribeMacro{\noibidem} Mit Hilfe des Befehls \cs{noibidem} können Sie den
+\texttt{ibidem}-Automatismus für das jeweils nächste (\emph{und nur für
+dieses!}) Wiederholungszitat abschalten.
+
+
+\subsubsection{Sonstiges}
+
+ \begin{Options}
+   \item[commabeforerest] Hier wird ein Komma vor evtl. angegebene Seitenzahlen, Randnummern
+                      und dergleichen gesetzt: \cite[S.\,12]{kkstrr}.
+   \item[silent] unterdrückt alle \textsf{jurabib}-spezifischen Warnungen.
+  \end{Options}
+
+\subsection[Formatierung des Literaturverzeichnisses]
+           {Möglichkeiten der Formatierung des\\ Literaturverzeichnisses}
+\subsubsection{Schriftschnitte}
+Die Möglichkeiten der Formatierung beschränken sich auf die Modifikation von
+Schriftarten einzelner, ausgewählter Teile eines Eintrages im
+Literaturverzeichnis. Dazu existieren die Befehle \cs{biblnfont} für die
+Formatierung der Nachnamen der
+   \DescribeMacro{\biblnfont}
+   \DescribeMacro{\bibelnfont}
+   \DescribeMacro{\bibfnfont}
+   \DescribeMacro{\bibefnfont}
+   \DescribeMacro{\bibtfont}
+   \DescribeMacro{\bibbtfont}
+   \DescribeMacro{\bibjtfont}
+   \DescribeMacro{\bibapifont}
+   \DescribeMacro{\bibsnfont}
+Autoren und \cs{bibelnfont} für die Herausgeber, \cs{bibfnfont} und \cs{bibefnfont}
+für die Formatierung der Vornamen
+selbiger, \cs{bibtfont} für die Anpassung der Titel von Büchern und anderem,
+\cs{bibbtfont} für die Formatierung der Titel bei Sammelwerken und
+\cs{bibjtfont} für die Modifizierung des Zeitschriftentitels bei Artikeln. Dazu
+kommt \cs{bibapifont}, um den Titel eines Artikels, eines Beitrages in einem
+Sammelwerk oder ähnliches zu formatieren. Dieser Befehl ist aktiv bei den
+Eintragstypen \texttt{@ARTICLE}, \texttt{@PERIODICAL}, \texttt{@INBOOK} und
+\texttt{@INCOLLECTION}, also bei unselbständigen Publikationsformen.
+Mit \cs{bibsnfont} können Sie das Aussehen des |series| Feldes bestimmen.
+
+Die voreingestellte Formatierung entspricht diesen Redefinitionen:
+
+\begin{verbatim}
+   \renewcommand*{\biblnfont}{\bfseries}
+   \renewcommand*{\bibfnfont}{\bfseries}
+   \renewcommand*{\bibelnfont}{\bfseries}
+   \renewcommand*{\bibefnfont}{\bfseries}
+   \renewcommand*{\bibtfont}{}
+   \renewcommand*{\bibbtfont}{}
+   \renewcommand*{\bibjtfont}{}
+   \renewcommand*{\bibapifont}{}
+   \renewcommand*{\bibsnfont}{}
+\end{verbatim}
+Die Modifikation erfolgt analog zu den schon oben gezeigten Beispielen. Auch
+hier ist zu beachten, daß Fontbefehle benutzt werden, die mit \cs{text}
+beginnen (Fontwechselbefehle mit Argumenten, z.\,B. \cs{textit}, \cs{textbf}
+usw.), und \emph{nicht} solche, die mit \texttt{series}, \texttt{family} oder
+\texttt{shape} enden (Deklarationsform, z.\,B. \cs{bfseries}, \cs{slshape},
+\cs{sffamily})!
+
+\subsubsection{Optionen für das Literaturverzeichnis}
+
+ \begin{Options}
+  \item[bibformat=nohang] Hiermit wird der voreingestellte Einzug der zweiten und
+        aller folgenden Zeilen in einem Eintrag im Literaturverzeichnis unterdrückt.
+\noindent Möchten Sie den Einzug in seiner Größe beeinflussen, so mögen Sie
+folgendes in die Präambel Ihres Dokumentes schreiben:
+\begin{verbatim}
+  \setlength{\jbbibhang}{1.5em}
+\end{verbatim}
+Voreingestellt ist ein Einzug von 2.5\,em.
+ \item[bibformat=tabular] Das Literaturverzeichnis wird in Form einer zweispaltigen Tabelle
+         ausgegeben. Die Autoren erscheinen links, der Rest des biblio"-graphischen Eintrages rechts.
+Die Breite der Spalten ist anpaßbar über folgende Befehle (die angegeben Werte
+sind voreingestellt):
+\begin{verbatim}
+  \renewcommand*{\bibleftcolumn}{\textwidth/3}
+  \renewcommand*{\bibrightcolumn}{\textwidth-\bibleftcolumn-1cm}
+\end{verbatim}
+ Eine Einstellung der Ausrichtung innerhalb der Spalten ist ebenfalls möglich
+(auch hier die Voreinstellungen):
+\begin{verbatim}
+  \renewcommand*{\bibleftcolumnadjust}{\raggedright}
+  \renewcommand*{\bibrightcolumnadjust}{\raggedright}
+\end{verbatim}
+Für einen besseren Umbruch sei die Benutzung von \mbox{\textsf{ragged2e.sty}}
+empfohlen:
+\begin{verbatim}
+  \usepackage{ragged2e}
+\end{verbatim}
+Das oben gezeigte Laden des \textsf{ragged2e}-Paketes ist ausreichend. Es
+erfolgt automatisch die Umdefinition der entsprechenden Befehle. Von Versuchen,
+hier einen Blocksatz erzwingen zu wollen, rate ich ab. Für diesen speziellen
+Fall ist Rauhsatz geeigneter. Wer trotzdem Blocksatz erreichen will:
+\begin{verbatim}
+  \renewcommand*{\bibrightcolumnadjust}{}
+\end{verbatim}
+ \item[bibformat=numbered] Hier werden die Einträge im Literaturverzeichnis numeriert. Das Format der Numerierung kann mit Hilfe von |\bibnumberformat| angepasst werden:
+\begin{verbatim}
+  \renewcommand{\bibnumberformat}[1]{(#1)}
+\end{verbatim}
+ \item[bibformat=ibidem] In -- nicht nur namentlicher -- Anlehnung an die "`großen"'
+            \texttt{ibidem}-Optionen kann diese Option
+            unmittelbare Wiederholungen von Autoren durch eine Linie (oder was auch immer) ersetzen.
+            Dabei testet \textsf{jurabib}, ob zwischen zwei Wiederholungen
+            ein Seitenumbruch liegt und verhindert entsprechend die Ausgabe der Ersetzung. Dabei können je
+            nach Umfang des Dokumentes auch drei, vier oder mehr(!) \LaTeX-Läufe nötig werden, bis dieser
+            Mechanismus vollständig greift. Also solange beim ersten Literaturverzeichniseintrag auf einer Seite
+           der Ersetzungstext erscheint, greift dieser Mechanismus noch nicht! (Dies gilt jedoch nicht
+           für gegenüberliegende Seiten bei Verwendung einer \texttt{*book}-Klasse oder der
+          \texttt{twoside}-Option.)
+\item[lookforgender] Es ist möglich, die im Deutschen nötige
+Unterscheidung zwischen männlichen und weiblichen Autoren durch Benutzung des
+neuen |gender|-Feldes bereits in der \BibTeX-Datenbank zu treffen. Diese Option bewirkt die Auswertung dieses Feldes.
+Dabei gelten folgende Abkürzungen:
+\end{Options}
+\noindent{\footnotesize
+   \begin{tabular}{@{}llllll@{}}
+    \hline\\[-2ex]
+    Abk. & Bedeutung      & Zitatvariante & Definition über:  & Bibliographievariante & Definition über:    \\
+    \hline\\[-2ex]
+    |sf| & single female  & Dies./dies.   & |\idem[S,s]fname| & Dieselbe/dieselbe     & |\bibidem[S,s]fname|\\
+    |sm| & single male    & Ders./ders.   & |\idem[S,s]mname| & Derselbe/derselbe     & |\bibidem[S,s]mname|\\
+    |pf| & plural female  & Dies./dies.   & |\idem[P,p]fname| & Dieselben/dieselben   & |\bibidem[P,p]fname|\\
+    |pm| & plural male    & Dies./dies.   & |\idem[P,p]mname| & Dieselben/dieselben   & |\bibidem[P,p]mname|\\
+    |sn| & single neutrum & Dass./dass.   & |\idem[S,s]nname| & Dasselbe/dasselbe     & |\bibidem[S,s]nname|\\
+    |pn| & plural neutrum & Dies./dies.   & |\idem[P,p]nname| & Dieselben/dieselben   & |\bibidem[P,p]nname|\\
+    \hline\\[-2ex]
+   \end{tabular}}
+
+\medskip
+
+\noindent Für eine einzelne Frau als Autorin wäre also für eine geänderte Darstellung ("`Dies."'/"`dies."' anstelle von "`Dieselbe"'/"`dieselbe"') im Literaturverzeichnis folgendes nötig:
+\begin{verbatim}
+	\AddTo\bibsgerman{%
+    		\renewcommand\bibidemSfname{Dies.}%
+    		\renewcommand\bibidemsfname{dies.}%
+	}
+\end{verbatim}
+
+\begin{Options}
+\item[bibformat=ibidemalt] Eine alternative  Darstellung des Literaturverzeichnisses,
+   speziell für Juristen. Diese Option geht auf Vorschläge von Tilman Finke zurück.
+\item[bibformat=compress] Das Literaturverzeichnis wird  etwas kompakter gesetzt,
+  d.\,h. der Abstand zwischen den einzelnen Einträgen wird verringert.
+\item[bibformat=raggedright] Das Literaturverzeichnis wird  mit Flattersatz gesetzt.
+  Diese sei speziell bei Benutzung von |bibformat=tabular| oder
+  bei geringer Textbreite empfohlen.
+\item[annote] Der Inhalt des |annote|-Feldes wird ausgegeben (nur im Literaturverzeichnis\,!).
+    Es besteht die Möglichkeit -- ähnlich wie bei \textsf{natbib}~-- das |annote|-Feld nicht zu
+    besetzen und \textsf{jurabib} stattdessen eine Datei benutzen zu lassen. Diese Datei wird
+    eingebunden, sofern sie den Namen des BibTeX-Datenbankeintrags besitzt und auf |.tex| endet.
+    Sollte das |annote|-Feld leer sein und keine annote-Datei existieren,
+    wird nichts ausgegeben.
+    \DescribeMacro{\bibAnnotePath}
+     Mit |\bibAnnotePath| läßt sich ein Pfad zu den Annote-Dateien angeben.
+     Die Syntax entspricht der von |\graphicspath|: |\bibAnnotePath{{annotes/}}|
+     verwendet die Annote-Dateien aus dem Verzeichnis |annotes| unterhalb
+     des aktuellen Verzeichnisses.
+\item[super] Konvertiert alle\NEW{0.6} |\cite|-Befehle in |\footcite|'s,
+\item[config=\meta{file}] Ermöglicht die\NEW{0.6} Nutzung von mehreren |.cfg| Dateien. Mit dieser Option laden Sie die gewünschte Datei. Bitte beachten Sie, daß es \emph{nicht} nötig ist, die Erweiterung |.cfg| anzugeben\,!
+\item[dotafter=bibentry] setzt einen \NEW{0.6}Punkt am Ende der Einträge in der Bibliographie.
+\item[dotafter=endnote] setzt einen \NEW{0.6} Punkt am Ende der Endnoten
+        (bei Verwendung von \textsf{endnotes.sty}).
+\end{Options}
+
+\subsubsection{Weitere Möglichkeiten der Anpassung}
+   \DescribeMacro{\bibbtsep}
+   \DescribeMacro{\bibjtsep}
+Da es durchaus unterschiedliche Ansichten dazu gibt, wie ein Zitat aus einem
+Sammelwerk oder einer Zeitschrift im Literaturverzeichnis zu erscheinen hat,
+gibt es die Befehle \cs{bibbtsep} und \cs{bibjtsep}. Sie stehen für
+"`\textbf{b}ook\textbf{t}itle \textbf{sep}aration"' und
+"`\textbf{j}ournal\textbf{t}itle \textbf{sep}aration"'.
+\begin{bibexample}
+\item \textbf{Brinkmann, Franz~Josef:} Der Zugang der Willenserklärungen,  Münsterische
+Beiträge zur Rechtswissenschaft, Bd.~3 Berlin, 1984
+\end{bibexample}
+Möchte man beispielsweise, daß im Literaturverzeichnis ein "`in~"' vor den
+Buch\-titeln und dem Titel von Zeitschriften erscheint, dann wären die
+folgenden Umdefinitionen zu tätigen:
+\begin{verbatim}
+  \renewcommand*{\bibbtsep}{in }
+  \renewcommand*{\bibjtsep}{in }
+\end{verbatim}
+Nach obiger Redefinition bietet sich uns folgendes Bild:
+\begin{bibexample}
+\item \textbf{Brinkmann, Franz~Josef:} Der Zugang der Willenserklärungen, in Münsterische
+Beiträge zur Rechtswissenschaft, Bd.~3 Berlin, 1984
+\end{bibexample}
+   \DescribeMacro{\bibansep}
+   \DescribeMacro{\bibatsep}
+   \DescribeMacro{\bibbdsep}
+Auch was die Zeichensetzung nach Autoren, Titeln und zwischen Verlagsort und
+Monat\slash Jahr betrifft, gibt es verschiedene Auffassungen. Dieser Tatsache
+wird durch die Befehle \cs{bibansep} (\textbf{a}fter \textbf{n}ame
+\textbf{sep}aration), \cs{bibatsep} (\textbf{a}fter \textbf{t}itle
+\textbf{sep}aration) und \cs{bibbdsep} (\textbf{b}efore \textbf{d}ate
+\textbf{sep}aration) Rechnung getragen. Möchte man also beispielsweise nach dem
+Autor keinen Doppelpunkt, nach dem Titel anstelle des Kommas einen Punkt und
+kein Komma zwischen Ort und Jahr, dann kann man sein Ziel über folgende
+Redefinitionen erreichen:
+\begin{verbatim}
+  \renewcommand*{\bibansep}{}
+  \renewcommand*{\bibatsep}{.}
+  \renewcommand*{\bibbdsep}{}
+\end{verbatim}
+Das Ergebnis sieht nun so aus:
+\begin{bibexample}
+\item \textbf{Brinkmann, Franz~Josef} Der Zugang der Willenserklärungen. Münsterische
+Beiträge zur Rechtswissenschaft, Bd.~3 Berlin 1984
+\end{bibexample}
+
+\subsubsection{Zitiert \dots}
+\DescribeMacro{howcited=normal} \DescribeMacro{howcited=multiple}
+\DescribeMacro{howcited=compare} \DescribeMacro{howcited=all} Die
+\texttt{howcited}-Optionen plazieren (unter unterschiedlichen Bedingungen)
+hinter \emph{ausgewählten} Einträgen im Literaturverzeichnis einen Kommentar,
+der angibt, wie das Werk im Text zitiert wurde. Dabei wird dieser Kommentar
+entsprechend dynamisch verändert, wie wir das schon vom Zitat selbst kennen,
+d.\,h. die Angabe im Literaturverzeichnis entspricht immer genau der
+\emph{zuletzt} im Text verwendeten Form. Bei Artikeln und Periodika wird per
+Voreinstellung keine Angabe über die Art der Zitierung gemacht -- dies gilt für
+alle \texttt{howcited}-Optionen (ausgenommen \texttt{howcited=all}) -- da dies
+üblicherweise über die Angabe des Autorennamens und des Zeitschriftentitels
+erfolgt und somit hinreichend eindeutig ist.\footnote{Vielen Dank an
+\textsc{Christian Meyn} für diesen Hinweis.} Sollte es erforderlich sein, daß
+der Vermerk auch bei Artikeln und Periodika erscheint, benutzen Sie folgendes:
+\begin{verbatim}
+     \makeatletter
+     \jb@allow@howcited@art@periodtrue
+     \makeatother
+\end{verbatim}
+\begin{Options}
+\item[howcited=normal]\DescribeMacro{howcited=normal}
+   Die Option \texttt{howcited=normal} setzt dann den Vermerk "`(zitiert: \meta{Autor})"', wenn in
+   der \texttt{.bib}-Datei das Feld \texttt{howcited} besetzt
+   wurde.\footnote{Mit dieser Option läßt sich der unter Umständen unerwünschte
+   Automatismus der nachfolgenden Option \texttt{howcited=compare} ausschalten und man behält bei
+   jedem einzelnen Werk die Kontrolle, ob dort ein Vermerk über die Art des Zitats
+   erscheinen soll oder nicht und wenn er erscheinen soll, wie er auszusehen hat.}
+
+Nun gibt es zwei Möglichkeiten, dieses Feld zu benutzen. Im Sinne eines
+Schalters funktioniert der Wert \texttt{1} in diesem Feld. Er bewirkt, daß das
+Originalzitat, so wie es im Text erscheint, auch nach dem Eintrag im
+Literaturverzeichnis gesetzt wird. Ein Beispiel:
+\begin{verbatim}
+   @BOOK{enne:nipp,
+     author      = {Ludwig Enneccerus and Hans Carl Nipperdey},
+     title       = {Allgemeiner Teil des Bürgerlichen Rechts},
+     year        = 1960,
+     volume      = {1},
+     volumetitle = {zweiter Halbband},
+     address     = {Tübingen},
+     edition     = {15.},
+     howcited    = {1}
+   }
+\end{verbatim}
+Erzeugt folgendes (Benutzung von \cs{[foot]cite} vorausgesetzt):
+\begin{bibexample}
+\item \textbf{Enneccerus, Ludwig\slash Nipperdey, Hans~Carl:}
+   Allgemeiner Teil des Bürgerlichen Rechts. Bd.~1, zweiter Halbband, 15.~Auf"|lage,
+   Tübingen 1960 (zitiert: Eneccerus\slash Nipperdey)
+\end{bibexample}
+
+Sollte jedoch Bedarf bestehen, diesen Vermerk vom Originalzitat abweichen zu
+lassen, trägt man in dieses Feld einfach das ein, was anstelle des
+Originalzitates erscheinen soll. Ein Beispiel:
+\begin{verbatim}
+   @BOOK{enne:nipp,
+     author      = {Ludwig Enneccerus and Hans Carl Nipperdey},
+     title       = {Allgemeiner Teil des Bürgerlichen Rechts},
+     year        = 1960,
+     volume      = {1},
+     volumetitle = {zweiter Halbband},
+     address     = {Tübingen},
+     edition     = {15.},
+     howcited    = {Enneccerus/Nipperdey, B"urgerliches Recht}
+   }
+\end{verbatim}
+Erzeugt:
+\begin{bibexample}
+\item \textbf{Enneccerus, Ludwig\slash Nipperdey, Hans~Carl:}
+   Allgemeiner Teil des Bürgerlichen Rechts. Bd.~1, zweiter Halbband, 15.~Auf"|lage,
+   Tübingen 1960 (zitiert: Enneccerus\slash Nipperdey, Bürgerliches Recht)
+\end{bibexample}
+Um ein einheitliches Layout auch bei der Veränderung von Optionen, die die
+Schriftschnitte der Autoren betreffen, sicherzustellen, sind u.\,U. Fontbefehle
+in das Feld einzufügen.
+
+\item[howcited=compare]\DescribeMacro{howcited=compare}
+Diese Option plaziert den Zusatz "`(zitiert: \meta{Autor})"' dann, \emph{wenn
+ein Eintrag im Feld \texttt{shorttitle} gemacht wurde}, und dieser vom Eintrag
+im Feld \texttt{title} abweicht. Das Feld \texttt{howcited} in der
+\texttt{.bib}-Datei wird nun ignoriert. Maßgeblich für die Plazierung des
+Vermerks ist allein die Abweichung des Feldes \texttt{shorttitle} vom Feld
+\texttt{title}! Das ist bei dem folgenden, mit \cs{[foot]citetitle} zitierten
+Beispiel der Fall:
+\begin{verbatim}
+   @BOOK{kkstrr,
+     author      = {Kurt Kodal and Joachim Krämer},
+     title       = {Straßenrecht},
+     shorttitle  = {StrR},
+     year        = 1995,
+     address     = {München},
+     edition     = {5.},
+     pages       = {30--34, \S~24}
+   }
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Kodal, K.\slash Krämer, J.:} Straßenrecht, 5.~Auf"|lage München, 1995
+(zitiert: Kodal\slash Krämer, StrR)
+\end{bibexample}
+
+\item[howcited=multiple]\DescribeMacro{howcited=multiple}
+   Diese Option plaziert den Zusatz "`(zitiert: \meta{Autor})"' nur dann, wenn
+   mehr als ein Werk des betreffenden Autors zitiert wurde. Dies gilt per
+   Voreinstellung jedoch nicht für Kommentare (bei diesen wird der Vermerk
+   immer gesetzt), was sich jedoch ändern läßt (\cs{jb@@mult@switch} ist gleich
+   \texttt{1}, wenn mehr als ein Werk eines Autors zitiert wurde):
+\begin{verbatim}
+     \makeatletter
+     \renewcommand*{\jb@make@howcited@multiple}{%
+        \jb@suppress@dot@for@howcitedtrue
+        \ifthenelse{\equal{\jb@@mult@switch}{1}}{%
+          \jb@make@howcited
+          \jb@make@comment@howcited
+          \jb@make@artperiod@howcited
+        }{%
+          \let\bibhowcited\@empty
+          \let\bibcommenthowcited\@empty
+          \let\bibartperiodhowcited\@empty
+        }%
+     }%
+     \makeatother
+\end{verbatim}
+\item[howcited=all]\DescribeMacro{howcited=all}
+  Der \texttt{howcited}-Vermerk erscheint bei allen Einträgen.
+\end{Options}
+
+Voreingestellt ist der Wortlaut "`(zitiert: \meta{Autor})"'. Eine Anpassung ist
+möglich über die folgenden Befehle:
+\begin{verbatim}
+   \newcommand*{\howcitedprefix}{-- als }
+   \newcommand*{\howcitedsuffix}{ zitiert.}
+\end{verbatim}
+Man beachte die Leerzeichen. Dies ergibt dann:
+\begin{bibexample}
+\item \textbf{Kodal, K.\slash Krämer, J.:} Straßenrecht, 5.~Auf"|lage München, 1995
+ -- als Kodal\slash Krämer, StrR zitiert.
+\end{bibexample}
+Wenn das Werk nicht zitiert worden ist, aber in das Literaturverzeichnis
+aufgenommen werden soll, kann man sich des Befehls \cs{nocite} bedienen:
+\begin{verbatim}
+   \nocite{kkstrr}
+\end{verbatim}
+Oder, um \emph{alle} nicht-zitierten Werke ins Literaturverzeichnis
+aufzunehmen:
+\begin{verbatim}
+   \nocite{*}
+\end{verbatim}
+Dann erhält der Vermerk die aktuelle Bedeutung des Befehls \cs{bibnotcited}.
+Standard ist die leere Definition dieses Befehls. Dies läßt sich jedoch einfach
+anpassen:
+\begin{verbatim}
+   \renewcommand*{\bibnotcited}{(nicht zitiert)}
+\end{verbatim}
+Erzeugt folgendes:
+\begin{bibexample}
+\item \textbf{Kodal, K.\slash Krämer, J.:} Straßenrecht, 5.~Auf"|lage München, 1995
+      (nicht zitiert)
+\end{bibexample}
+Eine der \texttt{howcited}-Optionen muß dafür natürlich aktiviert sein.
+
+Mittlerweile sind alle sinnvollen Kombinationen von |howcited|-Optionen möglich.
+
+Noch ein Hinweis zur Benutzung der \texttt{howcited}-Optionen: Wenn Sie
+bemerken sollten, daß nicht die zuletzt im Text verwendete Zitierform im
+Literaturverzeichnis erscheint, löschen Sie bitte die \texttt{.aux}-Datei und
+bearbeiten Ihr Dokument erneut mit \LaTeX.
+
+\subsubsection{Weitere Eintragsfelder und Eintragstypen}
+
+   \DescribeMacro{url =}
+Auch wenn es vielleicht in der Rechtswissenschaft noch nicht zur Üblichkeit
+gehört, Quellen aus dem World Wide Web zu zitieren, habe ich neben den Feldern
+\texttt{shortauthor} und \texttt{shorttitle} noch das Feld \texttt{url}
+hinzugefügt.
+
+   \DescribeMacro{urldate =}
+Mit dem Feld \texttt{urldate} ist es möglich, das Datum des Zugriffs auf die Website anzugeben. Der vor dem
+Datum des Zugriffs erscheinende Wortlaut ist voreingestellt auf "`Zugriff am "'
+und läßt sich redefinieren über:
+\begin{verbatim}
+   \AddTo\bibsgerman{\renewcommand*{\urldatecomment}{besucht am }} .
+\end{verbatim}
+Die Trennung zwischen URL und |\urldatecomment| ist konfigurierbar und durch das Makro |\bibbudcsep| repräsentiert.
+Es ist in der Voreinstellung als "` -- "' definiert.
+
+   \DescribeMacro{\biburlprefix}
+   \DescribeMacro{\biburlsuffix}
+In Zusammenhang damit ergibt sich die Möglichkeit, die Ausgabe des
+\texttt{url}-Feldes zu formatieren. Dies ist mit Hilfe des Befehls
+\cs{biburlprefix} möglich, welcher vor den eigentlichen URL-Eintrag
+beispielsweise "`URL:"' einfügt. Voreingestellt sind:
+
+\begin{verbatim}
+   \newcommand*{\biburlprefix}{\jblangle{}URL: }
+   \newcommand*{\biburlsuffix}{\jbrangle{}}
+\end{verbatim}
+Eine Umdefinition erfolgt analog zu den anderen Befehlen via \cs{renewcommand}.
+Um ein Umbrechen des URL sowie die korrekte Ausgabe von Zeichen wie z.\,B.
+\verb+~+ und \verb+_+ zu ermöglichen, lädt \textsf{jurabib} das
+\textsf{url}-Paket. In Version 0.51 ist der Befehl \CH{0.51} |\biburlfont|
+geändert worden, eine Formatierung des URL ist nun folgendermaßen möglich (nur
+diese vier Werte sind möglich\,!):
+\begin{verbatim}
+   \biburlfont{tt}   % typewriter
+   \biburlfont{rm}   % roman
+   \biburlfont{sf}   % serifenlos
+   \biburlfont{same} % wie im Text
+\end{verbatim}
+
+   \DescribeMacro{@WWW}
+ Neuer Eintragstyp für URL. Zwingend ist nur \texttt{url}, optional sind \texttt{urldate},
+\texttt{author} und \texttt{title}.
+\begin{verbatim}
+   @WWW{testurl,
+     author  = {Jens Berger},
+     title   = {Home of jurabib},
+     url     = {http://www.jurabib.org},
+     urldate = {06.12.2003}
+   }
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Berger, Jens:} Home of jurabib, $\langle$URL:
+      |http://www.jurabib.org|$\rangle$~-- Zugriff am 06.12.2003
+\end{bibexample}
+   \DescribeMacro{@PERIODICAL}
+Auf einen Hinweis von \textsc{Andreas Stefanski} hin habe ich für Periodika --
+die nach Band und nicht nach Jahreszahl zitiert werden -- einen neuen
+Eintragstyp \texttt{@PERIODICAL} definiert, der die Anforderung erfüllt, die
+Jahreszahl in eckigen Klammern zu setzen. Zudem ist die Angabe des Bandes
+möglich:
+\begin{verbatim}
+  @PERIODICAL{oellers,
+    author      = {Bernd Oellers},
+    title       = {Doppelwirkung im Recht?},
+    journal     = {AcP},
+    year        = 1969,
+    volume      = 169,
+    pages       = {67ff}
+  }
+\end{verbatim}
+Dies erzeugt folgendes:
+\begin{bibexample}
+\item \textbf{Oellers, Bernd:} Doppelwirkung im Recht? AcP 169 [1969], S.\,67ff
+\end{bibexample}
+  \DescribeMacro{\bibpldelim}
+  \DescribeMacro{\bibprdelim}
+Über die Befehle \cs{bibpldelim} (\texttt{P}eriodical \texttt{L}eft
+\texttt{DELIM}iter) und \cs{bibprdelim} (\texttt{P}eriodical \texttt{R}ight
+\texttt{DELIM}iter) ist eine Änderung der Klammerung der Jahreszahl möglich:
+\begin{verbatim}
+   \renewcommand*{\bibpldelim}{(}
+   \renewcommand*{\bibprdelim}{)}
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Oellers, Bernd:} Doppelwirkung im Recht? AcP 169 (1969), S.\,67ff
+\end{bibexample}
+
+\DescribeMacro{@COMMENTED} Desweiteren wurde durch die Definition des
+Eintragstyps \texttt{@COMMENTED} eine Möglichkeit geschaffen, Kommentare auch
+als solche zu verwalten. Im Zusammenhang mit der Option
+\texttt{howcited=normal} erscheint dann auch für diesen Eintrag am Ende des
+Eintrags (zitiert: \meta{Autor}\slash Bearbeiter) oder (zitiert: Bearbeiter in
+\meta{Autor}).
+\begin{bibexample}
+\item \textbf{Münchener Kommentar:} Kommentar zum Bürgerlichen Gesetzbuch, Bd.~2,
+\mbox{--~Schuldrecht~--} Allgemeiner Teil, 3.~Auf"|lage, München, 1994,
+\S\kern-.8pt\S~241--432 (zitiert: MüKo\slash Bearbeiter)
+\end{bibexample}
+\DescribeMacro{updated =} Dieses neue Feld wird innerhalb des Typs |@COMMENTED|
+ausgewertet, um den jeweils letzten Stand z.\,B. von Loseblattsammlungen anzugeben.
+\begin{bibexample}
+\item \textbf{Münchener Kommentar:} Kommentar zum Bürgerlichen Gesetzbuch, Bd.~2,
+\mbox{--~Schuldrecht~--} Allgemeiner Teil, 3.~Auf"|lage, München, Stand: Mai~1994
+\end{bibexample}
+|updated| überschreibt \emph{nicht} das |year|-Feld\,! Die Abtrennung vom |address|\slash|publisher|/|year|-Block
+ist durch das |\updatesep|-Makro gegeben, welches per Voreinstellung als Komma ausgeführt ist.
+Vor den im Feld |updated| angegebenen Daten erscheint via Voreinstellung "`Stand:"'. Dies ist
+konfigurierbar über das Makro |\updatename|.
+\begin{verbatim}
+   \AddTo\bibsgerman{%
+        \def\updatesep{.}
+        \def\updatename{Stand vom}
+   }
+\end{verbatim}
+
+Wird dieser Eintragstyp nicht verwendet, obwohl es sich um einen Kommentar
+handelt, erscheint (zitiert: \meta{Autor}), was nicht korrekt ist, weil das
+tatsächliche Layout des Zitates anders aussieht. Wer allerdings die
+\texttt{howcited}-Optionen  nicht benutzt, für den ist es unerheblich, welchen
+Eintragstyp er für die Eingabe von Kommentaren verwendet.
+
+\DescribeMacro{volumetitle =} Über das Feld \texttt{volumetitle} ist es
+möglich, einen Bandtitel anzugeben, der dann hinter der Nummer des Bandes
+erscheint. Dieses Feld steht für die Eintragstypen \texttt{@COMMENTED},
+\texttt{@BOOK}, \texttt{@INBOOK} und \texttt{@INCOLLECTION} zur Verfügung.
+
+\DescribeMacro{titleaddon =} Dieses Feld dient dazu, einen Kommentar, eine
+Notiz, Angaben zum Übersetzer, Mitarbeitern etc. zu machen. Es wird unmittelbar
+hinter dem Titel plaziert.
+\begin{verbatim}
+  @COMMENTED{mueko,
+    [...]
+    title       = {Kommentar zum Bürgerlichen Gesetzbuch},
+    titleaddon  = {Unter Mitarbeit von Hans Mustermann},
+    [...]
+  }
+\end{verbatim}
+Erzeugt:
+\begin{bibexample}
+\item \textbf{Münchener Kommentar:} Kommentar zum Bürgerlichen Gesetzbuch,
+ Unter Mitarbeit von Hans Mustermann, Bd.~2,
+\mbox{--~Schuldrecht~--} Allgemeiner Teil, 3.~Auf"|lage, München, 1994,
+\S\kern-.8pt\S~241--432
+\end{bibexample}
+
+\DescribeMacro{booktitleaddon =} Hier gilt ähnliches wie für das
+|titleaddon|-Feld, nur  ist dieses Feld für Anmerkungen hinter dem Titel eines
+Sammelwerkes vorgesehen.
+
+\DescribeMacro{editortype =} Sollte man einmal vor dem Problem stehen, daß man
+(für  einen einzelnen Eintrag in der Datenbank) nach dem Namen des Herausgebers
+etwas anderes als "`(Hrsg.)"' einsetzen möchte, etwa "`(Begr.)"' oder
+ähnliches, dann trägt man den gewünschten Ersetzungstext einfach in das Feld
+|editortype| ein:
+\begin{verbatim}
+   @COMMENTED{palandt,
+     editor      = {Otto Palandt},
+     editortype  = {Begr.},
+     title       = {Bürgerliches Gesetzbuch mit Einführungsgesetz [...]},
+     [...]
+   }
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Palandt, Otto (Begr.):} Bürgerliches Gesetzbuch mit Einführungsgesetz [...],
+59.~Auf"|lage, München, 2000
+\end{bibexample}
+  Dies funktioniert auch für den Eintragstyp |@INCOLLECTION|.
+\par\medskip\par
+\DescribeMacro{sortkey =} Es scheint des öfteren notwendig zu sein, ein Werk an
+einer bestimmten Stelle im Literaturverzeichnis auftauchen zu lassen, die vom
+normalen Sortieralgorithmus abweicht. Dieses Problem löst das neue Feld
+|sortkey|, in das man einen Sortierschlüssel eintragen kann, der -- im
+Gegensatz zum Standard-Feld |key| -- nicht erst bei Fehlen von |author| und
+|editor| zum Sortieren benutzt wird, sondern mit höchster Priorität die
+Sortierung bestimmt. Gerade deshalb sollte er sorgfältig eingesetzt werden.
+
+\DescribeMacro{annote =} Auch der Wunsch nach einer Möglichkeit, eine  (unter
+Umständen längere) Zusammenfassung nach dem Eintrag im Literaturverzeichnis
+auszugeben, wurde mehrfach geäußert. Diesem Wunsch trage ich mit dem neuen
+|annote|-Feld Rechnung. Das Erscheinen des Inhaltes dieses Feldes läßt sich
+über die Option |annote=true| bzw. nur |annote| in der Präambel bzw. in der
+ |jurabib.cfg| an- und abschalten.
+\begin{verbatim}
+   @COMMENTED{palandt,
+     editor      = {Otto Palandt},
+     title       = {Bürgerliches Gesetzbuch mit Einführungsgesetz [...]},
+     annote      = {Auch der Wunsch nach einer ...},
+     [...]
+   }
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Palandt, Otto:} Bürgerliches Gesetzbuch mit Einführungsgesetz [...],
+59.~Auf"|lage, München, 2000 \par {\small Auch der Wunsch nach einer
+Möglichkeit, eine (unter Umständen längere) Zusammenfassung nach dem Eintrag im
+Literaturverzeichnis auszugeben, wurde mehrfach geäußert. Diesem Wunsch trage
+ich mit dem neuen |annote|-Feld Rechnung. Das Erscheinen des Inhaltes dieses
+Feldes läßt sich über die Option |annote=true| bzw. nur |annote| in der
+Präambel bzw. in der
+ |jurabib.cfg| an- und abschalten.}
+\end{bibexample}
+Per Voreinstellung wird dieses Feld in |\small| gesetzt.
+ Aber auch hier ist eine Anpassung an den eigenen Geschmack möglich:
+\begin{verbatim}
+   \renewcommand{\jbannoteformat}[1]{{\footnotesize\begin{quote}#1\end{quote}}}
+\end{verbatim}
+
+\begin{bibexample}
+\item \textbf{Palandt, Otto:} Bürgerliches Gesetzbuch mit Einführungsgesetz [...],
+59.~Auf"|lage, München, 2000 \par {\footnotesize\begin{quote} Auch der Wunsch
+nach einer Möglichkeit, eine (unter Umständen längere) Zusammenfassung nach dem
+ Eintrag im Literaturverzeichnis auszugeben, wurde mehrfach geäußert. Diesem
+ Wunsch trage ich mit dem neuen |annote|-Feld Rechnung. Das Erscheinen des
+ Inhaltes dieses Feldes läßt sich über die Option |annote=true| bzw. nur
+ |annote| in der Präambel bzw. in der |jurabib.cfg| an- und abschalten.
+ \end{quote}}\end{bibexample}
+
+\subsubsection{Zitieren von juristischen Dissertationen und ähnlichen Werken}
+
+\DescribeMacro{dissyear =} Juristische Dissertationen können einmal als reine
+Dissertation zitiert werden, andererseits besteht die Möglichkeit, daß eine
+juristische Dissertation auch als Buch erschienen ist. Für den ersten Fall ist
+vorrangig der Eintragstyp \texttt{@JURTHESIS} (oder \texttt{@PHDTHESIS} bzw.
+\texttt{@MASTERSTHESIS}) zu verwenden.\footnote{Die beiden letzteren sind im
+Falle von \texttt{jurabib.bst} absolut identisch.} Im zweiten Fall scheint es
+sinnvoll, die auch als Buch erschienene Dissertation mittels \texttt{@BOOK} zu
+erfassen. Es wurde nun ein neues Feld \texttt{dissyear} geschaffen, was
+gewissermaßen den Schalter darstellt, um ein Buch auch als Dissertation oder
+ein ähnliches Werk zu deklarieren. Desweiteren werden nun innerhalb von
+\texttt{@BOOK} auch die Felder \texttt{school} und \texttt{type} ausgewertet,
+jedoch nur, wenn \texttt{dissyear} angegeben wurde, sonst werden sowohl
+\texttt{type} als auch \texttt{school} ignoriert. Ein Beispiel:
+\begin{verbatim}
+  @BOOK{alexy,
+    author      = {Alexy, Robert},
+    title       = {Theorie der Grundrechte},
+    year        = 1985,
+    address     = {Baden-Baden},
+    type        = {Habil.},
+    school      = {Göttingen},
+    dissyear    = 1984
+  }
+\end{verbatim}
+erzeugt folgendes:
+\begin{bibexample}
+\item \textbf{Alexy, Robert:} Theorie der Grundrechte, Baden-Baden 1985 (zugl. Habil.
+Göttingen 1984)
+\end{bibexample}
+
+Angenommen, diese Arbeit wäre nicht als Buch erschienen, wäre die folgende
+Erfassung sinnvoll gewesen:
+\begin{verbatim}
+  @JURTHESIS{alexy,
+    author      = {Alexy, Robert},
+    title       = {Theorie der Grundrechte},
+    year        = 1984,
+    type        = {Habil.},
+    school      = {Göttingen}
+  }
+\end{verbatim}
+und hätte folgendes erzeugt:
+\begin{bibexample}
+ \item \textbf{Alexy, Robert:} Theorie der Grundrechte, Habil. Göttingen 1984
+\end{bibexample}
+Die Voreinstellung bezüglich des Typs der Arbeit ist "`Jur. Diss."':
+\begin{verbatim}
+  @PHDTHESIS{alexy,
+    author      = {Alexy, Robert},
+    title       = {Theorie der Grundrechte},
+    year        = 1984,
+    school      = {Göttingen}
+  }
+\end{verbatim}
+\begin{bibexample}
+\item \textbf{Alexy, Robert:} Theorie der Grundrechte, Jur. Diss. Göttingen 1984
+\end{bibexample}
+  \DescribeMacro{\SSS}
+Der Befehl \cs{SS} wird nicht mehr durch \textsf{jurabib} umdefiniert\,!
+Der Befehl \cs{SSS} repräsentiert zwei Paragraphenzeichen mit verkürztem Zwischenraum. Man
+vergleiche \cs{S}\cs{S}: \S\S\ und \cs{SSS}: \S\kern-.8pt\S
+
+\section{Diverses~\dots}
+Hier nun in loser Folge einige Optionen und Befehle, die nach und nach in das
+Paket eingeführt wurden.
+\begin{Options}
+\item[pages=format] Hiermit können Sie die mittels optionalem Argument und
+  \texttt{pages}-Feld angegebenen Seitenzahlen und Seitenzahlbereiche durch \textsf{jurabib}
+formatieren lassen. Sie können also in der \texttt{.bib}-Datei \texttt{pages = \{22-34\}}
+statt \texttt{pages = \{S.\textasciitilde22-34\}} schreiben und innerhalb des optionalen
+Argumentes der \cs{cite}-Befehle z.B. |\cite[45]{<key>}|. Möchten Sie einmal etwas anderes als
+Seitenzahlen angeben oder möchten Sie nach einer Seitenzahl noch etwas Text im optionalen
+Argument unterbringen, benutzen Sie bitte die Befehle \cs{nopage} bzw. \cs{pageadd} (siehe
+Übersicht). \textsf{jurabib} fügt nun eigenständig "`S."' ein und -- falls Sie \textsf{babel}
+verwenden -- benutzt es die jeweils eingestellte Hauptsprache. \textsf{jurabib} unterscheidet
+dabei auch zwischen einzelnen Seiten und Seitenzahlbereichen, nur macht sich das im Deutschen
+per Voreinstellung nicht bemerkbar, da beide verantwortlichen Makros mit `S.' definiert sind.
+Wenn Sie das ändern möchten, z.B.:
+
+  \begin{verbatim}
+    \AddTo\bibsgerman{%
+        \def\jbpagename{Seite}%
+        \def\jbpagesname{Seiten}%
+    }
+  \end{verbatim}
+
+Es existieren eigene Makros für die Seitenangaben in der Bibliographie.
+Die Makronamen lauten |\bibpagename| und |\bibpagesname|. Ihre Definition entspricht per Voreinstellung
+der von |\jbpage[s]name|. Das heißt, wenn Sie |\jbpage[s]name| umdefinieren, wird auch automatisch
+|\bibpage[s]name| angepasst, es sei denn, Sie redefinieren |\bibpage[s]name| direkt.
+
+Hier eine Übersicht (zur Veranschaulichung der Unterscheidung zwischen
+Seitenzahlen und Seitenzahlbereichen hier mit dem englischen Pendant für
+"`S."'):
+\begin{center}
+{\small
+\begin{tabular}{@{}ll@{}}
+\hline\\[-2ex]
+|\cite[45]{<key>}                           |& \dots{}, p.~45\\
+|\cite[45--47]{<key>}                       |& \dots{}, pp.~45--47\\
+|\cite[45, 47 and 49]{<key>}                |& \dots{}, pp.~45, 47 and 49\\
+|\cite[45f]{<key>}                          |& \dots{}, pp.~45f.\\
+|\cite[45ff]{<key>}                         |&\dots{}, pp.~45ff.\\
+|\cite[\nopage{I, III and IV}]{<key>}       |& \dots{}, I, III and IV\\
+|\cite[13,\pageadd{etwas Text}]{<key>}      |& \dots{}, p.~13, etwas Text\\
+|        ^ Hier kein Leerzeichen!!!!        |& \\
+\hline\\[-2ex]
+\end{tabular}}
+\end{center}
+
+\item[pages=test] Da per Voreinstellung Seitenzahlen, die mit dem Feld
+    \texttt{pages} in der \texttt{.bib}-Datei angegeben wurden, im
+    Zitat unterdrückt werden, kann man mit diesem Befehl erreichen, daß
+    überprüft wird, ob via \cs{cite}-Befehl eine Fundstelle angegeben
+    wurde -- wenn das nicht der Fall ist, wird die Seitenangabe aus
+    der \texttt{.bib}-Datei verwendet.
+\item[pages=always] Hier werden die Seitenangaben aus der
+    \texttt{.bib}-Datei immer im Zitat ausgegeben.
+\item[hypercite=false] Schaltet die automatische Konvertierung von Zitaten in Hyperlinks ab, sofern man das \textsf{hyperref}-Paket benutzt.
+\end{Options}
+%
+\begin{description}
+\item[\cs{jbedseplikecite}] Die Separation der Herausgeber im
+    Literaturverzeichnis entspricht der im Zitat.
+\item[\cs{jbdisablecitationcrossref}] schaltet die Ausgabe von Querverweisen
+    innerhalb von Zitaten ab, aber nur solchen, die \emph{nicht} innerhalb einer
+    \texttt{@INCOLLECTION} gemacht wurden, also wo der Querverweis vielleicht
+    mehr die inhaltliche Verwandschaft zweier Werke kennzeichnen soll.
+\item[\cs{formatpages}, \textit{ehemals} \cs{formatarticlepages}] Mit Hilfe dieses
+    Befehls können Sie die Ausgabe der Seitenzahlen bei Zitaten steuern. Er
+    ermöglicht die bei Juristen teilweise übliche Angabe von Startseiten eines in
+    der Datenbank angegebenen Seitenzahlbereiches. \textsf{jurabib} ist in der
+    Lage, diese Startseite aus dem angegebenen Seitenzahlbereich zu extrahieren.
+    Seit v0.51 kann dieser Befehl nun auf alle Publikationstypen angewendet werden.
+    Dazu kann man im zweiten Argument eine Liste derjenigen Publikationstypen
+    angeben, bei denen diese Startseite angegeben werden soll.
+    Dieser Befehl besitzt \textit{zwei\,!} optionale und drei obligatorische Argumente:
+   \begin{center}
+    \small\cs{formatpages}\oarg{after start page separator}\oarg{before start page separator}\marg{typelist}\marg{left
+     delim}\marg{right delim}
+   \end{center}
+   D.\,h. die Angabe |\formatpages[: ]{<typelist>}{(}{)}| formatiert Ihr Zitat |\cite[48]|\marg{key} bei diesem Eintrag in der Datenbank
+\begin{verbatim}
+   @ARTICLE/PERIODICAL{broxja,
+     author      = {Hans Brox},
+     title       = {Die Anfechtung bei der Stellvertretung},
+     journal     = {JA},
+     language    = {german},
+     year        = 1980,
+     pages       = {45--60},
+     address     = {München}
+   }
+\end{verbatim}
+folgendermaßen:
+\par\medskip
+\qquad Brox, JA 1980, 45: (48).
+\par\medskip
+Bitte beachten Sie, daß für eine Angabe einer Startseite ohne folgendes
+Separationszeichen das optionale Argument mit einem Leerzeichen benutzen
+müssen: |\formatpages[ ]{<typelist>}}{(}{)}|\,!
+\par\medskip
+\qquad Brox, JA 1980, 45 (48).
+\par\medskip
+Wenn Sie nur die via |\cite| angegebenen Seiten formatieren wollen, können Sie
+auf die Angabe der Startseite verzichten, indem Sie die optionalen (erstes und zweites)
+Argumente weglassen:
+\par\medskip
+|\formatpages{<typelist>}{[}{]}|
+\par\medskip
+\qquad Brox, JA 1980, [48].
+\par\medskip
+
+Sollten Sie |\formatpages| zusammen mit der Option |pages=format| verwenden,
+ist es nun Voreinstellung, daß bei Angabe einer Seitenzahl im optionalen Argument diese
+keine weitere Formatierung erhält. Ein Beispiel: Sie haben
+|\formatpages[, ]{article}{}{}| in Ihrer Präambel und benutzen die Option |pages=format|,
+dann wird mit unserem Beispiel nun folgendes erzeugt:
+
+\par\medskip
+\qquad Brox, JA 1980 S.~45, 48.
+\par\medskip
+
+Sollten Sie eine Formatierung der zweiten Seitenzahl wünschen, können Sie dies durch
+Angabe von |\jbnoformatafterstartpagefalse| in der Präambel erreichen:
+
+\par\medskip
+\qquad Brox, JA 1980 S.~45, S.~48.
+\par\medskip
+
+\item[\cs{jbfirstcitepageranges}] Sollte bei einem Eintrag vom |@ARTICLE|- oder |@PERIODICAL|-Typ
+  mit Hilfe des |pages|-Feldes ein Seitenzahlbereich angegeben worden sein, wird dieser beim
+  Erstzitat (und bei expliziten Vollzitaten) ausgegeben. Dies funktioniert unabhängig von den |pages|-Optionen.
+  Wenn Sie eine konkrete Fundstelle über das optionale Argument des |\[foot]cite|-Befehls angegeben haben,
+  wird diese dem Seitenzahlbereich angefügt, getrennt durch das Wort "`hier:"':
+
+\par\medskip
+\qquad [\dots], S.~45, hier: S.~48.
+\par\medskip
+
+Eine Umdefinition dieses Wortes ist in gewohnter Weise möglich:
+
+  \begin{verbatim}
+    \AddTo\bibsgerman{%
+        \def\herename{da:}%
+    }
+  \end{verbatim}
+
+\end{description}
+
+\section{Die Konfigurationsdatei \texttt{jurabib.cfg}}
+Sei es, um immer wieder benötigte Umdefinitionen, die den Umfang der Präambel
+zu sprengen drohen aus selbiger zu verbannen oder weil man zu faul ist, diese
+immer wieder auf's neue in die Präambel des nächsten Dokumentes zu kopieren
+oder aus reiner Ordnungsliebe -- wie auch immer, es bietet sich an, diese
+häufig benutzten Redefinitionen in einer Datei abzulegen. Diese Datei muß
+\texttt{jurabib.cfg} heißen und entweder im Arbeitsverzeichnis oder dort wo
+\texttt{jurabib.sty} liegt, abgelegt werden. Ab Version 0.4p lassen sich nun
+auch sämtliche Optionen via \cs{jurabibsetup} in der Konfigurationsdatei
+ablegen:
+\begin{verbatim}
+  \jurabibsetup{
+    authorformat=smallcaps,
+    commabeforerest,
+    titleformat=colonsep,
+    bibformat=tabular
+ }
+\end{verbatim}
+\section{Optionen für Nicht-Juristen}\label{see:nichtjur}
+Die nun folgenden Optionen sind nicht primär für juristische Hausarbeiten
+gedacht, sondern decken Anforderungen ab, die u.\,U. von Historikern,
+Germanisten, Pädagogen und vielleicht auch noch anderen benötigt werden. Sie
+stellen das (vorläufige) Ergebnis von verschiedensten Anfragen an mich dar. Ich
+hoffe, daß diese Optionen hilfreich sind. Verbesserungsvorschläge sind
+willkommen.
+
+\begin{Options}
+ \item[ibidem=name] Hiermit werden ausführlichere Angaben beim Wiederholungszitat
+    gemacht als bei \texttt{ibidem/ibidem=strict}. Es wird der volle Name des
+    Autors ausgegeben (Es sei denn, die Option \texttt{authorformat=reducedifibidem}
+    ist aktiv, dann wird nur der Nachname ausgegeben). Diese Option ist für die
+    Verwendung mit der Option \texttt{citefull=first} konzipiert, deshalb erfolgt
+    auch automatisch die Aktivierung dieser Option.
+
+    Sollte ein Autor mit mehreren Werken zitiert werden, kann es vorkommen, daß
+    \textsf{jurabib} automatisch auf die Option
+    |ibidem=name&title&auto| umschaltet, um die Eindeutigkeit der Zitate nicht zu
+    gefährden. Sie werden dann in der \texttt{.log}-Datei einen Hinweis dazu
+    finden.
+
+\item[\texttt{ibidem=name\&title}] Wie \texttt{ibidem=name}, nur wird hier auch noch der Titel
+      ausgegeben. Es wird ebenfalls die Option \texttt{citefull=first} aktiviert.
+\end{Options}
+Auch hierzu eine Übersicht:
+\begin{center}
+{\small
+\begin{tabular}{@{}lr@{}p{4.55cm}r@{}p{4.55cm}@{}}\hline\\[-2ex]
+{\footnotesize\cs{footcite}\texttt{..}} & & {\footnotesize\texttt{ibidem=name}}  & &{\footnotesize|ibidem=name&title|}\\\hline               \\[-2ex]
+\texttt{..\mymarg{broxbgb}} & $^{1}$ &\textsc{Brox}, Hans:
+                            \textit{Allgemeiner Teil des Bürgerlichen
+                            Gesetzbuches.} 20.\,Auf"|lage, Köln,
+                            Berlin, Bonn, München 1996.
+                            & $^{1}$ &\textsc{Brox}, Hans:
+                            \textit{Allgemeiner Teil des Bürgerlichen
+                            Gesetzbuches.} 20.\,Auf"|lage, Köln,
+                            Berlin, Bonn, München 1996.                                                                    \\[.3ex]
+\texttt{..\mymarg{broxbgb}} & $^{2}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{2}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.3ex]
+\texttt{..\mymarg{broxbgb}} & $^{3}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{3}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.3ex]
+\texttt{..\mymarg{oellers}}  & $^{4}$ &\textsc{Oellers}, Bernd:
+                             \textit{Doppelwirkung im Recht\,?} AcP 169 [1969].
+                             & $^{4}$ &\textsc{Oellers}, Bernd:
+                             \textit{Doppelwirkung im Recht\,?} AcP 169 [1969].                                                \\[.5ex]
+\texttt{..\mymarg{broxbgb}} & $^{5}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{5}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.3ex]
+\texttt{..\mymarg{broxbgb}} & $^{6}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{6}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\multicolumn{5}{@{}c@{}}{\emph{Seitenumbruch}}\\[1.6ex]
+\texttt{..\mymarg{broxbgb}} & $^{7}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{7}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.3ex]
+\texttt{..\mymarg{broxbgb}} & $^{8}$ &\textsc{Brox}, Hans, a.\,a.\,O\kern-1.2pt. & $^{8}$&\textsc{Brox}, Hans: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\multicolumn{5}{@{}l@{}}{\emph{und jetzt mit \texttt{authorformat=citationreversed}:}}\\[.8ex]
+\texttt{..\mymarg{broxbgb}} & $^{9}$ & Hans \textsc{Brox}, a.\,a.\,O\kern-1.2pt. & $^{9}$&Hans \textsc{Brox}: BGB AT, a.\,a.\,O\kern-1.2pt. \\[.8ex]
+\multicolumn{5}{@{}l@{}}{\emph{oder mit \texttt{authorformat=reducedifibidem}:}}\\[.8ex]
+\texttt{..\mymarg{broxbgb}} & $^{10}$ &\textsc{Brox}, a.\,a.\,O\kern-1.2pt.      & $^{10}$&\textsc{Brox}: BGB AT, a.\,a.\,O\kern-1.2pt.     \\[.3ex]
+\hline
+\end{tabular}}
+\end{center}
+\begin{Options}
+\item[\texttt{ibidem=name\&title\&auto}]
+   Diese Option ist bei häufigen Wiederholungszitaten mehrerer Werke
+   eines Autors von Nutzen. Beim ersten Zitat eines Werks wird die volle
+   Information  ausgegeben (Option |citefull=first| ist automatisch aktiviert).
+   Solange wiederholt aus demselben Werk des Autors zitiert wird, wird im
+   folgenden nur der Name des Autors verwendet (entsprechend der Option
+   |ibidem=name|). Wird das Werk in einer späteren Fußnote nochmals zitiert,
+   werden einmalig Name und Titel ausgegeben (entsprechend der Option
+   |ibidem=name&title|). Dadurch wird die Eindeutigkeit der Zitate gewährleistet,
+   auch wenn ein Autor mit mehreren Werken vertreten ist. Für unmittelbar
+   folgende Zitate aus dem gleichen Werk wird dann wieder nur der Name
+   des Autors angegeben.
+
+   Bei Verwendung der Option |ibidem=name| prüft \textsf{jurabib}, ob durch das
+   Auftreten von Wiederholungszitaten verschiedener Werke eines Autors
+   Mehrdeutigkeiten entstehen und schaltet in diesem Fall automatisch
+   auf die Option |ibidem=name&title&auto| um. Ein entsprechender Hinweis
+   wird in der |.log|-Datei abgelegt.
+\end{Options}
+Dies läßt sich wohl am besten an einer Übersicht erklären:
+\begin{center}
+{\small
+\begin{tabular}{@{}lr@{}p{9.5cm}@{}}\hline\\[-2ex]
+{\footnotesize\cs{footcite}\texttt{..}} & & {\footnotesize|ibidem=name&title&auto|}\\\hline\\[-2ex]
+\texttt{..\mymarg{broxbgb}}  & $^{1}$&\textsc{Brox}: \textit{Allgemeiner Teil des Bürgerlichen Gesetzbuches.} 20.\,Auf"|lage, Köln, Berlin, Bonn, München 1996.\\[.3ex]
+\texttt{..\mymarg{broxschr}} & $^{2}$&\textsc{Brox}: \textit{Besonderes Schuldrecht.} 20.\,Auf"|lage, München 1995.\\[.3ex]
+\texttt{..\mymarg{broxbgb}}  & $^{5}$&\textsc{Brox}, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\multicolumn{3}{@{}l@{}}{\hfill\emph{jetzt Wechsel des Werkes\,!}}\\[.8ex]
+\texttt{..\mymarg{broxschr}} & $^{6}$&\textsc{Brox}: SchR~BT, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\texttt{..\mymarg{broxschr}} & $^{7}$&\textsc{Brox}, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\multicolumn{3}{@{}l@{}}{\hfill\emph{und noch ein Wechsel des Werkes\,!}}\\[.8ex]
+\texttt{..\mymarg{broxbgb}}  & $^{8}$&\textsc{Brox}: BGB AT, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\texttt{..\mymarg{broxbgb}}  & $^{8}$&\textsc{Brox}, a.\,a.\,O\kern-1.2pt.\\[.8ex]
+\hline
+\end{tabular}}
+\end{center}
+
+\bigskip
+
+\noindent Eine Änderung der Sequenz "`a.\,a.\,O."' ist über die Befehle
+\cs{ibidemname} und \cs{ibidemmidname} möglich:
+
+    \begin{verbatim}
+      \AddTo\bibsgerman{%
+         \renewcommand*{\ibidemname}{Ebd.}
+         \renewcommand*{\ibidemmidname}{ebd.}
+      }
+    \end{verbatim}
+
+\cs{ibidemname} wird bei den Optionen \texttt{ibidem=strict},
+\texttt{ibidem=strictdoublepage} und \texttt{ibidem=nostrict} verwendet und
+erscheint am Anfang des -- letztlich unterdrückten -- Zitates (es könnte hier
+also groß geschrieben werden). \cs{jibidemmidname} dagegen erscheint bei den
+Optionen \texttt{ibidem=name} und \texttt{ibidem=name\&title} und könnte klein
+geschrieben werden -- das ist letztlich jedoch Geschmackssache.
+
+Es ist nun möglich, zwischen zwei Situationen zu unterscheiden: dem
+Folgezitat mit derselben Seitenzahl und dem Folgezitat mit einer anderen
+Seitenzahl. Sollte also das unmittelbar folgende Zitat dieselbe Seitenangabe
+enthalten wie das vorhergehende, wird intern das Makro |\samepageibidemname|
+bzw. |\samepageibidemmidname| benutzt. Dessen Bedeutung ist per Voreinstellung
+identisch mit der Definition von |\ibidemname| bzw. |\ibidemmidname|. Wenn
+dagegen die Seitenzahlen im optionalen Argument abweichen sollten, werden die
+Makros |\diffpageibidemname| bzw. |\diffpageibidemmidname| benutzt. Möchte man
+also zum Beispiel, daß bei identischen Seitenzahlen "`Ebd."' erscheint, bei
+verschiedenen dagegen "`a.a.O."', wäre folgendes zu tun:
+    \begin{verbatim}
+         \renewcommand*{\samepageibidemname}{Ebd.}
+    \end{verbatim}
+Die folgende Übersicht mag das veranschaulichen:
+\begin{center}
+{\small
+\begin{tabular}{@{}lcl@{}}
+\hline\\[-2ex]
+|\footcite[45]{broxbgb}|     & $\longrightarrow$ &\textsuperscript{1}Brox, 45.\\
+|\footcite[45--47]{broxbgb}| & $\longrightarrow$ &\textsuperscript{2}A.a.O., 45--47.\\
+|\footcite[45--47]{broxbgb}| & $\longrightarrow$ &\textsuperscript{3}Ebd.\\
+|\footcite[45f]{broxbgb}|    & $\longrightarrow$ &\textsuperscript{4}A.a.O., 45\,f.\\
+\hline\\[-2ex]
+\end{tabular}}
+\end{center}
+
+\begin{Options}
+
+\item[citefull=first] Mit Hilfe dieser Option ist es möglich, das erste Zitat eines Werkes
+analog zum Eintrag im Literaturverzeichnis (Vollzitat) erscheinen zu lassen.
+Für alle weiteren Zitate werden die angegeben bzw. generierten Kurzformen
+verwendet. Eine erneute Verwendung des Vollzitats ist über die Befehle
+\cs{fullcite} und \cs{footfullcite} möglich. Bearbeiter werden bei dieser Form
+\emph{vor den Autor} gesetzt, getrennt durch ein "`in"'. Um ein einheitliches
+Erscheinungsbild zu erreichen und den Leser nicht zu verwirren, schaltet diese
+Option bezüglich Separation des Bearbeiters  global -- d.\,h. für alle anderen
+Zitate gültig -- automatisch auf die Option \texttt{annotatorfirstsep=in} um und
+überschreibt so andere Optionen, die die Separation steuern, wie z.\,B.
+\texttt{annotatorlastsep=divis} oder \texttt{annotatorfirstsep=comma}. Außerdem werden die
+\texttt{howcited}-Optionen deaktiviert.
+
+\item[citefull=chapter] Schaltet automatisch auf \texttt{citefull=first} und
+    setzt es bei Beginn eines neuen Kapitels zurück.
+
+\item[citefull=section] Schaltet automatisch auf \texttt{citefull=first} und
+    setzt es bei Beginn eines neuen Abschnittes zurück.
+
+\item[citefull=all] Diese Option läßt alle Zitate als Vollzitat erscheinen.
+Auch sie schaltet bezüglich Separation des Bearbeiters automatisch auf die
+Option \texttt{annotatorfirstsep=in} um. Auch hier werden die Optionen
+\texttt{howcited}-Optionen deaktiviert. Eine Kombination mit der Option
+\texttt{ibidem} ist hingegen möglich.
+
+\item[see] Da man als Nicht-Jurist das zweite optionale Argument der \cs{cite*}-Befehle
+nicht für die Angabe von Bearbeitern benötigt, lassen sich hiermit Sequenzen
+wie etwa "`Vgl."' oder "`Siehe"' vor das Zitat setzen. Diese Option wirkt
+global.
+
+\item[natoptargorder] Hiermit wird die Reihenfolge der optionalen Parameter
+    umgekehrt, z.\,B. um das Dokument kompatibel zu \texttt{natbib.sty} zu machen.
+
+\item[crossref=dynamic] Die anderen \texttt{crossref}-Optionen können mit dieser
+    Option kombiniert werden, um ein verschieden ausführliches Erscheinungsbild
+    der Querverweise zu erreichen, je nachdem, ob das Werk, in dem der Querverweis
+    vorkommt, das erste Mal oder ein weiteres Mal zitiert wird -- vergleichen Sie
+    die alleinige Anwendung von \texttt{crossref=dynamic} (zur Veranschaulichung
+    finden Sie die Querverweise jeweils in eckigen Klammern):
+\begin{quote}
+\small $^1$\,Lincoll, Daniel D.: Semigroups of Recurrences. In [Lipcoll/Lawrie/Sameh:
+        High Speed Computer and Algorithm Organization].\\
+       $^2$\,Lincoll, Daniel D.: Semigroups of Recurrences. In [Lipcoll/Lawrie/Sameh].
+\end{quote}
+mit der Kombination von \texttt{crossref=dynamic} und \texttt{crossref=long}:
+\begin{quote}
+\small $^1$\,Lincoll, Daniel D.: Semigroups of Recurrences. In [Lipcoll,
+David~J./Lawrie,
+            D.~H./Sameh, A.~H. (Hrsg.):
+            High Speed Computer and Algorithm Organization.
+            3.~Auf\/lage, New York: Academic Press, September 1977 (Fast Computers 23)].\\
+       $^2$\,Lincoll, Daniel D.: Semigroups of Recurrences. In [Lipcoll/Lawrie/Sameh:
+            High Speed Computer and Algorithm Organization].
+\end{quote}
+\item[crossref=normal] (Default) Hiermit werden (im Literaturverzeichnis) die
+   Querverweise, die mit Hilfe des \texttt{crossref}-Feldes angegeben werden, mit Autor
+  (\texttt{shortauthor} hat Priorität vor \texttt{author}) und Titel (\texttt{shorttitle},
+  wenn vorhanden, sonst Ersetzung mit \texttt{title}) angegeben.
+\item[crossref=short] Hier wird auf die Angabe des Titels verzichtet, es sei denn, die
+    Eindeutigkeit des Zitates ist gefährdet, in diesem Fall wird \texttt{shorttitle}
+    durch \texttt{title} ersetzt.
+\item[crossref=long]  Mit dieser Option wird im Querverweis das Vollzitat ausgegeben.
+\item[human] Allgemeine Option für die Geisteswissenschaften. Schaltet unter anderem
+    auf |authorformat=and|.
+\item[oxford] Schaltet auf eine Formatierung der Zitate und des Literaturverzeichnisses
+    im Oxford-Stil um (nicht im wörtlichen Sinn!).
+\item[chicago] Schaltet auf eine Formatierung der Zitate und des Literaturverzeichnisses
+    im chicago-Stil um (nicht im wörtlichen Sinn!). Sowohl die |oxford|- und
+    |chicago|-Option gehen auf Vorschläge von \textsc{Maarten Wisse} zurück.
+\item[lookat] Hiermit werden -- \emph{ausschließlich bei Verwendung der
+    \cs{footcite}-Befehle bzw. in Fußnoten eingefaßten \cs{cite}-Befehlen in
+    Verbindung mit der Option \texttt{citefull=first}} -- Querverweise
+  auf die Fußnoten möglich, die das Vollzitat enthalten, z.\,B. wenn für
+  einen Artikel keine Bibliographie ausgegeben werden soll. Hierfür gibt
+  es den Befehl
+\par\medskip
+\qquad \cs{nobibliography}\marg{bibfile}\DescribeMacro{\nobibliography}
+\par\medskip der die Ausgabe des Literaturverzeichnisses unterdrücken
+kann.\footnote{Dieser Befehl ist zwar primär für die Verwendung mit der Option
+\texttt{lookat} vorgesehen, er erfordert diese Option jedoch \emph{nicht}. Es
+muß lediglich eine der \texttt{citefull}-Optionen aktiv sein. Dank an
+\textsc{Stefan Ulrich}.} In einem späteren Zitat werden dann die Kurzformen
+verwendet, verbunden mit einem Hinweis, in welcher Fußnote das Vollzitat zu
+ finden ist.\footnote{Beispiel: \textsc{Brox}: BGB AT (wie Anm. \meta{Nr.}), Rn.~168.}
+
+Beachten Sie bitte, daß zur korrekten Auflösung der Verweise, die
+\texttt{lookat} produziert, (nach der Bearbeitung mit \BibTeX) \emph{drei}
+\LaTeX-Läufe nötig sind\,!
+
+Sollten Sie das Paket \textsf{varioref} oder \textsf{fancyref} verwenden, so
+wird intern statt \cs{ref} der Befehl \cs{vref} benutzt, was zu angepaßten
+Verweisen führt, insbesondere, wenn das Folgezitat ein bis zwei Seiten entfernt
+ist. Wollen Sie das Paket \textsf{varioref} oder \textsf{fancyref} in Ihrem
+Dokument benutzen, ohne daß dies Auswirkungen auf
+\DescribeMacro{\jbignorevarioref} Ihre Zitate hat, können Sie den Befehl
+\cs{jbignorevarioref} in die Präambel Ihres Dokumentes setzen.\par Sie müssen
+es zudem nicht bei der voreingestellten Form (wie Anm. \meta{Nr.}) belassen,
+sondern können diese Ihren Vorstellungen entsprechend anpassen:
+\begin{verbatim}
+   \renewcommand*{\lookatprefix}{\space(siehe Fußnote~}
+   \renewcommand*{\lookatsuffix}{)}
+\end{verbatim}
+
+\DescribeMacro{\lookatfortype} Mit |\lookatfortype| können \NEW{0.6} Sie eine kommaseparierte Liste der Publikationstypen angeben, für welche die |lookat|-Option ausschließlich wirksam werden soll. Die |lookat|-Option muß natürlich aktiviert sein\,!
+\begin{verbatim}
+   \lookatfortype{booklet}
+\end{verbatim}
+wendet die Option |lookat| nür auf Werke des Typs |@booklet| an.
+
+\texttt{lookat} \emph{kann} zusammen mit den \texttt{ibidem}-Optionen verwendet
+werden, nur möchte ich das nicht empfehlen.
+
+ Bei Verwendung von \cs{cite}-Befehlen im Fließtext (außerhalb einer
+ Fußnote\,!) \emph{und} \cs{footcite}-Befehlen \mymarginpar{\hfill\textsf{\large CAVE\,!}}
+ (oder \cs{cite}-Befehlen innerhalb einer Fußnote)
+ kann es zu Fehlermeldungen entweder von \textsf{alphanum}
+ oder -- sofern verwendet -- von \textsf{varioref} kommen.
+ \textsf{alphanum} beklagt sich dann möglicherweise:
+\begin{verbatim}
+    ! Package alphanum Error: Self-reference detected!.
+       [...]
+    ?
+\end{verbatim}
+Dann haben Sie mit einem \cs{cite}-Befehl im Fließtext ein Werk zum ersten Mal
+zitiert, worauf Sie noch innerhalb des aktuellen Abschnittes mit einem
+\cs{footcite}-Befehl Bezug nehmen. Da sich das erste Zitat nicht in einer
+Fußnote befindet, wird die aktuelle Abschnittsnumerierung als Referenz
+verwendet. Da Sie sich nun mit der Option \texttt{lookat} im Folgezitat auf das
+Erstzitat beziehen, wird als Referenz die Abschnittsnummer angegeben und da Sie
+sich im selben Abschnitt befinden, beschwert sich \textsf{alphanum} in oben
+gezeigter Form. \par Eine andere Fehlermeldung zum gleichen Problem könnte auch
+so aussehen:
+\begin{verbatim}
+    ! Extra }, or forgotten \endgroup.
+    \J@refP ...nta #1\,\J@INumberRoot {#1}{#2}
+       [...]
+    ?
+\end{verbatim}
+Zur Lösung empfiehlt es sich, zumindest das Erstzitat in eine Fußnote zu
+verfrachten (ob \cs{footcite} oder \cs{cite} innerhalb von \cs{footnote} ist
+dabei unerheblich).
+
+\emph{Die Option \texttt{lookat} kann nicht ohne weiteres innerhalb von
+\texttt{book}- oder \texttt{report}-Klassen oder deren Abkömmlingen verwendet
+werden.} Ebensowenig läßt sich die Option sinnvoll verwenden, wenn
+\textsf{footnpag.sty} benutzt wird.
+
+Eine Benutzung von \texttt{lookat} innerhalb der \texttt{book}- oder
+\texttt{report}-Klassen wird bei Verwendung des \textsf{remreset}-Paketes
+möglich. Dies kann die Rücksetzung des Fußnotenzählers zu Beginn eines neuen
+Kapitels rückgängig machen und so eindeutige Verweise ermöglichen. Fügen Sie
+dazu (mindestens) folgendes in Ihre Präambel ein:
+\begin{verbatim}
+    \usepackage{remreset}
+    \makeatletter
+    \@removefromreset{footnote}{chapter}
+    \makeatother
+\end{verbatim}
+Um eine gewisse Konsistenz zu errreichen, sollten Sie die Zähler der
+Abbildungen und Tafeln nicht außer acht lassen:
+\begin{verbatim}
+    \usepackage{remreset}
+    \makeatletter
+    \@removefromreset{footnote}{chapter}
+    \@removefromreset{figure}{chapter}
+    \renewcommand*{\thefigure}{\@arabic\c@figure}
+    \@removefromreset{table}{chapter}
+    \renewcommand*{\thetable}{\@arabic\c@table}
+    \makeatother
+\end{verbatim}
+\end{Options}
+
+ \begin{Options}
+ \item[\texttt{idem}]
+ Diese neue Option  ist der |ibidem|-Option sehr ähnlich, nur ersetzt sie nicht
+ das gesamte Zitat durch ein Kürzel, sondern nur den Namen des Autors/der
+ Autoren mit "`Idem"' bzw. "`idem"'. Sie ist mit der |ibidem|-Option
+ kombinierbar. Folgende Werte sind möglich: |idem| (gleichbedeutend mit
+ |idem=strict|), |idem=strictdoublepage| und |idem=nostrict|. Das jeweilige
+ Verhalten bei Seitenumbrüchen ist analog zu den |ibidem|-Optionen, weshalb ich
+ auf eine separate Übersicht verzichte.
+
+ Umdefinitionen sind wie gehabt möglich über:
+    \begin{verbatim}
+      \AddTo\bibsgerman{%
+         \renewcommand*{\idemname}{Ders.}
+         \renewcommand*{\idemmidname}{ders.}
+      }
+    \end{verbatim}
+\end{Options}%
+
+\DescribeMacro{\noidem} |\noidem| funktioniert analog zu |\noibidem| und setzt
+den |idem|-Mechanismus für das folgende Zitat außer Kraft.
+
+ \begin{Options}
+ \item[\texttt{opcit}]
+ Diese Option plaziert das Kürzel "`\textit{op.\,cit.}"' (opere citato: bereits zitiert) im Zitat.
+ Ein Beispiel:\\[1.5ex]
+ {\footnotesize\textsuperscript{1}\,Aamport, \textit{Gnats and Gnus} (1986), S.\,25.}\\
+ {\footnotesize [\ldots]}\\
+ {\footnotesize\textsuperscript{5}\,Aamport, \textit{op.\,cit.}, S.\,37.}
+
+ Anpassungen sind möglich über:
+
+    \begin{verbatim}
+      \renewcommand*{\opcit}{\textit{op.\,cit.}}
+    \end{verbatim}
+
+ \DescribeMacro{opcit=chapter}
+ \DescribeMacro{opcit=section}
+ Die Option |opcit| kann mit Hilfe der Werte |chapter| bzw. |section| zu Beginn
+ eines neuen Kapitels bzw. Abschnittes zurückgesetzt werden, d.\,h. es
+ erscheint bei erneuter Zitierung eines Werkes nach Kapitelbeginn wieder die
+ Form, die durch alle anderen Optionen festgelegt wurde. Dies ist vollkommen
+ analog zu |citefull=chapter| bzw. |citefull=section|.
+\end{Options}
+
+\section{Sprachanpassungen}
+
+Der zunehmenden Verbreitung von \textsf{jurabib} unter Nicht-Juristen
+\texttt{;-)} Rechnung tragend, habe ich u.\,a. den \BibTeX-Stil erheblich
+überarbeitet, so daß nun \LaTeX-seitig eine Umschaltung der sprachspezifischen
+Ausdrücke erfolgen kann, etwa, wenn das gesamte Dokument in englischer Sprache
+verfaßt werden soll. Dies betrifft vor allem Umschaltungen wie etwa von
+"`a.\,a.\,O\kern-1.2pt."' auf "`Ibid."'.
+
+\DescribeMacro{language =} Ebenso ist es möglich, innerhalb der
+\texttt{.bib}-Datei mit Hilfe des \texttt{language}-Feldes die für den
+jeweiligen Eintrag zutreffende Sprache auszuwählen.\footnote{Dieses Feature hat
+wesentlich vom \texttt{bibgerm}-Paket profitiert.} Zur Zeit sind Englisch,
+Französisch, Holländisch, Spanisch, Italienisch und Deutsch implementiert:
+
+\begin{verbatim}
+    @INCOLLECTION{incollection-crossref,
+        author      = {Daniel D. Lincoll},
+        title       = {Semigroups of Recurrences},
+        pages       = {179--183},
+        language    = {english}
+    }
+\end{verbatim}
+
+Ab Version 0.5e erfolgt  keine Modifizierung der \texttt{title}-Felder
+bezüglich Groß- und Kleinschreibung mehr.
+
+Im Gegensatz zum \textsf{bibgerm}-Paket brauchen Sie für ein deutschsprachiges
+Dokument nur bei den \emph{relevanten} Einträgen \texttt{language =
+\marg{andere Sprache}} anzugeben. Dies gilt ebenso bei der Verwendung von
+\textsf{babel}, \textsf{jurabib} wird automatisch die über die
+\textsf{babel}-eigenen Mechanismen gewählte Hauptsprache als Voreinstellung
+verwenden~-- sofern diese innerhalb von \textsf{jurabib} definiert ist.
+Ein weiterer Unterschied zum \textsf{bibgerm}-Paket besteht darin, daß die
+sprachspezifischen Einstellungen von der via \textsf{babel} angegebenen
+Hauptsprache abhängen. Jedoch werden die \emph{Trennmuster} für jeden Eintrag
+im Literaturverzeichnis und jedes Zitat individuell in Abhängigkeit von der
+angebenen Sprache des Eintrages gewählt.
+
+Eine Anpassung der sprachspezifischen Ausdrücke an eigene Vorstellungen ist
+möglich:
+\begin{verbatim}
+  \AddTo\bibsgerman{\def\editorname{Herausgeber}}
+\end{verbatim}
+Für das Englische lautet das Makro \cs{bibsenglish}.
+
+Sollte ich bei der Einarbeitung der englischen Begriffe noch etwas übersehen
+oder eine unglückliche Formulierung gewählt haben, bitte ich um Nachricht.
+Ebenso, wenn andere Sprachen unterstützt werden sollen.
+
+\section{Über den Tellerrand}
+
+\subsection{\textsf{jura.cls}}
+
+Wie schon erwähnt, ist eine Benutzung mit \textsf{\mbox{jura.cls}} möglich.
+
+\subsection{\textsf{bibtopic.sty}}
+
+\textsf{jurabib.sty} ist bislang unter einer Bedingung kompatibel zu
+\textsf{bibtopic.sty}: Es müssen alle Kurztitel angegeben werden, da es sonst
+zu zweideutigen Zitaten kommen kann. Es ist derzeit nicht möglich, das Feature
+des automatischen Setzens des Kurztitels zu verwenden, wenn geteilte
+Literaturdatenbanken verwendet werden. Deshalb erfolgt eine Aktivierung der
+Option \texttt{titleformat=all} automatisch, wenn \textsf{bibtopic.sty} geladen
+ist. Anmerkung: Sie sollten mindestens Version \texttt{1.0j} benutzen.
+
+\subsection{\textsf{hyperref.sty}}
+
+Ab Version 0.4b ist \textsf{jurabib} kompatibel mit
+\textsf{hyperref}.\footnote{Auch hier war erneut \textsc{Stefan Ulrich}
+entscheidend beteiligt.} Es existiert jedoch (noch) eine Inkompatibilität mit
+\textsf{alphanum}, die bewirkt, daß der \cs{ref}-Mechanismus von
+\textsf{alphanum} nur eingeschränkt funktioniert. Das bedeutet im einzelnen,
+daß der Befehl \cs{ref*} nur relative Verweise liefert. Wenn Sie
+\textsf{alphanum} und \textsf{hyperref} ohne \textsf{jurabib} benutzen wollen,
+sollten sie folgendes in Ihre Präambel schreiben:
+ \begin{verbatim}
+   \makeatletter
+     \let\J@SetCurrent\relax
+     \def\toclevel@lvla{0}\def\toclevel@lvlb{1}
+     \def\toclevel@lvlc{2}\def\toclevel@lvld{3}
+     \def\toclevel@lvle{4}\def\toclevel@lvlf{5}
+     \def\toclevel@lvlg{6}\def\toclevel@lvlh{7}
+     \def\toclevel@lvli{8}\def\toclevel@lvlj{9}
+     \def\toclevel@lvlj{10}\def\toclevel@lvll{11}
+     \newcommand*{\theHlvla}{\J@Number}\newcommand*{\theHlvlb}{\J@Number}
+     \newcommand*{\theHlvlc}{\J@Number}\newcommand*{\theHlvld}{\J@Number}
+     \newcommand*{\theHlvle}{\J@Number}\newcommand*{\theHlvlf}{\J@Number}
+     \newcommand*{\theHlvlg}{\J@Number}\newcommand*{\theHlvlh}{\J@Number}
+     \newcommand*{\theHlvli}{\J@Number}\newcommand*{\theHlvlj}{\J@Number}
+     \newcommand*{\theHlvlk}{\J@Number}\newcommand*{\theHlvll}{\J@Number}
+     \renewcommand*{\J@LongToc}[2][]{
+       \@startsection{lvl\alph{tiefe}}{\number\value{tiefe}}{0pt}
+       {\ifnum\value{tiefe}=1 -4ex plus-1,5ex minus-0,ex\else
+       -2,7ex plus-0,8ex minus-0,2ex\fi}{\ifnum\value{tiefe}>7
+       -1em plus-0,5em\relax\else 0,6ex plus0,3ex minus0,1ex\fi}
+       {\sectfont\csname lvl\alph{tiefe}style\endcsname}[#1]{#2}
+     }
+   \makeatother
+ \end{verbatim}
+
+Seit Version 0.51 hat \textsf{jurabib} eine neue interne
+URL-Schnittstelle. Mit dieser gibt es kein (bis jetzt bekanntes) Problem bei
+der Verwendung mit \textsf{hyperref}. Es wird nun eine separate Datei
+\meta{Dokument}|.url| generiert, welche die URL enthält. Bitte stellen sie
+sicher, daß Sie keine so benannte Datei für andere Zwecke benutzen. Sollte
+\textsf{jurabib} eine solche Datei vorfinden, die nicht von \textsf{jurabib}
+selbst generiert wurde, erhalten Sie eine Fehlermeldung. Das Verdienst an der
+Lösung dieses Problems hat einzig \textsc{Stefan Ulrich}.
+
+\subsection{\textsf{babel.sty}}
+
+\textsf{jurabib} ist nun ohne weitere Manipulation mit \textsf{babel}
+kompatibel und detektiert selbständig
+ die Hauptsprache. Dabei ist es egal, wie Sie die Sprache(n) angegeben haben
+ -- ob als globale Option:
+\begin{verbatim}
+    \documentclass[english,german]{article}
+    %                      ^^^^^^ die zuletzt angegebene Sprache
+    %                             ist die Hauptsprache !!
+    \usepackage{babel}
+\end{verbatim}
+oder als \textsf{babel}-Paketoption:
+\begin{verbatim}
+    \usepackage[english,german]{babel} .
+\end{verbatim}
+{\Large Sie müssen \textsf{babel} vor \textsf{jurabib} laden\,!}
+
+\subsection{\textsf{chapterbib.sty}}
+\textsf{jurabib} ist kompatibel zu \textsf{chapterbib}. Siehe dazu
+Beispieldokument |jbtestcb.tex|.
+
+\subsection{\textsf{bibunits.sty}}
+\textsf{jurabib} ist kompatibel zu \textsf{bibunits} (bitte
+benutzen Sie mindestens Version |2.1n|). Siehe dazu Beispieldokument |jbtestbu.tex|.
+
+\subsection{\textsf{multibib.sty}}
+\textsf{jurabib} ist kompatibel zu \textsf{multibib} (bitte
+benutzen Sie Versionen $>$~|1.2|). Siehe dazu Beispieldokument |jbtestmb.tex|.
+
+
+\subsection{\textsf{index.sty}}
+Wenn Sie das \textsf{french}-, \textsf{pmfrench}- oder das
+\textsf{frenchle}-Paket verwenden, können Sie dieses Feature momentan nicht
+verwenden.
+
+Mit Hilfe der Option \texttt{authorformat=indexed} können Sie alle zitierten
+Autoren in den Index aufnehmen. Möchten Sie einen separaten Autoren-Index
+erstellen, können Sie das \textsf{index}-Paket von \textsc{David M. Jones}
+verwenden, das Bestandteil des \textsf{camel}-Bündels ist. Um mit
+\textsf{index.sty} einen zusätzlichen Index zu deklarieren, tun sie folgendes:
+\begin{verbatim}
+  [...]
+ \usepackage[authorformat=indexed]{jurabib}%
+  [...]
+ \usepackage{index}
+ \newindex{default}{idx}{ind}{Index}    % für den normalen Index
+ \newindex{aut}{adx}{and}{Autorenindex} % für den neuen Index
+ \renewcommand*{\jbindextype}{aut}      %
+  [...]
+ \begin{document}
+  [...]
+ \printindex                            % für den normalen Index
+ \printindex[aut]                       % für den neuen Index
+ \end{document}
+\end{verbatim}
+Beachten Sie, daß \cs{jbindextype} dem Wert des ersten Argumentes von
+\cs{newindex} entsprechen muß.
+
+Um den Index dann via MakeIndex zu generieren, rufen Sie für obiges Beispiel
+\begin{verbatim}
+  makeindex -g -s german.ist -o datei.and datei.adx
+\end{verbatim}
+auf. Anschließend muß das Dokument noch einmal mit \LaTeX{} bearbeitet werden.
+Alles weitere entnehmen Sie bitte der Dokumentation des \textsf{index}-Paketes.
+
+\subsection{\textsf{endnotes.sty}}
+\textsf{jurabib} ist kompatibel mit \textsf{endnotes}. Durch einfaches Hinzufügen von |\usepackage{endnotes}| zur
+Präambel Ihres Dokumentes werden Ihre |\foot[full]cite|-Zitate zu Endnoten
+"`konvertiert"', die dort erscheinen, wo Sie den Befehl |\theendnotes| plaziert
+haben. "`Normale"' Zitate oder solche, die in |\footnote|-Befehle gefaßt sind,
+werden per Voreinstellung nicht konvertiert\,! Sollten Sie das wünschen, benutzen
+Sie die Option `|citetoend=true|' oder ziehen Sie bitte die
+\textsf{endnotes}-Dokumentation zu Rate.
+
+Endnoten besitzen per Voreinstellung keinen abschließenden Punkt. Sollten Sie
+trotzdem einen Punkt benötigen, benutzen sie bitte die Option |dotafter=endnote|.
+
+\section{Mitstreiter}
+Dieses Paket wäre ohne die tatkräftige Hilfe von \textsc{Stefan Ulrich},
+\textsc{Andreas Stefanski} und \textsc{Oren Patashnik} nie entstanden.
+Besonders \textsc{Stefan Ulrich} ist es zu verdanken, daß dieses Paket in
+dieser Form zustandekommen konnte und nicht schon in der Anfangsphase
+steckenblieb. Ihm gilt mein besonderer Dank. \textsc{Heiko Oberdiek} lieferte
+ebenso wertvolle Hinweise. \textsc{Andreas Stefanski} stand mir als
+unermüdlicher Tester und Berater in Sachen juristischer Formalien zur Seite.
+Nicht zu vergessen hat \textsc{Oren Patashnik} entscheidende Code-Teile des
+\BibTeX-Stils geliefert, die ein dynamisches Setzen des juristischen Kurztitels
+überhaupt erst ermöglicht haben. \textsc{Bernard Gaulle} hat viel für die
+Kompatibilität mit den french Paketen getan und gab viele wertvolle Hinweise,
+speziell zur Sprachunterstützung. Ich möchte \textsc{Maarten Wisse} für die
+Übersetzung der Dokumentation danken, ebenso für seine Geduld und seine vielen
+Hinweise während der Implementation der grundlegenden Optionen für die
+Geisteswissenschaften.
+ \textsc{Peter Flynn} und \textsc{P\'{a}draig de~Br\'{u}n} haben ebenso neue
+ Optionen für Nicht-Juristen vorgeschlagen. Und dann sind da noch viele Leute,
+ die als Beta-Tester oder als fleißiger Bug-Reporter meinen Dank verdienen (die
+ Reihenfolge ist keine Wertung\,!): \textsc{Alexander Wisspeintner},
+ \textsc{Andreas K.~Foerster}, \textsc{Arne Engels}, \textsc{Axel Sodtalbers},
+ \textsc{Bastian Kruse}, \textsc{Christian Folini}, \textsc{Christian Meyn},
+ \textsc{David Feest}, \textsc{Daniel M.~Grisworld}, \textsc{H\'{e}l\`{e}ne
+ Fernandez}, \textsc{Henning Eiden}, \textsc{Holger Pollmann}, \textsc{Hubert
+ Selhofer}, \textsc{Ivan Blatter}, \textsc{Jean-Pierre Drucbert},
+ \textsc{Joachim Trinkwitz}, \textsc{Max Dornseif}, \textsc{Moritz
+ Moeller-Herrmann}, \textsc{Nikolai Warneke}, \textsc{Olaf Meltzer},
+ \textsc{Oliver Schilling}, \textsc{Peter Wuesten}, \textsc{Ralph Sinkus},
+ \textsc{Rebekka Rieger}, \textsc{Robert Goulding}, \textsc{Thorsten Manegold}
+ und \textsc{Tilman Finke}.
+
+\section[Rückkopplung erwünscht]{Rückkopplung erwünscht \dots}
+
+Fragen, Vorschläge, Kritik oder sonstige Anregungen können gerichtet werden an:
+\texttt{jb <at> jurabib <dot> org}
+
+\newpage
+
+\bibliographystyle{jurabib}
+\end{document}

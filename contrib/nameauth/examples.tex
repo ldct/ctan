@@ -1,0 +1,311 @@
+\documentclass{article}
+\usepackage{verbatim}
+\begin{document}
+%% This is an example file used with the nameauth package.
+%% See README and nameauth.pdf for copyright info.
+%%
+
+\section{Test for Latex Engine}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Test which LaTeX engine you are using
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{verbatim}
+\ifdefined\Umathchar
+  \usepackage{fontspec}
+  \usepackage{polyglossia}
+\else
+  \usepackage[utf8]{inputenc}
+  \usepackage[TS1,T1]{fontenc}
+  \usepackage{babel}
+\fi
+% Below is optional; use only if your dvi viewer|\\
+% crashes or becomes unresponsive with tikz.|\\
+\usepackage{ifxetex}
+\usepackage{ifluatex}
+\usepackage{ifpdf}
+\ifxetex
+  \usepackage{tikz}
+\else
+  \ifpdf
+    \usepackage{tikz}
+  \fi
+\fi
+\end{verbatim}
+
+\section{Use Different Latex Engines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Allow for multiple LaTeX engines
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Requires \textsf{ifxetex}, \textsf{ifluatex}, and \textsf{ifpdf}.
+\begin{verbatim}
+\ifxetex
+  xelatex %
+\else
+  \ifluatex
+    \ifpdf
+      lualatex in pdf mode %
+    \else
+      lualatex in dvi mode %
+    \fi
+  \else
+    \ifpdf
+      pdflatex %
+    \else
+      latex %
+    \fi
+  \fi
+\fi
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Print the first use of a name in text and margin
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Below we print the argument both in the text and in a margin paragraph
+%% unless we are in internal vertical mode.
+%%
+%% This macro is suitable to replace \NamesFormat and \FrontNamesFormat.
+%%
+\section{First Use in Margin: $\epsilon$-\TeX}
+\begin{verbatim}
+\renewcommand*\NamesFormat[1]%
+{%
+  #1%
+  \unless\ifinner
+    \marginpar{\raggedleft\scriptsize #1}%
+  \fi
+}
+\end{verbatim}
+
+\section{First Use in Margin: Historic \TeX}
+\begin{verbatim}
+\renewcommand*\NamesFormat[1]%
+{%
+  #1%
+  \ifinner\else
+    \marginpar{\raggedleft\scriptsize #1}%
+  \fi
+}
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Print a text tag after first name use
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Below we print the argument in the text and then we query the text tag
+%% database to see if we can print a text tag after the argument.
+%%
+%% This macro is suitable to replace \NamesFormat and \FrontNamesFormat.
+%%
+\section{Text Tag With First Use: $\epsilon$-\TeX}
+\begin{verbatim}
+\newif\ifNoTag
+\makeatletter
+\renewcommand*\NamesFormat[1]{\begingroup%
+  \protected@edef\temp{\endgroup\textbf{#1}%
+  \unless\ifNoTag
+    \if@nameauth@InName
+      {\bfseries\noexpand\NameQueryInfo
+      [\unexpanded\expandafter{\the\@nameauth@toksa}]
+      {\unexpanded\expandafter{\the\@nameauth@toksb}}
+      [\unexpanded\expandafter{\the\@nameauth@toksc}]}\fi
+    \if@nameauth@InAKA
+      \noexpand\NameQueryInfo
+      [\unexpanded\expandafter{\the\@nameauth@toksa}]
+      {\unexpanded\expandafter{\the\@nameauth@toksb}}
+      [\unexpanded\expandafter{\the\@nameauth@toksc}]\fi
+  \fi}\temp\global\NoTagfalse}
+\makeatother
+\end{verbatim}
+\clearpage
+
+\section{Text Tag With First Use: Historic \TeX}
+\begin{verbatim}
+\newif\ifNoTag
+\makeatletter
+\renewcommand*\NamesFormat[1]{%
+  \let\ex\expandafter%
+  #1%
+  \if@nameauth@InName
+    \ifNoTag
+    \else
+      \ex\ex\ex\ex\ex\ex\ex\NameQueryInfo\ex\ex\ex\ex\ex\ex\ex[%
+        \ex\ex\ex\the\ex\ex\ex\@nameauth@toksa\ex\ex\ex]%
+        \ex\ex\ex{\ex\the\ex\@nameauth@toksb\ex}\ex[\the\@nameauth@toksc]%
+    \fi\fi
+  \if@nameauth@InAKA
+    \ifNoTag
+    \else
+      \ex\ex\ex\ex\ex\ex\ex\NameQueryInfo\ex\ex\ex\ex\ex\ex\ex[%
+        \ex\ex\ex\the\ex\ex\ex\@nameauth@toksa\ex\ex\ex]%
+        \ex\ex\ex{\ex\the\ex\@nameauth@toksb\ex}\ex[\the\@nameauth@toksc]%
+    \fi\fi
+  \global\NoTagfalse}
+\makeatother
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Surname index entries in an fbox
+%%     First surname instances in text are in an fbox
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% We create a macro \Fbox that prints its argument in a framed
+%% box when \@nameauth@DoAlt is true, or it just prints its argument.
+%%
+%%
+\section{Formatting and Capping: New Style}
+\begin{verbatim}
+\makeatletter
+\newcommand*\Fbox[1]{%
+  \if@nameauth@DoAlt
+    \fbox{#1}\else#1\fi
+}
+\makeatother
+
+\renewcommand*\MainNameHook[1]{\NameOnly\NameParser}
+
+\let\FrontNameHook\MainNameHook
+\end{verbatim}
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Use both the arguments passed to the hooks
+%%     and \NameParser under different conditions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% We redefine the hooks to print a name in the text and in
+%% a margin paragraph. We change some of the internal flags
+%% to make \NameParser print the name differently.
+%%
+%%
+\section{Putting \texttt{\textbackslash NameParser} on Display}
+\begin{verbatim}
+\makeatletter
+\renewcommand*\NamesFormat[1]{%
+  #1\unless\ifinner
+    \marginpar{\small\raggedleft%
+               \@nameauth@FullNametrue%
+               \@nameauth@FirstNamefalse%
+               \@nameauth@EastFNfalse%
+               \NameParser}%
+  \fi}
+\renewcommand*\MainNameHook[1]{%
+  \AltOff#1\unless\ifinner
+    \marginpar{\small\raggedleft%
+               \@nameauth@FullNamefalse%
+               \@nameauth@FirstNamefalse%
+               \@nameauth@EastFNfalse%
+               \NameParser}%
+  \fi}
+\makeatother
+\end{verbatim}
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Surname index entries in an fbox
+%%     First surname instances in text are in an fbox
+%%     We can capitalize name within that formatting
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Below we create a Boolean value \ifFbox and set it true.
+%% This will trigger an fbox
+%%
+%% We then create a macro \Fbox that prints its argument in 
+%% an fbox when \ifFbox is true, or makes no change otherwise.
+%%
+%% The \AltCaps macro only capitalizies its argument inside the
+%% formatting hook \NamesFormat below.
+%%
+%% \Namesformat ignores its argument, sets \InHooktrue, then
+%% calls the name parser used specifically in formatting hooks.
+%% \MainNameHook toggles \Fboxfalse to suppress formatting.
+%%
+%%
+\section{Formatting and Capping: Old Style}
+\begin{verbatim}
+\newif\ifFbox
+\newif\ifFirstCap
+\newif\ifInHook
+\Fboxtrue
+
+\renewcommand*\Fbox[1]{%
+  \ifFbox\fbox{#1}\else#1\fi
+}
+
+\renewcommand*\AltCaps[1]{%
+  \ifInHook
+    \ifFirstCap\MakeUppercase{#1}\else#1\fi
+  \else
+    #1%
+  \fi
+}
+
+\renewcommand\CapThis{\FirstCaptrue}
+
+\renewcommand*\NamesFormat[1]
+{%
+  \InHooktrue\NameParser\InHookfalse%
+  \global\FirstCapfalse%
+}
+
+\renewcommand*\MainNameHook[1]
+{%
+  \Fboxfalse\InHooktrue\NameParser\InHookfalse%
+  \global\FirstCapfalse\Fboxtrue%
+}
+
+\let\FrontNamesFormat\Namesformat
+\let\FrontNameHook\MainNameHook
+\end{verbatim}
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%     Migrate new style to old style
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% This is the full example abbreviated in the manual.
+%% Below we create a Boolean value \ifCaps and set it true.
+%% This will trigger small caps.
+%%
+%% We then redefine \textSC to use our flag instead of package internals.
+%% We redefine \AltCaps, \CapThis, and \NamesFormat in the same manner
+%% as above. We change \MainNameHook to use our Caps flag.
+%%
+%%
+\section{Migrating New Style to Old Style}
+\begin{verbatim}
+\newif\ifCaps
+\newif\ifFirstCap
+\newif\ifInHook
+\Capstrue
+
+\renewcommand*\textSC[1]{%
+  \ifCaps\textsc{#1}\else#1\fi
+}
+
+\renewcommand*\AltCaps[1]{%
+  \ifInHook
+    \ifFirstCap\MakeUppercase{#1}\else#1\fi
+  \else
+    #1%
+  \fi
+}
+
+\renewcommand\CapThis{\FirstCaptrue}
+
+\renewcommand*\NamesFormat[1]
+{%
+  \InHooktrue\NameParser\InHookfalse%
+  \global\FirstCapfalse%
+}
+
+\renewcommand*\MainNameHook[1]
+{%
+  \Capsfalse\InHooktrue\NameParser\InHookfalse%
+  \global\FirstCapfalse\Capstrue%
+}
+
+\let\FrontNamesFormat\Namesformat
+\let\FrontNameHook\MainNameHook
+\end{verbatim}
+\end{document}

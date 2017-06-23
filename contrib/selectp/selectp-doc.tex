@@ -1,0 +1,197 @@
+\documentclass[pagesize=auto, fontsize=12pt]{scrartcl}
+
+\usepackage{fixltx2e}
+\usepackage{etex}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{hologo}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcommand*{\mail}[1]{\href{mailto:#1}{\texttt{#1}}}
+\newcommand*{\pkg}[1]{\textsf{#1}}
+\newcommand*{\cs}[1]{\texttt{\textbackslash#1}}
+\makeatletter
+\newcommand*{\cmd}[1]{\cs{\expandafter\@gobble\string#1}}
+\makeatother
+\newcommand*{\opt}[1]{\texttt{#1}}
+\newcommand*{\meta}[1]{\textlangle\textsl{#1}\textrangle}
+\newcommand*{\marg}[1]{\texttt{\{}\meta{#1}\texttt{\}}}
+\newcommand*{\outputonly}[1]{\cmd{\outputonly}\texttt{\{#1\}}}
+
+\addtokomafont{title}{\rmfamily}
+
+\title{The \pkg{selectp} package\thanks{This manual corresponds to \pkg{selectp}~v1.0, dated~Sept 25, 1992.}}
+\subtitle{Select pages for output}
+\author{%
+  Donald Arseneau\thanks{\mail{asnd@triumf.ca}},%
+  \and based on macros in TUGBoat, 8:2 (1987), p.~217%
+  \and written by Don Knuth,%
+  \and and with suggestions from Hossein Saiedian.%
+}
+\date{Sept 25, 1992}
+
+
+\begin{document}
+
+\maketitle
+
+
+\section{Instructions}
+
+This style file defines the command \cmd{\outputonly} which selects specific
+pages for output, much as \cmd{\includeonly} selects certain files for input.
+To use \pkg{selectp.sty} in \LaTeX, specify \opt{selectp} as one of the document
+style options and give the command \cmd{\outputonly}\marg{list of page numbers}
+before \verb|\begin{document}|.  Only pages given in the list will be output
+to the DVI file.  For example
+%
+\begin{verbatim}
+    \documentstyle[12pt,selectp,subeqn]{article}
+    \outputonly{1,3, 7-12 16 17}
+\end{verbatim}
+%
+which will allow only pages 1, 3, 7, 8, 9, 10, 11, 12, 16, 17 to be output.
+For \hologo{plainTeX}, use \verb|\input{selectp.sty}|.
+
+The number list should consist of numbers and number ranges (\verb|7-12|, e.\,g.)\ %
+separated by commas or spaces. The order is not random but \emph{must be the
+order that the pages are produced}; normally this means the numbers must
+always increase.  If an invalid page number appears on the list, no pages
+will be output until the list is re-synchronized or the document ends.
+
+Any time the document's page number does not increment normally,
+\pkg{selectp.sty} tries to re-synchronize the page number with the \cmd{\outputonly}
+list of numbers.  This is necessary when \cmd{\includeonly} is used. 
+
+Pages that are labeled with roman numerals or letters should still be
+listed with a normal arabic number; page~xi should be referred to as~6.
+
+In \LaTeX, unfortunately, pages~i and~1 are both number~1, so it is
+tricky to skip over all the roman-numbered pages and then print
+page~1.  If there are 3 roman-numbered pages,
+%
+\begingroup
+\addtokomafont{labelinglabel}{\ttfamily}
+\begin{labeling}{1-3,8-12}
+\item[1-3]
+  will print pages i, ii, iii; not pages 1, 2, 3
+\item[1-3,1-5]
+  will print pages i, ii, iii, 1, 2, 3, 4, 5
+\item[1-3,8-12]
+  will print pages i, ii, iii, 8, 9, 10, 11, 19
+\item[1,1-5]
+  will print i, 1, 2, 3, 4, 5
+\item[1-6]
+  prints pages i, ii, iii only, not pages 4, 5, 6  !!!
+\item[0,2-6]
+  prints pages 2, 3, 4, 5, 6, since there is no page~0 and the
+  \verb|outputonly| page list is resynchronized when the actual page
+  number goes back to~1)
+\end{labeling}
+\endgroup
+%
+The last example is illuminating.  \LaTeX\ looks for page~0, but can't find
+it. It skips pages until the page number goes from~3~(iii) to~1, at which
+point it resynchronizes by reading~\texttt{2} from the list, waiting for page~2
+to be produced, and then writing page~2. Selectp then reads~\texttt{-6}, and
+\emph{Continues} outputting pages until it has done page~6.  As long as the
+numbers of the intervening pages are less than~6 (the end of the range),
+those pages will be printed. 
+
+If there are no roman numeral pages, the number list is simple, because
+the numbers must increase monotonically.
+
+\LaTeX\ will not write auxilliary files while selecting output pages, so
+the cross references and citations must be correct on the run \emph{before} 
+using \cmd{\outputonly}.  Unfortunately, this means you must produce the 
+full-size DVI file at least once.
+
+If multuple \cmd{\outputonly} commands are given, the lists are concatenated.
+
+In \hologo{plainTeX}, specify roman numeral pages as negative numbers, but do not
+use ranges until getting to the ordinary (arabic) page numbers (e.\,g.,\ %
+\outputonly{-1,-2,-3,-4, 1-8}).  In \hologo{plainTeX} specifying page~1 will \emph{not}
+print page~i. 
+
+If a page number in the list is not found, generally no more pages will be
+printed. For example, suppose a document has 50~pages, the list \verb*|3 5 910 13|
+(which perhaps should read \verb*|9 10|) causes \LaTeX\ to process silently
+through the whole document looking for page~910.  Only pages~3 and~5 will
+be printed. 
+
+\emph{Except} if the number terminating a \emph{range} is not found \verb*|{3 5-910 13}|,
+\LaTeX\ continues outputting pages until the end.
+
+\emph{Except} if the actual page number changes discontinuously, then the number
+list \emph{may} be scanned for the next number greater than the new page number.
+(Jumps are usually due to the numbering being changed from roman to arabic
+with the page reset to~1, or because an included file was skipped due to
+an \cmd{\includeonly} command.) The list is scanned if the page number jumps
+backward, or if it jumps forward \emph{past} the current target page. (``Target
+page'' = the end of the current range or the next number to be printed out,
+as appropriate.) 
+
+Numbers must be integers: \texttt{4.3} is illegal, even if some other style file
+is generating page numbers in that format.
+
+\pagebreak[1]
+
+Of course non-numbers are illegal.  Some plausible mistakes:
+%
+\begin{quote}
+  \verb|page|, \verb|xvii|, \verb|IV|, \verb|12--16|, \verb|49ff|, \verb|49-|, \verb|5_7|.  
+\end{quote}
+%
+\verb|5_7| could be a typo for the range \verb|5-7|.
+To specify page~49 and all following (\verb|49ff| or \verb|49-|), use a range 
+ending with a non-existent page:  \verb|49-99999|.
+The typo \verb|12--16| prints pages~12 and~16, not the range~12 through~16 as
+intended.
+
+
+\section{Examples of use}
+
+Suppose a document has pages i, ii, iii, iv, v, vi, 1, 2, 3,\dots, 33, but pages
+22\dots28 are absent due to \cmd{\includeonly}; here are some examples of valid
+uses of \cmd{\outputonly}.
+%
+\begin{labeling}[\enspace\textendash]{\outputonly{0,4,23-27,31-99}}
+\item[\outputonly{15-20}]
+  prints only the 6 pages 15...20
+\item[\outputonly{1-3}]
+  prints pages i, ii, iii (in \LaTeX)\\
+  \hologo{plainTeX} prints pages 1, 2, 3
+\item[\outputonly{1,1,2}]
+  prints pages i, 1, 2
+\item[\outputonly{0,1,2}]
+  prints pages 1, 2
+\item[\outputonly{1,3-6}]
+  prints pages i, iii, iv, v, vi
+\item[\outputonly{4,3-6}]
+  prints pages iv, 3, 4, 5, 6
+\item[\outputonly{5,2}]
+  prints pages v, 2
+\item[\outputonly{5-2}]
+  prints only page v    only!
+\item[\outputonly{5-7}]
+  prints pages v, vi     only!
+\item[\outputonly{1-33}]
+  prints pages i, ii, iii, iv, v, vi  only!
+\item[\outputonly{29-99}]
+  prints pages 29, 30, 31, 32, 33
+\item[\outputonly{19-99}]
+  prints pages 19, 20, 21, 29, 30, 31, 32, 33
+\item[\outputonly{24-32}]
+  prints pages 29, 30, 31, 32
+\item[\outputonly{15-25,32}]
+  prints pages 15, 16, 17, 18, 19, 20, 21, 32
+\item[\outputonly{0,4,23-27,31-99}]
+  prints pages 4, 31, 32, 33
+\end{labeling}
+
+Version 0.9 (test), Sept 25, 1992:
+Send problem reports to \mail{asnd@triumf.ca}
+
+\end{document}

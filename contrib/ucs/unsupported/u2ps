@@ -1,0 +1,576 @@
+#!/usr/bin/perl
+
+use strict;
+
+use Getopt::Long;
+
+use vars qw/$infile $outfile $code $tmpfile $fontencs $commands $r2lmode
+    $combine $charset $tolerant $default_fontencs $default_charset
+    $default_r2lmode $tolerant $tolerant_unknownchar @options @packages
+    $title $cleanup $view $escape $print $perhapsnofile
+    $fribidi_cmd
+/;
+
+$tmpfile = "u2ps-tmp";
+$default_fontencs = 'local,X2,LGR,T1';
+$default_charset = 'utf-8';
+$default_r2lmode = 'mark';
+$fribidi_cmd = "fribidi";
+
+
+sub define($) {
+    my $str = shift;
+    return $str if defined $str;
+    return '';
+}
+
+sub showhelp($) {
+    my $topic = shift;
+    $topic =~ s/^--//;
+    if ($topic eq '') {
+	print
+'Converts an UTF-8 plain text to postscript using LaTeX and the ucs package.
+Usage: u2ps [options] [input file] [output file]
+Available options:
+
+    --charset      Select input character set
+    --combine      Enables combining characters
+    --commands     Specify additional LaTeX-code to execute
+    --escape       Allow inline LaTeX code
+    --fontencs     Specify fontencodings to use
+    --fontsize     Specify font size
+    --fontstyle    Specify font style
+    --options      Unicode options
+    --package      Load package
+    --print        Print file
+    --r2l          Enables right-to-left code
+    --tolerant     Accept files with broken input encoding
+    --title        Set document title
+    --view         View file using gv
+    --help         This page, --help=<option> gives detailed help.
+
+Defaults for input and output file are stdin resp. stdout.
+';
+    } elsif ($topic eq 'escape') {
+	print 'Option --escape
+
+Allow execution of inline LaTeX code. The code must be of the form
+    ^[{<code>}
+where ^[ is U+001B (ESC) and <code> a piece of LaTeX code, properly
+nested with respect to braces.
+
+Example: a ^[{\bgroup\Huge}Huge^[{\egroup} word
+';
+    } elsif ($topic eq 'print') {
+	print 'Option --print[=<printer>]
+
+Print output (using lpr). If no output file is explicitly given, do not
+create an output file.
+
+If a printer is given, print with lpr -P<printer>.
+';
+    } elsif ($topic eq 'view') {
+	print 'Option --view
+
+View output (using gv). If no output file is explicitly given, do not
+create an output file.
+';
+    } elsif ($topic eq 'options') {
+	print 'Option --options=<option>:
+
+These are the Unicode options to be activated. They are passed as
+options to the package ucs.
+
+You can specify a priority by saying e.g. cjkjis=123. Options without
+specified priority get one less than the preceding option, the first
+getting 99 (one less than the priority for the option \'document\').
+';
+    } elsif ($topic eq 'package') {
+	print "Option --package <string>:
+
+Specifies a package to load. The following syntaxes for <string> are
+allowed:
+
+    packagename
+    {packagename}
+    [options]{packagename}
+
+This option can be given several times to load different packages.
+";
+    } elsif ($topic eq 'title') {
+	print "Option --title <string> (default: name of input file):
+
+Specifies a title for the document. It is stored in the structured
+comments of the resulting postscript file.
+
+In future, the title may be also used in other contexts like headings
+etc.
+";
+    } elsif ($topic eq 'fontencs') {
+	print "Option --fontencs <string> (default: $default_fontencs):".'
+
+The keywords given to this option are directly passed to the package autofe.
+
+This package takes the same options as fontenc, i.e. you have to give a list
+of all needed fontencodings, whereby the last should be the fontencoding
+used mainly in the document.
+
+If some ASCII characters are rendered incorrectly, try using a font
+encoding beginning with T (e.g. T1, T2A, ...) as the last
+fontencodingand perhaps additionally the option \'local\'.
+
+You may give the fontencodings as a comma-separated list or by 
+multiple calls of --fontencs.
+
+Some usefull fontencodings are:
+    T1     Most latin scripts
+    T2A    Cyrillic scripts like russian
+    T2B    Other cyrillic scripts
+    T2C    Other cyrillic scripts
+    T3     IPA
+    T5     Vietnamese
+
+The following fontencodings should be combined with local and T1
+(e.g. local,X2,T1):
+
+    LGR    Greek
+    LHE    Hebrew
+    TS1    Some symbols
+    X2     All supported cyrillic scripts
+
+If you are unsure, try running without any additional fontencodings and
+read the hints in the error messages.
+';
+    } elsif ($topic eq 'commands') {
+	print 'Option --commands <string>:
+
+The commands given to --commands will be executed as LaTeX-code before
+rendering the input file.
+
+You may call --commands several times.
+';
+    } elsif ($topic eq 'fontstyle') {
+	print 'Option --fontstyle <string>
+
+This specifies the style of the fonts which are used to render the document.
+Available arguments are:
+
+    bold        (short: bf)
+    italic      (short: it)
+    sansserif   (short: sf)
+    slanted     (short: sl)
+    smallcaps   (short: sc)
+    typewriter  (short: tt)
+
+You may call --fontstyle several times to combine styles. No warning
+will be uttered, if you choose a disallowed combination like 
+italic and slanted.
+';
+    } elsif ($topic eq 'fontstyle') {
+	print 'Option --fontsize <string>
+
+This specifies the size of the fonts which are used to render the document.
+Available arguments are:
+
+    tiny scriptsize footnotesize smallcaps normal large Large LARGE huge Huge
+
+The semantics are as with LaTeX
+';
+    } elsif ($topic eq 'r2l') {
+	print "Option --r2l[=<mode>] (default <mode>: $default_r2lmode):".'
+
+This enables preprocessing the input via the Unicode bidi algorithm to
+support right-to-left text. <mode> can be one of:
+
+    reorder    Reorders the characters of each line into visual order
+    mark       Inserts LROs/RLOs/PDFs into the text to indicate the directions
+
+To use \'reorder\', the program fribidi must be installed and in the
+path. Combining accents work incorrectly with this mode. Line breaks
+done by LaTeX may show improper right-to-left behaviour.
+
+If you use \'mark\', you need to have rlmark in your path. Further
+e-LaTeX is used instead of LaTeX.
+
+Each line of the input is processed separately.
+
+If this option is not given, right-to-left text will be displayed in
+the wrong direction without warning.
+';
+    } elsif ($topic eq 'combine') {
+	print 'Option --combine:
+
+This enables combining characters. You have to use this option, if
+your text contains non-precomposed characters, i.e. characters with
+accents, which are given as a sequence of code positions.
+
+Warning: Enabling this option will disable kerning and ligatures.
+
+If you are unsure, wether you need this option, try without. You will
+get the message
+! Package ucs Error: Please activate option \'combine\'.
+if this option is needed.
+';
+    } elsif ($topic eq 'help') {
+	print 'Option --help[=<option>]:
+
+Gives a summary of options or, with some option name
+(e.g. --help=r2l), an explanation of that option.
+';
+    } elsif ($topic eq 'tolerant') {
+        print 'Option --tolerant[=<replacement>]
+
+Be tolerant with respect to broken input encodings. This passes the
+switch -c to iconv(1). Additionally the option warnunknown is passed
+to LaTeX, i.e. the document is rendered even if unknown characters
+appear.
+
+If <replacement> is given, this LaTeX-code is executed in place of
+unknown characters. #1 gets replaced by the code position of the
+character (as a TeX-number, prefix by \number if you want to render it).
+';
+    } elsif ($topic eq 'charset') {
+        print 'Option --charset=<string> (default: $default_charset):
+
+Selects the character set of the input. Everything accepted by
+iconv(1) can be specified. Run iconv -l for a list.
+';
+    } else {
+        print "No help provided for given topic\n";
+    }
+    exit 0;
+}
+
+sub parseopts() {
+    my %opt;
+    Getopt::Long::Configure(qw/bundling no_ignore_case/);
+    unless (GetOptions(\%opt,qw/
+		       fontencs=s@
+		       title=s
+		       commands=s@
+		       fontstyle=s@
+		       fontsize=s
+		       r2l:s
+		       combine
+		       help|h:s
+		       tolerant:s
+		       charset=s
+		       options=s@
+		       package=s@
+		       cleanup!
+		       view!
+		       print:s
+		       escape!
+		       /)) {
+	die "Bad command line options";
+    }
+    $view = $opt{view};
+    $print = $opt{print};
+    $perhapsnofile = $view || defined $print;
+    showhelp($opt{help}) if defined $opt{help};
+    if ($#ARGV >= 2) {
+	die "Give input and output file, not more";
+    }
+    $infile = $ARGV[0];
+    $outfile = $ARGV[1];
+    $outfile = "$tmpfile.ps" if ($perhapsnofile && !define $outfile);
+    if (defined $infile && !defined $outfile) {
+	$outfile = $infile;
+	$outfile =~ s/\.[^.]+$//;
+	$outfile .= ".ps";
+    } elsif (!defined $infile) {
+	$infile = "/dev/stdin";
+	$outfile = "/dev/stdout" if !defined $outfile;
+    }
+    if (!-r $infile) {
+	die "Input file $infile is not readable";
+    }
+    $fontencs = join ',', @{$opt{fontencs}} if defined $opt{fontencs};
+    $fontencs = $default_fontencs unless defined $fontencs;
+    $commands = $opt{commands};
+    $commands = [] unless defined $commands;
+
+    my %fontsizes = 
+	('large' => '\large',
+	 'Large' => '\Large',
+	 'tiny' => '\tiny',
+	 'scriptsize' => '\scriptsize',
+	 'footnotesize' => '\footnotesize',
+	 'normal' => '',
+	 'normalfont' => '',
+	 'small' => '\small',
+	 'huge' => '\huge',
+	 'Huge' => '\Huge');
+    my %fontstyles = 
+	('typewriter' => '\ttfamily',
+	 'tt' => '\ttfamily',
+	 'bold' => '\bfseries',
+	 'bf' => '\bfseries',
+	 'italic' => '\itshape',
+	 'it' => '\itshape',
+	 'slanted' => '\slshape',
+	 'sl' => '\slshape',
+	 'sansserif' => '\sffamily',
+	 'sf' => '\sffamily',
+	 'smallcaps' => '\scshape',
+	 'sc' => '\scshape',
+	 );
+    if (defined $opt{fontsize}) {
+	die "Unknown fontsize '$opt{fontsize}'" 
+	    unless defined $fontsizes{$opt{fontsize}};
+	push @$commands, $fontsizes{$opt{fontsize}};
+    }
+    for my $fs (@{$opt{fontstyle}}) {
+	die "Unknown fontstyle '$fs'" 
+	    unless defined $fontstyles{$fs};
+	push @$commands, $fontstyles{$fs};
+    }
+    $tolerant = 1 if defined $opt{tolerant};
+    $tolerant_unknownchar = $opt{tolerant} if define($opt{tolerant}) ne '';
+    if ($tolerant_unknownchar) {
+	push @$commands, '\def\unicode@invalidglyph#1{'.
+	    $tolerant_unknownchar.'}';
+    }
+    $r2lmode = 'reorder' if defined $opt{r2l} && $opt{r2l} eq '';
+    $r2lmode = $opt{r2l} unless defined $r2lmode;
+    $r2lmode = 'none' unless defined $r2lmode;
+    $combine = '';
+    $combine = '\SetUnicodeOption{combine}' if $opt{combine};
+    $charset = $default_charset;
+    $charset = $opt{charset} if defined $opt{charset};
+    my $options = $opt{options};
+    $options = [] unless defined $options;
+    push @$options, 'warnunknown' if defined $tolerant;
+    $options = join ',',@$options;
+    my $oprio = 99;
+    for my $o (split ',', $options) {
+	my ($on,$prio) = ($o =~ /^(.+?)(?:=([0-9]+))?$/);
+	$prio = $oprio unless defined $prio;
+	push @$commands, "\\SetUnicodeOption[$prio]{$on}";
+	$oprio = $prio-1;
+    }
+    @packages = @{$opt{package}} if $opt{package};
+    $title = $infile;
+    $title = $opt{title} if defined $opt{title};
+    $commands = join "\n", @$commands;
+    $cleanup = $opt{cleanup};
+    $cleanup = 1 unless defined $cleanup;
+    $escape = $opt{escape};
+}
+
+$code = '
+\documentclass{article}
+\usepackage{ucs}
+\usepackage[utf8x]{inputenc}
+\let\oldgimel\gimel
+\usepackage[@@@[FONTENCS]]{autofe}
+\let\gimel\oldgimel
+%\usepackage{verbatim}
+@@@[PACKAGES]
+\usepackage{geometry}
+
+\nofiles
+
+\makeatletter
+
+\toks255\expandafter{\try@load@fontshape}
+\edef\try@load@fontshape{\begingroup\noexpand\uni@resetcatcodes\the\toks255\endgroup}
+
+\newdimen\parfirst
+\newdimen\parsecond
+\newif\ifescape
+
+\def\setchar#1#2{%
+  \catcode\count255=13\relax
+  \begingroup
+    \uccode`\~#1 %SPACE
+    \uppercase{%
+  \endgroup
+    \edef~}%
+  {#2}}
+
+\def\escape{\unicodecombine\begingroup\uni@resetcatcodes\@escape}
+\def\@escape#1{\endgroup#1}
+
+\def\loadfile{%
+  \bgroup
+  \count255=1
+  \loop\ifnum\count255<128\relax
+    \setchar{\count255}{\noexpand\unichar{\number\count255}}
+    \advance\count255by1\relax
+  \repeat
+  \setchar{13}{\noexpand\unicodecombine
+    \noexpand\noindent
+    \noexpand\null
+    \noexpand\\\\%
+    \noexpand\leavevmode}
+  \setchar{32}{\noexpand\unicodecombine\noexpand\unichar{32}}
+  \setchar{12}{\noexpand\unicodecombine\noexpand\newpage}
+  \setchar{27}{\noexpand\ifescape\noexpand\expandafter\noexpand\escape\noexpand\else\noexpand\unichar{27}\noexpand\fi}
+  @@@[COMBINE]%
+  \input{@@@[FILE]}%
+  \unicodecombine
+  \egroup
+}
+
+\def\parindentstuff{%
+  \let\temp@a\undefined
+  \ifnum\parfirst=0\else\let\temp@a1\fi
+  \ifnum\parsecond=0\else\let\temp@a1\fi
+  \ifx\temp@a1%
+    \parindent=\parfirst\advance\parindent by-\parsecond
+    \everypar{%
+      \@tempdima\linewidth\advance\@tempdima by-\parsecond
+      \parshape\@ne\parsecond\@tempdima}
+  \fi
+}
+
+\DeclareUnicodeCharacter{9}{\space\space\space\space\space\space\space\space}
+
+\begin{document}
+
+\frenchspacing
+\parindent=0pt
+\thispagestyle{empty}
+\raggedright
+@@@[SWITCHES]
+@@@[CMDS]
+\parindentstuff
+\loadfile
+
+\end{document}
+';
+
+sub makecode() {
+    my $code = $code;
+    $code =~ s/\Q@@@[FILE]/$tmpfile.txt/;
+    $code =~ s/\Q@@@[FONTENCS]/$fontencs/;
+    $code =~ s/\Q@@@[CMDS]/$commands/;
+    $code =~ s/\Q@@@[COMBINE]/$combine/;
+    my $packages = join "\n", map { 
+	my ($opts,$pkg) = /^(?:\[(.*?)\])?\{?(.*?)\}?$/;
+	if (defined $opts) { $opts = "[$opts]" } else { $opts = '' };
+	"\\usepackage${opts}"."{$pkg}";
+    } @packages;
+    $code =~ s/\Q@@@[PACKAGES]/$packages/;
+    my $switches = '';
+    $switches .= '\escapetrue' if $escape;
+    $code =~ s/\Q@@@[SWITCHES]/$switches/;
+#    $code =~ s/\Q@@@[OPTIONS]/$options/;
+    open MASTER, ">$tmpfile.tex" or
+	die "Could not open $tmpfile.tex for writing: $!";
+    print MASTER $code or
+	die "Could not write to $tmpfile.tex";
+    close MASTER;
+}
+
+sub _fribidi_call($) {
+    my $option = shift;
+    my $rc = system("$fribidi_cmd $option </dev/null &>/dev/null");
+    die "$fribidi_cmd could not be started: $!" if $rc == -1;
+    $rc /= 256;
+#    print "fribidi $option => $rc\n";
+    return !$rc;
+}
+
+sub fribidi_call() {
+#    _fribidi_call('') or
+#	die "$fribidi_cmd cannot be executed";
+    my %opts = (charset => 'UTF-8',
+		nopad => {},
+		nobreak => {},
+		clean => {},
+		swapnsm => {},
+		);
+    my $opts = '';
+    while (my ($k,$v) = each %opts) {
+	$opts .= " --$k"; $opts .= " $v" unless ref $v; };
+    unless (_fribidi_call($opts)) {
+	my $o = '--';
+	_fribidi_call('-charset UTF-8') and $o = '-';
+	for my $a (keys %opts) {
+	    unless (_fribidi_call($o.$a.((ref $opts{$a})?'':" $opts{$a}"))) {
+		warn "WARNING: $fribidi_cmd does not support option $o$a";
+		delete $opts{$a};
+	    }
+	}
+	$opts = '';
+	while (my ($k,$v) = each %opts) {
+	    $opts .= " --$k"; $opts .= " $v" unless ref $v; };
+    }
+    my $cmd = "$fribidi_cmd $opts";
+    #print "[[[$cmd]]]\n";
+    return $cmd;
+}
+
+sub copyfile() {
+    my @ops;
+# <''\Q$infile\E >$tmpfile.txt
+    push @ops, "cat <''\Q$infile\E";
+    if ($charset ne 'utf-8' || $tolerant) {
+	my $c = '';
+	$c = '-c' if $tolerant;
+	push @ops, "iconv $c -f ''\Q$charset\E -t utf-8";
+    }
+    if ($r2lmode eq 'none') {
+    } elsif ($r2lmode eq 'reorder') {
+#	push @ops, "fribidi --nopad --nobreak ".
+#	    "--charset UTF-8 --clean";
+	push @ops, fribidi_call();
+    } elsif ($r2lmode eq 'mark') {
+	push @ops, "rlmark";
+    } else {
+	die "Internal error: Unknown R2L mode '$r2lmode'";
+    }
+    my $cmd = (join ' | ', @ops)." >\Q$tmpfile.txt\E";
+    system($cmd) and
+	die "Could not copy/convert file using\n$cmd";
+}
+
+sub latex() {
+    makecode;
+    copyfile;
+    my $latex = 'latex';
+    $latex = 'elatex' if ($r2lmode eq 'mark');
+    system("$latex -interaction nonstopmode ''\Q$tmpfile.tex\E >/dev/stderr") 
+	and die "$latex returned an error";
+#    system("cat $tmpfile.tex >/dev/stderr");
+    my $t = $title; $t =~ s/\\/\\\\/g; $t =~ s/[^\x20-\x7e\xa0-\xff]/
+	sprintf "\\%03o", ord($&)/gei;
+    system("dvips -o /dev/stdout ''\Q$tmpfile.dvi\E | ".
+	   "sed -e 's/^%%Title: .*\\.dvi\$/%%Title: \Q$t\E/' ".
+	   "    -e 's/^%%Creator: /%%Creator: u2ps and /' ".
+	   ">''\Q$outfile\E") and
+	die "dvips returned an error";
+}
+
+sub view() {
+    my $cmd = "gv -antialias -watch ''\Q$outfile\E";
+    system($cmd) and 
+	die "Could not run '$cmd'";
+}
+
+sub printfile() {
+    my $printer = '';
+    $printer = "-P $print" unless $print eq '';
+    my $cmd = "lpr $printer -J ''\Q$title\E ''\Q$outfile\E";
+    system($cmd) and 
+	die "Could not run '$cmd'";
+}
+
+sub cleanup() {
+    my $suffixes = 'dvi,log,tex,txt';
+    $suffixes .= ',ps' if $outfile eq "$tmpfile.ps";
+    system("rm $tmpfile.{$suffixes} >/dev/stderr") and
+	die "Could not clean up";
+}
+
+sub main() {
+    parseopts;
+    latex;
+    view if $view;
+    printfile if defined $print;
+    cleanup if $cleanup;
+}
+
+&main;

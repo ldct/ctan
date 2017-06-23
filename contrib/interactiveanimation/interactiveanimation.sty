@@ -1,0 +1,596 @@
+% File `interactiveanimation.sty'
+
+% Copyright 2012--2013 Luis González, Javier Toro, Pedro Linares
+
+% This material is subject to the LaTeX Project Public License. See
+%   http://www.ctan.org/tex-archive/help/Catalogue/licenses.lppl.html
+% for the details of that license.
+
+% This package provides an interface to create Portable Document
+% Format (PDF) files with branching and button controllable
+% animations.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{interactiveanimation}[2013/05/21]
+
+% Check if pdfTeX is running in PDF mode
+\RequirePackage{ifpdf}
+\ifpdf
+\else
+	\PackageWarningNoLine{interactiveanimation}{%
+		Loading aborted, because pdfTeX is not running in PDF mode%
+	}%
+	\expandafter\endinput
+\fi
+\RequirePackage{keyval}
+
+% Package options
+\DeclareOption*{%
+	\PackageWarning{interactiveanimation}{%
+	Unknown option `\CurrentOption'}}
+\ProcessOptions\relax
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     String and Integer Variables     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\inta@JSFile{javascript/DocLevel.js}%     The name of JavaScript file
+\def\inta@JSCode{}%                           JavaScript code that will be executed at first level
+\def\inta@appearanceNames{}%                  Unique names for inserted images
+\def\inta@fields{}%                           PDF fields array
+\def\inta@buttonActions{}%                    Actions to be performed when a button is pressed
+\newcount\inta@numanims\inta@numanims=0%      Number of inserted animation widgets
+\newcount\inta@numframes\inta@numframes=0%    Number of inserted animation frames
+\newcount\inta@numbuttons\inta@numbuttons=0%  Number of inserted control buttons
+\newcount\inta@numimages\inta@numimages=0%    Number of inserted external images
+\newif\ifinta@animation\inta@animationfalse%  Flag to check if is inside of an animation
+\newif\ifinta@aframe\inta@aframefalse%        Flag to check if is inside of an aframe
+\newcount\inta@notequal
+\newcount\inta@I
+\newcount\inta@loopStart
+\newcount\inta@loopEnd
+\newcount\inta@step
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     Internal Helper Functions       %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% inserts string #2 at the end of #1
+\def\inta@concat#1#2{%
+	\expandafter\xdef
+	\csname inta@#1\endcsname
+	{\csname inta@#1\endcsname#2}
+}
+
+% add JavaScript code to te code that is being built
+\def\inta@addJS#1{%
+	\inta@concat{JSCode}{#1}
+}
+
+% Add a field to the fields array
+\def\inta@addField{
+	\inta@concat{fields}{\the\pdflastannot\space 0 R }
+}
+
+% add appearance name for an inserted image; #1: name, #2: reference number
+\def\inta@addAP#1#2{
+	\inta@concat{appearanceNames}{ (#1) \the#2 0 R }
+}
+
+% Insert an action given in #2 for a button given in #1
+\def\inta@addAction#1#2{%
+	\inta@concat{buttonActions}{#1=#2,}
+}
+
+% Tests if argument is a non-negative number
+\def\inta@isNumber#1{%
+	\ifnum9<1#1\space%  Non-negative number
+		1%
+	\else%              Negative or invalid number
+		0%
+	\fi
+}
+
+% Check if a string is empty or only contains spaces
+\def\inta@isEmpty#1{%
+	\ifnum\pdfstrcmp{#1}{\space}=0
+		1
+	\else\ifnum\pdfstrcmp{#1}{\space\space}=0
+		1
+	\else\ifnum\pdfstrcmp{#1}{\@empty}=0
+		1
+	\else
+		0
+	\fi\fi\fi
+}
+
+% Extract option and argument from expression option=argument
+\def\inta@extractOptArg#1=#2\relax{%
+	\xdef\inta@opt{#1}
+	\xdef\inta@arg{#2}
+}
+
+% Removes spaces at the beginning of a string
+\def\inta@removeSpaces#1{%
+	\if\space#1\else
+	#1\fi
+}
+
+% Transform a number in a three digits number filling with zeros
+\def\inta@threeDigits#1{%
+	\ifnum#1<10
+		00%
+	\else\ifnum#1<100
+		0%
+	\fi\fi
+	\the#1%
+}
+
+% Insert an object given in #2 into the PDF and saves its reference in #1
+\def\inta@insertObject#1#2{%
+	\immediate\pdfobj{#2}%
+	\expandafter\xdef
+	\csname inta@obj:#1\endcsname
+	{\the\pdflastobj \space 0 R}
+}
+
+% Insert an external image and saves its name in \inta@imageName. #1: file name, #2: page
+\def\inta@insertImage#1#2{
+	% Cheks if name and page are valid
+	\edef\inta@filePage{#2}
+	\IfFileExists{#1}%
+	{
+		\ifnum\inta@isEmpty{#2}=1 % if filePage not specified, first one is silently assumed
+			\def\inta@filePage{1}
+		\else\ifnum\inta@isNumber{#2}=0 % Not a valid number
+			\PackageError{interactiveanimation}{%
+				`#2' of file `\inta@fileName' is not a valid page number%
+			}{
+				A page number must be a positive integer
+			}
+			\def\inta@filePage{1}
+		\else\ifnum#2=0 % Zero-based numbering page
+			\PackageWarning{interactiveanimation}{%
+			  Page numbers starts in number one%
+			  \MessageBreak%
+			  Page number 1 (first page) was assumed.%
+			}
+			\def\inta@filePage{1}
+		\fi\fi\fi
+		\@ifundefined{inta@img:#1,\inta@filePage}% Only inserts if was not previously inserted
+		{
+			\immediate\pdfximage%
+			page \inta@filePage {#1}
+			\expandafter\xdef
+			\csname inta@img:#1,\inta@filePage\endcsname
+				{image\inta@threeDigits{\inta@numimages}}
+			\inta@addAP%
+				{image\inta@threeDigits{\inta@numimages}}%
+				  {\pdflastximage}
+			\global\advance\inta@numimages by 1
+		}{
+		}
+		\xdef\inta@imageName{%
+			\csname inta@img:#1,\inta@filePage\endcsname}
+	}{% File is invalid or not specified
+		\ifnum\inta@isEmpty{\inta@fileName}=0% Specified but invalid
+			\PackageError{interactiveanimation}{%
+				Could not find file `\inta@fileName'%
+			}
+			{}
+		\fi
+	}
+}
+
+% Refer an object previowsly inserted using \inta@insertObject
+\def\inta@refObj#1{%
+	\csname inta@obj:#1\endcsname}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     Initial PDF Setups               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% An AcroForm dictionary is inserted in the catalog,
+% containing the Fields array
+\pdfobj reserveobjnum
+\newcount\inta@fieldsnum
+\inta@fieldsnum=\pdflastobj
+\pdfcatalog{%
+	/AcroForm <<
+		/Fields \the\inta@fieldsnum\space 0 R
+		/NeedAppearances true
+	>>
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  Command and Environment Definitions %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Inserts an animation widget
+\newcount\inta@animationWidth\newcount\inta@animationHeight
+\newdimen\inta@dimen\inta@dimen=0pt% Auxiliar dimension
+\newenvironment{animation}[2]{% Two arguments: width and height
+	\ifinta@animation% if inside of another animation
+		\PackageError{interactiveanimation}{%
+			You can not define an animation inside%
+			\MessageBreak%
+			another one.
+		}
+		{}
+	\fi
+	\inta@animationtrue
+	\xdef\inta@animationName{animation\the\inta@numanims}
+	\inta@dimen=#1% Avoid printing measure, e.g. `pt'
+	\divide\inta@dimen by 65536% Converts to pt
+	\global\inta@animationWidth=\inta@dimen% store width
+	\inta@dimen=#2
+	\divide\inta@dimen by 65536
+	\global\inta@animationHeight=\inta@dimen
+	\strut\vskip #2% Displaying of widget start from lower left corner
+
+	% inserts a dummy widget for reserving its dimentions and position
+	\hbox{\pdfannot
+		width #1 height #2 {%
+		/Subtype /Widget /FT /Btn
+		/Ff 65536 % Not necessary, but avoids some warnings
+		/T (\inta@animationName)
+	}}
+	\inta@addField
+
+	\inta@addJS{
+		var \inta@animationName = extendField(this.getField("\inta@animationName"));
+	}
+}%
+{
+	\inta@animationfalse
+	\inta@addJS{\inta@animationName.displayFirstFrame();}
+
+	% Process button's actions
+	\@for \inta@tmp :=\inta@buttonActions\do%
+	{
+		\ifnum\pdfmatch{=}{\inta@tmp}=1\relax% Is an action
+			\expandafter\inta@extractOptArg\inta@tmp\relax
+			\def\inta@buttonName{\inta@opt}
+			
+			% Action = previous frame
+			\ifnum\pdfstrcmp{previous}{\inta@arg}=0
+				\inta@addJS{
+					\inta@buttonName.targetAction = function()
+						{ \inta@animationName.displayPreviousFrame(); };
+				}
+
+			% Action = next frame
+			\else\ifnum\pdfstrcmp{next}{\inta@arg}=0
+				\inta@addJS{
+					\inta@buttonName.targetAction = function()
+						{ \inta@animationName.displayNextFrame(); };
+				}
+
+			% Action = first frame
+			\else\ifnum\pdfstrcmp{first}{\inta@arg}=0
+				\inta@addJS{
+					\inta@buttonName.targetAction = function()
+						{ \inta@animationName.displayFirstFrame(); };
+				}
+
+			% Action = last frame
+			\else\ifnum\pdfstrcmp{last}{\inta@arg}=0
+				\inta@addJS{
+					\inta@buttonName.targetAction = function()
+						{ \inta@animationName.displayLastFrame(); };
+				}
+
+			% Action = given frame name
+			\else\@ifundefined{inta@frm:\inta@arg}% undefined frame name
+			{
+				\PackageError{interactiveanimation}{%
+					There is no frame named `\inta@arg'%
+				}{%
+					Please specify a valid frame name%
+					Or use: `previous', `next', `first' or `last'}
+			}{
+				\def\inta@frameNumber{\csname inta@frm:\inta@arg\endcsname}
+				\inta@addJS{
+					\inta@buttonName.targetAction = function()
+						{ \inta@animationName.displayFrame("frame\inta@frameNumber");};
+				}
+			}\fi\fi\fi\fi
+		\fi
+	}
+	\global\advance\inta@numanims by 1
+	\gdef\inta@buttonActions{}% It is cleared just in case it will be used again
+}
+
+% Inserts a frame to be displayed by the animation widget
+\newenvironment{aframe}[2]{% Two arguments: frame name and image
+	\ifinta@animation\else% if outside an animation
+		\PackageError{interactiveanimation}{%
+			You can not define an aframe outside%
+			\MessageBreak%
+			an animation.
+		}
+		{}
+	\fi
+	\ifinta@aframe% if inside another aframe
+		\PackageError{interactiveanimation}{%
+			You can not define an aframe inside%
+			\MessageBreak%
+			another one.
+		}
+		{}
+	\fi
+
+	\inta@aframetrue
+	\xdef\inta@frameName{frame\the\inta@numframes}
+	\vskip-\baselineskip
+
+	\hbox{\pdfannot{%
+		/Subtype /Widget /FT /Btn
+		/Ff 65537%                     No user interaction
+		/T (\inta@frameName)
+		/BS << /W 0 >>%                No border is drawn
+		/MK << /BG [1]%                White background color
+		/IF << /S /A >> %              Non-proportional scaling
+		/TP 1 >>%                      Only image, no text caption
+	}}
+	\inta@addField
+
+	\inta@addJS{%
+		var \inta@frameName = extendField(this.getField("\inta@frameName"));
+		\inta@animationName.addFrame(\inta@frameName);
+	}
+
+	% Animation frame image
+	\inta@I=0
+	\gdef\inta@fileName{}\gdef\inta@filePage{}
+	\@for \inta@tmp :=#2\do% Iterates each element in the comma separated list
+	{
+		\ifnum\inta@I=0% File name
+			\edef\inta@fileName{\inta@tmp}
+		\else\ifnum\inta@I=1% File page
+			\edef\inta@filePage{\inta@removeSpaces{\inta@tmp}}
+		\fi\fi
+		\advance\inta@I by 1
+	}
+
+	% Image is inserted, if it is all right associates it with frame
+	\inta@insertImage{\inta@fileName}{\inta@filePage}
+	\ifnum\inta@isEmpty{\inta@imageName}=0
+		\inta@addJS{%
+			\inta@frameName.buttonSetIcon(this.getIcon("\inta@imageName"));
+			\inta@frameName.buttonPosition = position.iconOnly;
+		}
+	\fi
+
+	% Saves number frame for actual frame's name
+	\expandafter\xdef\csname inta@frm:#1\endcsname
+		{\the\inta@numframes}
+	\global\advance\inta@numframes by 1
+}%
+{
+	\inta@aframefalse
+}
+
+% Definitions for keyval needed
+\define@key{inta}{position}{#1}
+
+% option=position
+\define@key{inta}{position}{%
+	% Check if option has a valid argument
+	\ifnum\pdfmatch{#1}{ left right above below center from }=1
+		\inta@addJS{\inta@buttonName .relatPosition = option.#1;}
+	\else% if it is invalid, does not process option and display an error
+		\PackageError{interactiveanimation}{%
+		  `#1' is not a valid position.}{%
+		  Valid positions are:%
+		  \MessageBreak%
+		  `left', `right', `above', `below' and `from'}
+	\fi
+}
+% option=X
+\define@key{inta}{X}{%
+	\ifnum\inta@isNumber{#1}=1% if is a non-negative integer
+		% Defines the coordinate depending on the animation width
+		% so the animation can be resized
+		\inta@addJS{%
+			\inta@buttonName.pointX = #1 * \inta@animationName.width / \the\inta@animationWidth;
+		}
+	\else\ifnum\pdfmatch{#1}{ start center end }=1
+		\inta@addJS{\inta@buttonName .positionX = option.#1;}
+	\else% if it is invalid, does not process option and displays an error
+		\PackageError{interactiveanimation}{%
+			`#1' is not a valid X coordinate}{%
+			Valid X coordinate are:%
+			\MessageBreak%
+			A non-negative integer, or `start', `center' or `end'}
+	\fi\fi
+}
+% option=Y
+\define@key{inta}{Y}{%
+	\ifnum\inta@isNumber{#1}=1% if is a non-negative integer
+		\inta@addJS{%
+			\inta@buttonName.pointY = #1 * \inta@animationName.height / \the\inta@animationHeight;
+		}
+	\else\ifnum\pdfmatch{#1}{ start center end }=1
+		\inta@addJS{\inta@buttonName .positionY = option.#1;}
+	\else% if it is invalid, does not process option and displays an error
+		\PackageError{interactiveanimation}{%
+			`#1' is not a valid Y coordinate}{%
+			Valid Y coordinate are:%
+			\MessageBreak%
+			A non-negative integer, or `start', `center' or `end'}
+	\fi\fi
+}
+% option=scale
+\define@key{inta}{scale}[1]{%
+	\inta@addJS{\inta@buttonName.scale(#1);}
+}
+% option=hidden
+\define@key{inta}{hidden}[true]{%
+	\inta@addJS{\inta@buttonName.toggleHidden = true;}
+}
+% option=transparent
+\define@key{inta}{transparent}[true]{%
+	\inta@addJS{ \inta@buttonName.transparent = true;}
+}
+% option=width
+\define@key{inta}{width}{%
+	\inta@addJS{%
+		\inta@buttonName.width = #1 * \inta@animationName.width / \the\inta@animationWidth;
+	}
+}
+% option=height
+\define@key{inta}{height}{%
+	\inta@addJS{%
+		\inta@buttonName.height = #1 * \inta@animationName.height / \the\inta@animationHeight;
+	}
+}
+% option=span
+\define@key{inta}{span}[1000]{%
+	\inta@addJS{\inta@buttonName.timeSpan = #1;}
+}
+% option=keep
+\define@key{inta}{keep}[true]{%
+	\inta@addJS{\inta@buttonName.keep = true;}
+}
+
+% Insert a button for interacting with the animation
+\newdimen\inta@buttonWidth
+\newcommand{\controlbutton}[4][]{% Four arguments: [animation], button's caption, destination frame and specification in a comma separated list
+	\ifinta@animation\else% if outside an animation
+		\PackageError{interactiveanimation}{%
+			You cannot define a control button%
+			\MessageBreak%
+			outside an animation.
+		}
+		{}
+	\fi
+	\edef\inta@buttonName{button\the\inta@numbuttons}
+	\setbox0=\hbox{ #2 \strut}
+	\inta@buttonWidth=\wd0
+	\vskip-\baselineskip
+
+	% Button is inserted
+	\hbox{\pdfannot
+	width \inta@buttonWidth{%
+		/Subtype /Widget /FT /Btn%    Button field
+		/Ff 65536%                    Push button type
+		/T (\inta@buttonName)%        Button's name, accessible from JavaScript
+		/BS << /S /B >>%              Beveled border style
+		/MK << /BG [0.6]%             60% white background color
+		/CA (#2) >>%                  Caption
+		/H /P%                        Push highlighting mode
+		/A << /S /JavaScript /JS (%   JavaScript action to be performed
+			\inta@buttonName.buttonAction();
+		) >>
+	}\strut}
+	\inta@addField
+
+	\inta@addJS{
+		var \inta@buttonName = extendField(this.getField("\inta@buttonName"));
+		\inta@buttonName.images = new Array();
+	}
+
+	% If present, button's action is stored and will be processed at end of animation environment
+	\ifnum\inta@isEmpty{#3}=0
+		\inta@addAction{\inta@buttonName}{#3}
+	\else
+		\inta@addJS{
+			\inta@buttonName.targetAction = function()
+				{ \inta@animationName.displayFrame("\inta@frameName");};
+				}
+	\fi
+
+	% Button's options are processed
+	\setkeys{inta}{#4}
+
+	% Button's image sequence is processed
+	\def\inta@rangeStart{}\def\inta@rangeEnd{}
+	\def\inta@fileName{}
+	\inta@I=0
+	\@for \inta@tmp :=#1\do
+	{
+		\ifnum\inta@I=0% File name
+			\edef\inta@fileName{\inta@tmp}
+		\else\ifnum\inta@I=1% Start range
+			\edef\inta@rangeStart{\inta@removeSpaces{\inta@tmp}}
+		\else\ifnum\inta@I=2% End range
+			\edef\inta@rangeEnd{\inta@removeSpaces{\inta@tmp}}
+		\fi\fi\fi
+		\advance\inta@I by 1
+	}
+	% Check if ranges are specified and valid
+	\ifnum\inta@isEmpty{\inta@fileName}=0
+	\ifnum\inta@isEmpty{\inta@rangeStart}=1
+		\def\inta@rangeStart{1}
+		\def\inta@rangeEnd{1}
+	\else\ifnum\inta@isNumber{\inta@rangeStart}=0
+		%\inta@insertImage will display the appropriate error
+		\inta@insertImage{\inta@fileName}{\inta@rangeStart}
+		\def\inta@rangeStart{1}
+		\def\inta@rangeEnd{1}
+	\fi\fi
+	\ifnum\inta@isEmpty{\inta@rangeEnd}=1% if only one number was given, set range to (1,number)
+		\edef\inta@rangeEnd{\inta@rangeStart}
+		\def\inta@rangeStart{1}
+	\else\ifnum\inta@isNumber{\inta@rangeEnd}=0
+		%\inta@insertImage will display the appropriate error
+		\inta@insertImage{\inta@fileName}{\inta@rangeEnd}
+		\edef\inta@rangeEnd{\inta@rangeStart}
+		\def\inta@rangeStart{1}
+	\fi\fi\fi
+
+	% If was given an animation action for the button, all animation frames are inserted
+	\ifnum\inta@isEmpty{\inta@fileName}=0
+		\inta@notequal=1% End loop flag
+		\inta@loopStart=\inta@rangeStart
+		\inta@loopEnd=\inta@rangeEnd\relax
+		\ifnum\inta@loopStart>\inta@loopEnd% Descending order
+			\inta@step=-1
+		\else
+			\inta@step=1
+		\fi
+		\inta@I=\inta@loopStart\loop
+			\inta@insertImage{\inta@fileName}{\the\inta@I}
+			\inta@addJS{
+				\inta@buttonName.addImage("\inta@imageName"); }
+			\ifnum\inta@I=\inta@loopEnd
+				\inta@notequal=0% Ends loop
+			\fi
+			\advance\inta@I by \inta@step
+		\ifnum\inta@notequal=1\repeat
+	\fi
+
+	\inta@addJS{\inta@frameName.addButton(\inta@buttonName);}
+	\global\advance\inta@numbuttons by 1
+}
+
+% JavaScript code is inserted into the PDF
+\input\inta@JSFile\relax
+\AtEndDocument{\inta@insertObject{JavaScript}{
+	<< /S /JavaScript /JS (
+		\inta@JSCode
+	) >>
+}}
+
+% A reference to the JavaScript code is inserted intho the names dictionary,
+% so the JavaScript actions perform when the document is opened
+\AtEndDocument{\pdfnames{
+	/JavaScript <<
+	/Names [ (interactiveanimation) \inta@refObj{JavaScript} ] >>
+}}
+
+% Appearance names dictionary is inserted into the names dictionary,%
+% so it is posible accessing inserted images from JavaScript
+\AtEndDocument{\pdfnames{
+	/AP <<
+	/Names [\inta@appearanceNames] >>
+}}
+
+% Array fields is inserted
+\AtEndDocument{\immediate\pdfobj useobjnum \inta@fieldsnum {%
+	[\inta@fields]%
+}}
+

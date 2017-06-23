@@ -1,0 +1,144 @@
+\documentclass{article}
+\usepackage{amsmath}
+%
+% the driver line is not necessary if you
+% have aebpro.cfg configured to your driver.
+%
+\usepackage[%
+%    driver=dvips,
+    web={pro,tight,usesf,usetemplates},
+    eforms,graphicxsp={showembeds}
+]{aeb_pro}
+\usepackage{rmannot}[2016/10/09]
+
+\useVideoPlayerX
+
+\margins{.25in}{.25in}{24pt}{.25in} % left,right,top, bottom
+\screensize{5in}{5.5in}             % height, width
+
+\DeclareDocInfo
+{
+    title=The \texttt{rmannot} Package\texorpdfstring{\\[1ex]}{: }Playing Videos with VPX,
+    author=D. P. Story,
+    university=Acro\negthinspace\TeX.Net,
+    email=dpstory@acrotex.net,
+    subject={Demo of the rmannot package, playing and streaming videos},
+    keywords={Adobe Acrobat, JavaScript, VideoPlayerX, ActionScript, RMA},
+    talksite=\url{http://www.acrotex.net},
+    talksite=\url{http://www.acrotex.net},
+    talkdate={October 2016},
+    copyrightStatus=True,
+    copyrightNotice={Copyright (C) 2008--\the\year, D. P. Story},
+    copyrightInfoURL=http://www.acrotex.net
+}
+\talkdateLabel{Published:}
+
+\def\AcroTeX{Acro\!\TeX}
+
+\newcommand{\myRMFiles}{%
+    C:/Users/Public/Documents/My TeX Files/%
+    tex/latex/aeb/aebpro/rmannot/RMfiles}
+\saveNamedPath{horse1}{\myRMFiles/horse1.flv}
+%\saveNamedPath{alexfishes}{\myRMFiles/100_0239.flv}
+\saveNamedPath{playtime}{\myRMFiles/sample.flv}
+\saveNamedPath{elephants}{http://www.math.uakron.edu/~dpstory/%
+    videos/elephants.flv}
+\saveNamedPath{loadingvid}{\myRMFiles/loadingvid.mp4}
+% Define a new skin
+\saveNamedPath{skin8}{\PathToSkins/%
+    MinimaUnderPlayBackSeekCounterVolMuteNoFull.swf}
+%\saveNamedPath{skin8}{\PathToSkins/SkinUnderAllNoVolNoCaptionNoFull.swf}
+%
+\makePoster[hiresbb]{aebmovie_poster}{aebmovie_poster}
+
+\begin{insDLJS}{playerJS}{JS for VPX}
+var isOver=/over(?!.*?\/)/i; // search for "over" even in a url
+function playerX(rm,source,skin,skinColor) {
+    rm.activated = true;
+    rm.callAS(\mmSkin, skin);
+    if ( isOver.test(skin) ) rm.callAS(\mmSkinAutoHide, true);
+    rm.callAS(\mmSkinColor, skinColor);
+    rm.callAS(\mmSource, source);
+    rm.callAS(\mmShowLoopButton, false);
+    rm.callAS(\mmPlay);
+}
+var vpxdebug=false;
+function vpx_listener(r,pg,pos,e) {
+    if (vpxdebug) console.println(
+        "vpx_listener: RMA="+r+", page="+pg+", event="+e+", position="+pos);
+}
+function vpx_init(r,pg) {
+    var rm=this.getAnnotRichMedia(pg,r);
+    rm.callAS(\mmIsLooping,false);
+    rm.callAS(\mmSetScaleMode,"maintainAspectRatio"); // "noScale", "exactFit", "maintainAspectRatio" (alias "showAll")
+}
+\end{insDLJS}
+\newcommand\pxEmbed[4]{\def#1{function() { playerX(rm,"\rmaName{#2}","\rmaName{#3}","#4");}}}
+\newcommand\pxStream[4]{\def#1{function() { playerX(rm,"\rmaUrlName{#2}","\rmaName{#3}","#4");}}}
+\pxEmbed{\itemi}{horse1}{skin2}{0x5F5F5F}
+\pxEmbed{\itemii}{playtime}{skin2}{0xFF0000}
+\pxStream{\itemiii}{elephants}{skin3}{0x0000FF}
+
+\parindent=0pt\parskip6pt\pagestyle{empty}
+
+\begin{insDLJS}{comb}{Dropdown action}
+function comboAction(rm,ch,bSelectOnChange) {
+	switch(ch) {
+        case "Horse":
+            if (!bSelectOnChange)
+                comboAction.play=\itemi;
+            break;
+        case "Playtime":
+            if (!bSelectOnChange)
+                comboAction.play=\itemii;
+            break;
+        case "Elephants":
+            if (!bSelectOnChange)
+                comboAction.play=\itemiii;
+            break;
+        default:
+            comboAction.play=null;
+            rm.activated=false;
+            break;
+	}
+    if (comboAction.play!=null) {
+        if (rm.activated) {
+            comboAction.play();
+        } else {
+            rm.activated=true;
+            toVar=app.setTimeOut('comboAction.play();app.clearTimeOut(toVar);',500);
+        }
+    }
+}
+\end{insDLJS}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{center} %\previewtrue
+\resizebox{.75\linewidth}{!}
+    {\rmAnnot[name=myRMA,poster=aebmovie_poster,skin=none,
+        resources={playtime,horse1,skin2,skin3}]{320bp}{240bp}{loadingvid}}\\[6bp]
+%
+    \comboBox[\V{Select a video from the list}\DV{Select a video from the list}
+        \Ff{\FfCommitOnSelChange}
+        \AA{\AAOnFocus{\JS{var rm = this.getAnnotRichMedia(this.pageNum,"myRMA");}}
+        \AAKeystroke{%
+            if (event.willCommit) {\r\t
+	           var ch=event.value;\r\t
+               comboAction(rm,ch,true);\r
+            }
+        }}
+    ]{comboSel}{2in}{11bp}{(Select a video from the list)(Horse)(Playtime)(Elephants)}\kern1bp
+%
+    \pushButton[\CA{Play}\A{\JS{%
+        var f=this.getField("comboSel");\r
+        var v=f.value;\r
+        comboAction(rm,v,false);
+    }}]{btnPlay}{}{11bp}
+\end{center}
+
+\end{document}
+

@@ -1,0 +1,1975 @@
+%\iffalse
+%
+% File calendar.dtx
+% Copyright (C) 1996, 1997 by Frank Bennett.  All rights reserved.
+%
+% IMPORTANT NOTICE:
+% You are not allowed to change this file.  You may however copy
+% this file to a file with a different name and then change the
+% copy if (a) you do not charge for the modified code, (b) you
+% acknowledge the author(s) in the new file, if it
+% is distributed to others, and (c) you attach these same
+% conditions to the new file.
+% 
+% You are not allowed to distribute this file alone.  You are not
+% allowed to take money for the distribution or use of this file
+% (or a changed version) except for a nominal charge for copying
+% etc.
+% 
+% You are allowed to distribute this file under the condition that
+% it is distributed with all of its contents, intact.
+% 
+% For error reports, or offers to help make Calendar a more powerful,
+% friendlier, and altogether more thrilling package, please contact me on
+% fb@soas.ac.uk
+% 
+%<*dtx>
+          \ProvidesFile{calendar.dtx}
+%</dtx>
+%<style>\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+%<style>\ProvidesPackage{calendar}
+%<style>          [1998/01/17 18:14:52 3.1.1.1 Calendar engine (Frank Bennett)]
+% \fi
+%
+% \def\fileversion{3.1.1.1}
+% \def\filedate{1998/01/17 18:14:52}
+%
+%
+% \iffalse
+%<*driver>
+\documentclass{ltxdoc}
+%\usepackage[dvips]{color}
+%\CodelineIndex
+%\EnableCrossrefs
+%\RecordChanges
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{calendar.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \changes{v0.01}{1996/11/10}{Initial Version}
+% \changes{v0.02}{1996/11/11}{Replaced \TeX{} newcount with \LaTeXe{}
+% newcounter, and changed counters accordingly.}
+% \changes{v0.02}{1996/11/11}
+%    {Incorporated higher maths functions into an option declaration
+%  in the main file (was loaded from a separate file in original
+%  \TeX{} version.)}
+% \changes{v0.03}{1996/11/12}{Complete re-draft of recursing routines,
+%   with documentation.}
+% \changes{v0.03}{1996/11/12}{Drafting of the sort engine.}
+% \changes{v0.03}{1996/11/12}{Picked up some more counters that
+%   hadn't been converted to \LaTeXe format.}
+% \changes{v0.03}{1996/11/12}{Wholesale cutting of old recursing
+%   and formatting routines.  The package is now a background engine;
+%   it knows nothing about printing anymore.}
+% \changes{v0.04}{1996/11/17}{Introduction of parsing routines
+%   and reorganization of entire package.}
+% \changes{v0.05}{1996/11/25}{Completed new parsing routines and finished
+%   debugging of same.}
+% \changes{v0.05}{1996/11/25}{Completed sorting routines and finished
+%   debugging of same.}
+% \changes{v0.06}{1996/11/27}{Added support for indicating a range of
+%   dates in an input file, and for declaring recursive entries.}
+% \changes{v0.07}{1996/11/27}{Minor alterations to make the package
+%   work for the timesheets demo.  Another alpha release.}
+% \changes{v0.08}{1996/11/27}{No changes to this file; but the
+%   README shipped to CTAN was for Nelson Beebe's makeindex.  Ah,
+%   the wonders of automation...}
+% \changes{v0.09}{1996/11/29}{Added maths routines for weekly
+%   and monthly recursion.  Nearly finished!}
+% \changes{v0.10}{1996/11/29}{Various bug fixes.}
+% \changes{v0.10}{1996/11/29}{Added routines for handling comments
+%   in CLD files.  Added demonstration files and comments thereto.}
+% \changes{v0.11}{1996/12/04}{Enhanced input and parsing routine.
+%   Now handles entries across multiple lines, even with par, and does
+%   not make characters active outside of the parsed text.}
+% \changes{v0.11}{1996/12/04}{Provided a check to prevent multiple
+%   input of data files.  Necessary to provide support for groups
+%   of lists.}
+% \changes{v0.11}{1996/12/06}{Further work on the initial input
+%   code, to provide for groups of lists and groups of groups.
+%   This portion of the code is now complete.}
+% \changes{v0.11}{1996/12/07}{Code clean-up in the date parsing
+%   routine; the code must be reasonably transparent if it is
+%   to be used as a general date parsing engine in the package.}
+% \changes{v0.12}{1996/12/15}{Complete redraft commenced following the
+%   removal of the overword and dates code to separate
+%   eponymous packages.  Recursive interface macro completed and
+%   first cut of debugging done.  Released with the Thumbnail demo.}
+% \changes{v1.0}{1996/12/26}{Far too many changes to document here.
+%   Finished through to final, hopefully stable form, and packaged
+%   with demonstration sub-packages for CTAN release.}
+% \changes{v1.11}{1997/01/07}{Moved LoadClass declaration from
+%   bottom of the timesht.cls file to the top, so that margin
+%   adjustments would not be overwritten and options would take effect.}
+% \changes{v1.11}{1997/01/07}{Added newpage to group break in timesheets style
+%   file.}
+% \changes{v1.12}{1997/01/18}{Fixed bug in the timesheets package that often caused
+%  one line in any *.cld entry spanning a range of times to appear in the wrong place.
+%  The ending, rather than the starting minutes of the range were used to calculate
+%  the current time position within the timesheet.  Oops.  This bug was reported by Miroslav Novak.}
+% \changes{v1.12}{1997/01/18}{Added code to correct another infelicity pointed
+%   out by Miroslav Novak; the appearance of an item description line in timesheet
+%   boxes where the ending time of the range for the item 
+%   is the starting time of the range in the box.}
+% \changes{v1.13}{1997/01/30}{Began work on improved
+%   documentation.  No promises that this will happen quickly\ldots}
+% \changes{v1.13}{1997/02/01}{Added color package to timesheets demo file.}
+% \changes{v1.13}{1997/02/01}{Added  reference to need for color package
+%  to documentation.}
+% \changes{v1.14}{1997/02/12}{Corrected an error lurking in cal@text@init
+%  (which turned out to be unused code --- the error cropped up when
+%  the code was extracted for explicit invocation in the Monthly style)
+%  that swallowed all event text when color was not in force, and gave
+%  rise to a fatal error otherwise.  Oops.}
+% \changes{v1.14}{1997/02/16}{Caught initialization of blank (but
+%   non-empty) entries in \texttt{cal@print@format}.}
+% \changes{v1.14}{1997/02/20}{Cut subpackages from this file;
+%   too many packages now to for this to be manageable.}
+% \changes{v1.14}{1997/02/21}{Eliminated erroneous use of
+%   cal@read for inputting *.eve files.}
+% \changes{v1.14}{1997/02/21}{Eliminated extraneous argument
+%   to PackageWarning.}
+% \changes{v1.14}{1997/02/21}{Added comment chars to the end
+%   of exported *.eve file event entries.}
+% \changes{v1.14}{1997/02/21}{Added initalization of exception
+%   list and cal@append instruction to load events drawn from
+%   an *.eve file into memory.  We now have phases of the moon.}
+% \changes{v1.14}{1997/02/21}{Not a change, but a note of a bug.
+%   A function such as moon.cld should be allowed to dynamically
+%   change a function, and have the change register in the
+%   theshorttext or thelongtext macros as the function recurses.
+%   But the moon.cld phases only change on export, not during
+%   the first run.}
+% \changes{v1.14}{1997/02/22}{Added cal@dates@base and the
+%   \texttt{z} incrementing option.  This gives us vertical
+%   date columns without much work.  For use in a conference
+%   style package for Miroslav Novak.}
+% \changes{v1.14}{1997/02/23}{Added quick but very ugly
+%   patch to allow non-printing text to be dropped on DVI
+%   at the beginning of a subgroup.}
+% \changes{v1.14}{1997/03/01}{Made a number of variable assignments
+%   global to prevent buildup in \TeX{}'s save space.  Job
+%   is not finished, but reliability has improved.}
+% \changes{v1.14}{1997/03/01}{Merged a large number of changes
+%  into this ".dtx" file from the "*.sty" file.}
+% \changes{v1.14}{1997/03/01}{Cut superfluous documentation
+%  from this file, and edited the remainder.}
+% \changes{v1.15}{1997/03/08}{Fixed bug in \texttt{cal@@@print@items}
+%  that suppressed entries for a single time falling at the top
+%  of a selected range of times.}
+% \changes{v1.16}{1997/05/19}{Minor changes to pass through language
+%  options to the \texttt{dates} package.}
+% \changes{v1.17}{1997/10/18}{New public release of all styles
+%  and modules incorporating global bug-fixes.}
+% \changes{v1.18}{1997/10/25}{Eliminated need for bogus entries
+%  to protect against reads past end of file. }
+% \changes{v1.19}{1997/10/26}{One more cross-nesting, of \cs{cal@offset},
+%  tracked down and eliminated.}
+%\iffalse
+% Source tree moved under RCS
+% ---------------------------
+% calendar.dtx,v
+% Revision 3.1.1.1  1998/01/17 18:14:52  root
+% Release code, checksum verified
+%
+% Revision 3.1  1998/01/17 16:59:04  root
+% Release code
+%
+% Revision 2.2  1997/11/07 10:44:05  root
+% Release code.
+%
+% Revision 2.1.1.2  1997/11/05 12:38:40  root
+% Changed RAN to rAN.
+%
+% Revision 2.1.1.1  1997/11/04 05:06:07  root
+% Development branch
+%
+% Revision 2.1  1997/11/01 15:14:56  bennett
+% Release code.
+%
+% Revision 1.10  1997/11/01 14:28:10  root
+% Eliminated \enditall's from the package.
+%
+% Revision 1.9  1997/11/01 12:56:27  root
+% Added assignment to new counter \dates@range@limit.
+%
+% Revision 1.8  1997/10/31 21:56:23  root
+% Added hardwired \dates@requiremonthtrue immediately before
+% \cal@input.
+%
+% Revision 1.7  1997/10/29 20:06:34  bennett
+% *** empty log message ***
+%
+% Revision 1.6  1997/10/29 17:21:40  root
+% Further change affecting subgroup breaks?
+%
+% Revision 1.5  1997/10/29 16:52:21  root
+% Moved use of subgroup@setup to the right location (oops).
+%
+% Revision 1.4  1997/10/29 16:39:42  root
+% Added subgroup@setup to begin@subgroup, to guard against
+% starting the second and later pages of a timesheet with
+% the last time from the previous page.  Thanks to Edward
+% Czilli for reporting this bug.
+%
+% Revision 1.3  1997/10/29 13:47:57  root
+% Restored date checking after discovering that it works
+% correctly if files are extracted from RCS using the -kv
+% option.
+%
+% Revision 1.2  1997/10/29 11:47:37  root
+% Eliminated optional date specification from RequirePackage{dates}
+%
+% Revision 1.1  1997/10/29 08:17:52  root
+% Initial revision
+%
+%\fi
+%
+%
+% \title{Designer's Guide to the Calendar
+%  package\thanks{This file is version number
+%    \fileversion{}.  It was last revised on
+%    \filedate.}}
+%
+% \author{Frank G. Bennett, Jr.}
+%
+%  \maketitle
+%
+% \DoNotIndex{\@,\@@par,\@beginparpenalty,\@empty}
+% \DoNotIndex{\@flushglue,\@gobble,\@input}
+% \DoNotIndex{\@makefnmark,\@makeother,\@maketitle}
+% \DoNotIndex{\@namedef,\@ne,\@spaces,\@tempa}
+% \DoNotIndex{\@tempb,\@tempswafalse,\@tempswatrue}
+% \DoNotIndex{\@thanks,\@thefnmark,\@topnum}
+% \DoNotIndex{\@@,\@elt,\@forloop,\@fortmp,\@gtempa,\@totalleftmargin}
+% \DoNotIndex{\",\/,\@ifundefined,\@nil,\@verbatim,\@vobeyspaces}
+% \DoNotIndex{\|,\~,\ ,\active,\advance,\aftergroup,\begingroup,\bgroup}
+% \DoNotIndex{\cal,\csname,\def,\documentstyle,\dospecials,\edef}
+% \DoNotIndex{\egroup}
+% \DoNotIndex{\else,\endcsname,\endgroup,\endinput,\endtrivlist}
+% \DoNotIndex{\expandafter,\fi,\fnsymbol,\futurelet,\gdef,\global}
+% \DoNotIndex{\hbox,\hss,\if,\if@inlabel,\if@tempswa,\if@twocolumn}
+% \DoNotIndex{\ifcase}
+% \DoNotIndex{\ifcat,\iffalse,\ifx,\ignorespaces,\index,\input,\item}
+% \DoNotIndex{\jobname,\kern,\leavevmode,\leftskip,\let,\llap,\lower}
+% \DoNotIndex{\m@ne,\next,\newpage,\nobreak,\noexpand,\nonfrenchspacing}
+% \DoNotIndex{\obeylines,\or,\protect,\raggedleft,\rightskip,\rm,\sc}
+% \DoNotIndex{\setbox,\setcounter,\small,\space,\string,\strut}
+% \DoNotIndex{\strutbox}
+% \DoNotIndex{\thefootnote,\thispagestyle,\topmargin,\trivlist,\tt}
+% \DoNotIndex{\twocolumn,\typeout,\vss,\vtop,\xdef,\z@}
+% \DoNotIndex{\,,\@bsphack,\@esphack,\@noligs,\@vobeyspaces,\@xverbatim}
+% \DoNotIndex{\catcode,\end,\escapechar,\frenchspacing,\glossary}
+% \DoNotIndex{\hangindent,\hfil,\hfill,\hskip,\hspace,\ht,\it,\langle}
+% \DoNotIndex{\leaders,\long,\makelabel,\marginpar,\markboth,\mathcode}
+% \DoNotIndex{\mathsurround,\mbox,\newcount,\newdimen,\newskip}
+% \DoNotIndex{\nopagebreak}
+% \DoNotIndex{\parfillskip,\parindent,\parskip,\penalty,\raise,\rangle}
+% \DoNotIndex{\section,\setlength,\TeX,\topsep,\underline,\unskip,\verb}
+% \DoNotIndex{\vskip,\vspace,\widetilde,\\,\%,\@date,\@defpar}
+% \DoNotIndex{\[,\{,\},\]}
+% \DoNotIndex{\count@,\ifnum,\loop,\today,\uppercase,\uccode}
+% \DoNotIndex{\baselineskip,\begin,\tw@}
+% \DoNotIndex{\a,\b,\c,\d,\e,\f,\g,\h,\i,\j,\k,\l,\m,\n,\o,\p,\q}
+% \DoNotIndex{\r,\s,\t,\u,\v,\w,\x,\y,\z,\A,\B,\C,\D,\E,\F,\G,\H}
+% \DoNotIndex{\I,\J,\K,\L,\M,\N,\O,\P,\Q,\R,\S,\T,\U,\V,\W,\X,\Y,\Z}
+% \DoNotIndex{\1,\2,\3,\4,\5,\6,\7,\8,\9,\0}
+% \DoNotIndex{\!,\#,\$,\&,\',\(,\),\+,\.,\:,\;,\<,\=,\>,\?,\_}
+% \DoNotIndex{\discretionary,\immediate,\makeatletter,\makeatother}
+% \DoNotIndex{\meaning,\newenvironment,\par,\relax,\renewenvironment}
+% \DoNotIndex{\repeat,\scriptsize,\selectfont,\the,\undefined}
+% \DoNotIndex{\arabic,\do,\makeindex,\null,\number,\show,\write,\@ehc}
+% \DoNotIndex{\@author,\@ehc,\@ifstar,\@sanitize,\@title,\everypar}
+% \DoNotIndex{\if@minipage,\if@restonecol,\ifeof,\ifmmode}
+% \DoNotIndex{\lccode,\newtoks,\onecolumn,\openin,\p@,\SelfDocumenting}
+% \DoNotIndex{\settowidth,\@resetonecoltrue,\@resetonecolfalse,\bf}
+% \DoNotIndex{\clearpage,\closein,\lowercase,\@inlabelfalse}
+% \DoNotIndex{\selectfont,\mathcode,\newmathalphabet,\rmdefault}
+% \DoNotIndex{\bfdefault}
+% \setcounter{StandardModuleDepth}{1}
+% \DeleteShortVerb{\|}
+% \MakeShortVerb{\"}
+%
+% \begin{abstract}
+% \noindent This package provides tools for creating
+% customized calendars using \LaTeXe.
+% \end{abstract}
+%
+%
+% \CheckSum{1460}
+%
+% \section{Overview and Exhortation}
+%
+% Think of this package as the Music Minus One
+% of the scheduling trade.  It provides a standard
+% interface for drafting calendars,
+% but leaves you in control of the style and
+% content of the finished product.
+% The calendar style generator included
+% in this package can be
+% used to create simple lists of events, as well
+% as daily, weekly, monthly and yearly calendars in a variety of
+% formats.  Calendars can be ground into DVI,
+% or can be exported in an arbitrary list or table formatting
+% language such as HTML, or delimited
+% ASCII text.
+% While the format of calendars is
+% pretty much up to you, all calendars created
+% using the Calendar package inherit a number of
+% useful features, among which are:
+% 
+% \begin{itemize}
+% \item Access to external lists of events
+% and appointments written in a user-friendly syntax.
+% \item Selective printing of long or short descriptions of
+% events and appointments according to the list
+% from which they originate or, in the case of appointments,
+% according to their starting time.
+% \item Built-in recursive entries such as "every" "monday"
+% or "Every" "second" "Wednesday", governed by a range.
+% \item An extensible interface within list files
+% for defining calculable dates within a range
+% by reference to a mathematical formula.
+% \item ``Stopping'' of recursive entries by reference
+% to a list of holidays.
+% \item Colour-coding of lists and groups of lists
+% for the readable presentation of complex schedules.
+% Colours may be associated with individual lists,
+% or with entire groups of lists.
+% \end{itemize}
+% 
+% On top of this, all calendar styles have a uniform
+% user interface.  For examples, please see the
+% files included in the "styles" subdirectory
+% in or near the filespace from which you retrieved
+% this file.
+% 
+% Finally, the Calendar package has the virtue of
+% being chilled, if not yet completely frozen.
+% While there will doubtless
+% be minor bug fixes and enhancements in future
+% releases, this package is intended to be a finished
+% and stable platform on which to build calendar
+% styles.  It will not move out from underneath
+% your work.  And if you draft a calendar style
+% and publish it on CTAN, others will be able to
+% put it straight to work on their own local lists
+% of events.
+% 
+% ************
+% The documentation to this package explains how
+% to define your own calendar formats.  There are many
+% possibilities, but here are a few ideas:
+%
+% \begin{itemize}
+% \item Web maintainers
+% can provide a current view of upcoming events formatted
+% with a tabular calendar at the top, the dates of
+% which are linked to events for that day. 
+% \item Filofax
+% calendars can be produced which contain institutional
+% data and personal appointments on a per-user basis.
+% \item  Scheduling conflicts or common free times can be identified by producing
+% concordance calendars that lay the daily schedules
+% of several members of staff alongside one another.
+% \item Timesheets with pre-printed diary entries can be
+% produced.
+% \item Consolidated academic timetables can be
+% produced.
+% \item To simplify the maintenance of lists, a
+% Web site may want to produce a forms interface
+% for the distributed creation and management of lists.  This
+% task is greatly simplified by the fact that the
+% syntax for entries is flexible and human-readable.
+% \item Users at a Web site can be given direct control over
+% calendar content, by running \LaTeX{} and "dvips" from a
+% CGI behind a click-box and radio-button interface.
+% \end{itemize}
+%
+% All of these applications can be supported directly
+% by the package as it stands.  All that is required
+% is to define appropriate calendar formats.
+% Classes and packages 
+% that define new calendar formats contain only the
+% essential commands which define their structure.
+%
+% The source of the Calendar package and related
+% files is located in
+% the CTAN archives under:
+%
+% \begin{quote}
+% "macros/latex/contrib/supported/calendar"
+% \end{quote}
+%
+% If you design a new calendar format, please upload
+% it to the CTAN "/incoming" directory at "ftp.tex.ac.uk"
+% and send the site maintainers a note (see the file
+% "README.uploads" for their contact details) asking
+% them to place it in the "styles" subdirectory
+% of the Calendar package filespace.  It is best
+% to send your calendar format as a "*.dtx" file, with
+% documentation on how to use it (see the existing
+% packages for model documentation).
+% If you design a CGI or other front-end 
+% that calls on a style or manages
+% database entries, please send that as well, for placement
+% in the "tools" subdirectory.  That way, anyone interested in
+% using Calendar will find everything that is available in one
+% place, and the utility of the package will be greatly
+% enhanced.
+%
+% I do not have time at present to write a
+% readable and well-presented guide to the style
+% drafting process.  If you want to draft
+% your own style, your best bet is to read
+% through the commentary and code of an
+% existing calendar style, and modify it
+% to suit your needs.
+% Feel free to write me
+% on "fb@soas.ac.uk" if you have any questions
+% or comments.
+%
+%\StopEventually{\PrintIndex}
+%
+% \section{The Macros}
+%
+% The Dates and Keyval packages will be used.
+%
+%    \begin{macrocode}
+%<*style>
+\DeclareOption{english}{\PassOptionsToPackage{\CurrentOption}{dates}}
+\DeclareOption{german}{\PassOptionsToPackage{\CurrentOption}{dates}}
+\ProcessOptions
+\RequirePackage{dates}[1997/10/29]
+\RequirePackage{keyval}
+%    \end{macrocode}
+%
+% \subsection{The Calendar Formatter}
+%
+% \begin{macro}{\newcalendar}
+% \begin{macro}{\@newcalendar}
+%
+% This is the business end of the package.  The
+% calendar-defining front end is spread across
+% two macros to allow us to use more than
+% nine arguments.  The second through ninth given
+% to the first macro are stored in a macro that
+% is expanded in the second.
+%
+% (the macro defined just above newcalendar is used
+% to parse the increment field)
+%
+%    \begin{macrocode}
+\def\cal@parseincrement#1#2#{%
+  \def\cal@incr{#1}%
+  \def\cal@subgroup@setup{#2}}%
+\long\def\newcalendar#1#2#3#4#5#6#7#8#9{%
+  \expandafter\def\csname cal@#1@bridge\endcsname{%
+    \def\cal@output{#2}%
+    \def\cal@first@weekday{#3}%
+    \def\cal@group@length{#4}%
+    \def\cal@subgroup@length{#5}%
+    \def\cal@item@sep@real{#6}%
+    \cal@parseincrement#7{}%
+    \def\cal@header{#8}%
+    \def\cal@footer{#9}}%
+    \@newcalendar{#1}}
+%    \end{macrocode}
+%
+% This defines the start and finish macros for an
+% environment, which will be invoked using "\begin"
+% and "\end".  The head macro just expands the head
+% matter, grabs its first and only argument to a
+% variable for future reference, and invokes the
+% "\dateread" command in order to read the date
+% text entered as the content of the environment.
+% The "\dateread" command will expire when it hits
+% the "\end" at the bottom of the enviroment.
+%
+%    \begin{macrocode}
+\long\def\@newcalendar#1#2#3#4#5#6#7#8#9{%
+  \expandafter\def\csname#1\endcsname##1##2{%
+    #4%
+    \gdef\cal@optionslist{##1}%
+    \setkeys{opt}{##1}%
+    \gdef\cal@files{##2}%
+    \dateread{}}%
+%    \end{macrocode}
+%
+% The tail macro for the environment will start
+% by setting up the starting and ending dates
+% for our calendar.  Step one is to set a subrange
+% start and end (which "\dateread" sets if "to" is
+% used in the date text) if none is found.  The
+% second step is to set the current date to be the
+% start of the subrange derived from the date text,
+% and generate human-readable register data for
+% future reference.  We then set the overall range for
+% the calendar to the subrange dates.
+%
+% The next step is to expand the front matter given
+% in the calendar definition, after which we expand
+% the material contained in the second through ninth
+% arguments given to the first macro.  Then a series
+% of other toggles and macros are defined.
+%
+% (We also set the date base, for the zigzag algorithm)
+%
+%    \begin{macrocode}
+  \expandafter\def\csname end#1\endcsname{\relax%
+    \ifnum\dates@subrange@start=0%
+      \dates@subrange@start\dates@date%
+      \dates@subrange@end\dates@date%
+    \fi%
+    \global\dates@date\dates@subrange@start%
+    \caldate%
+    \cal@date@base\dates@date%
+    \cal@range@start\dates@subrange@start%
+    \cal@range@end\dates@subrange@end%
+    #5%
+    \dates@range@limit\cal@range@end%
+    \csname cal@#1@bridge\endcsname%
+    \def\cal@groupbreak{#2}%
+    \def\cal@subgroupbreak{#3}%
+    \long\def\cal@entry@sep{#6}%
+    \def\cal@item@init{#7}%
+    \def\cal@entry@init{#8}%
+    \long\def\cal@item@text{#9}%
+%    \end{macrocode}
+%
+% We catch colors if the color package is not loaded.
+%
+%    \begin{macrocode}
+  \@ifundefined{color}%
+   {\let\textcolor\@gobble%
+    \let\colorbox\@gobble}%
+   {}%
+%    \end{macrocode
+%
+%
+% We then input the content of the event files given
+% as the argument to the environment, if any files exist
+% for processing.
+%
+%    \begin{macrocode}
+    \ifcat$\cal@files$%
+    \else%
+      \dates@requiremonthtrue%
+      \dates@requiredaytrue%
+      \expandafter\cal@input\cal@files,,\end%
+    \fi%
+%    \end{macrocode}
+%
+% Then we sort everything.
+%
+%    \begin{macrocode}
+    \cal@sorts%
+%    \end{macrocode}
+%
+% We set the date to the bottom of the range again,
+% and set the registers.
+%
+%    \begin{macrocode}
+    \global\dates@date\cal@range@start%
+    \caldate%
+%    \end{macrocode}
+%
+% Finally, we produce the calendar text.
+%
+%    \begin{macrocode}
+    \cal@top}}%
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+%
+% \subsection{Input and Export for Event Lists}
+%
+% \begin{macro}{\cal@input}
+% \begin{macro}{\cal@append}
+% \begin{macro}{\cal@list@append}
+% \begin{macro}{\cal@list@init}
+% \begin{macro}{\cal@read}
+%
+% This is the input routine.  It starts by setting
+% up to loop itself.  Then it checks to see if the
+% list is empty, and sets up to quit if it is.
+% If there is an item in the list, it first
+% puts the remainder of the items onto the list for
+% future reference.  Then the input file is defined
+% to be the first item.  Then it checks to see
+% if a freeze file exists.  If it does, it is input,
+% and the data file is ignored.  The engine number
+% counter is also incremented.  If the file does not
+% exist, we check for a list file.  If one is found,
+% we increment the engine counter, and turn off
+% freezing --- this will be turned on in the file
+% itself if a request is found there.  Then we
+% just input the file for scanning.  We follow the
+% text in the file with a meaningless entry as
+% a buffer, and a command that shuts off the
+% macro that gobbles up entries.
+%
+%    \begin{macrocode}
+\def\cal@check@colon#1:#2#{%
+  \def\dates@arg@a{#1}%
+  \def\dates@arg@b{#2}}
+\def\cal@input#1,#2,\end{%
+  \ifcat$#1$%
+    \let\cal@input@next\relax%
+    \global\let\cal@files\relax%
+  \else%
+    \advance\cal@engine by 1%
+    \cal@check@colon#1:{}%
+    \ifcat$\dates@arg@b$%
+      \expandafter\edef\csname cal@\the\cal@engine @color\endcsname{}%
+      \xdef\cal@color{}%
+    \else%
+      \expandafter\dates@strip@colon\dates@arg@b%
+      \expandafter\edef%
+        \csname cal@\the\cal@engine @color\endcsname{\dates@arg@b}%
+      \gdef\cal@color{:\dates@arg@b}%
+    \fi%
+    \xdef\cal@input@file{\dates@arg@a}%
+    \let\cal@input@next\cal@input%
+    \xdef\cal@files{#2,,\noexpand\end}%
+    \IfFileExists{\cal@input@file.eve}%
+      {\PackageWarning{Calendar}%
+         {Using freeze file \cal@input@file.eve}%
+       \expandafter\ifx\csname\cal@input@file @cal@engine\endcsname%
+       \relax%
+         \@@input\cal@input@file.eve\relax%
+       \fi}%
+      {\IfFileExists{\cal@input@file.cld}%
+        {\expandafter\ifx%
+           \csname\cal@input@file @cal@engine\endcsname%
+         \relax%
+           \cal@dofreezefalse%
+           \gdef\cal@exceptionlist{}%
+           \expandafter\cal@read%
+           \@@input\cal@input@file.cld\relax{}%
+           \ifcal@dofreeze%
+             \immediate\closeout\cal@freeze@file%
+           \fi%
+         \fi}%
+        {\@missingfileerror{\cal@input@file}{cld}}}%
+  \fi%
+  \expandafter\edef%
+    \csname\cal@input@file @cal@engine\endcsname{\the\cal@engine}%
+  \expandafter\cal@input@next\cal@files}
+\def\cal@input@next@default{\expandafter\cal@input@clone\cal@files}
+%    \end{macrocode}
+%
+% This is the handler used to put date information
+% into memory and, optionally, to write data to
+% a freeze file.  The chain of nested conditions
+% is explained step by step.
+%
+%    \begin{macrocode}
+\def\cal@append{%
+%    \end{macrocode}
+%
+% \textit{If we are looking at a list of holidays, we build
+% an exceptions list only.}
+%
+%    \begin{macrocode}
+  \ifcal@holidays%
+    \cal@except%
+%    \end{macrocode}
+%
+% \textit{Otherwise we are looking at dates for use in the calendar.
+% We check first for a matching exception date, and block all
+% action if one is found ("\cal@checkexception" sets the condition
+% that follows).}
+%
+%    \begin{macrocode}
+  \else%
+    \cal@checkexception%
+    \ifcal@useentry%
+%    \end{macrocode}
+%
+% \textit{If we are working on a range file, export to a freeze file
+% is blocked.}
+%
+%    \begin{macrocode}
+      \ifcal@noexport%
+%    \end{macrocode}
+%
+% \textit{We only export to a freeze file if specifically requested
+% to do so.  But if freezing is requested, we export all non-range
+% items, regardless of the range used for the calendar.}
+%
+%    \begin{macrocode}
+      \else%
+        \ifcal@dofreeze%
+          \cal@freeze%
+        \fi%
+      \fi%
+%    \end{macrocode}
+%
+% \textit{The remainder of our conditions pertain to the loading of
+% data into memory.  Range data is loaded, but only once,
+% so we use a separate condition to block action here.}
+%
+%    \begin{macrocode}
+      \ifcal@noload%
+      \else%
+%    \end{macrocode}
+%
+% \textit{If the current date is outside the range for
+% Memory store is only performed
+% for items within our overall date range for this
+% calendar.  Having this data in memory
+% would do no affirmative harm, but it is dead weight
+% since we'll not be using it.}
+%
+%    \begin{macrocode}
+        \ifnum\dates@date<\cal@range@start%
+        \else%
+          \ifnum\dates@date>\cal@range@end%
+          \else%
+            \cal@list@init{events}%
+            \cal@list@init{appointments}\relax%
+%    \end{macrocode}
+%
+% \textit{We build separate lists for events and appointments.}
+%
+%    \begin{macrocode}
+            \ifnum\dates@time@start=0%
+              \cal@list@append{events}%
+            \else%
+              \cal@list@append{appointments}%
+            \fi%
+          \fi%
+        \fi%
+      \fi%
+    \fi%
+  \fi}
+%    \end{macrocode}
+%
+% This appends to the selected list type for the
+% current date.  It grabs the list content, if any,
+% to a register.  Then it defines the list to be
+% itself plus the new set of details.
+%
+%    \begin{macrocode}
+\def\cal@list@append#1{%
+  \cal@reg@a=%
+    \expandafter\expandafter\expandafter{%
+    \csname\the\dates@date @#1\endcsname}%
+  \cal@reg@b\expandafter{\theshorttext}%
+  \cal@reg@c\expandafter{\thelongtext}%
+  \expandafter\edef%
+  \csname\the\dates@date @#1\endcsname{%
+    \the\cal@reg@a%
+    \noexpand\cal@delim%
+    {\the\dates@time@start}%
+    {\the\dates@time@end}%
+%    \end{macrocode}
+%
+% The no-export toggle is set whenever the ends of a range are being
+% loaded.  We use that here to fiddle the engine number for
+% these entries.  This is necessary to prevent color from being
+% applied to them.
+%
+%    \begin{macrocode}
+    {\ifcal@noexport%
+       0%
+     \else%
+       \the\cal@engine%
+     \fi}%
+    {\the\cal@reg@b}%
+    {\the\cal@reg@c}}}%
+%    \end{macrocode}
+%
+% This is the list initializer.  We first
+% check to see if there is an existing
+% list, and initialize it if it is new.
+%
+%    \begin{macrocode}
+\def\cal@list@init#1{%
+  \expandafter\ifx%
+  \csname\the\dates@date @#1\endcsname%
+  \relax%
+    \expandafter\def%
+    \csname\the\dates@date @#1\endcsname%
+      {}%
+  \fi}
+%    \end{macrocode}
+%
+% This is the file scanner.  The input handler
+% can be redefined.  The default at start-up is
+% to handle list files by putting them into memory.
+%
+%    \begin{macrocode}
+\def\cal@read{%
+  \dateread{\cal@append}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \subsection{Sorting Routines}
+%
+% \begin{macro}{\cal@sorts}
+% \begin{macro}{\cal@@sorts}
+% \begin{macro}{\cal@@sorts@exit}
+% \begin{macro}{\cal@@sort@init}
+%
+% This is the front end for sorting all items in
+% memory.  We step through the range day by day,
+% and execute the sort routine on any lists that
+% are found.  One could avoid processing the empty
+% days by loading all items into a single list, but
+% a linear sort on a large number of items can be
+% very slow, both because the work done in a linear
+% sort grows geometrically, and because the sorting
+% alogorithm requires more comparisons.
+% On balance, this is a faster approach
+% in most cases.
+%
+% We start by setting the date to be the start of
+% the range, and do a "\let" that will set up
+% recursion in the next macro in the chain.  We then
+% execute that macro.
+%
+%    \begin{macrocode}
+\def\cal@sorts{%
+  \global\dates@date\cal@range@start%
+  \let\cal@@sorts@next\cal@@sorts%
+  \cal@@sorts}
+%    \end{macrocode}
+%
+% The following will die when we hit the end of the range.
+% Otherwise, it will look to see if there is something
+% in a list for the current date in the events or appointment
+% macros, and execute a sort of each if required.
+%
+%    \begin{macrocode}
+\def\cal@@sorts{\relax%
+  \ifnum\dates@date>\cal@range@end%
+    \let\cal@@sorts@next\cal@@sorts@exit%
+  \else%
+    \expandafter\ifx%
+    \csname\the\dates@date @events\endcsname\relax%
+    \else%
+      \cal@sort{\the\dates@date @events}%
+    \fi%
+    \expandafter\ifx%
+    \csname\the\dates@date @appointments\endcsname\relax%
+    \else%
+      \cal@sort{\the\dates@date @appointments}%
+    \fi%
+    \global\advance\dates@date by 1%
+  \fi%
+  \cal@@sorts@next}
+%    \end{macrocode}
+%
+% When we finish all of the sorting work, we restore the date
+% to the start of the range, and we're ready to make a calendar!
+%
+%    \begin{macrocode}
+\def\cal@@sorts@exit{%
+  \global\dates@date\cal@range@start%
+  \caldate}
+%    \end{macrocode}
+%
+% This is used to initialize a list for sorting.  It
+% simply appends an entry with a time of minus one
+% to the end of the primary working list.
+%
+%    \begin{macrocode}
+\def\cal@sort@init{%
+  \cal@sort@A=-1%
+  \cal@sort@B=0%
+  \cal@sort@C=0%
+  \cal@sort@D{}%
+  \cal@sort@E{}%
+  \global\let\cal@sort@new\cal@sort@list%
+  \cal@appendright%
+  \let\cal@sort@list\cal@sort@new%
+  \gdef\cal@sort@new{}%
+  \cal@sort@passonetrue}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\cal@sort}
+% \begin{macro}{\cal@@sort}
+% \begin{macro}{\cal@appendright}
+% \begin{macro}{\cal@sort@swap}
+%
+% This is the front end for sorting individual lists
+% of items.  It takes a single
+% list macro name as its argument, invokes sorting on that
+% list macro, and sets it to be the sorted form.  The sorting
+% setup here is designed to be easy to follow.  It is probably
+% not the most efficient way of sorting, but the size of lists
+% is small (probably about ten items at the upper end),
+% so speed is not really an issue.
+%
+% The name of the list is given as text, to keep the code
+% where this is invoked more easily readable.
+%
+%    \begin{macrocode}
+\def\cal@sort#1{%
+  \expandafter\let\expandafter\cal@sort@list\csname#1\endcsname%
+  \cal@sort@init%
+  \global\let\cal@delim\cal@@sort%
+  \cal@sort@list%
+  \expandafter\let\csname#1\endcsname\cal@sort@new}
+%    \end{macrocode}
+% This is the sort engine itself.  Our data in memory consists of
+% a list macro in groups of five items each.  We will
+% use this list under the name of "\cal@sort@list", and a working
+% sort list for export under the name of "\cal@sort@new".
+%
+% We begin
+% by grabbing the items to registers.
+%
+%    \begin{macrocode}
+\def\cal@@sort#1#2#3#4#5{%
+  \cal@sort@a=#1%
+  \cal@sort@b=#2%
+  \cal@sort@c=#3%
+  \cal@sort@d{#4}%
+  \cal@sort@e{#5}%
+%    \end{macrocode}
+%
+% Our default action is to do nothing when we finish
+% with each sorting comparison; processing will be passed
+% to the next delimited item in the list.
+%
+%    \begin{macrocode}
+  \let\cal@@sort@next\relax%
+%    \end{macrocode}
+%
+% Every list for sorting is assumed to end in an entry with a
+% time of minus one.  When this is encountered, we export
+% the last held item, and just expire if there was no change
+% in the list.
+%
+% set the new list to be "\cal@sort@list", or we perform
+% some actions to prepare for rerunning the list.
+%
+%    \begin{macrocode}
+  \ifnum\cal@sort@a=-1\relax%
+    \message{.}%
+%    \cal@sort@swap%  ... ?
+    \cal@appendright%
+    \ifcal@nosortchange%
+%    \end{macrocode}
+%
+% If we are to rerun the list, we reset the change toggle
+% and the pass toggle.  Then we export the held item,
+% swap, and export the existing end-of-list marker.
+% Then we set next to be the new list, and blank the
+% new list to prevent geometric progression.
+%
+%    \begin{macrocode}
+    \else%
+      \cal@nosortchangetrue%
+      \cal@sort@passonetrue%
+%      \cal@appendright%
+      \cal@sort@swap%
+      \cal@appendright%
+      \let\cal@@sort@next\cal@sort@new%
+      \gdef\cal@sort@new{}%
+    \fi%
+%    \end{macrocode}
+%
+% If are not at the end of the list, we start here.
+% If this is the first pass, we do nothing.  Otherwise
+% we perform a series of comparisons.
+%
+%    \begin{macrocode}
+  \else%
+    \ifcal@sort@passone%
+    \else%
+%    \end{macrocode}
+%
+% The time held is larger than the existing time.
+% We need to change the order of the list, so we say so.
+% We swap and export the smaller item.
+%
+%    \begin{macrocode}
+    \ifnum\cal@sort@A>\cal@sort@a\relax%
+      \cal@nosortchangefalse%
+      \cal@sort@swap%
+      \cal@appendright%
+%    \end{macrocode}
+%
+% The time held is less than or equal to the existing time.\footnote{We also
+% need to keep engine numbers in sequence.  But the
+% engine held must be less than the existing engine
+% because they are loaded in sequence.  We therefore
+% do not need to check the next level.}
+% \changes{1996/12/25}{v1.2}{Cut out a check for equal
+%  values in the sort comparison, and eliminated an erroneous
+%  swap action.}
+%
+%    \begin{macrocode}
+    \else%
+%      \ifnum\cal@sort@A=\cal@sort@a\relax%
+        \cal@appendright%
+%    \begin{macrocode}
+%
+% The time held was less than the existing time.
+%
+%    \begin{macrocode}
+%      \else%
+%        \cal@appendright%
+%      \fi%
+    \fi%
+  \fi%
+%    \end{macrocode}
+%
+% Swap registers.  The current small registers were not exported
+% to the new list, and are used as the large registers in the
+% next pass.
+%
+%    \begin{macrocode}
+  \cal@sort@swap%
+  \cal@sort@passonefalse%
+  \fi%
+  \cal@@sort@next}
+%    \end{macrocode}
+%
+% This simply appends to the end of the export list.
+%
+%    \begin{macrocode}
+\def\cal@appendright{%
+  \cal@reg@a\expandafter{\cal@sort@new}%
+  \xdef\cal@sort@new{%
+    \the\cal@reg@a%
+    \noexpand\cal@delim%
+    {\the\cal@sort@A}%
+    {\the\cal@sort@B}%
+    {\the\cal@sort@C}%
+    {\the\cal@sort@D}%
+    {\the\cal@sort@E}}}
+%    \end{macrocode}
+%
+% This swaps the large and small registers (trust me).
+%
+%    \begin{macrocode}
+\def\cal@sort@swap{%
+  \cal@count@a\cal@sort@a%
+  \cal@sort@a\cal@sort@A%
+  \cal@sort@A\cal@count@a%
+  \cal@count@a\cal@sort@b%
+  \cal@sort@b\cal@sort@B%
+  \cal@sort@B\cal@count@a%
+  \cal@count@a\cal@sort@c%
+  \cal@sort@c\cal@sort@C%
+  \cal@sort@C\cal@count@a%
+  \cal@reg@a\expandafter{\the\cal@sort@d}%
+  \cal@sort@d\expandafter{\the\cal@sort@D}%
+  \cal@sort@D\expandafter{\the\cal@reg@a}%
+  \cal@reg@a\expandafter{\the\cal@sort@e}%
+  \cal@sort@e\expandafter{\the\cal@sort@E}%
+  \cal@sort@E\expandafter{\the\cal@reg@a}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \subsection{The Calendar Generator}
+%
+% The following is run at the start of table generation only.
+% After adjusting the global range for the table,
+% it sets up the limiting counters for lines and groups.
+% It also sets up a counter that tracks the number of items
+% in a line and another that tracks the number of items
+% in a group,
+% and sets counters indicating the day on which
+% each line will start and finish.  It then outputs the
+% headers and chains to the first macro in the loop.
+%
+%    \begin{macrocode}
+\def\cal@top{\relax%
+  \ifnum\tracingdates>0%
+    \message{^^J\themonth}%
+  \fi%
+  \let\cal@add@date@item\cal@add@date@item@default%
+  \advance\cal@range@end by 1%
+  \global\cal@subgroup@count0%
+  \global\cal@group@count0%
+  \cal@subgroup@len\cal@subgroup@length%
+  \advance\cal@subgroup@len by -1\relax%
+  \global\cal@group@len\cal@group@length%
+%  \advance\cal@group@len by -1\relax%
+  \cal@first@weekd\cal@first@weekday\relax%
+  \ifnum\cal@first@weekd=0%
+    \cal@last@weekd=6%
+  \else%
+    \cal@last@weekd\cal@first@weekd%
+    \advance\cal@last@weekd by -1%
+  \fi%
+  \cal@subgroup@setup%
+  \cal@output{\cal@header}\cal@begin@subgroup}
+%    \end{macrocode}
+%
+% The following begins every line in the table.  
+% It zeros the line item counter, then
+% checks to see if we are ready to finish the table.
+% If we are not finished, it checks to see if we have
+% finished a group.  If so, it puts the name of the new month
+% on the terminal, resets the line and group counters,
+% and grabs the group length afresh (this can change if,
+% say, the group is a month).  It then puts down a subfooter
+% (left out in the routine that feeds into this, so that
+% nothing will intervene between it and the foot), a footer
+% and a new header.  It then either pads or goes straight
+% to input, as appropriate.
+% If we are not at the end of a group, it puts down the start of a line.
+% It then either starts the padding routine or goes straight
+% to the item insertion routine.  
+% If we were ready to finish,
+% it puts down a final line ending and footer, then dies.
+%
+%    \begin{macrocode}
+\def\cal@begin@subgroup{%
+  \global\cal@subgroup@count=0%
+  \global\def\cal@item@sep{}%
+  \ifnum\dates@date<\cal@range@end\relax%
+    \ifnum\cal@group@count=\cal@group@len\relax%
+      \ifnum\tracingdates>0%
+        \message{^^J\themonth}%
+      \fi%
+      \global\cal@group@count=0%
+      \global\cal@group@len\cal@group@length%
+      \cal@subgroup@setup%
+      \cal@output{\cal@groupbreak}\relax%
+      \ifnum\cal@first@weekd<7%
+        \let\next\cal@pad@start%
+      \else%
+        \let\next\cal@add@date@item%
+      \fi%
+    \else%
+      \ifnum\cal@first@weekd<7\relax%
+        \let\next\cal@pad@start%
+      \else%
+        \let\next\cal@add@date@item%
+      \fi%
+    \fi%
+  \else%
+    \cal@output{\cal@footer}%
+    \let\next\relax%
+  \fi%
+  \next}
+%    \end{macrocode}
+%
+% This adds a date item. It starts by checking to 
+% see if we are at the end of a group.  It then either
+% selects padding or a new line, as requested.
+% If this is not the end of a group, we check to see
+% if it is the end of a line.  If so, it puts out a
+% subfooter, but only if we're not going to be finishing
+% the whole table.  (The same treatment should be given
+% to groups, come to think of it --- so there's at least
+% one known bug here).  If we're not at the end of a line,
+% we place the item separator (which might be asleep),
+% then let it wake up.  This is followed by the item
+% text and updates to the date and counters.
+%
+%    \begin{macrocode}
+\def\cal@add@date@item@default{\relax%
+  \ifnum\cal@group@count=\cal@group@len\relax%
+    \ifnum\cal@first@weekd<7%
+      \let\next\cal@pad@end%
+    \else%
+      \let\next\cal@begin@subgroup%
+    \fi%
+    \if\cal@incr G%
+      \global\advance\dates@date by 1%
+      \caldate%
+    \fi%
+    \if\cal@incr z%
+      \global\advance\dates@date by1%
+    \fi%
+  \else\relax%
+    \ifnum\cal@subgroup@count>\cal@subgroup@len\relax%
+      \if\cal@incr z%
+        \global\dates@date\cal@date@base%
+%        \global\advance\dates@date by-1%
+      \fi%
+      \ifnum\dates@date<\cal@range@end%
+        \if\cal@incr S%
+          \global\advance\dates@date by1%
+          \caldate%
+        \fi%
+        \cal@subgroup@setup%
+        \cal@output{\cal@subgroupbreak}%
+      \fi%
+      \let\next\cal@begin@subgroup%
+    \else%
+      \cal@output{\cal@item@sep}%
+      \global\def\cal@item@sep{\cal@item@sep@real}\relax%
+      \ifnum\tracingdates>0%
+        \message{\theday}%
+      \fi%
+      \cal@item@init%
+      \cal@output{\cal@item@text}%
+      \if\cal@incr I%
+        \global\advance\dates@date by 1%
+        \caldate%
+      \fi%
+      \if\cal@incr z%
+        \global\advance\dates@date by 1%
+        \caldate%
+      \fi%
+      \global\advance\cal@subgroup@count by 1\relax%
+      \global\advance\cal@group@count by 1\relax%
+      \let\next\cal@add@date@item%
+    \fi%
+  \fi%
+  \next}
+%    \end{macrocode}
+%
+% This pads out a line if the current date is later
+% than the day that should start a table.
+%
+% It then calculates an offset that will be used
+% by the padding loop, restoring the current date
+% after the figure has been determined.
+%
+%    \begin{macrocode}
+\def\cal@pad@start{%
+  \cal@temp@count\dates@date%
+  \bgroup%
+    \global\cal@offset=\dates@date%
+    \prevday\cal@first@weekd%
+    \global\advance\cal@offset by -\dates@date%
+  \egroup%
+  \global\dates@date\cal@temp@count%
+  \cal@pad@@start}
+%    \end{macrocode}
+%
+% This is the padding loop.  It moves to the beginning of
+% the next line
+% if padding is unnecessary or has been completed,
+% putting the item separator to sleep as it does so.
+% Otherwise, it wakes up the separator,
+% puts it down, and increments
+% the group and line counters.
+%
+%    \begin{macrocode}
+\def\cal@pad@@start{\relax%
+  \ifnum\cal@offset=0\relax%
+    \global\def\cal@item@sep{}%
+    \let\next\cal@add@date@item%
+  \else%
+    \global\def\cal@item@sep{\cal@item@sep@real}%
+    \cal@output{\cal@item@sep}%
+    \global\advance\cal@offset by -1\relax%
+    \global\advance\cal@subgroup@count by 1\relax%
+    \let\next\cal@pad@@start%
+  \fi%
+  \next}
+%    \end{macrocode}
+%
+% This pads a line to the ending day of the week.
+% It calculates the offset,
+% being careful not to let it hit an absurd value.
+%
+%    \begin{macrocode}
+\def\cal@pad@end{%
+  \cal@temp@count\dates@date%
+  \bgroup%
+    \global\cal@offset=\dates@date\relax%
+    \nextday\cal@last@weekd%
+    \advance\dates@date by -\cal@offset%
+    \global\cal@offset\dates@date\relax%
+    \ifnum\cal@offset=6%
+      \global\cal@offset=0%
+    \else%
+      \global\advance\cal@offset by 1%
+    \fi%
+  \egroup%
+  \global\dates@date\cal@temp@count%
+  \cal@pad@@end}
+%    \end{macrocode}
+%
+% If the offset is zero, there is no (longer) need for
+% padding, and we go back to see if it's okay to start
+% another line.  Otherwise we output an item separator
+% and iterate.
+%
+%    \begin{macrocode}
+\def\cal@pad@@end{\relax%
+  \ifnum\cal@offset=0\relax%
+    \let\next\cal@begin@subgroup%
+  \else%
+    \cal@output{\cal@item@sep}%
+    \global\advance\cal@offset by -1%
+    \global\advance\cal@subgroup@count by 1\relax%
+    \let\next\cal@pad@@end%
+  \fi%
+  \next}
+%    \end{macrocode}
+%
+% \subsection{Event Macros}
+%
+% The macros in this section are used to place text in the
+% finished calendar.  They are used by designers with
+% the "\newcalendar" formatting macro.
+%
+%
+% We provide several macros for conditional execution
+% of text and color.  The first two make rough decisions
+% about an entire list of items, and are intended for
+% use in tiny calendars in which specific text relating
+% to events is not included.
+%
+% \begin{macro}{\ifanyitem}
+%
+% This executes one of two arguments depending on whether
+% there is an event or appointment associated with the
+% current date.  We'll use this for small calendars
+% on black and white printers, to boldface text
+% showing that there is something significant about
+% the date.
+%
+%    \begin{macrocode}
+\def\ifanyitem#1#2{%
+  \gdef\cal@temp{#1}%
+  \expandafter\ifx%
+  \csname\the\dates@date @events\endcsname%
+  \relax%
+    \expandafter\ifx%
+    \csname\the\dates@date @appointments\endcsname%
+    \relax%
+      \gdef\cal@temp{#2}%
+    \fi%
+  \fi%
+  \let\next\cal@temp%
+  \next}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\getanycolor}
+% \begin{macro}{\get@calcolor}
+% \begin{macro}{\calcolor}
+%
+% The next extracts a colour
+% associated with a date.  The color is returned in
+% "\calcolor".
+%
+%    \begin{macrocode}
+\def\getanycolor{%
+  \gdef\calcolor{}%
+  \global\let\cal@delim\get@anycolor%
+  \csname\the\dates@date @events\endcsname%
+  \csname\the\dates@date @appointments\endcsname}
+%    \end{macrocode}
+%
+% The following is executed on each item in the list.
+% When a color is found, we stick with that; the
+% order of lists fed to the calendar will determine
+% priority.
+% \changes{v0.12}{1996/12/21}{First attempt at color
+%  coding --- it works!}
+%
+%    \begin{macrocode}
+\def\get@anycolor#1#2#3#4#5{%
+  \ifcat$\calcolor$%
+    \expandafter\ifx%
+    \csname cal@#3@color\endcsname%
+    \relax%
+    \else%
+      \xdef\calcolor{\csname cal@#3@color\endcsname}%
+    \fi%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% Next, we have macros for working with lists.  The set here
+% sets up for the execution of a list, and dumps the list into the
+% DVI hopper.  Any list found will formatted using
+% "\thecaltext", which the user may wish to redefine.
+%
+% If options are given to the command, only matching
+% entries will be printed.
+%
+% We permit the selection of
+% appointments and events by time, and
+% by engine number.\footnote{The latter feature will allow
+% the creation of concordance calendars that lay
+% schedules side by side on the page.  It should be
+% possible, with minor enhancements to the Calendar
+% package itself, to produce a schedule concordance
+% that formats itself to the number of top-level lists
+% fed to it.  Really terrific if you have a use for it\ldots}
+%
+% We begin by hunting for options.
+%
+%    \begin{macrocode}
+\def\cal@get@events{%
+  \def\theevents{}%
+  \gdef\cal@entry@macro{\theevents}%
+  \expandafter\let%
+  \expandafter\cal@dumplist\csname\the\dates@date @events\endcsname%
+  \cal@print@items}
+\def\cal@get@appointments{%
+  \gdef\theappointments{}%
+  \gdef\cal@entry@macro{\theappointments}%
+  \expandafter\let%
+  \expandafter\cal@dumplist%
+  \csname\the\dates@date @appointments\endcsname%
+  \cal@print@items}
+\def\cal@print@items{%
+  \cal@sort@passonetrue%
+  \@ifnextchar[%
+   {\cal@@print@items}%
+   {\cal@@print@items[-1/-1]}}
+\def\cal@@print@items#1[#2/#3]{%
+  \cal@select@start=#2%
+  \cal@select@end=#3%
+  \@ifnextchar[%
+   {\cal@@@print@items}%
+   {\cal@@@print@items[-1]}}
+\def\cal@@@print@items#1[#2]{%
+  \cal@engine@limit=#2%
+  \global\let\cal@delim\cal@print@format%
+  \cal@dumplist}
+%    \end{macrocode}
+%
+% I'm sure there is a more clever way to do this,
+% but I can't think of it tonight.  If no value
+% is given for an option, it becomes irrelevant
+% to the decision of whether or not to print.  Otherwise,
+% a match for its value is required.
+%
+%    \begin{macrocode}
+\def\cal@print@format#1#2#3#4#5{\relax%
+  \ifcat$#4$%
+  \else%
+    \def\theshorttext{#4}%
+    \ifcat$#5$%
+      \let\thelongtext\theshorttext%
+    \else%
+      \def\thelongtext{#5}%
+    \fi%
+    \global\dates@time@start#1\relax%
+    \global\dates@time@end#2\relax%
+    \mod{60}\dates@time@start\cal@minutes@start%
+    \cal@hours@start\dates@three%
+    \divide\cal@hours@start by60%
+    \mod{60}\dates@time@end\cal@minutes@end%
+    \cal@hours@end\dates@three%
+    \divide\cal@hours@end by60%
+    \ifnum\cal@minutes@start<10%
+      \xdef\cal@minutes@start@mac{%
+        0\the\cal@minutes@start}%
+    \else%
+      \xdef\cal@minutes@start@mac{%
+        \the\cal@minutes@start}%
+    \fi%
+    \ifnum\cal@minutes@end<10%
+      \xdef\cal@minutes@end@mac{%
+        0\the\cal@minutes@end}%
+    \else%
+      \xdef\cal@minutes@end@mac{%
+        \the\cal@minutes@end}%
+    \fi%
+    \xdef\cal@appt@start@text{%
+      \the\cal@hours@start:\cal@minutes@start@mac}%
+    \xdef\cal@appt@end@text{%
+      \the\cal@hours@end:\cal@minutes@end@mac}%
+    \cal@doeventfalse%
+    \cal@doapptfalse\relax%
+    \ifnum\cal@engine@limit>-1\relax%
+      \ifnum#3=\cal@engine@limit%
+        \cal@doeventtrue%
+      \fi%
+    \else%
+        \cal@doeventtrue%
+    \fi\relax%
+    \ifnum\cal@select@start>-1\relax%
+%
+% We eliminate anything that is outside or just
+% touches the time slot we're dealing with.
+%
+      \ifnum\dates@time@start<\cal@select@end%
+        \ifnum\dates@time@end>\cal@select@start%
+          \cal@doappttrue%
+%
+% Ha! But just-touching entries that are pinpoint
+% times are okay.
+%
+        \else
+          \ifnum\dates@time@end=\cal@select@start%
+            \ifnum\dates@time@start=\dates@time@end%
+              \cal@doappttrue%
+            \fi%
+          \fi%
+        \fi%
+      \fi%
+    \else%
+      \cal@doappttrue%
+    \fi%
+    \ifcal@doappt%
+      \ifcal@doevent%
+        \xdef\calcolor{\csname cal@#3@color\endcsname}%
+        \ifcal@sort@passone%
+          \cal@reg@a{}%
+        \else%
+          \cal@reg@a\expandafter{\cal@entry@sep}%
+        \fi%
+        \cal@times@init%
+        \global\let\cal@textcolor\relax%
+        \cal@entry@init%
+        \global%
+        \global\let\cal@textcolor\cal@textcolor@default%
+        \cal@reg@b\expandafter{\cal@entry@text}%
+        \cal@reg@c%
+         \expandafter\expandafter%
+         \expandafter{\cal@entry@macro}%
+        \expandafter\xdef\cal@entry@macro{%
+           \the\cal@reg@c%
+           \the\cal@reg@a%
+           \the\cal@reg@b}%
+        \cal@sort@passonefalse%
+      \fi%
+    \fi%
+  \fi}
+%    \end{macrocode}
+%
+% This macro is used to initialize the values of
+% text-literal macros "\thetimestart" and "\thetimeend".
+%
+%    \begin{macrocode}
+\def\cal@times@init{%
+  \mod{60}\dates@time@start\dates@one%
+  \dates@three\dates@time@start%
+  \divide\dates@three by 60%
+  \ifnum\dates@one<10\relax%
+    \xdef\cal@temp{0\the\dates@one}%
+  \else%
+    \xdef\cal@temp{\the\dates@one}%
+  \fi%
+  \xdef\thetimestart{\the\dates@three:\cal@temp}%
+  \mod{60}\dates@time@end\dates@one%
+  \dates@three\dates@time@end%
+  \divide\dates@three by 60%
+  \ifnum\dates@one<10\relax%
+    \xdef\cal@temp{0\the\dates@one}%
+  \else%
+    \xdef\cal@temp{\the\dates@one}%
+  \fi%
+  \xdef\thetimeend{\the\dates@three:\cal@temp}}
+%    \end{macrocode}
+%
+% And last but not least, we have the default macros used
+% to print the text.  Users may want to season this one
+% to taste, but it should serve for most purposes.
+% We need to define two macros.  One always goes to DVI,
+% and can contain non-printable stuff.  The other goes
+% may be routed to an external file, and should only
+% contain things that expand to text, as nearly as possible.
+%
+%    \begin{macrocode}
+\def\cal@textcolor@default#1#2{%
+  \@ifundefined{color}
+    {\ifcat$#1$#2\else\textbf{#2}\fi}
+    {\ifcat$#1$#2\else\textcolor{#1}{#2}\fi}}
+\global\let\cal@textcolor\cal@textcolor@default
+%    \end{macrocode}
+%
+% \subsection{Parser Customizations}
+%
+% This section contains macros that are used to alter
+% the behaviour of the "\dateread" macro.  Two new commands
+% are introduced, "freeze" and "range".  The first sets a toggle
+% that will cause pre-processed dates to be exported to
+% a freeze file for the list being imported.  The second
+% sets a range for the current import file by referring to
+% a separate import file containing the range information.
+%
+% \begin{macro}{\fremac}
+% \begin{macro}{\cal@freeze}
+% \begin{macro}{\event}
+%
+% The first set is pretty simple.  Users must be cautioned, however,
+% that they should only use this macro at the \textit{top} of a
+% file to be frozen, in order to catch all of the data it contains.
+% A patch could probably be applied to kill the parser if
+% "\fremac" occurs after the first argument is read.  Later, later!
+%
+%    \begin{macrocode}
+\def\fremac{%
+  \immediate\openout\cal@freeze@file=\cal@input@file.eve\relax
+  \cal@dofreezetrue%
+}
+%    \end{macrocode}
+%
+% The following macro is used to export text if the
+% "\cal@dofreeze" toggle is on.
+%
+%    \begin{macrocode}
+{\catcode`\%=12\xdef\cal@percent{%}}
+\def\cal@freeze{%
+  \immediate\write\cal@freeze@file\relax%
+  {\string\event%
+    {\the\dates@date}%
+    {\the\dates@time@start}%
+    {\the\dates@time@end}%
+    {\theshorttext}%
+    {\thelongtext}\cal@percent}}
+%    \end{macrocode}
+%
+%
+% Frozen export files contain "\event" macros, the arguments to
+% which contain frozen data.  The "\event" macro loads date items
+% into memory via the same handler used to import fresh-cooked
+% data.  We don't set the engine number from the file, because
+% we've already set the figure for this run.
+%
+%    \begin{macrocode}
+\def\event#1#2#3#4#5{%
+  \global\dates@date=#1\relax%
+  \global\dates@time@start=#2\relax%
+  \global\dates@time@end=#3\relax%
+  \def\theshorttext{#4}%
+  \def\thelongtext{#5}%
+  \cal@append}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\ranmac}
+% \begin{macro}{\cal@@@read@ranmac}
+% \begin{macro}{\cal@get@range}
+% \begin{macro}{\cal@get@@range}
+% \begin{macro}{\rANmac}
+%
+% This set of macros fetches a file containing
+% ranges (or other dates, although that would not
+% be wise) into the current file.
+% We need to snatch the word immediately following the
+% command.  We do this by diverting the flow of the
+% date parsing routines, as documented in the Dates
+% package.
+%
+%    \begin{macrocode}
+\def\ranmac{%
+  \global\let\dates@@@read\cal@@@read@ranmac}%
+%    \end{macrocode}
+%
+% The following will grab the very next word after
+% "range", and input that file immediately, so that
+% the currently-running dates parser can pass over
+% it.  We look forward for a brace; if we
+% find one, it means that the user put a braced
+% argument after the range as a comment.  
+%
+%    \begin{macrocode}
+\def\cal@@@read@ranmac{%
+  \global\let\dates@@@read\dates@@@read@default%
+  \@ifoverword\dates@serious@brace%
+    {\expandafter\cal@get@range\@gobble}%
+    {\cal@get@range}%
+    {\message{This can't happen.}}}
+%    \end{macrocode}
+%
+% The following two macros grab the range into the
+% current parsing process.  The name of the file
+% is expanded first, then the "\@@input" is expanded,
+% then the parser proceeds without knowing that
+% the text it sees came from elsewhere.
+%
+%    \begin{macrocode}
+\def\cal@get@range{%
+  \cal@noexporttrue%
+  \expandafter\ifx%
+  \csname\@overword @range@loaded\endcsname%
+  \relax%
+    \expandafter\def%
+    \csname\@overword @range@loaded\endcsname{%
+      1}%
+  \else%
+    \cal@noloadtrue%
+  \fi%
+  \IfFileExists{\@overword.cld}%
+    {\expandafter\cal@get@@range\@overword.cld rAN }%
+    {\@missingfileerror{\@overword}{cld}}}
+%    \end{macrocode}
+%
+% We need a single macro that grabs stuff.
+%
+%    \begin{macrocode}
+\def\cal@get@@range{%
+  \expandafter\dates@read\@@input}
+%    \end{macrocode}
+%
+% We need to prevent the range data from being
+% loaded into memory multiple times.  We also
+% never want to export this data to a freeze
+% file; there would be no tidy means of determining
+% which range data had been loaded and which
+% not.
+%
+% We accomplish these effects
+% by checking whether this range has been
+% loaded previously, and toggling
+% "\ifcal@noload" to true in the above
+% macro if it has.  We also toggle "\ifcal@noexport"
+% to true.  We then plant
+% a macro after the imported text that will
+% restore this functionality in "\cal@append".
+% An all-caps word
+% in the user text will be lower-cased, so this
+% will not cause confusion.
+%
+% In a future release, the entry of ranges directly
+% into a list file should probably be prevented;
+% freezing several lists containing a literal range
+% would introduce precisely the problem referred to
+% in the first paragraph of this comment.
+%
+% The reset for "\cal@holidays" supports the modified
+% behaviour required by the holiday option immediately
+% below.
+%
+%    \begin{macrocode}
+\def\rANmac{%
+  \cal@holidaysfalse%
+  \cal@noloadfalse\cal@noexportfalse}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\holmac}
+% \begin{macro}{\cal@except}
+% \begin{macro}{\cal@checkexception}
+% \begin{macro}{\cal@@checkexception}
+%
+% Some lists should ignore entries that fall on a holiday.
+% This is a property of the list, and so is governed by
+% a list of holidays called at the top of the list itself;
+% the user writing a calendar document does not need or
+% want control over holidays.
+%
+% We accomplish this by importing a holidays list into the
+% document, using the routines above.  However, we
+% modify the action for the parser so that it builds an
+% exceptions list.  This action is built into the
+% "\cal@append" macro.
+%
+%    \begin{macrocode}
+\def\holmac{%
+  \cal@holidaystrue%
+    \global\let\dates@@@read\cal@@@read@ranmac}%
+%    \end{macrocode}
+%
+% The "\cal@append" macro will call the following macro
+% to build an exceptions list.
+%
+%    \begin{macrocode}
+\def\cal@except{%
+  \cal@reg@a\expandafter{\cal@exceptionlist}%
+  \xdef\cal@exceptionlist{%
+    \noexpand\cal@delim{\the\dates@date}\the\cal@reg@a}}
+%    \end{macrocode}
+%
+% This sets to false if an entry exists on the exception list,
+% otherwise true.
+%
+%    \begin{macrocode}
+\def\cal@checkexception{%
+  \cal@useentrytrue%
+  \global\let\cal@delim\cal@@checkexception%
+  \cal@exceptionlist}
+%    \end{macrocode}
+%
+% This sets the condition, via the above macro, by checking each
+% item in the list.
+%
+%    \begin{macrocode}
+\def\cal@@checkexception#1{\relax%
+  \ifnum\dates@date=#1\relax\cal@useentryfalse\fi}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\lismac}
+%
+% We allow nested lists.  We avoid nested input by placing the
+% name of the file onto the input list, so that the input
+% routine will pick it up during tail recursion.  Nonetheless
+% we want the colors of susidiary lists to be governed by
+% the color at the top level, so we put the last-defined color onto the
+% list as well.
+%
+%    \begin{macrocode}
+\def\lismac{%
+  \global\let\dates@@@read\cal@pass@list}
+%    \end{macrocode}
+%
+% We need a little gadget to safely extract the contents of the
+% file list.
+%
+%    \begin{macrocode}
+\def\cal@grablist#1\end{%
+  \def\cal@grabbedlist{#1}}
+%    \end{macrocode}
+%
+% This just does the passing and returns control to "\dates@@@read".
+%
+%    \begin{macrocode}
+\def\cal@pass@list{%
+  \expandafter\cal@grablist\cal@files%
+  \global\let\dates@@@read\dates@@@read@default%
+  \@ifoverword\dates@serious@brace%
+    {\xdef\cal@files{%
+       \@overword\cal@color,\cal@grabbedlist\noexpand\end}%
+     \expandafter\dates@read\@gobble}%
+    {\message{I don't think I'm supposed to do this}%
+     \xdef\cal@files{%
+       \@overword\cal@color,\cal@grabbedlist\noexpand\end}}%
+    {\message{This can't happen}}}
+%    \end{macrocode}
+%\end{macro}
+%
+% \subsection{Initializations}
+%
+% Before any of this runs, we need the following registers,
+% macros and conditionals.
+%
+%    \begin{macrocode}
+\newcount\cal@first@weekd
+\newcount\cal@range@start
+\newcount\cal@range@end
+\newcount\cal@temp@count
+\newcount\cal@last@weekd
+\newcount\cal@subgroup@len
+\newcount\cal@offset
+\newcount\cal@subgroup@count
+\newcount\cal@group@count
+\newcount\cal@group@len
+\newcount\cal@engine
+\newcount\cal@engine@limit
+\newcount\cal@select@start
+\newcount\cal@select@end
+\newcount\cal@hours@start
+\newcount\cal@minutes@start
+\newcount\cal@hours@end
+\newcount\cal@minutes@end
+\newcount\tracingdates
+\tracingdates=1
+\def\cal@sort@new{}
+\newtoks\cal@reg@a
+\newtoks\cal@reg@b
+\newtoks\cal@reg@c
+\newcount\cal@sort@A
+\newcount\cal@sort@B
+\newcount\cal@sort@C
+\newtoks\cal@sort@D
+\newtoks\cal@sort@E
+\newcount\cal@sort@a
+\newcount\cal@sort@b
+\newcount\cal@sort@c
+\newtoks\cal@sort@d
+\newtoks\cal@sort@e
+\newcount\cal@count@a
+\newwrite\cal@freeze@file
+\newif\ifcal@sort@passone
+\newif\ifcal@nosortchange
+\newif\ifcal@dofreeze
+\newif\ifcal@noload
+\newif\ifcal@noexport
+\newif\ifcal@holidays
+\newif\ifcal@useentry
+\newif\ifcal@doevent
+\newif\ifcal@doappt
+\def\cal@insert#1{#1}
+\expandafter\edef\csname cal@0@color\endcsname{black}
+\def\theappointments{}
+\def\theevents{}
+\def\cal@exceptionlist{}
+\newcount\cal@date@base
+%</style>
+%    \end{macrocode}
+%
+%\iffalse
+% \section{The Installation File}
+%    \begin{macrocode}
+%<*installer>
+\def\batchfile{calendar.ins}
+\input docstrip.tex
+
+\keepsilent
+
+\preamble
+
+This file is part of the Calendar package.
+Copyright (C) 1996 Frank Bennett, Jr.
+All rights reserved.
+------------------------------------------
+This is a generated file.
+
+IMPORTANT NOTICE:
+
+You are not allowed to change this file.  You may however copy
+this file to a file with a different name and then change the
+copy if (a) you do not charge for the modified code, (b) you
+acknowledge the author(s) in the new file, if it
+is distributed to others, and (c) you attach these same
+conditions to the new file.
+
+You are not allowed to distribute this file alone.  You are not
+allowed to take money for the distribution or use of this file
+(or a changed version) except for a nominal charge for copying
+etc.
+
+You are allowed to distribute this file under the condition that
+it is distributed with all of its contents, intact.
+
+For error reports, or offers to help make Calendar a more powerful,
+friendlier, and better package, please contact me on
+`fb' at soas.ac.uk
+
+\endpreamble
+
+\postamble
+\endpostamble
+
+\generate{\file{calendar.sty} {\from{calendar.dtx}{style}}
+}
+
+\Msg{***********************************************************}
+\Msg{*}
+\Msg{* To finish the installation, you have to move the following}
+\Msg{* files into a directory searched by TeX:}
+\Msg{*}
+\Msg{* \space\space calendar.sty}
+\Msg{*}
+\Msg{* You will also need to have the following packages}
+\Msg{* installed on your system before using this package}
+\Msg{* or printing its documentation:}
+\Msg{*}
+\Msg{* \space\space overword.dtx}
+\Msg{* \space\space dates.dtx}
+\Msg{*}
+\Msg{***********************************************************}
+
+%</installer>
+%    \end{macrocode}
+%\fi
+% \Finale \PrintChanges

@@ -1,0 +1,320 @@
+% arara: pdflatex
+% arara: biber
+% arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the IDXCMDS package
+% 
+%   create commands for adding formatted index entries
+% 
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    http://www.mychemistry.eu/forums/forum/idxcmds/
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% Copyright 2012-2015 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% --------------------------------------------------------------------------
+% The idxcmds package consists of the files
+%  - idxcmds.sty
+%  - idxcmds_en.tex, idxcmds_en.pdf
+%  - README
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+\documentclass[load-preamble,add-index,scrartcl={DIV10}]{cnltx-doc}
+\usepackage[utf8]{inputenc}
+\usepackage{idxcmds}
+\setcnltx{
+  package  = {idxcmds} ,
+  authors  = Clemens Niederberger ,
+  email    = contact@mychemistry.eu ,
+  url      = http://www.mychemistry.eu/forums/forum/idxcmds/ ,
+  abstract = {%
+    create commands for adding formatted index entries%
+  } ,
+  add-cmds = {
+    newidxcmd,newsubidxcmd,newsubmainidxcmd
+  } ,
+  add-silent-cmds = {
+    acr,environ,file,hsnbg,KOMAScript,scientist,test,@ifstar,
+    cmd,cmd@base,cmd@idx,cmd@nostar,cmd@star,
+    indexentry
+  } ,
+  index-setup = { othercode=\footnotesize,noclearpage } ,
+  makeindex-setup = { columns=3, columnsep=1em , intoc , title=Package Index }
+}
+\usepackage{imakeidx}
+\makeindex[name=environments,title=Index of Environments,intoc,columns=2]
+\makeindex[name=\jobname-examples,title=Index of Examples,intoc,columns=3]
+
+\usepackage[
+backend=biber,
+style=cnltx,
+sortlocale=en_US,
+indexing=cite,
+useprefix]{biblatex}
+\addbibresource{cnltx.bib}
+
+\defbibheading{bibliography}{\addsec{References}}
+\usepackage{csquotes}
+
+\usepackage[biblatex]{embrac}[2012/06/29]
+\ChangeEmph{[}[,.02em]{]}[.055em,-.08em]
+\ChangeEmph{(}[-.01em,.04em]{)}[.04em,-.05em]
+
+% \setidxcmds{idx-cmd=\index[\jobname-examples]}
+
+\newidxcmd[{\index[\jobname-examples]}]\acr{\textsc{#1}}
+\newidxcmd[{\index[environments]}]\environ{\texttt{#1}}[ (Environment)]
+\newidxcmd[{\index[\jobname-examples]}]\scientist{\textsf{#1}}
+\newsubmainidxcmd[{\index[\jobname-examples]}]\file{\textsf{#1}}
+\newsubidxcmd[{\index[\jobname-examples]}]\test{Test}{\textcolor{red}{#1}}
+\newsubidxcmd*[{\index[\jobname-examples]}]\hsnbg{\scientist[Heisenberg]{Werner Heisenberg}}{#1}
+
+\begin{document}
+
+\section{Licence and Requirements}\label{sec:license}
+\license
+
+\idxcmds\ loads and needs the the packages \pkg{etoolbox}~\cite{pkg:etoolbox},
+\pkg{pgfopts}~\cite{pkg:pgfopts} and \pkg{ltxcmds}~\cite{pkg:ltxcmds}.
+
+\section{Motivation}
+When working on a larger document and designing and writing the macros for
+various bits and pieces I was going to use I found myself repeatedly writing
+the same kind of macros again and again that had some kind of semantic
+meaning, maybe some markup definitions that also created an index entry and
+had a star form for omitting the index entry.  They all had more or less the
+following structure:
+
+\begin{sourcecode}
+  \makeatletter
+  \newcommand*\cmd{\@ifstar\cmd@star\cmd@nostar}
+  \newcommand*\cmd@star[1]{\cmd@base{#1}}
+  \newcommand*\cmd@nostar[1]{\cmd@base{#1}\cmd@idx{#1}}
+  \newcommand*\cmd@base[1]{\textit{#1}}
+  \newcommand*\cmd@idx[1]{\index{#1@\cmd@base{#1}}}
+  \makeatother
+\end{sourcecode}
+
+After having copied and pasted this code for the fourth time I thought: you
+should have a command that does this for you.  That was when \cs{newidxcmd}
+was born.  This command soon enough got some extensions, \eg, giving
+the commands thus defined an optional argument that allowed specifying the
+sorting.  It wasn't long before I realized that I might want to use this
+\cs{newidxcmd} again in other documents which was when I wrote the first
+draft of this package.
+
+I added other commands, \cs{newsubmainidxcmd} and \cs{newsubidxcmd}, which I
+didn't (and still don't) really use or need but of which I thought they could
+be useful for others, and here we are.
+
+\section{Usage}\label{sec:usage}
+\subsection{Available Commands}
+\idxcmds\ provides these commands:
+\begin{commands}
+  \command{newidxcmd}[\oarg{index cs}\marg{cs}\marg{formatting specs}\oarg{append}]
+    Defines a command \meta{cs} that formats its argument according to
+    \meta{formatting specs} and creates an index entry with \meta{index cs}
+    that gets \meta{append} appended.  Refer to the argument of \meta{cs}
+    in \meta{formatting specs} with \code{\#1}.
+    
+    Also defines a command \cs*{\meta{cs}idx} that allows to only create an
+    index entry.  See section~\ref{sec:command:usage:newidxcmd} for examples
+    and further description of its functionality.  Default for \meta{index cs}
+    is \cs{index}.
+  \command{newsubidxcmd}[\sarg\oarg{index cs}\marg{cs}\marg{main
+    entry}\marg{form. specs}\oarg{append}]
+    Defines a command \meta{cs} that formats its argument according to
+    \meta{form. specs} and creates an index sub-entry to \meta{main entry}
+    with \meta{index cs} that gets \meta{append} appended.  Refer to the
+    argument of \meta{cs} in \code{form.\@ specs} with \code{\#1}.
+    
+    Also defines a command \cs*{\meta{cs}idx} that allows to only create an
+    index entry.  See section~\ref{sec:command:usage:newsubidxcmd} for further
+    description of its functionality. Default for \meta{index cs} is
+    \cs*{index}.
+  \command{newsubmainidxcmd}[\oarg{index cs}\marg{cs}\marg{form. specs}\oarg{append}]
+    Defines a command \meta{cs} that formats its argument according to
+    \meta{form. specs} and creates an index sub-entry to a main entry with
+    \meta{index cs} that gets \meta{append} appended.  Refer to the argument
+    of \meta{cs} in \meta{form. specs} with \code{\#1}.
+    
+    Also defines a command \cs*{\meta{cs}idx} that allows to only create an
+    index entry.  The main entry is specified at use time. See
+    section~\ref{sec:command:usage:newsubmainidxcmd} for examples and further
+    description of its functionality. Default for \meta{index cs} is
+    \cs*{index}.
+\end{commands}
+
+The commands \meta{cs} defined this way are robust but their formatting
+argument is not placed in a group.  Keep this in mind when you use
+\cs*{bfseries} or something in a definition.  \meta{cs} will be defined using
+\pkg{etoolbox}' \cs*{newrobustcmd} which means an error will be thrown if
+\meta{cs} is already defined.
+
+Of course these commands cannot cover all possible use cases for index entries
+but that is not the intention of this package, anyway.
+
+\subsection{Command Usage}\label{sec:command:usage}
+\subsubsection{\cs*{newidxcmd}}\label{sec:command:usage:newidxcmd}
+The command \cs{newidxcmd}\Marg{\cs*{foo}}\marg{formatting specs} will define
+a new command \cs*{foo} with the following syntax:
+\begin{commands}
+  \command*{foo}[\sarg\marg{text}]
+    format \meta{text} according to specifications, no index entry.
+  \command*{foo}[\oarg{sort idx}\marg{text}\oarg{append}]
+    format \meta{text} according to specifications, add formatted index
+    entry, sorted according to \meta{sort idx} or, if the optional argument
+    is left out, sorted according to \meta{text}.  \meta{append} is added to
+    the index entry if the trailing optional argument is used (this can be
+    useful for instance for getting formatted page numbers).
+  \command*{fooidx}[\oarg{sort idx}\marg{text}\oarg{append}]
+    add formatted index entry, sorted according to \meta{sort idx} or, if the
+    optional argument is left out, sorted according to \meta{text}.
+    \meta{append} is added to the index entry if the trailing optional
+    argument is used.
+\end{commands}
+
+Let's see an example:
+\begin{example}
+  % in the preamble, probably:
+  % \newidxcmd{\acr}{\textsc{#1}}
+  % \newidxcmd[{\index[environments]}]{\environ}{\texttt{#1}}[ (Environment)]
+  % \newidxcmd{\scientist}{\textsf{#1}}
+  \acr{cd}, \acr{id}
+  
+  \environ{center}, \environ{flushleft}
+ 
+  \scientist*{Albert Einstein}, \scientist[Heisenberg]{Werner Heisenberg}
+\end{example}
+You will find these examples in the index of examples or the index of
+environments, respectively.  The second set of examples shows the purpose of
+the first optional argument: if you have several indexes --~like this
+documentation has for demonstration purposes~-- you might need to specify the
+index command used\footnote{This document uses
+  \pkg{imakeidx}~\cite{pkg:imakeidx} for this purpose.}.  If you want to prove
+if the example worked: \scientist*{Albert Einstein} should not be found in the
+index and \scientist*{Werner Heisenberg} should be sorted under
+\emph{Heisenberg}.  Both \environ*{center} and \environ*{flushleft} ahould be
+found in the examples index.
+
+Now let's disect the example a bit.  The uses of \cs*{acr}\Marg{cd},
+\cs*{scientist}\sarg\Marg{Albert Einstein} and \cs*{environ}\Marg{center} will
+essentially expand to
+\begin{sourcecode}
+  % \acr{cd} =>
+  \textsc{cd}\index{cd@\textsc{cd}}
+  % and in \jobname.idx =>
+  \indexentry{cd@\textsc  {cd}}{3}
+ 
+  % \scientist*{Albert Einstein} =>
+  \textsf{Albert Einstein}
+ 
+  % \environ{center} =>
+  \texttt{center}\index[environments]{center@\texttt{center} (Environment)}
+  % and in examples.idx =>
+  \indexentry{center@\texttt  {center} (Environment)}{3}
+\end{sourcecode}
+
+\subsubsection{\cs*{newsubidxcmd}}\label{sec:command:usage:newsubidxcmd}
+The command \cs{newsubidxcmd}\sarg\Marg{\cs*{foo}}\marg{main entry}\marg{form.
+  specs} will define a new command \cs*{foo} with the same syntax as
+\cs{newidxcmd} does.  However, \cs{newsubidxcmd} has an additional argument
+that specifies the main index entry this group of sub entries belongs to.  For
+the unstarred variant this argument can be some arbitrary main entry.  For the
+starred variant it demands a command plus argument defined by \cs{newidxcmd}
+as argument.
+
+\begin{example}
+  % preamble:
+  % \newsubidxcmd{\test}{Test}{\textcolor{red}{#1}}
+  % \newsubidxcmd*{\hsnbg}{\scientist[Heisenberg]{Werner Heisenberg}}{#1}
+  \scientist[Heisenberg]{Werner Heisenberg} was born in
+  \hsnbg[Wuerzburg]{W\"urzburg (Germany)}. He worked as a
+  professor in \hsnbg{Leipzig (Germany)}. And this is a
+  \test{test}.
+\end{example}
+
+\subsubsection{\cs*{newsubmainidxcmd}}\label{sec:command:usage:newsubmainidxcmd}
+The command \cs{newsubmainidxcmd}\Marg{\cs*{foo}}\marg{form. specs} will define
+a new command \cs*{foo} similar to \cs{newsubidxcmd} but where the main
+index entry is specified for every use case in the running text.  \cs*{foo}
+will have the following syntax:
+\begin{commands}
+  \command*{foo}[\sarg\marg{text}]
+    format \meta{text} according to specifications, no index entry.
+  \command*{foo}[\oarg{sort idx}\marg{text}\marg{main entry}\oarg{append}]
+    format \meta{text} according to specifications, add formatted index
+    sub-entry to the main index entry \meta{main entry}, sorted according to
+    \meta{sort idx} or, if the optional argument is left out, sorted
+    according to \meta{text}.  \meta{append} is added to the index entry if
+    the trailing optional argument is used (this can be useful for instance
+    for getting formatted page numbers).
+  \command*{fooidx}[\oarg{sort idx}\marg{text}\marg{main entry}\oarg{append}]
+    add formatted index sub-entry to the main index entry \meta{main entry},
+    sorted according to \meta{sort idx} or, if the optional argument is left
+    out, sorted according to \meta{text}.  \meta{append} is added to the
+    index entry if the trailing optional argument is used.
+\end{commands}
+
+\begin{example}
+  % in the preamble, probably:
+  % \newsubmainidxcmd{\file}{\textsf{#1}}
+  \file{article}{classes} is a standard \LaTeX{} class.
+  \file{scrartcl}{KOMA-Script@\KOMAScript} is part of the \KOMAScript{} bundle.
+  \file*{test} is a dummy.
+\end{example}
+
+\subsection{Options}
+\idxcmds\ has the following options -- either setable as package option or with
+the setup command \cs{setidxcmds}\marg{options} which takes a comma separated
+list of options:
+\begin{options}
+  \keyval{sort-sep}{symbol}\Default{@}
+    set makeindex symbol to separate the index into sorting and typesetting
+    part as specified in the index style file.
+  \keyval{sub-sep}{symbol}\Default{!}
+    set makeindex symbol to add a sub entry as specified in the index style
+    file.
+  \keyval{idx-cmd}{cs}\Default{\cs*{index}}
+    \sinceversion{0.2b}The default indexing command that is used by \idxcmds.
+\end{options}
+
+% \end{document}
+
+\printbibliography
+
+% \section{Implementation}
+% In the following code the lines 1--32 have been omitted.  They only repeat the
+% license statement which has already been mentioned in
+% section~\ref{sec:license}.
+
+% \implementation[linerange={33-1000},firstnumber=33]
+
+
+\printindex[\jobname-examples]
+
+\printindex[environments]
+
+% \indexprologue{\noindent
+%   This index has some peculiar entries in addition to the ones you would
+%   normally expect.  But actually they are the corresponding entries to the
+%   examples shown in section~\ref{sec:usage}.%
+% }
+% \printindex
+
+\end{document}

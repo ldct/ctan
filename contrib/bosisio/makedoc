@@ -1,0 +1,97 @@
+#!/bin/sh
+
+#  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+#  |             Copyright(C) 1997-2005 by F. Bosisio            |
+#  |                                                             |
+#  | This program can be redistributed and/or modified under     |
+#  | the terms of the LaTeX Project Public License, distributed  |
+#  | from CTAN archives in directory macros/latex/base/lppl.txt; |
+#  | either version 1 of the License, or any later version.      |
+#  |                                                             |
+#  | E-mail:   fbosisio@bigfoot.com                              |
+#  | CTAN location: macros/latex/contrib/bosisio/                |
+#  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+
+#
+# If there isn't a command-line parameter, ask for a filename
+#
+if test $1
+then
+  FILE=$1
+else
+  printf '\tInsert the filename you want to process with makedoc\n'
+  read FILE
+fi
+#
+# Strip the ".dtx" extension (if present) and check that the file exists
+#
+FILE=`basename ${FILE} .dtx`
+test -f ${FILE}.dtx || exit 1
+#
+# Run LaTeX on the ".dtx" file to generate the ".sty" and ".drv" files
+#
+printf '\n\t\tRunning LaTeX on %s.dtx ...\n\n' "${FILE}"
+latex ${FILE}.dtx || exit 2
+#
+# Run LaTeX once to generate the ".aux", ".idx" and ".glo" files
+#
+printf '\n\t\tRunning LaTeX on %s.drv ...\n\n' "${FILE}"
+latex ${FILE}.drv || exit 3
+#
+# Run BibTeX to generate the bibliography file (".bbl")
+#
+if grep -q bibdata ${FILE}.aux
+then
+  printf '\n\t\tRunning BibTeX on %s.aux ...\n\n' "${FILE}"
+  bibtex ${FILE} || exit 4
+  rm ${FILE}.blg
+fi
+#
+# Run MakeIndex on the index file
+#
+if test ${FILE}.idx
+then
+  printf '\n\t\tRunning MakeIndex on %s.idx ...\n\n' "${FILE}"
+  makeindex -s gind.ist -o ${FILE}.ind ${FILE}.idx || exit 5
+  rm ${FILE}.ilg
+fi
+#
+# Run MakeIndex on the glossary file
+#
+if test ${FILE}.glo
+then
+  printf '\n\t\tRunning MakeIndex on %s.glo ...\n\n' "${FILE}"
+  makeindex -s gglo.ist -o ${FILE}.gls ${FILE}.glo || exit 6
+  rm ${FILE}.ilg
+fi
+#
+# Rerun LaTeX to read the ".bbl", ".ind" and ".gls" files
+#
+printf '\n\t\tRe-running LaTeX on %s.drv ...\n\n' "${FILE}"
+latex ${FILE}.drv
+#
+# Rerun LaTeX again to get the cross-references right
+#
+if grep -q 'Rerun to get cross-references right' ${FILE}.log
+then
+  printf '\n\t\tRe-running LaTeX again on %s.drv ...\n\n' "${FILE}"
+  latex ${FILE}.drv
+fi
+#
+# Remove temporary files
+#
+rm -f ${FILE}.drv ${FILE}.log ${FILE}.aux ${FILE}.ind ${FILE}.glo \
+      ${FILE}.bbl ${FILE}.idx ${FILE}.gls
+#
+# Show the generated output
+#
+xdvi ${FILE}.dvi
+#
+# Run DviPdf to produce the PDF file
+#
+printf '\n\t\tRunning DviPdf ...\n\n'
+dvipdf ${FILE}.dvi
+#
+# Remove DVI file
+#
+rm ${FILE}.dvi

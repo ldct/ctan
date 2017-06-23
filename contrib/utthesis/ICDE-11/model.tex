@@ -1,0 +1,831 @@
+\section{Prairie: A language for rule specification}
+\label{sec:framework}
+
+The basic concepts and definitions that underlie the Prairie model are
+presented in this section.  The goal is to lay a foundation for
+reasoning about query optimization algebraically; this is necessary for
+our subsequent discussion about translating Prairie specifications to
+those of Volcano.
+
+\subsection {Notation and assumptions}
+\label{sec:notation}
+
+\paragraph{Stored Files and Streams.}
+A file is \emph{stored} if its tuples reside on disk.  In the case of
+relational databases, stored files are sometimes called \emph{base
+relations}; we will denote them by $R$ or $R_i$.  In object-oriented
+schemas, stored files are \emph{classes}; we will denote them by
+$\textit{C}$ or $\textit{C}_i$.  Henceforth, whenever we refer to a
+stored file, we mean a relation or a class; when the distinction is
+unimportant, we will use $F$ or $F_i$.  A \emph{stream} is a sequence
+of tuples and is the result of a computation on one or more streams or
+stored files; tuples of streams are returned one at a time, typically
+on demand.  Streams can be \emph{named}, denoted by $S_i$, or
+\emph{unnamed}.
+
+\paragraph{Database Operations.}
+An \emph{operation} is a computation on one or more streams or stored
+files.  There are two types of database operations in Prairie:
+abstract (or implementation-unspecified) operators and concrete
+algorithms.  Each is detailed below.
+\begin{description} % To achieve extra indentation.
+\begin{description}
+\item[Operators.]
+Abstract (or conceptual) \emph{operators} specify computations on
+streams or stored files; they are denoted by all capital
+letters (\eg JOIN).  Operators have two types of parameters:
+essential and additional.  \emph{Essential parameters} are the stream
+or file inputs to an operator; these are the primary inputs to be
+processed by an operator.   \emph{Additional parameters} are
+``fine-grain'' qualifications of an operator; their purpose is to
+describe an operator in more detail than essential parameters.
+
+\item[Algorithms.]
+\emph{Algorithms} are concrete implementations of conceptual operators;
+they will be represented in lower case with the first letter
+capitalized (\eg Nested\_loops).  Algorithms have at least the same
+essential and additional parameters as the conceptual operators that
+they implement.\footnote{Algorithms may have \emph{tuning parameters}
+which are not parameters of the operators they implement.}
+Furthermore, there can be, and usually are, several algorithms for a
+particular operator.
+\end{description}
+\end{description}
+Table~\ref{tab:operators} lists some operators and algorithms implementing
+them together with their additional parameters.
+
+\begin{centeredtable*}
+\begin{minipage}[b]{9.9cm}
+\nodesizes
+\newlength{\first}
+\settowidth{\first}{JOIN($S_1$, $S_2$)}
+\newlength{\second}
+\settowidth{\second}{Join streams $S_1$, $S_2$}
+\newlength{\third}
+\settowidth{\third}{projected\_attributes}
+\newlength{\fourth}
+\settowidth{\fourth}{Nested\_loops($S_1$, $S_2$)}
+\newlength{\linelength}
+\setlength{\linelength}{\fourth+\tabcolsep*2}
+\begin{tabular}{|l|l|l|p{\fourth}|} \thickhline
+\textbf{Operator}
+    & \textbf{Description}
+    & \textbf{Additional Parameters}
+    & \textbf{Algorithm} \\ \thickhline
+\multirow{2}{\first}{JOIN($S_1$, $S_2$)}
+    & \multirow{2}{\second}{Join streams $S_1$, $S_2$} & tuple\_order
+    & Nested\_loops($S_1$, $S_2$) \\ \cline{4-4}
+  & & join\_predicate & Merge\_join($S_1$, $S_2$) \\ \hline
+\multirow{3}{\first}{RET($F$)}
+    & \multirow{3}{\second}{Retrieve file $F$}
+    & tuple\_order
+    & \parbox[c][\baselineskip][b]{\fourth}{File\_scan($F$)} \\
+  & & selection\_predicate
+    & \parbox[c]{\linelength}
+                {\hspace*{-\tabcolsep}\rule{\linelength}{\arrayrulewidth}} \\ 
+  & & projected\_attributes
+    & \parbox[c][\baselineskip][t]{\fourth}{Index\_scan($F$)} \\ \hline
+\multirow{2}{\first}{SORT($S_1$)}
+    & \multirow{2}{\second}{Sort stream $S_1$}
+    & \multirow{2}{\third}{tuple\_order}
+    & Merge\_sort($S_1$) \\ \cline{4-4}
+  & & & Null($S_1$) \\ \thickhline
+\end{tabular}
+\caption{Operators and algorithms in a centralized query optimizer and
+         their additional parameters}
+\label{tab:operators}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{6.5cm}
+\nodesizes
+\settowidth{\first}{projected\_attributes}
+\begin{tabular}{|l|l|}  \thickhline
+\textbf{Property} 
+    & \textbf{Description} \\ \thickhline
+join\_predicate
+    & join predicate for JOIN operator \\ \hline
+selection\_predicate
+    & selection predicate for RET operator \\ \hline
+\multirow{2}{\first}{tuple\_order}
+    & tuple order of resulting stream, \\
+    & DONT\_CARE if none \\ \hline
+num\_records
+    & number of tuples of resulting stream \\ \hline
+tuple\_size
+    & size of individual tuple in stream \\ \hline
+projected\_attributes
+    & projected attributes for RET operator \\ \hline
+attributes
+    & list of attributes \\ \hline
+cost
+    & estimated cost of algorithm \\ \thickhline
+\end{tabular}
+\caption{Properties of nodes in an operator tree}
+\label{tab:annotations}
+\end{minipage}
+\end{centeredtable*}
+
+\paragraph{Operator Trees.}
+An \emph{operator tree} is a rooted tree whose non-leaf, or
+\emph{interior}, nodes are database operations (operators or
+algorithms) and whose leaf nodes are stored files.  The children of an
+interior node in an operator tree are the essential parameters (\ie the
+stream or file parameters) of the node.  Additional parameters are
+implicitly attached to each node.  Algebraically, operator trees are
+compositions of database operations; thus, we will also call operator
+trees \emph{expressions}; both terms will be used interchangeably.
+
+\begin{example}
+A simple expression and its operator tree representation are shown
+in Figure~\ref{fig:optreeexample}.  Relations $R_1$ and $R_2$ are first 
+RETrieved, then JOINed, and finally SORTed resulting in a stream
+sorted on a specific attribute.  The figure shows only the essential
+parameters of the various operators, not the additional parameters.
+\end{example}
+
+\begin{comment}
+The figures which follow.
+
+               SORT
+                 |
+                 |
+               JOIN
+                /\
+               /  \
+             RET  RET
+              |    |
+              |    |
+             R1   R2
+
+            Merge_sort
+                |
+                |
+           Nested_loops
+               / \
+              /   \
+        File_scan File_scan
+            |         |
+            |         |
+           R1        R2
+
+\end{comment}
+
+\begin{centeredfigure}
+\setlength{\unitlength}{0.6in}
+%
+\myshadowbox
+{
+\subfigure[An expression and its corresponding operator tree]
+{
+\begin{centeredinhalfminipage}
+\psset{unit=4mm}
+\psset{nodesep=1pt}
+\tiny
+\begin{pspicture}(0,0)(2,4)
+\rput(1,4){SORT (JOIN (RET ($R_1$), RET ($R_2$)))}
+\rput(1,3){\rnode{sort}{SORT}}
+\rput(1,2){\rnode{join}{JOIN}}
+\ncline{-}{sort}{join}
+\rput(0,1){\rnode{retr1}{RET}}
+\rput(2,1){\rnode{retr2}{RET}}
+\ncline{-}{join}{retr1}
+\ncline{-}{join}{retr2}
+\rput(0,0){\rnode{r1}{$R_1$}}
+\rput(2,0){\rnode{r2}{$R_2$}}
+\ncline{-}{retr1}{r1}
+\ncline{-}{retr2}{r2}
+\end{pspicture}
+\end{centeredinhalfminipage}
+\label{fig:optreeexample}
+}
+%
+\vrule
+%
+\subfigure[Possible access plan for operator tree in (a)]
+{
+\begin{centeredinhalfminipage}
+\psset{unit=4mm}
+\psset{nodesep=1pt}
+\tiny
+\begin{pspicture}(0,0)(2,3)
+\rput(1,3){\rnode{mergesort}{Merge\_sort}}
+\rput(1,2){\rnode{nestedloops}{Nested\_loops}}
+\ncline{-}{mergesort}{nestedloops}
+\rput(0,1){\rnode{filescanr1}{File\_scan}}
+\rput(2,1){\rnode{filescanr2}{File\_scan}}
+\ncline{-}{nestedloops}{filescanr1}
+\ncline{-}{nestedloops}{filescanr2}
+\rput(0,0){\rnode{r1}{$R_1$}}
+\rput(2,0){\rnode{r2}{$R_2$}}
+\ncline{-}{filescanr1}{r1}
+\ncline{-}{filescanr2}{r2}
+\end{pspicture}
+\end{centeredinhalfminipage}
+\label{fig:accplanexample}
+}
+}
+%
+\caption{Example of an operator tree and access plan}
+\label{fig:expexample}
+\end{centeredfigure}
+
+\paragraph{Descriptors.}
+A \emph{property} of a node is a (user-defined) variable that contains
+information used by an optimizer.  An \emph{annotation} is a $\langle
+\emph{property, value} \rangle$ pair that is assigned to a node.  A
+\emph{descriptor} is a list of annotations that describes a node of an
+operator tree; every node has its own descriptor.  As an example,
+Table~\ref{tab:annotations} lists some typical properties that might be
+used in a descriptor.  Note that descriptors for stream and stored
+files may have different properties.  The following notations will be
+useful in our subsequent discussions.  If $S_i$ is a stream, then
+$\mathbf{D_i}$ is its descriptor.  Annotations of $S_i$ are accessed by
+a structure member relationship, \eg
+$\mathbf{D_i}.\text{num\_records}$.  Also, let $E$ be an expression and
+let $\mathbf{D}$ be its descriptor.  We will write this as
+$E:\mathbf{D}$.
+
+\begin{example}
+The expression,
+\begin{eqnarray*}
+{\scriptstyle \text{SORT}(\text{JOIN}(\text{RET}(R_1):\mathbf{D_3},
+      \text{RET}(R_2):\mathbf{D_4}):\mathbf{D_5}):\mathbf{D_6}} & &
+\end{eqnarray*}
+corresponds to the operator tree in Figure~\ref{fig:optreeexample}, and
+shows the descriptors of the various nodes.
+\end{example}
+
+A notational simplification can be made here.  Additional parameters
+of operators can be treated the same way as other properties of a node;
+essential parameters, however, are \emph{expressions}.  Thus, the term
+descriptor in the remainder of this paper will refer to a set of properties,
+including additional parameters, as shown in Table~\ref{tab:annotations}.
+
+Currently, descriptor properties are defined entirely by the user;
+however, we envision providing a hierarchy of pre-defined descriptor
+types to aid this process.
+
+\paragraph{Access Plans.}
+An \emph{access plan} is an operator tree in which all interior nodes
+are algorithms.
+
+\begin{example}
+An access plan for the operator tree in Figure~\ref{fig:optreeexample}
+is shown in Figure~\ref{fig:accplanexample}.
+\end{example}
+
+\subsection{Prairie optimization paradigm}
+\label{sec:topdown}
+
+Prairie admits two rather different means of optimization: top-down and
+bottom-up.  A top-down query optimizer optimizes the parents of a node
+prior to optimizing the node itself.  A bottom-up optimizer optimizes
+the children of a node prior to optimizing the node.  The earliest
+optimizers (System R \cite{Seli79} and R$^*$ \cite{Dani82}) employed
+the bottom-up approach.
+
+Our research concentrates on a top-down optimization of operator
+trees.  We have chosen this approach because we intend to translate
+Prairie rules into the format required by the Volcano query optimizer
+generator \cite{Grae90b} which is based on a top-down strategy.
+Given an appropriate search engine, Prairie can potentially also be
+used with a bottom-up optimization strategy; however, we will not
+discuss this approach in this paper.
+
+In query optimization, there are certain annotations (such as
+additional parameters) that are known before any optimization is
+begun.  These annotations can be computed at the time that the operator
+tree is initialized, and will not change with application of rules.
+Our following discussions assume operator trees are initialized.
+
+There are two types of algebraic transformations (or \emph{rewrite
+rules}) in Prairie: T-rules (``transformation rules'') and I-rules
+(``implementation rules'').  Each rule transforms an expression into
+another based on additional conditions; the transformation also results
+in a mapping of descriptors between expressions.  We define T-rules and
+I-rules precisely in the following sections and illustrate them with
+examples.  Our examples are chosen from rules that would be used in a
+centralized relational query optimizer; the operators, algorithms, and
+properties are subsets of those in Tables~\ref{tab:operators} and
+\ref{tab:annotations}.
+
+\subsection{Transformation rules}
+\label{sec:trules}
+
+\begin{centeredfigure}
+\def\subfigtopskip{0pt}
+\myshadowbox{
+\begin{tabular}{c}
+\subfigure[General form of a T-rule]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\begin{trule}
+E(x_1, \ldots, x_n):\mathbf{D_1} \Longrightarrow
+        E'(x_1, \ldots, x_n):\mathbf{D_2} \label{eq:generaltrule}
+\end{trule}
+\begin{trulepretest}
+\> pre-test statements
+\end{trulepretest}
+test
+\begin{truleposttest}
+\> post-test statements
+\end{truleposttest}
+\end{minipage}
+\label{fig:generaltrule}
+} \\ \hline
+%%%
+\subfigure[Join associativity]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\vspace*{4pt}
+\begin{trule}
+\text{JOIN}(\text{JOIN}(S_1, S_2):\mathbf{D_4}, S_3):\mathbf{D_5}
+\label{eq:associativity}
+\end{trule}
+%%% TODO: Remove extra space above eqnarray.
+\begin{eqnarray*}
+\rulespace \Longrightarrow
+    \text{JOIN}(S_1, \text{JOIN}(S_2, S_3):\mathbf{D_6}):\mathbf{D_7}
+%                                              \label{eq:associativity}
+\end{eqnarray*}
+\begin{trulepretest}
+\> $\mathbf{D_6}.\text{attributes} =
+     \text{union}\ (\mathbf{D_2}.\text{attributes},
+                    \mathbf{D_3}.\text{attributes})\ ;$
+\end{trulepretest}
+$\text{is\_associative}\ (\mathbf{D_6}.\text{join\_predicate},
+                             \mathbf{D_6}.\text{attributes},
+                             \mathbf{D_5}.\text{join\_predicate})$
+\begin{truleposttest}
+\> $\mathbf{D_7} = \mathbf{D_5}\ ;$ \\
+\> $\mathbf{D_7}.\text{join\_predicate} =
+     \mathbf{D_4}.\text{join\_predicate}\ ;$ \\
+\> $\mathbf{D_6}.\text{tuple\_size} =
+     \mathbf{D_2}.\text{tuple\_size}
+      + \mathbf{D_3}.\text{tuple\_size}\ ;$ \\
+\> $\mathbf{D_6}.\text{num\_records} =
+     \text{cardinality}\ (\mathbf{D_2}, \mathbf{D_3})\ ;$
+\end{truleposttest}
+\end{minipage}
+\label{fig:associativity}
+}
+\end{tabular}
+}
+\caption{T-rule}
+\label{fig:trules}
+\end{centeredfigure}
+
+Transformation rules, or T-rules for short, define equivalences among
+pairs of expressions; they define mappings from one operator tree to
+another.  Let $E$ and $E'$ be expressions that involve only abstract
+operators.  Equation~(\ref{eq:generaltrule}) (shown in
+Figure~\ref{fig:generaltrule}) shows the general form of a T-rule.  The
+actions of a T-rule define the equivalences between the descriptors of
+nodes of the original operator tree $E$ with the nodes of the output
+tree $E'$; these actions consist of a series of (C or C++)
+assignment\footnote{The actions can be non-assignment statements (like
+function calls), but in this case, the P2V pre-processor (described in
+Section~\ref{sec:ptov}) needs some hints about the properties that
+are changed by the statement in order to correctly categorize each
+property.  For simplicity, in this paper, we assume all actions consist
+of assignment statements.} statements.  The left-hand sides of these
+statements refer to descriptors of expressions on the right-hand side
+of the T-rule; the right-hand sides of the statements can refer to any
+descriptor in the T-rule.  Function (called \emph{helper} functions)
+calls can also appear on the right side of the assignment statements.
+Thus, descriptors on the \emph{left-hand side} of a T-rule are
+\emph{never} changed in the rule's actions.  A \emph{test} is needed to
+determine if the transformations of the T-rule are in fact applicable.
+
+Purely as an optimization, it is usually the case that not all
+statements in a T-rule's actions need to be executed prior to a
+T-rule's test.  For this reason, the actions of a T-rule are split into
+two groups; those that need to be executed prior to the T-rule's test,
+and those that can be executed after a successful test.  These groups
+of statements comprise, respectively, the \emph{pre-test} and
+\emph{post-test} statements of the T-rule.\footnote{We suspect it is
+possible to use data-flow analysis to partition the assignment
+statements automatically, but for now, we let the rule-writer do the
+partitioning.}
+
+\begin{comment}
+We now define the actions and tests of a T-rule more precisely.  Let
+$O_i$ be an abstract operator of $E'$, and let $\mathbf{O_i}$ be its
+descriptor.  Similarly, let $I_i$ be an abstract operator of $E$ and
+let $\mathbf{I_i}$ be its descriptor. ($I_i$ is an operator that is
+input to the rule and $O_i$ is an operator that is output by the
+rule).  Let $M_i$ denote the $i$th descriptor property.  Thus,
+$\mathbf{O_i}.M_j$ is the value of the $j$th property of descriptor
+$\mathbf{O_i}$.  We have found that actions of a T-rule are invariably
+assignment statements, since actions compute assignments to descriptor
+properties.  Rather than admitting all possible computations, we will
+present our model in terms of assignment statements.\footnote{ The
+actions can be non-assignment statements (like function calls), but in
+this case, the P2V pre-processor (described in
+Section~\ref{sec:results}) needs some hints about the properties that
+are changed by the statement in order to correctly categorize each
+property.  For simplicity, in this paper, we assume all actions consist
+of assignment statements.  } The left-hand side of an assignment refers
+to an output descriptor ($\mathbf{O_i}$) or a member of an output
+descriptor ($\mathbf{O_i}.M_j$).  The right-hand side is an expression
+or function that only references input descriptors and/or their
+members.  (We call such functions \emph{helper} functions; they are
+defined externally to a rule).  Here are a few examples:
+\[
+\begin{array}{rlll}
+\mathbf{O_i} & = & \mathbf{I_k}\ ; &
+    \text{$//$ copy descriptor $\mathbf{I_k}$ to $\mathbf{O_i}$} \nonumber \\
+\mathbf{O_i}.M_j & = & \mathbf{I_k}.M_j + 4\ ; &
+    \text{$//$ expression defining $\mathbf{O_i}.M_j$} \nonumber \\
+\mathbf{O_3}.M_5 & = & \text{helper}\ (\mathbf{I_1}.M_5, \mathbf{I_2}.M_5)\ ; &
+    \text{$//$ helper function that computes $\mathbf{O_3}.M_5$} \nonumber \\
+& & &
+    \text{$//$ from inputs $\mathbf{I_1}.M_5$ and $\mathbf{I_2}.M_5$.} \nonumber
+\end{array}
+\]
+
+The test for a T-rule's applicability is a boolean expression and
+normally involves checks on the values of output descriptors (\eg
+$\mathbf{O_3}.M_5 > 6$); occasionally, helper functions may be needed.
+
+Again, it is important to remember that the pre-test actions are
+carried out prior to the test; the post-test actions are performed only
+if a T-rule's test evaluates to TRUE, and all post-test actions are
+performed immediately, with no intermediate optimization of any
+descendant nodes of the root of $E$.
+
+Note that there are no actions that are carried out \emph{after} the
+essential parameters of the root of $E$ are optimized.  This is because
+a T-rule only logically transforms a conceptual tree into another
+conceptual tree.
+\end{comment}
+
+\begin{example}
+\label{ex:joinassociativity}
+The associativity of JOINs is expressed by T-rule
+(\ref{eq:associativity}) in Figure~\ref{fig:associativity}.
+\end{example}
+
+\begin{comment}
+
+          b2=c1 JOIN                          JOIN a1=b1
+                 /\                            /\
+                /  \                          /  \
+       a1=b1 JOIN  RET                      RET JOIN b2=c1
+              /\    |        ====>          |    /\
+             /  \  R3                      R1   /  \
+           RET  RET                           RET  RET
+            |    |                             |    |
+           R1   R2                            R2   R3
+
+          a2=c1 JOIN                           JOIN a1=b1
+                 /\                             /\
+                /  \                           /  \
+       a1=b1 JOIN   RET                      RET  JOIN <empty>
+              /\     |        ==/==>          |    /\
+             /  \   R3                       R1   /  \
+           RET  RET                             RET  RET
+            |    |                               |    |
+           R1   R2                              R2   R3
+
+\end{comment}
+
+\newsavebox{\lefttreeone}
+\newsavebox{\righttreeone}
+\newsavebox{\lefttreetwo}
+\newsavebox{\righttreetwo}
+\newsavebox{\rewritesto}
+\newsavebox{\doesnotrewriteto}
+
+\begin{lrbox}{\lefttreeone}
+\begin{minipage}[t]{3.0cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(-0.5,0)(3,3)
+\rput(2,3){\rnode{joinr1r2r3}{JOIN}}
+\rput(0.5,3){$b_2 = c_1$}
+\rput(1,2){\rnode{joinr1r2}{JOIN}}
+\rput(-0.5,2){$a_1 = b_1$}
+\rput(0,1){\rnode{retr1}{RET}}
+\rput(2,1){\rnode{retr2}{RET}}
+\rput(3,2){\rnode{retr3}{RET}}
+\rput(0,0){\rnode{r1}{$R_1$}}
+\rput(2,0){\rnode{r2}{$R_2$}}
+\rput(3,1){\rnode{r3}{$R_3$}}
+\ncline{-}{joinr1r2}{retr1}
+\ncline{-}{joinr1r2}{retr2}
+\ncline{-}{joinr1r2r3}{joinr1r2}
+\ncline{-}{joinr1r2r3}{retr3}
+\ncline{-}{retr1}{r1}
+\ncline{-}{retr2}{r2}
+\ncline{-}{retr3}{r3}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\begin{lrbox}{\rewritesto}
+\begin{minipage}[t]{0.6cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(0,0)(1,3)
+\rput(0.5,1.5){$\Longrightarrow$}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\begin{lrbox}{\righttreeone}
+\begin{minipage}[t]{3.0cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(0,0)(3,3)
+\rput(1,3){\rnode{joinr1r2r3}{JOIN}}
+\rput(2.5,3){$a_1 = b_1$}
+\rput(2,2){\rnode{joinr2r3}{JOIN}}
+\rput(3.5,2){$b_2 = c_1$}
+\rput(0,2){\rnode{retr1}{RET}}
+\rput(1,1){\rnode{retr2}{RET}}
+\rput(3,1){\rnode{retr3}{RET}}
+\rput(0,1){\rnode{r1}{$R_1$}}
+\rput(1,0){\rnode{r2}{$R_2$}}
+\rput(3,0){\rnode{r3}{$R_3$}}
+\ncline{-}{joinr1r2r3}{retr1}
+\ncline{-}{joinr1r2r3}{joinr2r3}
+\ncline{-}{joinr2r3}{retr2}
+\ncline{-}{joinr2r3}{retr3}
+\ncline{-}{retr1}{r1}
+\ncline{-}{retr2}{r2}
+\ncline{-}{retr3}{r3}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\begin{lrbox}{\lefttreetwo}
+\begin{minipage}[t]{3.0cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(-0.5,0)(3,3)
+\rput(2,3){\rnode{joinr1r2r3}{JOIN}}
+\rput(0.5,3){$a_2 = c_1$}
+\rput(1,2){\rnode{joinr1r2}{JOIN}}
+\rput(-0.5,2){$a_1 = b_1$}
+\rput(0,1){\rnode{retr1}{RET}}
+\rput(2,1){\rnode{retr2}{RET}}
+\rput(3,2){\rnode{retr3}{RET}}
+\rput(0,0){\rnode{r1}{$R_1$}}
+\rput(2,0){\rnode{r2}{$R_2$}}
+\rput(3,1){\rnode{r3}{$R_3$}}
+\ncline{-}{joinr1r2}{retr1}
+\ncline{-}{joinr1r2}{retr2}
+\ncline{-}{joinr1r2r3}{joinr1r2}
+\ncline{-}{joinr1r2r3}{retr3}
+\ncline{-}{retr1}{r1}
+\ncline{-}{retr2}{r2}
+\ncline{-}{retr3}{r3}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\begin{lrbox}{\doesnotrewriteto}
+\begin{minipage}[t]{0.6cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(0,0)(1,3)
+\rput(0.5,1.5){$\Longrightarrow$}
+\rput(0.5,1.5){$/$}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\begin{lrbox}{\righttreetwo}
+\begin{minipage}[t]{3.0cm}
+\psset{unit=\edgesizes}
+\psset{nodesep=3pt}
+\nodesizes
+\begin{center}
+\begin{pspicture}(0,0)(3,3)
+\rput(1,3){\rnode{joinr1r2r3}{JOIN}}
+\rput(2,2){\rnode{joinr2r3}{JOIN}}
+\rput(0,2){\rnode{retr1}{RET}}
+\rput(1,1){\rnode{retr2}{RET}}
+\rput(3,1){\rnode{retr3}{RET}}
+\rput(0,1){\rnode{r1}{$R_1$}}
+\rput(1,0){\rnode{r2}{$R_2$}}
+\rput(3,0){\rnode{r3}{$R_3$}}
+\ncline{-}{joinr1r2r3}{retr1}
+\ncline{-}{joinr1r2r3}{joinr2r3}
+\ncline{-}{joinr2r3}{retr2}
+\ncline{-}{joinr2r3}{retr3}
+\ncline{-}{retr1}{r1}
+\ncline{-}{retr2}{r2}
+\ncline{-}{retr3}{r3}
+\end{pspicture}
+\end{center}
+\end{minipage}
+\end{lrbox}
+
+\subsection{Implementation rules}
+\label{sec:irules}
+
+Implementation rules, or I-rules for short, define equivalences between
+expressions and their implementing algorithms.  Let $E$ be an
+expression and $A$ be an algorithm that implements $E$.  The general
+form of an I-rule is given by Equation~(\ref{eq:generalirule}) (shown
+in Figure~\ref{fig:generalirule}).
+
+\begin{centeredfigure}
+\def\subfigtopskip{0pt}
+\myshadowbox{
+\begin{tabular}{c}
+\subfigure[General form of an I-rule]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\begin{irule}
+E(x_1, \ldots, x_n):\mathbf{D_1} \Longrightarrow
+        A(x_1, \ldots, x_n):\mathbf{D_2} \label{eq:generalirule}
+\end{irule}
+test
+\begin{irulepreopt}
+\> pre-opt statements
+\end{irulepreopt}
+\begin{irulepostopt}
+\> post-opt statements
+\end{irulepostopt}
+\end{minipage}
+\label{fig:generalirule}
+} \\ \hline
+%%%
+\subfigure[Merge-sort sort algorithm]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\vspace*{4pt}
+\begin{irule}
+\text{SORT}(S_1):\mathbf{D_2} \Longrightarrow
+     \text{Merge\_sort}(S_1):\mathbf{D_3} \label{eq:msort}
+\end{irule}
+$(\mathbf{D_2}.\text{tuple\_order}\ !\negthinspace= \text{DONT\_CARE})$
+\begin{irulepreopt}
+\> $\mathbf{D_3} = \mathbf{D_2}\ ;$
+\end{irulepreopt}
+\begin{irulepostopt}
+\> $\mathbf{D_3}.\text{cost} = \mathbf{D_1}.\text{cost}$ \\
+\> \hspace{1.2cm} $+ (\mathbf{D_3}.\text{num\_records}) *
+            \log(\mathbf{D_3}.\text{num\_records})\ ;$
+\end{irulepostopt}
+\end{minipage}
+\label{fig:msort}
+}
+\end{tabular}
+}
+\caption{I-rule}
+\label{fig:irules}
+\end{centeredfigure}
+
+The actions associated with an I-rule are defined in three parts.  
+The first part, or \emph{test}, is a boolean expression whose
+value determines whether or not the rule can be applied.
+
+The second part, or \emph{pre-opt statements}, is a set of descriptor
+assignment statements that are executed only if the test is true and
+\emph{before} any of the inputs $x_i$ of $E$ are optimized.  Additional
+parameters of nodes are usually assigned in the pre-opt section.  This
+is necessary before any of the nodes on the right side can be
+optimized.
+
+The third part, or \emph{post-opt statements}, is a set of descriptor
+assignment statements that are executed \emph{after} all $x_i$ are
+optimized.  Normally, the post-opt statements compute cost properties
+that can only be determined once the inputs to the algorithm are
+completely optimized and their costs known.  This \emph{does not},
+however, imply a bottom-up optimization strategy.  It simply means that
+although I-rules are applied to parents before their children are
+optimized, the \emph{cost} (and other properties in the post-opt
+section) of the parent cannot be computed until the children have been
+optimized.
+
+\begin{example}
+\label{ex:mergesort}
+Equation~(\ref{eq:msort}) (in Figure~\ref{fig:msort}) shows the I-rule
+that implements the SORT operator by Merge\_sort.
+\end{example}
+
+\subsection{Null algorithm}
+\label{sec:null}
+Recall that, in Section~\ref{sec:intro}, we mentioned that Prairie
+allows users to treat all operators and algorithms as first-class
+objects, \ie all operators and algorithms are explicit, in contrast to
+enforcers in Volcano or glue in Starburst.  This requires that Prairie
+provide a mechanism where users can also ``delete'' one or more of the
+explicit operators from expressions.  This is done by having a special
+class of I-rules that have the form given by
+Equation~(\ref{eq:generalnullalg}) in Figure~\ref{fig:generalnullalg}.
+The left side of the rule is a single abstract operator $O$ with one
+stream input $S_1$.  The right side of the rule is an algorithm called
+``Null'' with the same stream input but with a different descriptor.
+As the name suggests, the Null algorithm is supposed to pass its input
+unchanged to algorithms above it in an operator tree.  This is
+accomplished in the I-rule as follows.
+
+The test for this I-rule is always TRUE, \ie any node in an operator
+tree with $O$ as its operator can be implemented by the Null
+algorithm.  The actions associated with this rule have a specific
+pattern.  The pre-opt section consists of three
+statements.  The first statement copies the descriptor of the operator
+$O$ to the algorithm Null.  The second statement sets the descriptor of
+the stream $S_1$ on the right side to the descriptor of the stream
+$S_1$ on the left side.  Why is it necessary to do this?  The key lies
+in the third statement.  This statement copies the property
+``property'' of the operator $O$ node on the left side to the
+``property'' of the input stream $S_1$ on the right side.  Since
+left-hand side descriptors cannot be changed in an I-rule, a new
+descriptor $\mathbf{D_3}$ is necessary for $S_1$ to convey the property
+propagation information.
+
+The post-opt section in the I-rule has only a cost-assignment
+statement; this simply sets the cost of the Null node to the cost of
+its optimized input stream.
+
+The Null algorithm, therefore, serves to effectively transform a single
+operator to a no-op.
+
+\begin{example}
+Equation~(\ref{eq:nullsort}) (in Figure~\ref{fig:nullsort}) shows the
+I-rule that rewrites the SORT operator to use a Null algorithm.
+\end{example}
+
+\begin{centeredfigure}
+\def\subfigtopskip{0pt}
+\myshadowbox{
+\begin{tabular}{c}
+\subfigure[General form of a ``Null'' I-rule]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\begin{irule}
+O(S_1):\mathbf{D_2} \Longrightarrow
+   \text{Null}(S_1:\mathbf{D_3}):\mathbf{D_4} \label{eq:generalnullalg}
+\end{irule}
+TRUE
+\begin{irulepreopt}
+\> $\mathbf{D_4} = \mathbf{D_2}\ ;$ \\
+\> $\mathbf{D_3} = \mathbf{D_1}\ ;$ \\
+\> $\mathbf{D_3}.\text{property} = \mathbf{D_2}.\text{property}\ ;$
+\end{irulepreopt}
+\begin{irulepostopt}
+\> $\mathbf{D_4}.\text{cost} = \mathbf{D_3}.\text{cost}\ ;$
+\end{irulepostopt}
+\end{minipage}
+\label{fig:generalnullalg}
+}
+\\ \hline
+%%%
+\subfigure[Null sort algorithm]
+{
+\setlength{\topsep}{0pt}
+\scriptsize
+\begin{minipage}[b]{0.86\linewidth}
+\vspace*{4pt}
+\begin{irule}
+\text{SORT}(S_1):\mathbf{D_2} \rulespace \Longrightarrow 
+   \text{Null}(S_1:\mathbf{D_3}):\mathbf{D_4} \label{eq:nullsort}
+\end{irule}
+TRUE
+\begin{irulepreopt}
+\> $\mathbf{D_4} = \mathbf{D_2}\ ;$ \\
+\> $\mathbf{D_3} = \mathbf{D_1}\ ;$ \\
+\> $\mathbf{D_3}.\text{tuple\_order} = \mathbf{D_2}.\text{tuple\_order}\ ;$
+\end{irulepreopt}
+\begin{irulepostopt}
+\> $\mathbf{D_4}.\text{cost} = \mathbf{D_3}.\text{cost}\ ;$
+\end{irulepostopt}
+\end{minipage}
+\label{fig:nullsort}
+}
+\end{tabular}
+}
+\caption{The ``Null'' algorithm concept}
+\label{fig:null}
+\end{centeredfigure}

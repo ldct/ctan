@@ -1,0 +1,275 @@
+% The parnotes package
+% Notes after every paragraph, or elsewhere
+% Copyright (c) 2016 Chelsea Hughes
+%
+% This work is distributed under the LaTeX Project Public License,
+% version 1.3 or later, available at
+%     http://www.latex-project.org/lppl.txt
+% I currently maintain this project (comprising parnotes.sty, parnotes.tex,
+% README.md, and the derived file parnotes.pdf) and will receive error reports at
+%     https://github.com/chelh/LaTeX-parnotes
+%
+% This package was started due to a question at the TeX Stack Exchange:
+%     http://tex.stackexchange.com/questions/34746/
+%
+% Thanks to Stack Exchange users Ahmed Musa, Bruno Le Floch, and David Carlisle.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{parnotes}[2016/08/15 rev. 3 Notes after every paragraph, or elsewhere]
+
+%
+% These are the user-modifiable format commands
+%
+
+% Format for parnotes - \PN@notes@shape is blank (\relax) by default
+\providecommand{\parnotefmt}[1]{\footnotesize%
+                \PN@notes@shape\PN@narrower@optional\noindent #1}
+% Number format (arabic, roman, etc.) for the parnote mark counter
+\providecommand{\theparnotemark}{\arabic{parnotemark}}
+% Minimum vertical space before and after parnotes
+\providecommand{\parnotevskip}{\medskipamount}
+% Full command used between parnotes
+\providecommand{\parnoteintercmd}{\hspace{1em plus 0.3em minus 0.2em}}
+% Basic formatting for parnote marks
+\providecommand{\parnotecusmarkfmt}[1]{\textsuperscript{#1}}
+
+%
+% Internal variables below this line
+%
+
+
+% This holds all the parnote text
+\global\def\PN@text{}
+% Counter for parnote marks
+\newcounter{parnotemark}
+% autopn environment name
+\def\@PN@autopn{autopn}
+% True if currently setting parnotes
+\newif\ifPN@inparnotes
+% Commands used to disable indentation for the next paragraph
+\def\PN@disable@indent{\@afterindentfalse\@afterheading}
+
+%
+% Optionally reset the counter within \parnotes
+%
+\let\PN@reset@optional\relax
+\DeclareOption{restart}{\def\PN@reset@optional{\parnotereset}}
+%
+% Parnote marks are arabic by default, but an option changes them to roman
+%
+\DeclareOption{roman}{\renewcommand\theparnotemark{\roman{parnotemark}}}
+% breakwithin just changes \parnoteintercmd
+\DeclareOption{breakwithin}{\renewcommand{\parnoteintercmd}{\\}}
+% And indentafter just clears \PN@disable@indent
+\DeclareOption{indentafter}{\let\PN@disable@indent\relax}
+%
+% Set parnotes using \narrower if that option is specified
+%
+\let\PN@narrower@optional\relax
+\DeclareOption{narrower}{\let\PN@narrower@optional\narrower}
+% Allow the user to disable separators between multiple parnote marks
+\DeclareOption{nomultiple}{\def\FN@mf@prepare{\relax}\def\FN@mf@check{\relax}}
+%
+% Font-changing options
+%
+\let\PN@notes@shape\relax
+\DeclareOption{notesrm}{\let\PN@notes@shape\rmfamily}
+\DeclareOption{notessf}{\let\PN@notes@shape\sffamily}
+\DeclareOption{notesit}{\let\PN@notes@shape\itshape}
+% Finally process the options
+\ProcessOptions\relax
+
+%
+% Provide a null implementation of \phantomsection in case hyperref
+% isn't loaded
+%
+\providecommand\phantomsection{}
+
+% Later, we'll check to see if this command was redefined
+\let\parnotemarkfmt\@gobble
+
+%
+% A wrapper for \PN@parnote@real. Takes an optional (manually-specified)
+% mark and mandatory note text, and transforms them into the two mandatory
+% arguments (mark and note text) for \PN@parnote@real. If no mark is
+% specified, it will increment the counter parnotemark and pass its FULLY
+% EXPANDED text value to \PN@parnote@real. That's two cases:
+%
+% 1: \parnote[MARK]{TEXT} -> \PN@parnote@real{MARK}{TEXT}
+% 2: \parnote{TEXT}       -> \PN@parnote@real{EXPANDED COUNTER}{TEXT}
+%
+% \parnote supports behavior like the stable option of the package
+% footmisc, by Robin Fairbairns: If encountered in the Table of Contents,
+% it will do nothing and expand nothing. That adds two more cases:
+%
+% 3: \parnote[MARK]{TEXT} -> {}
+% 4: \parnote{TEXT}       -> {}
+%
+
+\long\def\parnote{%
+\ifx\@gobble\parnotemarkfmt\else
+    % Crash if the user has defined \parnotemarkfmt, as this is
+    % no longer supported
+    \PackageError{parnotes}{%
+        Cannot use custom definition of \protect\parnotemarkfmt\MessageBreak
+        in parnotes rev. 2 or later. Use
+        \protect\theparnotemark\MessageBreak
+        and \protect\parnotecusmarkfmt\space instead%
+    }{%
+        You've used an option that is no longer supported.
+        Downgrade back\MessageBreak
+        to parnotes rev. 1, or redefine \protect\theparnotemark\space
+        and \protect\parnotecusmarkfmt\MessageBreak
+        instead of \protect\parnotemarkfmt. See section
+        2.2 of the parnotes manual for\MessageBreak
+        details.
+    }%
+\fi
+% This incorporates changes suggested by David Carlisle
+\relax\ifx\@footnotetext\TX@trial@ftn\else
+    \ifx\protect\@typeset@protect
+        \expandafter\expandafter\expandafter\PN@check@args
+    \else
+        \expandafter\expandafter\expandafter\@gobble
+    \fi
+\fi
+}
+\def\PN@check@args{%
+        \@ifnextchar [
+                \PN@parnote@twoargs% Case 1
+                \PN@parnote@onearg% Case 2
+}
+\DeclareRobustCommand\PN@gobble@opt{%
+    \@ifnextchar [
+        \PN@gobble@opt@@% Case 3
+        \@gobble% Case 4
+}
+\def\PN@parnote@twoargs[#1]#2{\PN@parnote@real{#1}{#2}}
+\def\PN@parnote@onearg#1{%
+    % Fully expand the new counter value, as text
+    \begingroup\protected@edef\@x{\endgroup\noexpand\PN@parnote@real%
+                                  {\theparnotemark}}\@x{#1}%
+    \global\advance\c@parnotemark\@ne
+}
+\def\PN@gobble@opt@@[#1]#2{}
+
+%
+% Collects tokens into \PN@text, to be set when \parnotes is called.
+% Everything added to \PN@text is expanded first. Takes two MANDATORY
+% arguments, a mark and some note text.
+%
+\long\def\PN@parnote@real#1#2{%
+    \parnotemark{#1}%
+    % Unless this is the first parnote in \PN@text, add a separator first
+    \unless\ifx\PN@text\@empty\g@addto@macro\PN@text{\parnoteintercmd}\fi
+    % Redefine \@currentlabel to the parnote label, so \label works
+    \g@addto@macro\PN@text{\phantomsection\def\@currentlabel{#1}}%
+    \g@addto@macro\PN@text{\parnotemark{#1}\nolinebreak\thinspace#2}%
+}
+
+%
+% Definitions to get multiple consecutive parnotes/footnotes working, as
+% in footmisc and manyfoot; this is cribbed directly from footmisc
+%
+\providecommand*{\multiplefootnotemarker}{3sp}
+\providecommand*{\multfootsep}{,}
+\providecommand\FN@mf@prepare{%
+    \kern-\multiplefootnotemarker
+    \kern\multiplefootnotemarker\relax
+}
+\providecommand\FN@mf@check{%
+    \ifdim\lastkern=\multiplefootnotemarker\relax
+        \edef\@x@sf{\the\spacefactor}%
+        \unkern
+        \textsuperscript{\multfootsep}%
+        \spacefactor\@x@sf\relax
+    \fi
+}
+
+%
+% Sets the parnote mark (included as a MANDATORY argument)
+%
+\newcommand\parnotemark[1]{%
+    \leavevmode
+    \ifhmode
+        % Save the spacefactor, like \footnote
+        \edef\@x@sf{\the\spacefactor}%
+        \FN@mf@check
+        \nobreak
+    \fi
+    \parnotecusmarkfmt{#1}%
+    \FN@mf@prepare
+    \ifhmode\spacefactor\@x@sf\fi
+    \relax
+}
+
+%
+% Calls \PN@parnotes@real, if there are parnotes to set.
+%
+\newcommand\parnotes{%
+    \unless\ifx\PN@text\@empty
+        \expandafter\PN@parnotes@real
+    \fi
+}
+
+\def\PN@parnotes@real{%
+    % We call \par later, so this avoids recursion with \PN@parnotes@auto
+    \PN@inparnotestrue
+    \unless\ifvmode\par\fi
+    % Avoid page breaks between a paragraph and its parnotes
+    \nopagebreak\addvspace{\parnotevskip}%
+    {\parnotefmt{\PN@text}\par}%
+    \global\def\PN@text{}%
+    \addvspace{\parnotevskip}%
+    %
+    % These can be enabled or disabled by package options
+    %
+    \PN@disable@indent
+    \PN@reset@optional
+    \PN@inparnotesfalse
+}
+
+\newenvironment{autopn}{%
+    %
+    % Insert \PN@parnotes@auto into \par and \@par
+    % We can't just do \@setpar{\PN@parnotes@auto\@@par} since autopn
+    % could be nested within a list
+    %
+    \let\PN@par\par
+    \def\par{\PN@parnotes@auto\PN@par}%
+    \def\@par{\PN@parnotes@auto\@@par}%
+}
+{\PN@parnotes@auto} % At the environment's end, set any notes we've missed
+
+%
+% If autopn calls parnotes, check for nested environments, and that this
+% isn't a call to \par from within \PN@parnotes@real, AND that there are
+% parnotes to set
+%
+\def\PN@parnotes@auto{%
+    \ifx\@currenvir\@PN@autopn
+        \unless\ifPN@inparnotes
+            \unless\ifx\PN@text\@empty
+                \expandafter\PN@parnotes@real
+            \fi
+        \fi
+    \fi
+}
+
+%
+% Set parnote counter to 1
+%
+\newcommand\parnotereset{\setcounter{parnotemark}{1}}
+% A variant also clears \PN@text
+\newcommand\parnoteclear{%
+    \gdef\PN@text{}%
+    \parnotereset
+}
+
+%
+% A wrapper around \ref to provide formatted parnote references
+%
+\newcommand\parnoteref[1]{\parnotemark{\ref{#1}}}
+
+% Set parnote mark counter to 1 initially
+\parnotereset

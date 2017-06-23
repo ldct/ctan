@@ -1,0 +1,381 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%       csp2e.tex               ->      hack guide to zed-csp.sty 
+
+%       (c) Jim Davies September 1994  >> Version 0 <<
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt]{article}
+
+% \usepackage[yy]{lucbr} 
+
+% Uncomment the above line if you have the Lucida fonts and want to
+% use them to set csp.  Note that you may have to change the [yy]
+% option if you are not using the Y&Y font naming convention. 
+
+\usepackage{zed-csp}
+
+\advance\textwidth 30mm
+\advance\oddsidemargin -15mm 
+\advance\evensidemargin -15mm 
+\advance\textheight 35mm
+\advance\topmargin -20mm
+
+\begin{document} \thispagestyle{empty}
+
+\def\AMS{%
+   $\cal{A}$
+   \kern-.5em\lower.5ex\hbox{$\cal{M}$}\kern-.125em$\cal{S}$}
+
+\parindent 0pt
+\parskip 10pt
+
+{\huge\bf Setting real-time CSP}
+
+\vskip 2mm
+
+{\Large Jim Davies}
+
+\vskip 8mm
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+
+The language and models of CSP have undergone a gradual evolution
+since the publication of the first CSP textbook---Hoare's {\sl
+Communicating Sequential Processes\/} (Prentice-Hall, 1985).  The
+forthcoming text on real-time CSP will provide for some
+degree of standardisation.  
+
+In parallel, we hope to provide a standard set of macros for setting
+documents which use CSP notation.  This will allow users to exchange
+documents in electronic form, and will form part of the user interface
+to the language tools.
+
+The macros are defined by a style file called \verb|zed-csp.sty|.
+This should work with \LaTeXe.  Inquiries, suggestions, or complaints
+should be addressed to 
+
+\begin{center}
+  {\tt Jim.Davies@comlab.ox.ac.uk}.
+\end{center}
+
+Note that this is a fairly quick fix of the style to enable myself and
+others to use the improved facilities offered by the new version of
+\LaTeX.  It has not been rigorously tested, although it seems to work
+for me.  
+
+\section{Symbols}
+
+We can divide the symbols used into three separate classes: symbols
+for the language itself, symbols used in the definition of the
+semantics, and symbols used in the specification language.  
+
+\subsection{The language of real-time CSP}
+
+The operators of real-time CSP are set using macros of the same name.
+The macros for atomic operators begin with an uppercase letter; the
+same is true for those representing indexed versions of parallel and
+choice operators.  All other macros are lowercase throughout.  Some
+operators accept optional arguments, but no argument is compulsory.
+
+When an operator with an optional argument appears within an optional
+argument, \LaTeX may require assistance if it is to parse the
+expression correctly.  In these circumstances, we use an extra pair of
+braces to delimit the process expression: e.g., 
+\begin{center}
+  \verb|\Ftf[{P \parallel[A] Q}]|.
+\end{center}
+
+\begin{tabular}{p{2in}p{1.5in}c} \\ \\
+bottom          & \verb|\Bottom|        & $ \Bottom  $  \\[1ex]
+stop            & \verb|\Stop|          & $ \Stop    $  \\[1ex]
+skip            & \verb|\Skip|          & $ \Skip    $  \\[1ex]
+wait            & \verb|\Wait|          & $ \Wait $     \\[1ex]
+prefix          & \verb|\then|          & $ \then $     \\[1ex]
+external choice & \verb|\extchoice|     & $ \extchoice $ \\[1ex]
+internal choice & \verb|\intchoice|     & $ \intchoice $ \\[1ex]
+hiding          & \verb|\hide|          & $ \hide $ \\[1ex]
+parallel        & \verb|\parallel[A][B]|& $ \parallel[A][B] $\\[1ex]
+interleaving    & \verb|\interleave|    & $ \interleave $ \\[1ex]
+sharing         & \verb|\parallel[C]|   & $ \parallel[C] $ \\[1ex]
+recursion       & \verb|\mu X \spot P|  & $ \mu X \spot P $ \\[1ex]
+timeout         & \verb|\timeout[t]|    & $\timeout[t]$\\[1ex]
+transfer        & \verb|\transfer[t]|   & $\transfer[t]$\\[1ex]
+interrupt       & \verb|\interrupt|     & $\interrupt$ \\[1ex]
+timer           & \verb|\at|            & $\at$ \\[1ex]
+indexed external choice & \verb|\Extchoice| & $ \Extchoice $ \\[1ex]
+indexed internal choice & \verb|\Intchoice| & $ \Intchoice $ \\[1ex]
+indexed alphabet parallel & \verb|\Parallel| & $ \Parallel $ \\[1ex]
+indexed interleaving & \verb|\Interleave| & $ \Interleave $
+\end{tabular}
+
+\subsection{Parallel combinations}
+
+There are several ways to denote the parallel combination of
+two processes in CSP.  Firstly, we can describe the set of events upon
+which they must cooperate: e.g., in the process
+\[
+P \parallel[C] Q
+\]
+components $P$ and $Q$ must cooperate upon every event from the shared
+set $C$.  Alternatively, we can declare two alphabets
+\begin{eqnarray*}
+\alpha P & = & A \\
+\alpha Q & = & B
+\end{eqnarray*}
+and write
+\[
+P \parallel Q
+\]
+to denote the parallel combination in which $P$ and $Q$ must cooperate
+upon every event in the intersection of their alphabets.  Finally, we
+can add explicit alphabet information to the parallel operator: e.g.,
+\[
+P \parallel[A][B] Q
+\]
+is equivalent to the above parallel combination, given the values
+chosen for $\alpha P$ and $\alpha Q$.
+
+\subsection{Delays and timers}
+
+We write $\Wait t ; P$ to denote the process which will delay for time
+$t$ before behaving as $P$.  The wait process is a delayed form of
+termination $\Skip$: i.e.,
+\begin{eqnarray*}
+\Wait 0 & = & \Skip
+\end{eqnarray*}
+To model a nondeterministic delay, we can use an internal choice
+operator indexed by a range of time values:
+\[
+\Intchoice_{t \in [t_1,t_2)} \Wait t
+\]
+A convenient abbreviation for this involves overloading the $\Wait$
+operator: e.g.,
+\[
+\Wait [t_1,t_2)
+\]
+abbreviates the above choice.
+
+External events in a process description are performed in cooperation
+with the environment of that process.  It is therefore quite likely
+that an external event will not occur as soon as the process is ready.
+The time elapsed between the offer of an event and its occurrence can
+influence future behaviour; the rest of the process description should
+be allowed to refer to this time.
+
+Accordingly, real-time CSP includes a timer construct, or
+`passage-of-time' operator.  We write
+\[
+a \at t \then P \qquad \qquad \hbox{\verb|a \at t \then P|}
+\]
+to denote a process which is initially ready to engage in event $a$.
+The time variable $t$ is assigned the relative time at which $a$
+occurs.  This is the same as the elapsed time between control being
+passed to this process---at which point the offer of $a$ is made---and
+the event $a$ actually occuring.
+
+A useful extension to this, which adds nothing to the expressivity of
+the language but can make for more intelligible process descriptions,
+is the offer timeout.  We write
+\[
+a \at t \{ d \} \then P \qquad \qquad
+\hbox{\verb|a \at t \{ d \} \then P|}
+\]
+to denote a process which offers to perform $a$, and will store the
+time of occurrence in $t$, but will withdraw the offer if it has not
+been accepted by time $d$.  (This form of timeout was suggested
+by Guy Leduc for his version of timed LOTOS.)
+
+\section{Mathematical language}
+
+The semantic models of CSP come with a great deal of notational
+baggage.  We need to define operators to project information out of
+traces, refusals, and timed failures.  There is also a specification
+language based upon the timed semantics, and the names used for the
+models themselves.
+
+\subsection{Logic, sets, and sequences}
+
+\begin{tabular}{c@{\hspace{0.55in}}c@{\hspace{0.55in}}c} \\
+\begin{tabular}[t]{@{}lc}
+\verb|\defs| & $ \defs $ \\[0.6ex]
+\verb|\mu| &  $ \mu $ \\[0.6ex]
+\verb|\lambda| & $ \lambda $ \\[0.6ex]
+\verb|\exists| &  $ \exists $ \\[0.6ex]
+\verb|\forall| &  $ \forall $ \\[0.6ex]
+\verb|\spot| &  $ \spot $ \\[0.6ex]
+\verb|\nat| &  $ \nat $ \\[0.6ex]
+\verb|\num| & $ \num $ \\[0.6ex]
+\verb|\rat| & $ \rat $ \\[0.6ex]
+\verb|\real| & $ \real $ \\[0.6ex]
+\verb|\seq| & $ \seq $
+\end{tabular} &
+\begin{tabular}[t]{lc}
+\verb|\land| &  $ \land $ \\[0.6ex]
+\verb|\lor| &  $ \lor $ \\[0.6ex]
+\verb|\Land| & $ \Land $ \\[0.6ex]
+\verb|\Lor| & $ \Lor $ \\[0.6ex]
+\verb|\lnot| &  $\lnot $ \\[0.6ex]
+\verb|\implies| & $ \implies $ \\[0.6ex]
+\verb|\iff| &  $ \iff $ \\[0.6ex]
+\verb|\upto| & $\upto$ \\[0.6ex]
+\verb|\le| & $ \le $ \\[0.6ex]
+\verb|\ge| & $ \ge $ \\[0.6ex]
+\verb|\project| & $ \project $
+\end{tabular} &
+\begin{tabular}[t]{lc}
+\verb|\power| &  $ \power  $ \\[0.6ex]
+\verb|\finset| & $ \finset $ \\[0.6ex]
+\verb|\cross| &  $ \cross $ \\[0.6ex]
+\verb|\union| & $ \union $ \\[0.6ex]
+\verb|\inter| & $ \inter $ \\[0.6ex]
+\verb|\Union| & $ \Union $ \\[0.6ex]
+\verb|\Inter| & $ \Inter $ \\[0.6ex]
+\verb|\dom| & $ \dom$ \\[0.6ex]
+\verb|\ran| & $ \ran$ \\[0.6ex]
+\verb|\emptyset| & $\emptyset$ \\[0.6ex]
+\verb|\set{x}| & $ \set{x} $
+\end{tabular}
+\end{tabular}
+
+\subsection{Operators on traces}
+
+\begin{tabular}{p{1.95in}p{1.75in}c} \\
+empty trace     & \verb|\nil|           & $\nil $ \\[0.6ex]
+trace   & \verb|\trace{e_1,e_2}|        & $\trace{e_1,e_2}$\\[0.6ex]
+catenation of traces & \verb|\cat|      & $\cat $ \\[0.6ex]
+count           & \verb|\cnt|           & $\cnt $ \\[0.6ex]
+during          & \verb|\during|        & $\during $ \\[0.6ex]
+tick event      & \verb|\tick|          & $\tick$ \\[0.6ex]
+subsequence     & \verb|\subseq|        & $\subseq$ \\[0.6ex]
+data values     & \verb|\data|          & $\data$ 
+\end{tabular}
+
+\subsection{Projection functions}
+
+\begin{tabular}{p{1.95in}p{1.75in}l} \\
+  begin         & \verb|\Begin    |  & $\Begin$   \\[0.4ex]
+  end           & \verb|\End      |  & $\End  $   \\[0.4ex]
+  head          & \verb|\Head     |  & $\Head $   \\[0.4ex]
+  first         & \verb|\First    |  & $\First$   \\[0.4ex]
+  tail          & \verb|\Tail     |  & $\Tail $   \\[0.4ex]
+  front         & \verb|\Front    |  & $\Front$   \\[0.4ex]
+  last          & \verb|\Last     |  & $\Last $   \\[0.4ex]
+  times         & \verb|\Times    |  & $\Times$   \\[0.4ex]
+  events        & \verb|\Events   |  & $\Events$  \\[0.4ex]
+\end{tabular}
+
+$\Times$ and $\Events$ are projection functions from timed traces to
+sequences of times and sequences of events respectively.  $\Head$ and
+$\Tail$ may be applied to any sequence.  $\Begin$ and $\End$ may be
+applied to timed traces and timed refusals.  $\First$ is a synonym for
+$\Head$. $\Front$ is the dual of $\Tail$.  $\Last$ is the dual of
+$\Head$.
+
+To denote the set of events mentioned in a timed or untimed trace or
+refusal, we prefix the name of the object with $\alpha$.  For example,
+the set of events mentioned in the timed trace $s$ would be written
+$\alpha s$.  Earlier version of real-time CSP did this using the
+$\sigma$ operator to avoid confusion with process alphabets.  Where
+there is scope for confusion, we suggest that this practice is
+continued.
+
+\subsection{Semantic functions, models, and spaces}
+
+In {\sl  Advanced CSP}, we use long names for the semantic functions:
+
+\begin{tabular}{p{1.95in}p{1.75in}l} \\
+semantics       & \verb|\Semantics|     & $\Semantics$ \\
+traces          & \verb|\Traces|        & $\Traces$ \\
+failures        & \verb|\Failures|      & $\Failures$ \\
+timed failures  & \verb|\TimedFailures| & $\TimedFailures$ \\
+divergences     & \verb|\Divergences|   & $\Divergences$ \\
+infinites       & \verb|\Infinites|     & $\Infinites$
+\end{tabular} 
+
+Any semantic function macro can be given an optional argument. This
+will be set within semantic brackets: e.g., \verb|\Traces[P]| yields
+$\Traces[P]$.  To obtain the semantic brackets alone, use the
+\verb|\semb| macro; this takes a single compulsory argument.
+Alternatively, the macros \verb|\leftsemb| and \verb|\rightsemb|
+produce left and right semantic brackets respectively.
+
+In theoretical papers, we often need to refer to several models,
+functions, and associated spaces.  To make things easier on ourselves,
+we adopt short names for these mathematical objects, using subscripts
+to identify the model concerned.  For example, the objects associated
+with the timed failures model are all subscripted with $TF$.
+
+The models themselves have macros beginning \verb|\M|:
+
+\begin{tabular}{p{2.4in}p{1.1in}l} \\
+traces                          & \verb|\Mut|   & $ \Mut  $     \\
+failures                        & \verb|\Muf|   & $ \Muf  $     \\
+failures-divergences            & \verb|\Mufd|  & $ \Mufd $     \\
+timed failures                  & \verb|\Mtf|   & $ \Mtf  $     \\
+timed failures-stability        & \verb|\Mtfs|  & $ \Mtfs $     \\
+timed infinite                  & \verb|\Mti|   & $ \Mti  $
+\end{tabular} 
+
+The matching semantic functions use \verb|\F| instead---e.g.,
+\verb|\Fut| for untimed traces---and the observation spaces use
+\verb|\S|.  
+
+\subsection{Refinement and satisfaction}
+
+The satisfaction notation employed in Hoare's {\sl Communicating
+Sequential Processes} has been retained.  We also have a refinement
+relation between processes, possibly indexed by the name of the model
+concerned.
+
+The satisfaction relation is set as follows: \verb|P \sat S| produces
+$P \sat S$.  The refinement relation is produced by \verb|\lessdet| (or
+\verb|refinedby|, a synonymbol).  
+
+\subsection{Specifications}
+
+To capture timing constraints at the level of the semantic models, we
+use a number of specification `macros'.  These are set using \LaTeX\
+macros which begin with an `m' (for macro) and are then capitalised.
+\par 
+\begin{tabular}{p{1.95in}p{1.75in}l} \\
+internal        & \verb|\mInternal  | & $ \mInternal $    \\[0.4ex]
+refuses         & \verb|\mRef       | & $ \mRef      $    \\[0.4ex]
+at              & \verb|\mAt        | & $ \mAt       $    \\[0.4ex]
+live            & \verb|\mLive      | & $ \mLive     $    \\[0.4ex]
+open            & \verb|\mOpen      | & $ \mOpen     $    \\[0.4ex]
+from            & \verb|\mFrom      | & $ \mFrom     $    \\[0.4ex]
+until           & \verb|\mUntil     | & $ \mUntil    $    \\[0.4ex]
+live from       & \verb|\mLiveFrom  | & $ \mLiveFrom  $   \\[0.4ex]
+open from       & \verb|\mOpenFrom  | & $ \mOpenFrom  $   \\[0.4ex]
+name of last    & \verb|\mNameOfLast| & $ \mNameOfLast $  \\[0.4ex]
+before          & \verb|\mBefore    | & $ \mBefore   $    \\[0.4ex]
+after           & \verb|\mAfter     | & $ \mAfter   $     \\[0.4ex]
+time of last    & \verb|\mTimeOfLast| & $ \mTimeOfLast $  \\[0.4ex]
+\end{tabular}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Discussion}
+
+\subsection{Dependencies}
+
+You must have the AMS fonts available, and the {\tt amsfonts}
+installation must have been performed for \LaTeXe.  This requires the
+{\tt mfnfss} package; it takes about twenty seconds. 
+
+\subsection{CSP and Z}
+
+You may have problems if you try to use the {\tt zed-csp} package with
+{\tt fuzz} or any style package that uses the AMS fonts.  The good
+news is that you shouldn't need them.  All of the AMS symbols are
+defined in the {\tt zed-csp} package, using the standard names.  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

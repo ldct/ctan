@@ -1,0 +1,404 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                              %
+%  Copyright (C) 2012 by Michiel Helvensteijn - www.mhelvens.net               %
+%                                                                              %
+%  http://latex-concepts.googlecode.com                                        %
+%                                                                              %
+%  This work may be distributed and/or modified under the                      %
+%  conditions of the LaTeX Project Public License, either                      %
+%  version 1.3 of this license or (at your option) any later                   %
+%  version. The latest version of this license is in                           %
+%      http://www.latex-project.org/lppl.txt                                   %
+%  and version 1.3 or later is part of all distributions of                    %
+%  LaTeX version 2005/12/01 or later.                                          %
+%                                                                              %
+%  This work has the LPPL maintenance status `author-maintained'.              %
+%                                                                              %
+%  The Current Maintainer of this work is Michiel Helvensteijn.                %
+%                                                                              %
+%  This work consists of the files concepts.tex and concepts.sty.              %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[a4paper]{packagedoc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Setup                                                                        %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\moretexcs{%
+  NewConcept,ConceptOption,ConceptName,ConceptSymbol,%
+  ConceptSymbols,ConceptNameAndSymbols,delta,d,product,p,%
+  prd%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Global Changes                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\changes{0.0.1}{2012/11/16}{initial version}
+\changes{0.0.2}{2012/11/25}{put the package into a .dtx file}
+\changes{0.0.3}{2012/12/01}{separated the .dtx file from the .sty file}
+\changes{0.0.4}{2012/12/08}{finished the documentation and made a few fixes}
+\changes{0.0.5}{2012/12/18}{implemented symbol-list commands and improved documentation}
+\changes{0.0.6}{2013/1/1}{made concept `options' mandatory + fixed some spacing bugs}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction and Motivation}                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Documents with a lot of formal notation (such as papers about mathematics or
+theoretical computer science) can introduce a number of concepts that need
+to be managed. They'll have \emph{names}, \emph{descriptions} and associated
+\emph{symbols} that need to be typeset, as well as \emph{relations} between them.
+
+I'm now writing my PhD thesis in the field of Theoretical Computer Science.
+It will be especially heavy with definitions. I need to make sure that every
+symbol is associated with no more than one concept and that all names and
+symbols are consistently used. I'll also need to generate a glossary with
+this information. But I don't want to manually keep track
+of all that. It's error-prone and it takes time. I'd rather focus on the theory.
+
+There are already techniques and packages that help lighten the load:
+%
+\begin{itemize}
+  \item Rather than use any names or symbols directly in the text, declare
+        a macro for each one. If you ever need to change one, you'll only
+        have to do it in one place. You'll also be far less likely to
+        introduce any typos.
+  \item There are packages out there to keep track of and output a glossary%
+        \footnote{It is sometimes called a nomenclature.
+                  The distinction is subtle.}.
+\end{itemize}
+
+But I'm not aware of any technique or package to ensure I'm not
+using a name or symbol inconsistently, thereby potentially
+confusing the reader. And even if there was, using all these techniques at the
+same time is still a lot of overhead.
+
+I wrote the \textsf{concepts} package to automate all this stuff for me. Every
+time I introduce a new concept in my thesis I `declare' it once. The package
+then defines all necessary macros for me and checks that I'm using them
+properly.
+
+In \textsf{concepts}~\fileversion{}, most of the above already works but it
+cannot generate a glossary yet. In future versions, it will interface with
+the \textsf{glossaries} package to accomplish this, and more.
+
+I'm also planning to implement a rudimentary typesystem, to catch even more
+kinds of mistakes in symbol usage. Also, I may want to integrate the
+|ligature| option from the \textsf{semantic} package, which allows you to
+choose arbitrary characters to typeset your symbols in math mode (with some
+restrictions).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Usage}                                                                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Every concept first has to be declared using the |\NewConcept| macro.
+Afterwards, its name and associated symbols can by typeset using other macros.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\NewConcept}{
+  \marg{concept key} \marg{options}
+}
+
+Every concept needs a unique \meta{concept key}, by which it will be identified
+for the rest of the document. This key can also be used to automatically
+derive the name of the concept as well as the macro used to typeset the name.
+
+Then you'll want to add \meta{options}. This argument takes
+a comma-separated list of |key=value| pairs. The following is a list of available
+options. Note that the option names are case-sensitive:
+%
+\begin{description}
+\item[name] the name of the concept\\
+            --- default: \meta{concept key}
+\item[Name] the capitalized name of the concept, for use in the beginning of
+            a sentence\\
+            --- default: \meta{name} with the first letter capitalized
+\item[plural] the plural form of the name\\
+              --- default: \meta{name}|s|
+\item[Plural] the capitalized, pluralized name of the concept\\
+              --- default: \meta{plural} with the first letter capitalized
+\item[namecmd] the `short' command that may be used to typeset the name of
+               this concept; this option *has* to be specified for
+               any command to be defined, but the |=value| part may
+               be omitted to get the default\\
+               --- default: |\|\meta{concept key}
+\item[symbols] a comma-separated list of symbols that may represent instances
+               of this concept, delimited by curly brackets\\
+               --- default: |{}| (the empty list)
+\item[symbolcmd] the `short' command that may be used to typeset a
+                 specific symbol
+\end{description}
+
+Here are a few examples which will also be used to illustrate the other commands:
+
+\begin{latex-example}
+\NewConcept{swproduct}{
+  name      = software product,  % options 'plural', 'Plural'
+  Name      = Software Product,  %   are implicitly defined
+  namecmd   = \product,          % defines \product
+  symbols   = {p},               % p represents a product
+  symbolcmd = \p                 % defines \p
+}
+\end{latex-example}
+%
+\begin{latex-example}
+\let\delta\relax \let\d\relax  % I won't be using these
+\NewConcept{delta}{
+  namecmd,                     % defines \delta
+  symbols   = {x, y, z},       % x, y and z represent deltas
+  symbolcmd = \d               % defines \d
+}
+\end{latex-example}
+
+There are certain restrictions on new concept declarations. You may
+not use the same \meta{concept key} more than once. You may not use the same
+symbol for more than one concept (this is a feature; the package will
+report an error if you do). Also, both \meta{namecmd} and \meta{symbolcmd} are
+subject to the rules governing |\newcommand|. They may not be reused, or you
+will see a standard \LaTeX{} error. Finally, any value you supply must behave
+properly in an expansion-only context, e.g. be robust.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\ConceptOption}{
+  \marg{concept key} \marg{option key}
+}
+
+This command can be used to get back any option value given a
+specific \meta{concept~key} and \meta{option key}. For example:
+
+\begin{latex-example-show}
+\ConceptOption{delta}{Plural}
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+\edef\prd{\ConceptOption{swproduct}{namecmd}}%
+{\ttfamily\expandafter\detokenize\expandafter{\prd}}%
+  expands to ``\prd''.
+\end{latex-example-show}
+
+|\ConceptOption| is `fully expandable', meaning that it can expand at
+least down to the value that was given to the option. (This is not (yet)
+guaranteed for the other commands.)
+
+As you can observe from the |\product| example above, options that expect a
+command sequence are stored with an accompanying |\noexpand|. That means that
+in an |\edef| context, |\ConceptOption| expands down to the stored command but
+no further. After that you can expand it further if you wish.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\ConceptName}{
+  \movarg{\textasciicircum} \movarg{*} \marg{concept key}
+}
+
+With this command you can typeset the name of the concept with \meta{concept key}
+in any of four forms. The |^| modifier gives you the capitalized version. The |*|
+modifier gives you the plural version. The combination gives you both. The order
+between |^| and |*| doesn't matter.
+
+\begin{latex-example-show}
+\ConceptName^*{delta} can transform a \ConceptName{swproduct}.
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemetamacro{namecmd}{
+  \movarg{\textasciicircum} \movarg{*}
+}
+
+This is the `short' version of |\ConceptName|, specific for each concept that
+was declared with the |namecmd| option. It supports the same modifiers.
+
+\begin{latex-example-show}
+\delta^* can easily transform a \product.
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\ConceptSymbol}{
+  \marg{concept key} \oarg{symbol index}
+}
+
+This command typesets a specific symbol associated with a a given concept. It is
+always typeset in math mode. Specify the concept with the \meta{concept key}
+and the symbol with the \meta{symbol index}.
+
+The index is 1-based and points to a place in the symbol list provided with the
+concept options. If a concept has only one allocated symbol the index may be
+omitted. If there is more than one symbol, the index is mandatory.
+
+\begin{latex-example-show}
+\product^* have symbols like \ConceptSymbol{swproduct}.
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+$\ConceptSymbol{delta}[2] \cdot \ConceptSymbol{delta}[1] =
+ \ConceptSymbol{delta}[1] \cdot \ConceptSymbol{delta}[2]$
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemetamacro{symbolcmd}{
+  \momarg{symbol index}
+}
+
+This is the `short' version of |\ConceptSymbol|, specific for each concept that
+was declared with the |symbolcmd| option. The optional index is given directly
+following the command itself. It doesn't need any delimiters. However, you are
+allowed to use square brackets. See the list-variation of this short command
+below.
+
+\begin{latex-example-show}
+$(\d2 \cdot \d1)(\p) = \d2(\d1(\p)) = \d2(\p') = \p''$
+\end{latex-example-show}
+
+As you can see, this short construct requires a lot less space than the
+full |\ConceptSymbol| command, so its use is recommended for readability.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\ConceptSymbols}{
+  \marg{concept key}    \oarg{separator}
+  \oarg{last separator} \marg{symbol indices}
+}
+
+This command typesets a \meta{separator} separated list of symbols associated
+with the given concept, optionally with a different \meta{last separator}. Specify
+the concept with the \meta{concept key} and the symbol-list with the
+\meta{symbol indices}. \meta{separator} defaults to |,| and \meta{last separator}
+defaults to \meta{separator}. The whole list is typeset in math mode, so if
+you'd like a non-math delimiter, you need to use \verb|$| tokens.
+
+The indices are 1-based and point to a place in the symbol list provided with the
+concept options. The index-list is mandatory, but can be empty.
+
+\begin{latex-example-show}
+The symbols \ConceptSymbols{delta}{1,2,3} represent \delta*.
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+$\{\ConceptSymbols{delta}[;]{1,1,1}\}$ contains only \d1.
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+What about \ConceptSymbols{delta}[,][$ and $]{3, 2, 1}?
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+xx\ConceptSymbols{delta}{}xx
+\end{latex-example-show}
+
+If you need any symbol in the resulting list to have some decoration (like a
+prime, subscript or superscript) you can decorate the corresponding index
+accordingly. This currently only works for decorations that would be specified
+\emph{after} the symbol. Each element of \meta{symbol indices} still needs to
+start with the index itself:
+
+\begin{latex-example-show}
+\ldots such as the symbols in
+  $(\ConceptSymbols{delta}{1_1, 2'', 3^{\d1(\p)}})$.
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemetamacro{symbolcmd}{
+  \oarg{symbol indices}
+}
+
+This is the `short' version of |\ConceptSymbols|, specific for each concept that
+was declared with the |symbolcmd| option. The \meta{symbol indices} list needs
+to be delimited by square brackets as shown below.
+
+\begin{latex-example-show}
+$\forall \d[1,2] \in D:\ \d1 \| \d2\ \Rightarrow\ {}
+  \exists \d[3'] \in D:\ \d1 \prec \d3' \land \d2 \prec \d3'$
+\end{latex-example-show}
+%
+\begin{latex-example-show}
+xx\d[]xx\p[]xx
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\ConceptNameAndSymbols}{
+  \movarg{\textasciicircum} \marg{concept key}
+  \oarg{separator} \oarg{last separator}
+  \marg{symbol indices}
+}
+
+This command is the `hybrid' version of |\ConceptName| and |\ConceptSymbols|.
+It typesets the name of the concept followed by a \meta{separator} separated list
+of symbols associated with the given concept, optionally with a different
+\meta{last separator}. Specify the concept with the \meta{concept key} and the
+symbol-list with \meta{symbol~indices}. \meta{separator} defaults to |,| and
+\meta{last separator} defaults to |$ and $|. The name is typeset in text mode and
+the list is typeset in math mode.
+
+The indices are 1-based and point to a place in the symbol list provided with the
+concept options. The index-list is mandatory and cannot be empty.
+
+You can still supply the |^| modifier to capitalize the name but the choice
+between singular and plural form is determined by the number of \meta{symbol indices}.
+
+\begin{latex-example-show}
+We use \ConceptNameAndSymbols{delta}[,][$ and also $]{1,2,3}.
+\end{latex-example-show}
+
+For some other neat tricks, read the documentation of |\ConceptSymbols| above.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemetamacro{namecmd}{
+  \movarg{\textasciicircum} \oarg{symbol indices}
+}
+
+This is a `short' version of |\ConceptNameAndSymbols|,
+specific for each concept that was declared with the |namecmd| option.
+The \meta{symbol indices} list needs to be delimited by square brackets
+as shown below. The list is comma-delimited and the last (or only) delimiter is
+the word `and'.
+
+\begin{latex-example-show}
+\delta^[1,2] come before \delta[3]. 
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Future Work}                                                          %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Everything up to this version of the package has been a bit of an experiment
+for me. A way to get me started. I may still fix one or two issues for the
+0.0.x series, but I will soon start from scratch with all I've learned.
+
+There will be two major changes starting from version 0.1.0. First of all, the
+package will be built on top of the |glossaries| package, which already does
+much of the work I'm now doing manually. This was always the plan, as we'll
+want to typeset a glossary with our concepts, and I don't want to reinvent
+the wheel. The |glossaries| package is actively developed and has a great
+amount of features we can take advantage of. Secondly, I will program the
+0.1.0 series using \LaTeX3.
+
+Here is an incomplete list of the features I am planning to implement:
+\begin{itemize}
+  \item full integration with the \textsf{glossaries} package
+  \item typesetting a \emph{summary} of the concepts introduced in each chapter / section
+  \item management of \emph{tuples} and \emph{sets} of concept instances
+  \item management of \emph{subconcepts} plus a rudimentary \emph{typesystem} that
+        ensures concept instances are not used where a different concept is expected
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}                                                                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

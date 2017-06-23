@@ -1,0 +1,579 @@
+%\iffalse
+%
+% file: mkaddr.dtx
+%
+% This file is distributed as-is, with no warranty whatsoever.
+% Out of courtesy to others, please do not distribute the
+% files contained in this file separately, but always
+% together with this file and the documentation it contains.
+%
+%\fi
+%
+% \def\fileversion{3.1.1.1}
+% \def\filedate{1998/01/17 18:15:06}
+%
+% \iffalse
+%
+%<*driver>
+\documentclass{ltxdoc}
+%\CodelineIndex
+%\EnableCrossrefs
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{mkaddr.dtx}
+\end{document}
+%</driver>
+%\fi
+%
+%\iffalse
+% Source tree moved under RCS
+% ---------------------------
+% mkaddr.dtx,v
+% Revision 3.1.1.1  1998/01/17 18:15:06  root
+% Release code, checksum verified
+%
+% Revision 3.1  1998/01/17 17:13:48  root
+% Release code
+%
+% Revision 2.3  1997/12/06 21:15:31  root
+% *** empty log message ***
+%
+% Revision 2.2  1997/11/07 10:44:05  root
+% Release code.
+%
+% Revision 2.1.1.1  1997/11/04 05:06:07  root
+% Development branch
+%
+% Revision 2.1  1997/11/01 14:58:44  bennett
+% Release code.
+%
+% Revision 1.1  1997/10/29 08:17:52  root
+% Initial revision
+%
+%\fi
+%
+%
+% \title{The \texttt{mkaddr} Tcl script\thanks{This file is version number
+%    \fileversion{}.  It was last revised on
+%    \filedate{}.}}
+%
+% \author{Frank G. Bennett, Jr.}
+%
+% \maketitle
+%
+% \setcounter{StandardModuleDepth}{1}
+% \DeleteShortVerb{\|}
+% \MakeShortVerb{\"}
+%
+% \begin{abstract}
+% \noindent The utilities in this bundle
+% can be used together to generate address lists from
+% a database in the format used by the marvellous BBDB database
+% for Emacs.
+% \end{abstract}
+%
+% \CheckSum{392}
+%
+% \section{Installation and Use}
+%
+% The script is designed for use on a Unix system (if
+% you haven't already moved to Linux, you might consider
+% joining the gathering).  You will need to have Emacs installed
+% on your system.  You will also need the BBDB extensions,
+% which produce and maintain a database file, ".bbdb",
+% in your home directory.  You should also have the
+% AUC\TeX{} extensions to Emacs installed, for editing, compiling,
+% previewing and printing \LaTeX{} documents.  You will
+% also need "dvips" and, if (like me) you don't have
+% access to a PostScript printer, "ghostscript" --- or
+% some other combination of printing gear for which
+% page rotation is supported in the "graphics" bundle.  Your
+% \TeX{} system will need the files in the "graphics"
+% bundle, and the "autofilo" package from the "calendar"
+% bundle for making filofax page frames.
+%
+% In your \texttt{/etc} directory,
+% you will need a format file or files.  Each should
+% have the name "addresses", followed by an extension.
+% The extension(s) will be used by the first mandatory
+% option to the script.  On my system, I have two
+% format files, "mkaddr.Frank" and "mkaddr.Mieko",
+% which produce pages suitable for my own and my wife's
+% diary, respectively.  Each file is simply a \LaTeX{}
+% document, with "%%BODY%%" where the list of addresses
+% should be inserted.  An example is given below.  Note
+% that you will need to edit the script to reflect the
+% names of your format files.
+%
+% The ".bbdb" database is designed for use with email
+% systems, adding entries for your correspondents on
+% the fly as mail is received.  To make it easier to add entries for
+% people with whom you have not corresponded by email, you
+% may want to add a suitable chunk of elisp to your
+% ".emacs" file.  A chunk of such code is given below.
+% It sets your "f12" key to add a new entry, prompting
+% for details.  Edit to taste (especially note the
+% "[M]" and "[F]"; you will want to change these.
+%
+% Flags for extracting data from the list should be
+% put into the "Notes:" field, in square braces.
+%
+% Extract everything, edit and install the script,
+% install the style,
+% and install one or more format files.
+% Run the script and read the instructions.  On my system,
+% the command "mkaddr Frank [AaBb] [F]" will make a
+% file "mkaddr.tex" in the current directory, formatted
+% as specified in the format file "\etc\mkaddr.Frank",
+% containing all entries beginning with "A" or "a",
+% or "B" or "b", and flagged with "[F]".  Run the
+% file through \LaTeX{} and "dvips", and you have an address list.
+%
+%
+% \StopEventually{\PrintIndex}
+%
+% \section{Sample Format File}
+%    \begin{macrocode}
+%<*format>
+\documentclass{filoaddr}
+\begin{document}
+\begin{addresses}{%
+    topmargin=2cm,
+    rightmargin=3cm,
+    pageheight=172mm,
+    pagewidth=95mm,
+    columnsep=14pt,
+    punchcluster=3,
+    punchgroups=2,
+    interspace=51.25mm,
+    intraspace=19.25mm,
+    grip=5mm,
+    punchmargin=2mm,
+    punchpoints=15,
+    topspace=2pt,
+    bottomspace=1.5cm}
+%%BODY%%
+\end{addresses}
+\end{document}
+%</format>
+%    \end{macrocode}
+%
+% \section{Elisp for \texttt{.emacs}}
+%
+%    \begin{macrocode}
+%<*elisp>
+;; Essential add-on for BBDB
+(defun bbdb-create-external ()
+  "Prompt for and create a record.  Hacked from bbdb-read-new-record."
+  (interactive)
+  (let ((name (bbdb-read-string "Name: "))
+	(company (bbdb-read-string "Company: "))
+	(net (bbdb-split (bbdb-read-string "Network Address: ") ","))
+	(addrs 
+	 (let (L L-tail str addr)
+	   (while 
+	       (not 
+		(string= 
+		 ""
+		 (setq str 
+		       (bbdb-read-string 
+			"Address Description [RET when no more addrs]: "))))
+	     (setq addr (make-vector bbdb-address-length nil))
+	     (bbdb-record-edit-address addr str)
+	     (if L
+		 (progn (setcdr L-tail (cons addr nil))
+			(setq L-tail (cdr L-tail)))
+	       (setq L (cons addr nil)
+		     L-tail L)))
+	   L))
+	(phones 
+	 (let (L L-tail str)
+	   (while 
+	       (not 
+		(string= 
+		 ""
+		 (setq str
+		       (bbdb-read-string 
+			"Phone Location [RET when no more phones]: "))))
+	     (let* ((phonelist
+		     (bbdb-error-retry
+		      (bbdb-parse-phone-number
+		       (read-string 
+			"Phone: "
+			(and 
+			 bbdb-default-area-code 
+			 (format "(%03d) " bbdb-default-area-code))))))
+		    (phone (apply 'vector str
+				  (if (= 3 (length phonelist))
+				      (nconc phonelist '(0))
+				    phonelist))))
+	       (if L
+		   (progn (setcdr L-tail (cons phone nil))
+			  (setq L-tail (cdr L-tail)))
+		 (setq L (cons phone nil)
+		       L-tail L))))
+	   L))
+	(notes (bbdb-read-string "Additional Comments: " "[M][F]")))
+    (if (string= company "") (setq company nil))
+    (if (string= name "") (setq name nil))
+    (if (string= notes "") (setq notes nil))
+    (bbdb-display-records 
+     (list 
+      (bbdb-create-internal name company net addrs phones notes)))))
+
+(global-set-key [f12] 'bbdb-create-external)
+%</elisp>
+%    \end{macrocode}
+%
+% \section{The Script}
+%
+% You must edit this file for your system.  Search
+% especially for instances of "Frank" and "Mieko".
+%
+%    \begin{macrocode}
+%<*script>
+#!/usr/local/bin/tclsh
+if {[catch "kanji defaultInputCode EUC" errormsg]}\
+   {puts "Running $argv0 without Japanese support."
+    puts "For Japanese support, you need to use a Japanized"
+    puts "Tcl interpreter.\n"}\
+   {}
+# This script parses a database in the format used by
+# the Insidious Big Brother Database for Emacs.  It can
+# be adapted to output LaTeX lists of contents and so forth.
+set format [lindex $argv 0]
+set range [lindex $argv 1]
+set condition [lindex $argv 2]
+set usage "Usage is: $argv0 \<SIZE\> \[<RANGE>\] \[<CONDITION>\]\
+\n(Square braces are literal)\
+\n(\<SIZE\> is one of \"Mieko\" or \"Frank\")"
+if {[string match $format "Mieko"]+\
+    [string match $format "Frank"]==0}\
+   {puts "$usage"; exit}\
+   {}
+if {[regexp {\[.*\]} $condition ignore]==0}\
+   {puts "$usage"; exit}\
+   {}
+if {[regexp {\[.*\]} $range ignore]==0}\
+   {puts "$usage"; exit}\
+   {}
+puts "Creating LaTeX2e file mkaddr.tex ..."
+regexp {\[(.*)\]} $condition ignore condition
+set condition "\\\[$condition\\\]"
+set ifh [open "/home/bennett/.bbdb"]
+set ofh [open "./mkaddr.tex" w+]
+set counter 0
+set temp ""
+# Let's grab the content of a header file
+set header [open "/etc/mkaddr.$format" r]
+while 1 {
+  if {[gets $header line] == -1} break
+  if {[string match $line "%%BODY%%"]} break
+  puts $ofh $line
+}
+while 1 {
+  if {[gets $ifh line] == -1} break
+  regsub -all {([ "])\\"} $line {\1``} line
+  regsub -all {\\"([^A-Za-z])} $line {''\1} line
+  regsub -all {\\n} $line { } line
+  regsub -all {([^\])%} $line {\1\\%} line
+  regsub -all {([^\])&} $line {\1\\\&} line
+set fn nil
+set ln nil
+set aka nil
+set co nil
+set ph nil
+set ad nil
+set net nil
+set op nil
+  regexp {
+*(nil|\"[^"]*\")\
++(nil|\"[^"]*\")\
++(nil|\(\".*\"\))\
++(nil|\"[^"]*\")\
++(nil|\(\[.*\]\))\
++(nil|\(\[.*\]\))\
++(nil|\(\".*\"\))\
++(nil|\(\(.*\)\)|\"[^"]*\")\
++nil} $line ignore fn ln aka co ph ad net op
+#
+# Make lone first names into lone last names
+if {[string match $ln "nil"]}\
+   {set ln $fn
+    set fn nil}\
+   {}
+# Check that we're in the range specified
+if {[regexp "\"$range" $ln ignore]}\
+   {}\
+   {if {[string match $ln nil]}\
+       {if {[regexp "\"$range" $co ignore]}\
+           {}\
+           {continue}}\
+       {continue}}
+#
+# Fish out the notes field so we can check whether this
+# record matches the specified conditions
+set tempone ""
+set temptwo ""
+regexp {\(notes \. \"([^"]*)\"|\"([^"]*)\"$} $op \
+       ignore tempone temptwo
+if {[string match $temptwo ""]} \
+   {set notes $tempone} \
+   {set notes $temptwo}
+if {[string match "*$condition*" $notes]} {} {continue}
+#
+# Are all three names missing?  If so, skip it.
+  if { [expr 3 == \
+       [string match $fn "nil"]+\
+       [string match $ln "nil"]+\
+       [string match $co "nil"]] }\
+         {}\
+         {
+# Each entry is put in a parbox to keep it on one page.
+# The parbox opens with a vskip to make a little room
+# at the top of the page and between entries.
+puts $ofh "\\entry\{%"
+# Are both the first and last name missing?  If so,
+# we skip that line.
+  set counter [expr $counter + 1]
+  if { [expr 2 == \
+       [string match $fn "nil"]+\
+       [string match $ln "nil"]] }\
+         {}\
+         {regexp {\"(.*)\"} $fn ignore fn
+          regexp {\"(.*)\"} $ln ignore ln
+puts -nonewline "$fn $ln"
+          set ln " \\textbf\{$ln\}"
+          puts $ofh "$fn$ln\\\\"}
+# Is the company name missing?  If so, we'll
+# skip that line.
+  if { [string match $co "nil"] }\
+       {}\
+       {regexp {\"(.*)\"} $co ignore co
+        puts $ofh "\\textbf\{$co\}\\\\"
+        puts -nonewline $co}
+puts ""
+# Spit out any telephone numbers for this entry.
+if {[string match $ph nil]} {set ph ""} {}
+regexp {\((\[.*\])\)} $ph ignore ph
+while {[string match $ph ""] == 0} {
+  set temp ""
+  regexp {\[([^]]*)\](.*)} $ph ignore temp ph
+  regexp {\"([^"]*)\" *\"([^"]*)\"} $temp ignore temp number
+  puts -nonewline $ofh "  \{\\small $number ($temp)\}"
+  if {[string match $ph ""] == 0}\
+     {puts $ofh "\\\\"}\
+     {if {[string match $ad nil]+[string match $net nil]==2}\
+         {puts $ofh ""}\
+         {puts $ofh "\\\\"}}
+  }
+# Spit out any addresses for this entry.
+if {[string match $ad nil]} {set ad ""} {}
+while {[string match $ad ""] == 0} {
+  set temp ""
+  set lineone ""
+  set linetwo ""
+  set linethree ""
+  set city ""
+  set state ""
+  set zip ""
+  set bridge ""
+  regexp {\(\[([^]]*)\](.*)\)} $ad ignore ad temp
+  regexp {\"([^"]*)\"\
++\"([^"]*)\"\
++\"([^"]*)\"\
++\"([^"]*)\"\
++\"([^"]*)\"\
++\"([^"]*)\"\
++([0-9]*)} $ad ignore ad lineone linetwo linethree city state zip
+if {$zip == 0} {set zip ""} {}
+set comp [expr [string match $city ""]+[string match $state ""]]
+if {$comp==2}\
+   {}\
+   {if {$comp==1}\
+       {set bridge " "
+        set zip " $zip"}\
+       {if {$comp==0}\
+           {set bridge ", "
+            set zip " $zip"}\
+           {}}}
+  puts $ofh "  \\address\{$ad\}\{\%"
+  if {[string match $lineone ""]}\
+     {puts $ofh "\\mygobble"}\
+     {puts $ofh "    $lineone"}
+  if {[string match $linetwo ""]}\
+     {}\
+     {puts $ofh "    \\\\$linetwo"}
+  if {[string match $linethree ""]}\
+     {}\
+     {puts $ofh "    \\\\$linethree"}
+  if {[string match "$city$state$zip" ""]}\
+     {}\
+     {puts $ofh "    \\\\$city$bridge$state$zip"}
+  puts $ofh "  \}"
+  set ad $temp
+  }
+# Spit out any email addresses associated with this person
+if {[string match $net nil]} {set net ""} {}
+regexp {\((\".*\")\)} $net ignore net
+while {[string match $net ""] == 0} {
+  set temp ""
+  regexp {\"([^"]*)\"(.*)} $net ignore net temp
+  puts -nonewline $ofh "\\url\{$net\}"
+  set net $temp
+  if {[string match $net ""] == 0} {puts $ofh "\\\\"} {puts $ofh ""}
+  }
+puts $ofh "\}\n"
+}
+}
+# Once everything's finished, we send along the footer
+while 1 {
+  if {[gets $header line] == -1} break
+  puts $ofh $line
+}
+puts "Done."
+exit
+%</script>
+%    \end{macrocode}
+%
+% \section{\LaTeX{} Style}
+% We use this to simplify the format file.
+%    \begin{macrocode}
+%<*style>
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesClass{filoaddr}
+          [1998/01/17 18:15:06 3.1.1.1 Filofax address pages (Frank Bennett)]
+\DeclareOption{fourcolumn}%
+              {\PassOptionsToPackage{\CurrentOption}{autofilo}}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+\ProcessOptions
+\LoadClass{article}
+\RequirePackage{rotating}
+\RequirePackage{url}
+%    \end{macrocode}
+% Some variables.
+%    \begin{macrocode}
+\def\mygobble#1{}
+\newlength\templen
+\newlength\mytemplength
+\newlength\descheight
+\newlength\myparwidth
+\newlength\descwidth
+\newlength\biggerwidth
+\newlength\myentryheight
+\newlength\myparheight
+\newlength\mylinewidth
+%    \end{macrocode}
+% Define a macro to format each entry.
+%    \begin{macrocode}
+\def\entry#1{%
+\vbox{%
+\vskip2pt
+\topline
+\vskip 2pt
+\parbox{\linewidth}{%
+\raggedright%
+\small#1}
+\vskip 1pt
+\bottomline}}
+%    \end{macrocode}
+% The above macro requires a couple of line-building
+% macros.
+%    \begin{macrocode}
+\def\topline{%
+  \vbox to0pt{%
+    \hbox to\linewidth{%
+      \hskip-2.4pt%
+      \vrule width0.4pt height0pt depth7pt%
+      \vrule width\mylinewidth depth0.4pt height0pt%
+      \vrule width0.4pt height0pt depth7pt\hskip-2.4pt}%
+    \vskip-7pt}}
+\def\bottomline{%
+  \vbox to0pt{%
+    \vskip-7pt
+    \hbox to\linewidth{%
+      \hskip-2.4pt%
+      \vrule width0.4pt height7pt depth0pt%
+      \vrule width\mylinewidth depth0.4pt height0pt%
+      \vrule width0.4pt height7pt depth0pt%
+      \hskip-2.4pt}}}
+%    \end{macrocode}
+% Define a macro to format addresses.
+%    \begin{macrocode}
+\def\address#1#2{%
+  \settoheight\myparheight{\vbox{%
+                             \boxmaxdepth0pt%
+                             \parbox{\myparwidth}{\raggedright #2}}}%
+  \settowidth\descwidth{\small\textbf{#1}}%
+  \ifnum\descwidth>\myparheight\biggerwidth\descwidth\else%
+      \biggerwidth\myparheight\fi%
+  \vbox{\vskip3pt%
+  \hbox to\linewidth{%
+    \hskip3pt%
+    \vbox to\biggerwidth{%
+      \vfil%
+        \hbox to\descheight{%
+          \begin{sideways}{\small\textbf{#1}}\end{sideways}%
+          \hfil}%
+      \vfil}%
+    \hskip2pt%
+    \vbox to\biggerwidth{%
+      \vfil%
+        \hbox to\myparwidth{%
+          \parbox{\myparwidth}{\raggedright #2}}%
+      \vfil}}}}
+%    \end{macrocode}
+% Define an environment that creates frames and sets up
+% variables for use in the macros we have just defined.
+%    \begin{macrocode}
+\def\addresses#1{%
+  \autofilo{#1}
+  \settoheight\descheight{\vbox{\boxmaxdepth0pt{\small\textbf{Yy}}}}
+  \myparwidth\linewidth%
+  \advance\myparwidth by-\descheight\relax%
+  \advance\myparwidth by-5pt\relax%
+  \mylinewidth\linewidth
+  \advance\mylinewidth by4pt\relax}
+\def\endaddresses{\endautofilo}
+%</style>
+%    \end{macrocode}
+%\iffalse
+%    \begin{macrocode}
+%<*installer>
+\def\batchfile{mkaddr.ins}
+\input docstrip.tex
+
+\keepsilent
+
+\preamble
+\endpreamble
+
+\postamble
+\endpostamble
+
+\def\WritePreamble#1{}
+\def\WritePostamble#1{}
+
+\generate{\file{mkaddr.Frank}{\from{mkaddr.dtx}{format}}
+          \file{mkaddr.tcl}{\from{mkaddr.dtx}{script}}
+          \file{.emacs.for.bbdb}{\from{mkaddr.dtx}{elisp}}
+          \file{filoaddr.sty}{\from{mkaddr.dtx}{style}}
+   }
+
+\Msg{***********************************************************}
+\Msg{*}
+\Msg{* To finish the installation, you have to move the following}
+\Msg{* file into you executable search path:}
+\Msg{*}
+\Msg{* \space\space mkaddr}
+\Msg{*}
+\Msg{* And you have to move the following file into the search}
+\Msg{* used by TeX:}
+\Msg{*}
+\Msg{* \space\space filoaddr.sty}
+\Msg{*}
+\Msg{***********************************************************}
+%</installer>
+%    \end{macrocode}
+%\fi
+% \Finale \PrintChanges

@@ -1,0 +1,573 @@
+%Copyright 2015-2016 David Purton
+%
+%This work may be distributed and/or modified under the
+%conditions of the LaTeX Project Public License, either version 1.3
+%of this license or (at your option) any later version.
+%The latest version of this license is in
+%    http://www.latex-project.org/lppl.txt
+%and version 1.3 or later is part of all distributions of LaTeX
+%version 2005/12/01 or later.
+%
+%This work has the LPPL maintenance status `maintained'.
+%
+%The Current Maintainer of this work is David Purton.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{sbl-paper}
+  [2017/01/15 Society of Bibilical Literature Paper Style]
+
+
+% xetex/luatex engine test set up
+
+\RequirePackage{ifxetex}
+\RequirePackage{ifluatex}
+\newif\ifxetexorluatex
+\ifxetex
+  \xetexorluatextrue
+\else
+  \ifluatex
+    \xetexorluatextrue
+  \else
+    \xetexorluatexfalse
+  \fi
+\fi
+
+
+% Load required packages
+
+\ifxetexorluatex
+  \RequirePackage{fontspec}
+  \RequirePackage{polyglossia}
+\else
+  \RequirePackage[T1]{fontenc}
+  \RequirePackage[utf8]{inputenc}
+  \RequirePackage[base]{babel}
+\fi
+
+\RequirePackage{csquotes}
+\RequirePackage{ragged2e}
+\RequirePackage[headheight=14.5pt,margin=1in]{geometry}
+\RequirePackage{textcase}
+\RequirePackage{setspace}
+\RequirePackage{titlesec}
+\RequirePackage{titletoc}
+\RequirePackage{quoting}
+\RequirePackage{fancyhdr}
+\RequirePackage[bottom]{footmisc}
+\RequirePackage{bibleref-parse}
+\RequirePackage[style=sbl,indexing=cite,backend=biber]{biblatex}
+\RequirePackage{imakeidx}
+\RequirePackage{hyperref}
+
+
+% work around bidi redefining theindex
+\ifxetex
+  \let\imakeidxtheindex\theindex
+  \let\imakeidxendtheindex\endtheindex
+  \AtBeginDocument{%
+    \let\theindex\imakeidxtheindex
+    \let\endtheindex\imakeidxendtheindex
+  }
+\fi
+
+
+% patch index commands so contents is in all caps
+\patchcmd{\imki@putindexsplit}
+{\addcontentsline{toc}{\imki@toclevel}{\imki@title}}
+{\addcontentsline{toc}{\imki@toclevel}{\MakeTextUppercase{\imki@title}}}
+{}{}
+\patchcmd{\imki@putindexunique}
+{\addcontentsline{toc}{\imki@toclevel}{\imki@title}}
+{\addcontentsline{toc}{\imki@toclevel}{\MakeTextUppercase{\imki@title}}}
+{}{}
+\ifimki@splitindex
+  \let\imki@putindex\imki@putindexunique
+\else
+  \let\imki@putindex\imki@putindexsplit
+\fi
+
+
+% Set up languages
+
+\ifxetexorluatex
+  \setdefaultlanguage[variant=american]{english}
+  \setotherlanguage[variant=ancient]{greek}
+  \setotherlanguage{hebrew}
+  \ifxetex
+    \renewenvironment{hebrew}[1][]{%
+      \par
+      \raggedleft % add to right align paragraphs
+      \begin{otherlanguage}[#1]{hebrew}}%
+      {\end{otherlanguage}\par}
+  \else % luatex
+    \let\luatexpardir\pardir % luabidi needs this
+    \let\luatextextdir\textdir % luabidi needs this
+    % text direction gets stuffed up without these workarounds
+    \let\luatextextgreek\textgreek
+    \let\luatextextenglish\textenglish
+    \AtBeginDocument{%
+      \renewcommand{\textgreek}[1]{\bgroup\luatextextgreek{#1}\egroup}
+      \renewcommand{\textenglish}[1]{\bgroup\setLTR\luatextextenglish{#1}\egroup}
+    }
+  \fi
+\fi
+
+
+% Set up document spacing
+
+\doublespacing
+\raggedright
+\raggedbottom
+\setlength{\parindent}{0.5in}
+\frenchspacing
+
+
+% Set up headers and footers
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+\renewcommand\footnoterule{\kern-3pt \hrule width 2in \kern 2.6pt\vskip -8pt}
+\renewcommand\footnotelayout{\raggedright}
+\setlength{\footnotemargin}{0.5in}
+\setlength{\footnotesep}{18pt}
+
+
+% set up quotations
+
+\quotingsetup{leftmargin=0.5in,rightmargin=0in,vskip=0pt}
+\renewcommand*{\quotingfont}{\singlespacing\vspace*{-5pt}}
+
+
+% Set up Bibliography
+
+\renewcommand*{\bibsetup}{\vspace*{7pt}}
+
+\setlength{\bibitemsep}{14.5pt}
+
+\DefineBibliographyStrings{english}{%
+  shorthands = {List of Abbreviations}
+}
+
+\ifcase\abx@classtype\relax % article
+  \defbibheading{bibliography}[\bibname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \firstsection*{#1}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{biblist}[\biblistname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \firstsection*{#1}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{bibintoc}[\bibname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \phantomsection
+    \firstsection*{#1}%
+    \addcontentsline{toc}{section}{\MakeTextUppercase{#1}}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{biblistintoc}[\biblistname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \phantomsection
+    \section*{#1}%
+    \addcontentsline{toc}{section}{\MakeTextUppercase{#1}}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+
+\or % book/report
+  \defbibheading{bibliography}[\bibname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \chapter*{#1}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{biblist}[\biblistname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \firstsection*{#1}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{bibintoc}[\bibname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \phantomsection
+    \chapter*{#1}%
+    \addcontentsline{toc}{chapter}{\MakeTextUppercase{#1}}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+  \defbibheading{biblistintoc}[\biblistname]{%
+    \clearpage
+    \thispagestyle{plain}%
+    \phantomsection
+    \section*{#1}%
+    \addcontentsline{toc}{chapter}{\MakeTextUppercase{#1}}%
+    \markboth{\MakeTextUppercase{#1}}{\MakeTextUppercase{#1}}}
+
+\fi
+
+
+% Set up section headings and table of contents
+
+\setcounter{secnumdepth}{0}
+\titleformat
+  {\chapter}
+  [block]
+  {\singlespacing\centering}
+  {\MakeTextUppercase{\chaptertitlename} \thechapter:}
+  {.5em}
+  {\MakeTextUppercase}
+\titleformat
+  {\section}
+  [block]
+  {\singlespacing\centering}
+  {\thesection}
+  {.5em}
+  {\MakeTextUppercase}
+\titleformat
+  {\subsection}
+  [block]
+  {\singlespacing\centering\bfseries}
+  {\thesubsection}
+  {.5em}
+  {}
+\titleformat
+  {\subsubsection}
+  [block]
+  {\singlespacing\centering}
+  {\thesubsubsection}
+  {.5em}
+  {}
+\titleformat
+  {\paragraph}
+  [hang]
+  {\singlespacing\raggedright\bfseries\itshape}
+  {\theparagraph}
+  {.5em}
+  {}
+\titleformat
+  {\subparagraph}
+  [hang]
+  {\singlespacing\raggedright}
+  {\thesubparagraph}
+  {.5em}
+  {}
+\titlespacing*{\chapter}{0pt}{38pt}{29pt}
+\titlespacing*{\section}{0pt}{38pt}{29pt}
+\titlespacing*{\subsection}{0pt}{38pt}{0pt}
+\titlespacing*{\subsubsection}{0pt}{38pt}{0pt}
+\titlespacing*{\paragraph}{0pt}{38pt}{0pt}
+\titlespacing*{\subparagraph}{0pt}{38pt}{0pt}
+\assignpagestyle{\chapter}{plain}
+\def\firstsection{%
+  \clearpage
+  \null
+  \thispagestyle{plain}
+  \section}
+\setcounter{tocdepth}{3}
+\renewcommand\tableofcontents{%
+    \if@twocolumn
+      \@restonecoltrue\onecolumn
+    \else
+      \@restonecolfalse
+    \fi
+    \section*{\contentsname
+        \@mkboth{%
+           \MakeTextUppercase\contentsname}{\MakeTextUppercase\contentsname}}%
+    \@starttoc{toc}%
+    \if@restonecol\twocolumn\fi
+    \thispagestyle{plain}
+    }
+\titlecontents{chapter}
+  [0pt]
+  {\singlespacing}
+  {\MakeTextUppercase{\chaptertitlename~\thecontentslabel}: }
+  {}
+  {\hspace{.5em}\titlerule*[.5pc]{.}\contentspage}
+\titlecontents{section}
+  [0pt]
+  {\singlespacing}
+  {\MakeTextUppercase{\chaptertitlename~\thecontentslabel}: }
+  {}
+  {\hspace{.5em}\titlerule*[.5pc]{.}\contentspage}
+\titlecontents{subsection}
+  [1em]
+  {\singlespacing}
+  {\thecontentslabel~}
+  {}
+  {\hfill\contentspage}
+\titlecontents{subsubsection}
+  [1em]
+  {\singlespacing}
+  {\thecontentslabel~}
+  {}
+  {\hfill\contentspage}
+
+\renewcommand\appendix{\par
+  \ifcase\abx@classtype\relax % article
+    \setcounter{section}{0}%
+    \setcounter{secnumdepth}{1}
+    \gdef\@chapapp{\appendixname}%
+    \titleformat
+      {\section}
+      [block]
+      {\singlespacing\centering}
+      {\MakeTextUppercase{\chaptertitlename} \thesection:}
+      {.5em}
+      {\MakeTextUppercase}
+    \titlecontents{section}
+      [0pt]
+      {\singlespacing}
+      {\MakeTextUppercase{\appendixname~\thecontentslabel}: }
+      {}
+      {\hspace{.5em}\titlerule*[.5pc]{.}\contentspage}
+
+  \or % book/report
+    \setcounter{chapter}{0}%
+    \setcounter{section}{0}%
+    \gdef\@chapapp{\appendixname}%
+    \titlecontents{chapter}
+      [0pt]
+      {\singlespacing}
+      {\MakeTextUppercase{\appendixname~\thecontentslabel}: }
+      {}
+      {\hspace{.5em}\titlerule*[.5pc]{.}\contentspage}
+
+  \fi}
+
+
+% make sure chapter and section commands uppercase with hyperref
+
+\pdfstringdefDisableCommands{%
+  \let\MakeTextUppercase\relax}
+
+\def\@chapter[#1]#2{\ifnum \c@secnumdepth >\m@ne
+  \if@mainmatter
+    \refstepcounter{chapter}%
+    \typeout{\@chapapp\space\thechapter.}%
+    \addcontentsline{toc}{chapter}%
+      {\protect\numberline{\thechapter}\MakeTextUppercase{#1}}%
+  \else
+    \addcontentsline{toc}{chapter}{\MakeTextUppercase{#1}}%
+  \fi
+  \else
+    \addcontentsline{toc}{chapter}{\MakeTextUppercase{#1}}%
+  \fi
+  \chaptermark{#1}%
+  \addtocontents{lof}{\protect\addvspace{10\p@}}%
+  \addtocontents{lot}{\protect\addvspace{10\p@}}%
+  \if@twocolumn
+    \@topnewpage[\@makechapterhead{#2}]%
+  \else
+    \@makechapterhead{#2}%
+    \@afterheading
+  \fi}
+
+\def\ttl@addcontentsline#1#2{%
+  \expandafter\ifx\csname l@#1\endcsname\l@section
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {%
+    \addcontentsline{toc}{#1}{\ifttl@toclabel\ttl@a\fi\MakeTextUppercase{#2}}%
+  }{%
+    \addcontentsline{toc}{#1}{\ifttl@toclabel\ttl@a\fi#2}%
+  }\nobreak}
+
+
+% Set up title page
+
+\renewcommand{\maketitle}{%
+  \hypersetup{pageanchor=false}%
+  \newgeometry{margin=2in}%
+  \thispagestyle{empty}%
+  \singlespacing
+  \begin{center}
+    \MakeTextUppercase{\@institution}
+
+    \vfill
+
+    \doublespacing
+    \MakeTextUppercase{\@title}
+
+    \vfill
+    
+    \singlespacing
+    \MakeTextUppercase{Submitted to \@professor \protect\\
+      in Partial Fulfilment of \protect\\\relax
+    \@course}
+
+    \vfill
+
+    \MakeTextUppercase{By \protect\\\relax
+      \@author \protect\\\relax
+    \@date}
+  \end{center}
+  \restoregeometry
+  \hypersetup{pageanchor=true}%
+}
+
+\def\author#1{\gdef\@author{#1}}
+\def\@author{[Your name]}
+\def\title#1{\gdef\@title{#1}}
+\def\@title{Title of Paper}
+\def\institution#1{\gdef\@institution{#1}}
+\def\@institution{[Name of Institution]}
+\def\professor#1{\gdef\@professor{#1}}
+\def\@professor{[Name of Professor]}
+\def\course#1{\gdef\@course{#1}}
+\def\@course{[Course Number and Title]}
+
+
+% Set up Bible references
+
+\braltabbrvname
+\renewcommand*{\BRperiod}{}
+\renewcommand*{\BRchsep}{;\space}
+\renewcommand*{\BRvsep}{,\space}
+
+\def\br@Ecclesiastes{Eccl\BRperiod}
+\def\br@SongofSongs{Song\BRperiod}
+
+\def\br@Titus{Titus}
+\def\br@Philemon{Phlm\BRperiod}
+
+\csdef{bri@Gen}{\BRbookof Genesis}
+\csdef{bri@Exod}{\BRbookof Exodus}
+\csdef{bri@Lev}{\BRbookof Levitcus}
+\csdef{bri@Num}{\BRbookof Numbers}
+\csdef{bri@Deut}{\BRbookof Deuteronomy}
+\csdef{bri@Josh}{\BRbookof Joshua}
+\csdef{bri@Judg}{\BRbookof Judges}
+\csdef{bri@Ruth}{\BRbookof Ruth}
+\csdef{bri@1Sam}{\BRbooknumberstyle{1}\BRbookof Samuel}
+\csdef{bri@2Sam}{\BRbooknumberstyle{2}\BRbookof Samuel}
+\csdef{bri@1Kgs}{\BRbooknumberstyle{1}\BRbookof Kings}
+\csdef{bri@2Kgs}{\BRbooknumberstyle{2}\BRbookof Kings}
+\csdef{bri@1Chr}{\BRbooknumberstyle{1}\BRbookof Chronicles}
+\csdef{bri@2Chr}{\BRbooknumberstyle{2}\BRbookof Chronicles}
+\csdef{bri@Ezra}{\BRbookof Ezra}
+\csdef{bri@Neh}{\BRbookof Nehemiah}
+\csdef{bri@Esth}{\BRbookof Esther}
+\csdef{bri@Job}{\BRbookof Job}
+\csdef{bri@Ps}{\BRbookof Psalms}
+\csdef{bri@Prov}{\BRbookof Proverbs}
+\csdef{bri@Eccl}{\BRbookof Ecclesiastes}
+\csdef{bri@Song}{\BRbookof Song of Songs}
+\csdef{bri@Isa}{\BRbookof Isaiah}
+\csdef{bri@Jer}{\BRbookof Jeremiah}
+\csdef{bri@Lam}{\BRbookof Lamentations}
+\csdef{bri@Ezek}{\BRbookof Ezekiel}
+\csdef{bri@Dan}{\BRbookof Daniel}
+\csdef{bri@Hos}{\BRbookof Hosea}
+\csdef{bri@Joel}{\BRbookof Joel}
+\csdef{bri@Amos}{\BRbookof Amos}
+\csdef{bri@Obad}{\BRbookof Obadiah}
+\csdef{bri@Jonah}{\BRbookof Jonah}
+\csdef{bri@Mic}{\BRbookof Micah}
+\csdef{bri@Nah}{\BRbookof Nahum}
+\csdef{bri@Hab}{\BRbookof Habakkuk}
+\csdef{bri@Zeph}{\BRbookof Zephaniah}
+\csdef{bri@Hag}{\BRbookof Haggai}
+\csdef{bri@Zech}{\BRbookof Zechariah}
+\csdef{bri@Mal}{\BRbookof Malachi}
+
+\csdef{bri@Matt}{\BRbookof Matthew}
+\csdef{bri@Mark}{\BRbookof Mark}
+\csdef{bri@Luke}{\BRbookof Luke}
+\csdef{bri@John}{\BRbookof John}
+\csdef{bri@Acts}{\BRbookof Acts}
+\csdef{bri@Rom}{\BRbookof Romans}
+\csdef{bri@1Cor}{\BRbooknumberstyle{1}\BRbookof Corinthians}
+\csdef{bri@2Cor}{\BRbooknumberstyle{2}\BRbookof Corinthians}
+\csdef{bri@Gal}{\BRbookof Galatians}
+\csdef{bri@Eph}{\BRbookof Ephesians}
+\csdef{bri@Phil}{\BRbookof Philippians}
+\csdef{bri@Col}{\BRbookof Colossians}
+\csdef{bri@1Thess}{\BRbooknumberstyle{1}\BRbookof Thessalonians}
+\csdef{bri@2Thess}{\BRbooknumberstyle{2}\BRbookof Thessalonians}
+\csdef{bri@1Tim}{\BRbooknumberstyle{1}\BRbookof Timothy}
+\csdef{bri@2Tim}{\BRbooknumberstyle{2}\BRbookof Timothy}
+\csdef{bri@Titus}{\BRbookof Titus}
+\csdef{bri@Phlm}{\BRbookof Philemon}
+\csdef{bri@Heb}{\BRbookof Hebrews}
+\csdef{bri@Jas}{\BRbookof James}
+\csdef{bri@1Pet}{\BRbooknumberstyle{1}\BRbookof Peter}
+\csdef{bri@2Pet}{\BRbooknumberstyle{2}\BRbookof Peter}
+\csdef{bri@1John}{\BRbooknumberstyle{1}\BRbookof John}
+\csdef{bri@2John}{\BRbooknumberstyle{2}\BRbookof John}
+\csdef{bri@3John}{\BRbooknumberstyle{3}\BRbookof John}
+\csdef{bri@Jude}{\BRbookof Jude}
+\csdef{bri@Rev}{\BRbookof Revelation}
+
+\csdef{br@oldtestament}{Old Testament}
+\csdef{br@newtestament}{New Testament}
+
+\biblerefmap{Gen}{01@\br@oldtestament !01}
+\biblerefmap{Exod}{01@\br@oldtestament !02}
+\biblerefmap{Lev}{01@\br@oldtestament !03}
+\biblerefmap{Num}{01@\br@oldtestament !04}
+\biblerefmap{Deut}{01@\br@oldtestament !05}
+\biblerefmap{Josh}{01@\br@oldtestament !06}
+\biblerefmap{Judg}{01@\br@oldtestament !07}
+\biblerefmap{Ruth}{01@\br@oldtestament !08}
+\biblerefmap{Sam1}{01@\br@oldtestament !09}
+\biblerefmap{Sam2}{01@\br@oldtestament !10}
+\biblerefmap{Kgs1}{01@\br@oldtestament !11}
+\biblerefmap{Kgs2}{01@\br@oldtestament !12}
+\biblerefmap{Chr1}{01@\br@oldtestament !13}
+\biblerefmap{Chr2}{01@\br@oldtestament !14}
+\biblerefmap{Ezra}{01@\br@oldtestament !15}
+\biblerefmap{Neh}{01@\br@oldtestament !16}
+\biblerefmap{Esth}{01@\br@oldtestament !17}
+\biblerefmap{Job}{01@\br@oldtestament !18}
+\biblerefmap{Ps}{01@\br@oldtestament !19}
+\biblerefmap{Prov}{01@\br@oldtestament !20}
+\biblerefmap{Eccl}{01@\br@oldtestament !21}
+\biblerefmap{Song}{01@\br@oldtestament !22}
+\biblerefmap{Isa}{01@\br@oldtestament !23}
+\biblerefmap{Jer}{01@\br@oldtestament !24}
+\biblerefmap{Lam}{01@\br@oldtestament !25}
+\biblerefmap{Ezek}{01@\br@oldtestament !26}
+\biblerefmap{Dan}{01@\br@oldtestament !27}
+\biblerefmap{Hos}{01@\br@oldtestament !28}
+\biblerefmap{Joel}{01@\br@oldtestament !29}
+\biblerefmap{Amos}{01@\br@oldtestament !30}
+\biblerefmap{Obad}{01@\br@oldtestament !31}
+\biblerefmap{Jonah}{01@\br@oldtestament !32}
+\biblerefmap{Mic}{01@\br@oldtestament !33}
+\biblerefmap{Nah}{01@\br@oldtestament !34}
+\biblerefmap{Hab}{01@\br@oldtestament !35}
+\biblerefmap{Zeph}{01@\br@oldtestament !36}
+\biblerefmap{Hag}{01@\br@oldtestament !37}
+\biblerefmap{Zech}{01@\br@oldtestament !38}
+\biblerefmap{Mal}{01@\br@oldtestament !39}
+
+\biblerefmap{Matt}{02@\br@newtestament !01}
+\biblerefmap{Mark}{02@\br@newtestament !02}
+\biblerefmap{Luke}{02@\br@newtestament !03}
+\biblerefmap{John}{02@\br@newtestament !04}
+\biblerefmap{Acts}{02@\br@newtestament !05}
+\biblerefmap{Rom}{02@\br@newtestament !06}
+\biblerefmap{Cor1}{02@\br@newtestament !07}
+\biblerefmap{Cor2}{02@\br@newtestament !08}
+\biblerefmap{Gal}{02@\br@newtestament !09}
+\biblerefmap{Eph}{02@\br@newtestament !10}
+\biblerefmap{Phil}{02@\br@newtestament !11}
+\biblerefmap{Col}{02@\br@newtestament !12}
+\biblerefmap{Thess1}{02@\br@newtestament !13}
+\biblerefmap{Thess2}{02@\br@newtestament !14}
+\biblerefmap{Tim1}{02@\br@newtestament !15}
+\biblerefmap{Tim2}{02@\br@newtestament !16}
+\biblerefmap{Titus}{02@\br@newtestament !17}
+\biblerefmap{Phlm}{02@\br@newtestament !18}
+\biblerefmap{Heb}{02@\br@newtestament !19}
+\biblerefmap{Jas}{02@\br@newtestament !20}
+\biblerefmap{Pet1}{02@\br@newtestament !21}
+\biblerefmap{Pet2}{02@\br@newtestament !22}
+\biblerefmap{John1}{02@\br@newtestament !23}
+\biblerefmap{John2}{02@\br@newtestament !24}
+\biblerefmap{John3}{02@\br@newtestament !25}
+\biblerefmap{Jude}{02@\br@newtestament !26}
+\biblerefmap{Rev}{02@\br@newtestament !27}
+
+\endinput

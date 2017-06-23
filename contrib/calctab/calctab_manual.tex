@@ -1,0 +1,658 @@
+% 0.6.1 - 2009/07/12
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[	left=32mm,
+		right=45mm,
+		top=32mm,
+		bottom=28mm]{geometry}
+
+\usepackage[english]{babel}
+\usepackage{inconsolata}
+
+\usepackage{fancyhdr}
+\usepackage{calctab}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{fancyvrb}
+\usepackage{caption}
+\usepackage[	pdfauthor={Roberto Giacomelli},
+		pdfsubject={Calctab package user manual},
+		pdfkeywords={table, invoice, expense note, report},
+		pdftitle={Calctab user manual},
+		colorlinks,
+		linkcolor=blue]{hyperref}
+
+% set the Verbatim environment
+\fvset{numbers=left,numbersep=7pt}
+
+% set page layout
+\pagestyle{fancy}
+
+% new command definition section
+\newcommand{\ct}{\textsc{calctab}} % calctab package
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\env}[1]{\textsf{#1}}
+\newcommand{\cmd}[1]{\texttt{\char`\\#1}}
+\newcommand{\meta}[1]{\ensuremath{\langle}\emph{#1}\ensuremath{\rangle}}
+\newcommand{\curlyp}[1]{\texttt{\{}\meta{#1}\texttt{\}}}
+\newcommand{\squarep}[1]{\texttt{[}\meta{#1}\texttt{]}}
+
+\author{Roberto Giacomelli\\
+e-mail: \texttt{giaconet dot mailbox at gmail dot com}}
+\date{2009/07/12}
+\title{\ct{} package\\version 0.6.1}
+
+\begin{document}
+\maketitle
+
+\bigskip
+\hspace*{238pt}\begin{minipage}{125pt}\em
+``The table computes the sum\\
+not because is useful,\\
+but because the result\\
+is not an user essential data''
+\end{minipage}
+
+\vfill
+\begin{center}
+\begin{minipage}{112mm}%.8\textwidth
+\tableofcontents
+\end{minipage}
+\end{center}
+\vfill
+\newpage
+%
+%
+%
+\section{Introduction}
+The \ct{} package helps the user to typeset a kind of economic table such as invoices, expence notes and liquidation, or other tabular material with numeric columns.
+
+A standard \env{tabular} environment works well but forces the author \emph{to think} in a generic \LaTeX{} language to reference economic object and without a conceptual relation among them. In addition a lot of formatting commands takes the same relevance of the main data, values, text description, etc.
+
+Economic items maybe are independent values or not, like sums and percentages on previous values. The language must be expressive concerning together data and its relations. So, the priority is to add a new language element.
+
+%
+%
+%
+\section{User manual}
+This section will be explain the use of the two \ct{} environments \env{calctab} and \env{xcalctab}, first through several examples and then showing its formal syntax.
+
+%
+%
+%
+\subsection{\env{calctab} and \env{xcalctab} by examples}
+%
+\subsubsection{A simple table}
+Well, starting with a simple case of a list of three entries, a 10\% tax apply on it, and the final sum as showed in the next table:
+
+\begin{calctab}
+   \amount{First cost}{12500,9}
+   \amount{Second cost}{8560,03}
+   \amount{Third cost}{9200,45}
+   \perc{Tax}{10}
+   \add{Total cost}
+\end{calctab}
+
+The user can typesetting the example table with the followed \ct{} code (obviously, the directive \verb=\usepackage{calctab}= must be present in the document preamble).
+
+{\color{blue}
+\begin{Verbatim}[numbers=none]
+% in the document preamble
+\usepackage{calctab}
+\end{Verbatim}
+}
+
+\begin{Verbatim}
+% in the document body
+\begin{calctab}
+   \amount{First cost}{12500,9}
+   \amount{Second cost}{8560,03}
+   \amount{Third cost}{9200,45}
+   \perc{Tax}{10}
+   \add{Total cost}
+\end{calctab}
+\end{Verbatim}
+
+Probably, is better to show the sum on which the 10\% tax is applied. Look this code:
+
+
+\begin{Verbatim}
+\begin{calctab}
+   \amount{First cost}{12500,9}
+   \amount{Second cost}{8560,03}
+   \amount{Third cost}{9200,45}
+   \add{Partial total}   % <-- The 'Partial total' row is not
+   \perc{Tax}{10}        %     considered in the 'Total cost' sum...
+   \add{Total cost}
+\end{calctab}
+\end{Verbatim}
+
+Since the \cmd{add} command not adds new table element in the stack so is easy to insert a subtotal. This is one of the basic rules implicit in the \env{calctab} environment so you are free to add an \cmd{add} row without you worry about following row's computation. In other words, the \cmd{add} command is a \emph{trasparent} math object.
+
+The behaviour of the inner commands is based on these main rules:
+
+\begin{itemize}
+    \item Each command typeset one table row;
+    \item The sequence of commands produce the sequence of the table rows;
+    \item The \verb=\perc= and the \verb=\add= commands computes all previous values (with exception to the \verb=\add= rows);
+    \item Optional command argument provides a relation rows language to select an item or a group of items.
+\end{itemize}
+
+An independent item is not only a numeric data but also it's defined by a description text. This concept is directly express by the \verb=\amount= command which needs two mandatory arguments: the \emph{description text} and the item \emph{numeric consistency}.
+
+No more different is a percentage object structured in a description text and in a numeric value this time not an absolute number but a \emph{factor} multiply by one hundred applied on some previous data, still we can easy express this with the \verb=\perc= command.
+
+Finally, we encountered a sum that only needs a description text. The \ct{} language provides the \verb=\add= command to cover this concept.
+
+These three commands are available in an environment called \env{calctab} that represents the comprehensive structure of a table.
+
+The code implementation of the inner commands computes the numeric results with the floating point algorithm rounded it with a max of two decimal digit (currently the results are truncated at this fixed precision).
+The number of the commands mandatory argument can be negative.
+
+The \ct{} environments manages all the table format elements such as the rows color, the rules, the columns header description text, etc. Furthermore, the code executes the data numeric formatting, the font family selection and more. For example, to the rows description text the \verb=\add= and \verb=\perc= commands adds a list of uppercase alphabetical character to explicate the computed rows.
+
+Potentially all of these \emph{visual property} could be adjust by the \ct{} user.
+
+%
+\subsubsection{Quantity and price columns}
+The \ct{} package provides another environment called \env{xcalctab} where the \env{x} character suggests a multiply operation and an extension of the base \env{calctab} too.
+The inner commands are the same already discussed except the \verb=\amount= command that accepts the description test and \emph{two} numbers indeed only one.
+
+The final table will appears with three columns typesetting with the two numeric arguments and their product. The following table with its corresponding code clarify this structure:
+
+\begin{xcalctab}
+    \amount{Newspapers}{3}{1,30}
+    \amount{Coloured pencils}{12}{6,00}
+    \amount{Maths exercise book}{6}{2,50}
+    \amount{Compass}{1}{9,90}
+    \amount{Ruler}{1}{5,90}
+    \amount{Protractor}{1}{6,80}
+    \perc{Deduction}{-5}
+    \add{Total}
+\end{xcalctab}
+
+\begin{Verbatim}
+\begin{xcalctab}
+    \amount{Newspapers}{3}{1,30}
+    \amount{Coloured pencils}{12}{6,00}
+    \amount{Maths exercise book}{6}{2,50}
+    \amount{Compass}{1}{9,90}
+    \amount{Ruler}{1}{5,90}
+    \amount{Protractor}{1}{6,80}
+    \perc{Deduction}{-5}
+    \add{Total}
+\end{xcalctab}
+\end{Verbatim}
+
+The help text A+B+C+D+$\cdots$+\meta{LAST}, will be shorted when the items are more than \emph{five} elements, in A+B+$\cdots$+\meta{LAST}. The abbreviation condition is true only if the items in the subgroup are a consecutive sequence.
+
+%
+%
+%
+\subsubsection{Items relations}
+If more complex tables require \emph{relational} information between rows is necessary to assign an items names and to recall later these identifiers in a list. This simply way can be achieved with the command optional argument.
+
+A name can be assign to a table row by using the \texttt{id} key (a significance name of the key improve code clarity). The syntax is based to \meta{key} $=$ \meta{value} assignment, where key is the fixed \texttt{id} string. Later on, compute sum or percentage only on a subset of previous \pkg{calctab} items, can get recall in a comma separated list, the user row names.
+
+The next example explains the language support to the rows relation by naming with commands optional argument at work. For example, we want to apply a different discount on each expense or on each group of expense.
+
+\begin{calctab}
+    \amount[id=dinner]{Five dinner}{146}
+    \amount[id=breakfast]{Five breakfast}{35}
+    \perc[dinner]{Discount}{-8}
+    \perc[breakfast]{Discount}{-4}
+    \add{Grand total}
+\end{calctab}
+
+\medskip
+\begin{Verbatim}
+\begin{calctab}
+    \amount[id=dinner]   {Five dinner}{146}
+    \amount[id=breakfast]{Five breakfast}{35}
+    \perc[dinner]   {Discount}{-8}
+    \perc[breakfast]{Discount}{-4}
+    \add{Grand total}
+\end{calctab}
+\end{Verbatim}
+
+\subsubsection{Subtotals}
+To the table of the last example we will add a subtotal as the sum of the discount rows. These \cmd{perc} rows handling together own identifiers and a list of previous names (one id name list in this case). As the reader can be notice, the optional \emph{table description} is typeset as a paragraph having the same (variable) table width.
+
+\begin{calctab}[Hotel bill:\\
+Period from 12 october 2008 to 18 october 2008 (room 456)]
+    \amount[id=dinner]      {Five dinner}   {29,2 * 5}
+    \amount[id=breakfast]   {Five breakfast}{   7 * 5}
+    \perc[id=dis8,dinner]   {Discount}      {      -8}
+    \perc[id=dis4,breakfast]{Discount}      {      -4}
+    \add[dis8,dis4]         {Total of discount}
+    \add                    {Grand total}
+\end{calctab}
+
+\bigskip
+
+\begin{Verbatim}
+\begin{calctab}[Hotel bill:\\
+    Period from 12 october 2008 to 18 october 2008 (room 456)]
+    \amount[id=dinner]      {Five dinner}   {29,2 * 5}
+    \amount[id=breakfast]   {Five breakfast}{   7 * 5}
+    \perc[id=dis8,dinner]   {Discount}      {      -8}
+    \perc[id=dis4,breakfast]{Discount}      {      -4}
+    \add[dis8,dis4]         {Total of discount}
+    \add                    {Grand total}
+\end{calctab}
+\end{Verbatim}
+
+%
+%
+%
+\subsubsection{An arithmetic argument}
+The last example silently uses a feature of the \cmd{amount} command (only for \env{calctab} and not for \env{xcalctab}) available from the version 0.6. The numeric argument can optionally be a \emph{binary} math expression. The parse algorithm is very simple and the only syntax allowed are show in Tab.~\ref{tabOper} where \meta{a} and \meta{b} are two decimal numbers.
+
+\begin{table}[bh]
+\centering
+\caption{\env{calctab} \cmd{amount} command optional binary operation}
+\label{tabOper}
+\begin{tabular}{lcc}\toprule
+Floating point operation & Symbolic description     & Numeric example\\\midrule
+    \emph{Addition}	 &    \meta{a} $+$ \meta{b} & $15{,}20 + 41$\\
+    \emph{Addition}	 & $-$\meta{a} $+$ \meta{b} & $-15{,}20 + 41$\\
+    \emph{Subtraction}	 &    \meta{a} $-$ \meta{b} & $15{,}20 - 41$\\
+    \emph{Subtraction}	 & $-$\meta{a} $-$ \meta{b} & $-15{,}20 - 41$\\
+  \emph{Multiplication}	 &    \meta{a} $\cdot$ \meta{b} & $15{,}20 * 41$\\
+  \emph{Multiplication}  & $-$\meta{a} $\cdot$ $-$\meta{b} & $-15{,}20 * -41$\\
+    \emph{Division}	 &    \meta{a} $/$ \meta{b} & $15{,}20 / 41$\\
+    \emph{Division}	 & $-$\meta{a} $/$ \meta{b} & $-15{,}20 / 41$\\\bottomrule
+\end{tabular}
+\end{table}
+
+Sometimes the applied round off number must be show in the table. This is possible because \env{calctab} reports the \cmd{amount} binary operations. Here is an example.
+
+\begin{calctab}
+   \amount{A rounded cost}{4506-6}
+   \amount{Positive rounded cost}{3598,30+1,70}
+   \add{Total (rounded)}
+\end{calctab}
+
+\begin{Verbatim}
+\begin{calctab}
+   \amount{A rounded cost}{4506-6}
+   \amount{Positive rounded cost}{3598,30+1,70}
+   \add{Total (rounded)}
+\end{calctab}
+\end{Verbatim}
+
+
+\subsubsection{Sum of sums}
+The next table a 20\% deduction amount must be apply on the total of the first three values (see the F row). A solution is to assign a name for each rows and to write its list in the optional argument of \cmd{perc} command. Nevertheless, this sum is just computed in previus row, thus we can assign a name only to row \texttt{\cmd{add}[id=total]\{Total amount of the design task\}}, and later recall the result and then apply percentage on it with the line \texttt{\cmd{perc}[total]\{Deduction\}\{-20\}}.
+
+\begin{calctab}[Plant project Fee Note:\\
+		Italian restaurant and pizzeria ``La Margherita'']
+	\amount{Design of the air conditioned plant}{5400}
+	\amount{Design of the electric plant and video surveillance}{8000}
+	\perc{General expence}{8,55}
+	\add[id=total]{Total amount of the design task}
+	\perc{Tax}{2}
+	\perc{VAT}{20}
+	\perc[total]{Deduction}{-20}
+	\add{Total}
+\end{calctab}
+
+The complete code is showed here:
+
+\begin{Verbatim}
+\begin{calctab}[Plant project Fee Note:\\
+	Italian restaurant and pizzeria ``La Margherita'']
+   \amount{Design of the air conditioned plant}{5400}
+   \amount{Design of the electric plant and video surveillance}{8000}
+   \perc{General expence}{8,55}
+   \add[id=total]{Total amount of design task}
+   \perc{Tax}{2}
+   \perc{VAT}{20}
+   \perc[total]{Deduction}{-20}
+   \add{Total}
+\end{calctab}
+\end{Verbatim}
+
+\subsubsection{Interval selection}
+The \emph{interval} selection of a elements list is simply an identification of consecutive elements. So we only need to specify the first and the last elements delimiters of the series. If the first delimeter is not an explicit information, we can give to the first list element this role. Equally, the default last element of the interval can be the last list element, if one is not available.
+
+The \ct{} commands \cmd{perc} and \cmd{add} supports the interval selection with \texttt{from} and \texttt{until} keys that referenced row name. For example in this follow table the first five items and the last four are two separated groups.
+
+Is possible to combine the key \texttt{until} with the key \texttt{from} in the same optional argument to select a completely defined inner interval.
+In case of a selection overlap, a package warning will be throw at compile time.
+
+\begin{calctab}[The interval selection table]
+    \amount{One}  	  {100000000}
+    \amount{Two}  	  {20000000}
+    \amount{Three}	  {3000000}
+    \amount{Four} 	  {400000}
+    \amount[id=five]{Five}{50000}
+    \inrule
+    \amount[id=six]{Six}  {6000}
+    \amount{Seven}        {700}
+    \amount{Eight}        {80}
+    \amount{Nine}         {9}
+    \add[until=five]{From one to five}
+    \add[from=six]{From six to nine}
+    \add[from=five,until=six]{From five to six}
+    \add{As well as total}
+\end{calctab}
+
+\begin{Verbatim}
+\begin{calctab}[The interval selection table]
+    \amount          {One}{100000000}
+    \amount          {Two}{20000000}
+    \amount        {Three}{3000000}
+    \amount         {Four}{400000}
+    \amount[id=five]{Five}{50000}
+    \inrule
+    \amount[id=six]  {Six}{6000}
+    \amount        {Seven}{700}
+    \amount        {Eight}{80}
+    \amount         {Nine}{9}
+    \add[until=five]{From one to five}
+    \add[from=six]{From six to nine}
+    \add[from=five,until=six]{From five to six} % same of [five,six]
+    \add{As well as total}
+\end{calctab}
+\end{Verbatim}
+
+An inner rule is adding \emph{manually} to the table with command \cmd{inrule} (that just sounds \emph{inner rule}).
+
+\subsection{Environments formal syntax}
+\subsubsection{\env{calctab} syntax}
+The \env{calctab} environment syntax will be described in succession:
+
+\medskip
+\noindent\fbox{
+	\parbox{220pt}{
+		\noindent\cmd{begin}\texttt{\{calctab\}}\squarep{description paragraph}\smallskip
+
+		\hspace*{5mm}\meta{calctab commands list}\smallskip
+
+		\noindent\cmd{end}\texttt{\{calctab\}}
+	}
+}\medskip
+
+The \meta{calctab commands list} is a sequence of the internal commands \cmd{amount}, \cmd{perc}, \cmd{add} and \cmd{inrule}.\medskip
+
+\noindent\fbox{\cmd{amount}\squarep{key-value identifier}\curlyp{description}\curlyp{value}}\medskip
+
+\meta{key-value identifier} $=$ \texttt{id=}\meta{rowID};\medskip
+
+\meta{description} $=$ \meta{text line};\medskip
+
+\meta{value} $=$ \meta{decimal value} or \meta{basic binary operation}.\medskip
+
+\noindent\fbox{\cmd{perc}\squarep{key-value list}\curlyp{description}\curlyp{percentage}}\medskip
+
+\meta{key-value list} $=$ \texttt{id=}\meta{rowID}\texttt{,} \texttt{from=}\meta{rowID}\texttt{,} \texttt{until=}\meta{rowID}\texttt{,} \meta{rowID~list};\medskip
+
+\meta{description} $=$ \meta{text line};\medskip
+
+\meta{value} $=$ \meta{percentage decimal value}.\medskip
+
+\noindent\fbox{\cmd{add}\squarep{key-value list}\curlyp{description}}\medskip
+
+\meta{key-value list} $=$ \texttt{id=}\meta{rowID}\texttt{,} \texttt{from=}\meta{rowID}\texttt{,} \texttt{until=}\meta{rowID}\texttt{,} \meta{rowID~list};\medskip
+
+\meta{description} $=$ \meta{text line}.\medskip
+
+\noindent\fbox{\cmd{inrule}}\medskip
+
+
+\subsubsection{\env{xcalctab} syntax}
+The \pkg{xcalctab} environment syntax will be described in the next paragraph:
+
+\medskip
+\noindent\fbox{
+	\parbox{220pt}{
+		\noindent\cmd{begin}\texttt{\{xcalctab\}}\squarep{description paragraph}\smallskip
+
+		\hspace*{5mm}\meta{xcalctab commands list}\smallskip
+
+		\noindent\cmd{end}\texttt{\{xcalctab\}}
+	}
+}
+\medskip
+
+The \meta{xcalctab commands list} is a sequence of the internal commands \cmd{amount}, \cmd{perc}, \cmd{add} and \cmd{inrule}.\medskip
+
+\noindent\fbox{\cmd{amount}\squarep{key-value identifier}\curlyp{description}\curlyp{value1}\curlyp{value2}}\medskip
+
+\meta{key-value identifier} $=$ \texttt{id=}\meta{rowID};\medskip
+
+\meta{description} $=$ \meta{text line};\medskip
+
+\meta{value1} $=$ \meta{decimal value};\medskip
+
+\meta{value2} $=$ \meta{decimal value}.\medskip
+
+\noindent\fbox{\cmd{perc}\squarep{key-value list}\curlyp{description}\curlyp{percentage}}\medskip
+
+\meta{key-value list} $=$ \texttt{id=}\meta{rowID}\texttt{,} \texttt{from=}\meta{rowID}\texttt{,}
+\texttt{until=}\meta{rowID}\texttt{,} \meta{rowID~list};\medskip
+
+\meta{description} $=$ \meta{text line};\medskip
+
+\meta{value} $=$ \meta{percentage decimal value}.\medskip
+
+\noindent\fbox{\cmd{add}\squarep{key-value list}\curlyp{description}}\medskip
+
+\meta{key-value list} $=$ \texttt{id=}\meta{rowID}\texttt{,} \texttt{from=}\meta{rowID}\texttt{,} \texttt{until=}\meta{rowID}\texttt{,} \meta{rowID~list};\medskip
+
+\meta{description} $=$ \meta{text line}.\medskip
+
+\noindent\fbox{\cmd{inrule}}\medskip
+
+Please note that the \pkg{calctab} and \pkg{xcalctab} environments are based on the standard \LaTeX{} \env{tabular} environment, so you can manage your table as a float object all-surrounding it with a \pkg{table} environment.
+
+\subsection{The table appearance commands (at the moment)}
+The first row of the table typeset by \pkg{calctab} environment contains a pair of texts. The title of description column, that can be modify by the user with the command \cmd{ctdescription}, and the title of economic column that describe currency, set by the command \cmd{ctcurrency}. Default values are ``\texttt{Items description}'' and \cmd{euro}.
+
+These command save the argument in defined internal macro, in the same way of the common \cmd{title} and \cmd{author} command of the \pkg{article} class. Insert these commands before the \pkg{calctab} environment to change it.
+
+\bigskip
+\noindent\fbox{\cmd{ctcurrency}\curlyp{user text}}
+
+\smallskip
+
+\noindent\fbox{\cmd{ctdescription}\curlyp{user text}}
+
+
+\bigskip
+A table example show explicit assignment of the description text and currency unit after this commands:
+
+\begin{Verbatim}
+\ctdescription{Your bill, thanks a lot.}
+\ctcurrency{USD}
+\end{Verbatim}
+
+\ctdescription{Your bill, thanks a lot.}
+\ctcurrency{USD}
+
+\begin{calctab}
+    \amount[id=dinner]{Five dinner}{146}
+    \amount[id=breakfast]{Five breakfast}{35}
+    \perc[dinner]{Discount}{-8}
+    \perc[breakfast]{Discount}{-4}
+    \add{Grand total}
+\end{calctab}
+
+The default english text in percentage row can be changed in the same way with the command \cmd{ctontranslation}.
+
+\bigskip
+\noindent\fbox{\cmd{ctontranslation}\curlyp{on traslation}}
+\bigskip
+
+and the headers of the two \env{xcalctab} numeric columns can be setting with
+
+\bigskip
+\noindent\fbox{\cmd{ctheaderone}\curlyp{first text header}}
+\noindent\fbox{\cmd{ctheadertwo}\curlyp{second text header}}
+%
+%
+%
+\subsection{Incrementing the table width}
+The width of the \ct{} table can be adjust via a standard \LaTeX{} length called \cmd{ctsep} (default value is 8mm). The horizontal space will be add to the central column of the table. The next line is an example:
+
+\medskip
+\texttt{\cmd{setlength}\{\cmd{ctsep}\}\{28pt\}}
+
+
+%
+%
+%
+\newcommand{\closetable}[1][10]{
+\add{Subtotal}
+\perc{Tax}{#1}
+\add{Total}
+}
+%
+\newcommand{\billtab}[2][10]{%
+\begin{calctab}[This is my table]
+\amount{Confirmed cost}{#2}
+\perc{Tax}{#1}
+\add{Total}
+\end{calctab}}
+%
+\ctdescription{Description}
+\ctcurrency{\euro}
+%
+%
+%
+\subsection{New command with \ct{} environments}
+Some cases requires repetitive tasks with tables. How \ct{} can help to do these?
+
+\subsubsection{One command, one table}
+A table similar to \env{calctab} basic structure can to be build with a unique command.
+
+\begin{Verbatim}
+\newcommand{\billtab}[2][10]{% two arg command
+\begin{calctab}[This is my table]
+\amount{Confirmed cost}{#2}
+\perc{Tax}{#1}
+\add{Total}
+\end{calctab}}
+\end{Verbatim}
+
+When you write: \verb=\billtab{2800}= you achieved this table:
+
+\billtab{2800}\bigskip
+
+and with the command \verb=\billtab[20]{2000}= you achieved:
+
+\billtab[20]{2000}
+
+%
+%
+%
+\subsubsection{Inner table command}
+
+Sometimes is useful to insert only one command to insert several rows of \ct{} computation. The next code is an example.
+
+\begin{Verbatim}
+\newcommand{\closetable}[1][10]{
+\add{Subtotal}
+\perc{Tax}{#1}
+\add{Total}
+}
+\end{Verbatim}
+
+With this command the user can write shortly:
+
+\begin{Verbatim}
+\begin{calctab}
+   \amount{Cost}{1200}
+   \amount{Save pricing}{-400}
+   \closetable
+\end{calctab}
+\end{Verbatim}
+
+\begin{calctab}
+   \amount{Cost}{1200}
+   \amount{Save pricing}{-400}
+   \closetable
+\end{calctab}
+
+
+
+%
+%
+%
+\section{\ct{} idea}
+The language efficacy is particularly important for the \LaTeX{} user. The \ct{} underline concept is to build an expressive language for the model -- view paradigm.
+
+So one \emph{model} of structured data, can have more and more presentation \emph{view}. For example, a text with tabular structure can became a report or a graphic plot image.
+
+\section{ToDo}
+A big work remain to do until the release 1.0 version: a language design and implementation too of a new user interface that make easy modify the view paramenter of the table such as the type of label row (number, letter and so on), or to define the description text in the header column.
+
+
+This list report tasks:
+
+\begin{itemize}
+    \item write in good english the package documentation;
+    \item internationalization of the fixed text in table and the currency unit;
+    \item data input and inner commands language development;
+    \item new infrastructure to manage the table view properties;
+    \item \dots
+\end{itemize}
+
+\section{Package License}
+This work may be distributed and/or modified under the
+conditions of the \LaTeX{} Project Public License, either version 1.3
+of this license or any later version.
+The latest version of this license is in
+\url{http://www.latex-project.org/lppl.txt}
+and version 1.3 or later is part of all distributions of \LaTeX{}
+version 2005/12/01 or later.
+
+
+\section{Thanks and acknowledgments}
+
+The enthusiasm raised during GuIT\emph{meeting}2008 in Pisa (Italy)\footnote{For information please visit the site \url{www.guit.sssup.it/guitmeeting/2008/2008.it.php}} by the talk \emph{``Una tabella che fa calcoli''} and the tip suggest me by Norbert Preining (Vienna University of Technology) to upload on CTAN the code in experimental section, finally persuade me to publish this work.
+
+Thanks GuIT\emph{meeting}2008 people, thanks Norbert.
+
+Thanks a lot to Professor Enrico Gregorio for help me to resolve some code problem: balance the table description paragraph width to the table variable width, save in a tokens registry the material of table so as over the implicit group barrier of the tabular cells, and solve consequent \verb=\expandafter= \emph{jungle}.
+
+Thanks a lot to the authors of the packages used by \pkg{calctab}.
+
+And finally, thanks to my family.
+
+Every comment are welcome as well as any language discussion, so don't esitate to send to me an e-mail message with your opinion, suggestion or desiderata, or to leave a public comment in my site blog\footnote{Blog site address: \url{http://robitex.wordpress.com/calctab-package/}}. Thank you.
+
+
+
+\section{Change history}
+
+\begin{tabular}{lccp{247pt}}\toprule
+ Ver.    & N.  & Date       & Improvement description\\\midrule
+ 0.5     &     & 2009/02/23 & first \ct{} CTAN release\\\midrule
+         & 1   & 2009/03/03 & New \cmd{inrule} command to manual draw a rule
+                              among the table rows\\
+         & 2   & 2009/03/03 & Fixed bug: the absense of a rule after an add row\\
+         & 3   & 2009/03/05 & New \env{xcalctab} environment (extended environment
+                              with the ``quantity'' and ``price'' columns)\\
+         & 4   & 2009/03/10 & New feature: automatic short of the description
+                              string (A+B+C+$\cdots$) if it's long than more five items\\
+         & 5   & 2009/03/10 & Substituted the standard \LaTeX{} command \cmd{Alph}
+                              with \cmd{AlphAlph} by Heiko Oberdiek to eliminate
+                              the 26 rows limit in label column\\
+         & 6   & 2009/03/12 & New feature for \cmd{amount} command: basic binary
+                              operation with two numbers implemented with the \pkg{xstring}
+                              package\\
+         & 7   & 2009/03/12 & Some minor internal code adjustments\\\midrule
+  0.6    &     & 2009/03/29 & CTAN upload of the new version\\\midrule
+         & 1   & 2009/06/26 & Fixed parsing of negative numbers in the \cmd{amount}
+                              command binary operations\\
+         & 2   & 2009/07/12 & User manual improvement\\\midrule
+  0.6.1  &     & 2009/07/14 & CTAN upload of the maintenance release\\\bottomrule
+\end{tabular}
+
+\end{document}
+
+

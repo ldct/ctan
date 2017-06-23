@@ -1,0 +1,2048 @@
+% BEGIN seminar.doc
+%%
+\def\fileversion{1.0}
+\def\filedate{93/04/01}
+%%
+%% LaTeX document style `seminar', for use with LaTeX v2.09.
+%% This is a style for typesetting notes and slides.
+%%
+%% COPYRIGHT 1993, by Timothy Van Zandt, Timothy.VAN-ZANDT@insead.edu
+%%
+%%
+%% This file may be distributed and/or modified under the conditions of
+%% the LaTeX Project Public License, either version 1.2 of this license
+%% or (at your option) any later version.  The latest version of this
+%% license is in:
+%% 
+%%    http://www.latex-project.org/lppl.txt
+%% 
+%% and version 1.2 or later is part of all distributions of LaTeX version
+%% 1999/12/01 or later.
+%%
+%%
+% **************************************************************************
+% This is `seminar.doc', the documented code for `seminar.sty'.
+% You can copy this to `seminar.sty' and use it as is.
+% You can also create a stripped input file `seminar.sty' using sem-make.tex.
+% You can print the documented code using sem-code.tex.
+% sem-make.tex and sem-code.tex are distributed with seminar.sty.
+% **************************************************************************
+%
+% \EndDocPreamble
+%
+% \CheckSum{3062}
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+%
+%
+% \section{Overview}
+%
+% In principle, a slides style is a simple matter; just a question of
+% resetting the magnification and changing a few page parameters. However,
+% allowing notes and slides to be put in the same file but treated
+% differently, and allowing everything to be printed in various formats,
+% complicates things a bit.
+%
+% The code starts by checking that the file is not loaded, and announcing the
+% file on the terminal.
+%    \begin{macrocode}
+\@ifundefined{@seminarerr}{}{\endinput}
+\typeout{%
+  Document Style: `seminar' v\fileversion \space <\filedate> (tvz)}
+%    \end{macrocode}
+%
+%
+% \section{Useful hacks}
+%
+% \begin{macro}{\test@member}
+% The second argument to "\test@member" is a comma-separated list.
+% "\test@member" checks whether the first argument is a member of this list
+% (after expanding both the list and the first argument), setting "\if@test"
+% appropriately.
+%    \begin{macrocode}
+\def\test@member#1#2{%
+  \edef\@tempg{,#2,#1,}%
+  \edef\@temph{####1,#1,}%
+  \expandafter\def\expandafter\@temph\@temph##2\@nil{%
+    \def\@tempg{##2}%
+    \ifx\@tempg\@empty\@testfalse\else\@testtrue\fi}%
+  \expandafter\@temph\@tempg\@nil}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\addto@hook}
+% The first argument of "\addto@hook" is a token register. "\addto@hook" adds
+% its second argument to this register. This is a standard macro in the Mainz
+% distribution,.
+%    \begin{macrocode}
+\def\addto@hook#1#2{#1\expandafter{\the#1#2}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\reset@font}
+% "\reset@font" is part of later releases of \LaTeX.
+%    \begin{macrocode}
+\@ifundefined{reset@font}{\def\reset@font{\normalsize\rm}}{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@seminarerr}
+% "\@seminarerr" is analogous to "\@latexerr".
+%    \begin{macrocode}
+\def\@seminarerr#1#2{%
+  \edef\@tempc{#2}\expandafter\errhelp\expandafter{\@tempc}%
+  \typeout{^^JSeminar.sty error.\space\space\space
+    Type \space H <return> \space for immediate help.^^J}%
+  \errmessage{#1^^J}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\notslide@err}
+%    \begin{macrocode}
+\def\notslide@err#1{Cannot use \string#1 in slide environments}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\new@slidebox}
+% Since "\newbox" is "\outer".
+%    \begin{macrocode}
+\def\new@slidebox{\alloc@4\box\chardef\insc@unt}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidewidth,\slideheight}
+%    \begin{macrocode}
+\newdimen\slidewidth \slidewidth 8.5in
+\newdimen\slideheight \slideheight 6.3in
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\paperwidth,\paperheight}
+% "\paperwidth" and "\paperheight" are used by "sem-page.sty" to set the page
+% parameters. "\twoup" also uses the values.
+%    \begin{macrocode}
+\@ifundefined{paperwidth}{\def\paperwidth{8.5in}}{}
+\@ifundefined{paperheight}{\def\paperheight{11in}}{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\addto@preamblecmds}
+% Various commands used in this style are added to "\@preamblecmds". This
+% macros makes it easier to do this as we go along. Argument is a list of
+% commands separated by "\do".
+%    \begin{macrocode}
+\def\addto@preamblecmds#1{%
+  \begingroup
+    \def\do{\noexpand\do\noexpand}%
+    \xdef\@preamblecmds{\@preamblecmds\do#1}%
+  \endgroup}
+\addto@preamblecmds{\addto@preamblecmds\do\@preamblecmds}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Auxilary files and style options}
+%
+% The formats and selections are specified using style options, but these do
+% not correspond to independent files.
+% It is possible to set the flags before inputting "seminar.sty".
+%    \begin{macrocode}
+\def\sem@temp#1{\@ifundefined{if#1}%
+  {\def\@tempa{\csname newif\endcsname}
+  \expandafter\@tempa\csname if#1\endcsname}{}}
+\sem@temp{article}{}
+\sem@temp{slidesonly}{}
+\sem@temp{notes}{}
+\sem@temp{notesonly}{}
+\sem@temp{notesonlystar}{}
+\sem@temp{portrait}{}
+\def\ds@article{\articletrue}
+\def\ds@slidesonly{\slidesonlytrue\notesfalse\notesonlyfalse}
+\def\ds@notes{\notestrue\slidesonlyfalse\notesonlyfalse}
+\def\ds@notesonly{\notesonlytrue\slidesonlyfalse\notesfalse}
+\@namedef{ds@notesonly*}{\ds@notesonly\notesonlystartrue}
+\def\ds@portrait{\portraittrue}
+\@namedef{ds@a4}{%
+  \def\paperwidth{210mm}
+  \def\paperheight{297mm}
+  \slidewidth 222mm
+  \slideheight 152mm\relax}
+%    \end{macrocode}
+% This style is based in part on the \LaTeX{} "article" style, which we now
+% input. "article.sty" takes care of executing the options.
+%    \begin{macrocode}
+\@@input article.sty
+\ifnotesonly\else\notesonlystarfalse\fi
+\@@input sem-page.sty
+%    \end{macrocode}
+%
+% \section{Document hooks}
+%
+% \begin{macro}{\document}
+% "\document" is redefined to incorporate hooks, in the following order:
+% \begin{LVerbatim}
+%   \endgroup
+%   \the\before@document
+%   \begingroup
+%   \document
+%   \the\after@document
+%   \xcomment@hook
+% \end{LVerbatim}
+% "\before@document" and "\after@document" are token registers that can be
+% added to using "\addto@hook". These will be used for things like invoking
+% "\landscape". "\xcomment@hook" is a command sequence that will be used to
+% invoke the "xcomment" macros for commenting out the notes in the
+% "slidesonly" selection.
+%
+% Messing with the definition of "\document" creates potential conflicts with
+% other optional style files that do the same. However, we add these commands
+% in a very friendly way: (i) it shouldn't cause problems even if "\document"
+% does not have its standard definition, and (ii) if some other macros
+% subsequently change the definition of "\document" in the same way,
+% "seminar.sty" should not break. Styles designed specifically for use with
+% "seminar.sty" should use "\before@document" and "\after@document" to add
+% their own modifications to the "\document" command. \codelabel{document}
+%
+% In the code below, "\before@document" and "\after@document" are used as
+% temporary token registers during the modification of "\document".
+%    \begin{macrocode}
+\newtoks\before@document
+\newtoks\after@document
+\let\xcomment@hook\relax
+\before@document{\endgroup\the\before@document\begingroup}
+\after@document{\the\after@document\xcomment@hook}
+\expandafter\@temptokena\expandafter{\document}
+\edef\document{\the\before@document\the\@temptokena\the\after@document}
+\before@document{}
+\after@document{}
+%    \end{macrocode}
+% \codelabel*{document*}
+% \end{macro}
+%
+% \begin{macro}{\enddocument}
+% Now we do something similar with "\end@document", adding the token register
+% "\before@enddocument" to the beginning of the definition of "\enddocument".
+% This might be used, for example, to warn the user to print in landscape
+% mode.
+%    \begin{macrocode}
+\newtoks\before@enddocument
+\before@enddocument{\the\before@enddocument}
+\expandafter\@temptokena\expandafter{\enddocument}
+\edef\enddocument{\the\before@enddocument\the\@temptokena}
+\before@enddocument{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\landscape}
+% "\printlandscape" is invoked at the beginning of landscape documents. It is
+% defined here to warn the user to print in landscape mode.
+%    \begin{macrocode}
+\newif\ifprintlandscape
+\ifportrait
+  \ifarticle\printlandscapetrue\fi
+\else
+  \ifarticle\else\printlandscapetrue\fi
+\fi
+\addto@hook\before@document{\ifprintlandscape\printlandscape\fi}
+\addto@preamblecmds{\printlandscape}
+\def\printlandscape{\addto@hook\before@enddocument{%
+  \typeout{^^J%
+  *******************************************************^^J%
+  ***** !! PRINT THIS DOCUMENT IN LANDSCAPE MODE !! *****^^J%
+  *******************************************************}}}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Slide-making macros}
+%
+% \begin{macro}{\slide,\endslide,\slide*,\endslide*}
+% Let's start from the outside and move in.
+%    \begin{macrocode}
+\def\slide{%
+  \NestedSlide@Error{slide}%
+  \landscapetrue
+  \@ifnextchar[{\begin@slide}{\begin@slide[\slidewidth,\slideheight]}}
+\def\endslide{\end@slide}
+\@namedef{slide*}{%
+  \NestedSlide@Error{slide*}%
+  \landscapefalse
+  \@ifnextchar[{\begin@slide}{\begin@slide[\slidewidth,\slideheight]}}%
+\@namedef{endslide*}{\end@slide}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\theslide}
+% "slide" is the counter for slides. "slide@count" keeps track of the number
+% of slides in the current slide environment.
+%    \begin{macrocode}
+\newcounter{slide}
+\def\theslide{\arabic{slide}}
+\newcount\slide@count
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@slidebox}
+% Each slide is stored in the box "\@slidebox". The current page of notes
+% might be saved in "\not@slidebox".
+%    \begin{macrocode}
+\newbox\@slidebox
+\newbox\not@slidebox
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\ifslide,\iflandscape}
+% "\ifslide" is true in any slide environment. This allows commands to be
+% active only in slide environments (important for overlays, for example).
+% "\iflandscape" is true for landscape slides, and false for portrait slides.
+% This allows embellishments to customize their behavior, although it is not
+% actually used by any of the macros defined in "seminar.sty".
+%    \begin{macrocode}
+\newif\ifslide
+\newif\iflandscape
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@landscapeonly,\landscapeonly,\portraitonly}
+% "\@landscapeonly" is defined to be "1" if only landscape slides should be
+% printed, "-1" if only portrait slides should be printed, and "0" if both
+% orientations should be printed.
+%    \begin{macrocode}
+\def\@landscapeonly{0}
+\def\landscapeonly{\def\@landscapeonly{1}}
+\def\portraitonly{\def\@landscapeonly{-1}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\NestedSlide@Error}
+% We will check for nested slide environments, and attempt to recover the best
+% we can. Otherwise, forgetting the end of a slide environment could cause
+% \TeX{} to procede to the end of the document without generating any input,
+% and then give unlightening error messages.
+%    \begin{macrocode}
+\def\NestedSlide@Error#1{%
+  \ifslide
+    \endgroup
+    \@seminarerr{Nested slide environments. Perhaps missing
+      \string\end{\@currenvir}. May be fatal}\@ehd
+    \expandafter\end\expandafter{\@currenvir}%
+    \ifslide\expandafter\end\expandafter{\@currenvir}\fi
+    \begingroup
+    \def\@currenvir{#1}%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\begin@slide}
+% This is the meat of "\slide" and "\slide*".
+%    \begin{macrocode}
+\def\begin@slide[#1,#2]{%
+  \slide@clearpage
+  \setlength\slidewidth{#1}%
+  \setlength\slideheight{#2}%
+%    \end{macrocode}
+% The current contents of the page is saved in "\not@slidebox", and then the
+% output routine is set to "\slide@output".
+%    \begin{macrocode}
+  \begingroup
+    \ifarticle
+      \output{%
+        \advance\count@ 1
+        \global\setbox\not@slidebox\box\@cclv}%
+      \par\@@par\penalty-\@M
+    \fi
+    \output{\slide@output}%
+%    \end{macrocode}
+% The flag "\ifslide" is set, and the counter "\slide@count", which keeps
+% track of the number of slides in the current slide environment, is
+% initialized.
+%    \begin{macrocode}
+    \slidetrue
+    \ifarticle\global\slide@count=\z@\fi
+    \refstepcounter{slide}%
+    \ifnotesonlystar\xdef\first@slidemarker{\the\c@slide}\fi
+    \def\do##1{\setcounter{##1}\z@}\slide@reset
+%    \end{macrocode}
+% Save current "\textheight" and "\textwidth", to be used later by the output
+% routine in the "slides" format.
+%    \begin{macrocode}
+    \ifarticle\else
+      \edef\page@textheight{\number\textheight sp}%
+      \edef\page@textwidth{\number\textwidth sp}%
+    \fi
+    \set@slidesize
+%    \end{macrocode}
+% Now we finish customizing the slide environment.
+%    \begin{macrocode}
+    \slidebox@restore
+    \the\slide@hook
+    \the\before@newslide
+    \everyslide}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\end@slide}
+% This is "\endslide" and "\endslide*". We first make sure that there are
+% balanced groups so that the normal output routine is restored.
+%    \begin{macrocode}
+\def\end@slide{%
+    \par\penalty-\@M
+    \xdef\@tempg{\@currenvir}%
+  \endgroup
+  \ifslide
+    \@seminarerr{Perhaps missing `\string\end{\@tempg}',
+      \iffalse{\fi`\string}' or `\string\endgroup'}\@ehd
+    \def\next{\endgroup\ifslide\expandafter\next\fi}%
+    \next
+  \fi
+%    \end{macrocode}
+% If there is anything on the page, it was inserted with "\aftergroup" and
+% should be discarded. (This can happen with color commands, for example.)
+%    \begin{macrocode}
+  \begingroup
+    \output{\setbox\@tempboxa\box\@cclv}%
+    \@@par\penalty-\@M
+  \endgroup
+%    \end{macrocode}
+% The slide counter was stepped when the last slide was output. Now we need to
+% set it back one. With the "article" format, we now have to output all the
+% acculumulated slides.
+%    \begin{macrocode}
+  \global\advance\c@slide-1
+  \def\do##1{\setcounter{##1}{\@nameuse{saved@c@##1}}}%
+  \slide@reset
+  \ifarticle\outputloop@savedslides\fi
+  \the\after@slide}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slideclearpagetrue,\slideclearpagefalse,\slide@clearpage}
+%    \begin{macrocode}
+\let\slideclearpagetrue\relax
+\let\slideclearpagefalse\relax
+\ifarticle
+  \def\slide@clearpage{\par\penalty\z@}
+  \ifnotes
+    \def\slideclearpagetrue{\def\slide@clearpage{\clearpage}}
+    \def\slideclearpagefalse{\def\slide@clearpage{\par\penalty\z@}}
+  \else
+    \ifnotesonly
+      \def\slideclearpagetrue{\def\slide@clearpage{\clearpage}}
+      \def\slideclearpagefalse{\def\slide@clearpage{\par\penalty\z@}}
+    \fi
+  \fi
+\else
+  \def\slide@clearpage{\clearpage}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@hook,\everyslide,\after@slide}
+% "\slide@hook" and "\everyslide" are hooks for modifying the slide
+% environments. "\slide@hook" is a token register. Commands can be added to it
+% without destroying previously added commands using the "\addto@hook"
+% command.
+% "\everyslide" is an ordinary command sequence to be used by users.
+% "\after@slide" can be used to initialize things for notes.
+%    \begin{macrocode}
+\newtoks\slide@hook
+\def\everyslide{}
+\newtoks\after@slide
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{$\setminus$slidebox@restore\label{everyslide}}
+%
+% \begin{macro}{\slidebox@restore}
+% "\slidebox@restore" sets up the spacing parameters at the beginning of every
+% slide. The component commands are defined following this macro.
+%    \begin{macrocode}
+\def\slidebox@restore{%
+  \def\thepage{\theslide}%
+  \def\newpage{\newslide}%
+  \def\clearpage{\newslide}%
+  \def\thispagestyle{\notslide@err{\thispagestyle}}%
+  \pagestyle{\slide@pagestyle}%
+  \@twocolumnfalse
+  \def\twocolumn{\notslide@err{\twocolumn}}%
+  \def\onecolumn{\notslide@err{\onecolumn}}%
+  \def\marginpar{\notslide@err{\marginpar}}%
+  \def\thanks{\slidethanks}%
+  \def\maketitle{\slidemaketitle}%
+  \fix@floats
+  \fix@whatsits
+  \slide@footnotes
+  \def\do##1{\expandafter\xdef\csname
+   saved@c@##1\endcsname{\the\@nameuse{c@##1}}}%
+  \slide@reset
+  \topskip\z@ \maxdepth\z@
+  \slide@listparameters
+  \slidefonts
+  \def\baselinestretch{\slidestretch}%
+  \def\arraystretch{\slidearraystretch}%
+  \sem@ptsize{\slide@ptsize}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\thedate,\theauthor,\thetitle,\thethanks}
+% The "\date", "\author" and "\title" commands are redefined so that they save
+% their information in accessible command sequences, "\thedate", "\theauthor"
+% and "\thetitle". "\thanks" is saved so that it can be restored during slide
+% environments. "\thethanks" is set to "\@thanks" so that it is easier to
+% redefine "\slidemaketitle" in the preamble.
+%    \begin{macrocode}
+\def\date#1{\gdef\@date{#1}\gdef\thedate{#1}}
+\def\author#1{\gdef\@author{#1}\gdef\theauthor{#1}}
+\def\title#1{\gdef\@title{#1}\gdef\thetitle{#1}}
+\date{\today}
+\let\slidethanks\thanks
+\def\thethanks{\@thanks}%
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidemaketitle}
+%    \begin{macrocode}
+\def\slidemaketitle{%
+  \par
+  \begin{center}\bf
+    {\large \thetitle}\par\vskip 1ex
+    \begin{tabular}[t]{c} \theauthor \end{tabular}\par\vskip 1ex
+    \thedate
+  \end{center}%
+  \thethanks\par}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\fix@floats}
+% Floats are neutralized, but the captions work as usual. This makes it easier
+% to just transfer a float from some other document to a slide. This only
+% works if end of floating environment is "\def"ined to be "\end@float",
+% rather than "\let" to be "\end@float", or if "\@float{foo}" is ended by
+% "\endfoo". This should get 99\% of the cases.
+%    \begin{macrocode}
+\def\fix@floats{%
+  \def\@xfloat##1[##2]{%
+    \expandafter\let\csname end##1\endcsname\end@float
+    \par\medskip\vbox\bgroup\def\@captype{##1}\parindent\z@
+    \ignorespaces}%
+  \def\end@float{\par\vskip\z@\egroup\medskip}%
+  \def\@dblfloat{\@float}\def\end@dblfloat{\end@float}%
+  \def\endfigure{\end@float}\def\endtable{\end@float}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\fix@whatsits}
+% The whatsits "\write", "\openout" and "\closeout" are problematic in slides
+% for two reasons:
+% \begin{enumerate}
+% \item First, an otherwise empty vertical list with a whatsit is not empty.
+% Thus, if a slide begins with a "\write" command, followed by a line a text,
+% "\parskip" is inserted before the text. This can be quite noticable in a
+% slide environment, since by default "\parskip" is about 2.5\% of the height
+% of a slide. This problem is likely to arise because it is convenient to put
+% a slide's "\label" command first.
+% \item Second, the slides are omitted in the "notesonly" selection, but we
+% want to preserve cross-referencing.
+% \end{enumerate}
+% We solve both problems by making the three whatsits mentioned above
+% "\immediate" within the slide environments. This might cause unforeseen
+% problems for some macros. It also introduces a known problem: slide
+% cross-references may not be accurate if \TeX\ is doing the page breaking
+% automatically.
+%    \begin{macrocode}
+\let\normal@write\write
+\let\normal@read\read
+\let\normal@openout\openout
+\let\normal@closeout\closeout
+\def\fix@whatsits{%
+  \def\write{\immediate\normal@write}%
+  \def\read{\immediate\normal@read}%
+  \def\openout{\immediate\normal@openout}%
+  \def\closeout{\immediate\normal@closeout}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@footins,\theslidefootnote,\slide@footnotes}
+% We want to set up a parallel footnote system for slides. It acts just like
+% regular footnotes, but
+% \begin{LVerbatim}
+%   \interfootnotelinepenalty\@M
+% \end{LVerbatim}
+% means that footnotes will not be split across pages.
+%    \begin{macrocode}
+\newinsert\slide@footins
+\skip\slide@footins=\bigskipamount
+\count\slide@footins=1000
+\dimen\slide@footins=4in
+\def\theslidefootnote{\alph{footnote}}
+\def\slide@footnotes{%
+  \def\thefootnote{\theslidefootnote}%
+  \let\footins\slide@footins
+  \interfootnotelinepenalty\@M}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidefonts,\ifslidefonts}
+% "\slidefonts" should set up any special fonts for the slides.
+%    \begin{macrocode}
+\def\slidefonts{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidestretch,\slidearraystretch}
+%    \begin{macrocode}
+\def\slidestretch{1.18}
+\def\slidearraystretch{1.2}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\raggedslides}
+% "\ragggedslides[0pt]" means justified, "\raggedslides[1fil]" means
+% "\raggedright". Ideally, we would also like a version that breaks lines the
+% same way as with justified text, but then doesn't stretch any glue to
+% justify the margin. This is impossible, but "\raggedslides[1em]", e.g., is
+% meant to be an intermediate case.
+%    \begin{macrocode}
+\def\raggedslides{\@ifnextchar[{\@raggedslides}{\@raggedslides[1fil]}}
+\def\@raggedslides[#1]{%
+  \edef\slide@@rightskip{#1}%
+  \ifslide\slide@rightskip\fi}
+\def\slide@rightskip{%
+  \@rightskip\z@ plus \slide@@rightskip\relax \rightskip\@rightskip}
+\def\slide@@rightskip{1fil}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\slide@listparameters}
+% The list parameters are generally tightened up, compared to the usual
+% spacing in "article.sty", to compensate for the large "\parskip" and
+% "\baselinestretch".
+%    \begin{macrocode}
+\newcount\slide@listdepth
+\def\slide@listparameters{%
+  \let\@listdepth\slide@listdepth
+  \slide@listdepth\z@
+  \def\@listi{\slide@listi}%
+  \def\@listii{\slide@listii}%
+  \def\@listiii{\slide@listiii}%
+  \let\@listiv\relax\let\@listv\relax\let\@listvi\relax}
+\def\slide@listi{%
+  \leftmargin\leftmargini
+  \labelwidth\leftmargini \advance\labelwidth-\labelsep
+  \parsep\parskip \divide\parsep2
+  \partopsep\slidepartopsep\relax
+  \advance\partopsep-\parskip
+  \ifdim\partopsep<\z@\partopsep\z@\fi
+  \itemsep\slideitemsep\relax
+  \ifdim\parsep<\itemsep
+    \topsep\itemsep \advance\topsep-\parsep
+  \else
+    \itemsep\parsep \topsep\z@
+  \fi}
+\def\slide@listii{%
+  \leftmargin\leftmarginii
+  \labelwidth\leftmarginii \advance\labelwidth-\labelsep
+  \divide\itemsep2 \divide\parsep2
+  \divide\topsep2 \divide\partopsep2\relax}%
+\def\slide@listiii{%
+  \leftmargin\leftmarginiii
+  \labelwidth\leftmarginiii \advance\labelwidth-\labelsep
+  \itemsep \z@ \parsep\z@ \topsep\z@}%
+\def\slideleftmargini{1.8em}
+\def\slideleftmarginii{1.4em}
+\def\slideleftmarginiii{1em}
+\def\slidelabelsep{.5em}
+\def\slideitemsep{.8ex minus .2ex}
+\def\slidepartopsep{1ex minus .2ex}
+%    \end{macrocode}
+% \codelabel{defaultpar*}%
+% \end{macro}
+%
+% \section{Slide output routines: $\setminus$output}
+%
+% \begin{macro}{\save@slidespecials}
+% First, a trick to make sure that "\special"'s in the preamble end up on the
+% first page of the document, even if the first slide is omitted, or if the
+% first item in the document is a float (in which case \LaTeX\ discards
+% "\special"'s). "\@textop" is used to insert the specials if the first page
+% is processed by \LaTeX's usual output routines, and "\insert@specials" is
+% used to insert the specials if the first page is a slide in the "slides"
+% format (see the definition of "\output@slide" below).
+%    \begin{macrocode}
+\newbox\saved@specials
+\def\save@slidespecials{%
+  \begingroup
+    \output{%
+      \global\setbox\saved@specials=\box\@cclv
+      \global\wd\saved@specials=\z@
+      \global\dp\saved@specials=\z@
+      \global\ht\saved@specials=\z@}%
+    \hbox{}\penalty-\@M
+    \global\let\saved@texttop\@texttop
+    \gdef\@texttop{%
+      \ifvoid\saved@specials\else\box\saved@specials\nointerlineskip\fi
+      \saved@texttop
+      \global\let\@texttop\saved@texttop}%
+  \endgroup}
+\addto@hook\after@document{\save@slidespecials}
+\ifarticle\else
+  \def\insert@specials{%
+    \ifvoid\saved@specials\else
+      \setbox\@slidebox\hbox{\box\saved@specials\box\@slidebox}%
+    \fi
+    \global\let\insert@specials\relax}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\extraslideheight}
+% This increases the height of a slide for the purpose of page-breaking. We
+% use unscaled dimensions so that \TeX's warnings about overfull "\vbox"'s
+% will be comparable.
+%    \begin{macrocode}
+\def\extraslideheight#1{%
+  \@tempdima #1\relax
+  \edef\X@SlideHeight{\number\@tempdima sp}
+  \ifslide\set@slidesize\fi}
+\extraslideheight{6pt}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\set@slidesize}
+% In addition to setting "\hsize" and "\vsize", this sets the \LaTeX\
+% parameters such as "\textheight" and "\textwidth" so that slides seem like a
+% regular page, whatever format is being used.
+%    \begin{macrocode}
+\def\set@slidesize{%
+  \iflandscape
+    \hsize=\inverseslidesmag\slidewidth
+    \vsize=\inverseslidesmag\slideheight
+  \else
+    \hsize=\inverseslidesmag\slideheight
+    \vsize=\inverseslidesmag\slidewidth
+  \fi
+  \edef\slide@vsize{\number\vsize sp}%
+  \textheight\vsize
+  \advance\vsize\X@SlideHeight\relax
+  \textwidth\hsize\columnwidth\hsize\linewidth\hsize}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\newslide}
+% This includes things you want to initialize whenever a new page is started
+%    \begin{macrocode}
+\def\newslide{%
+  \par\penalty-\@M
+  \def\do##1{\setcounter{##1}\z@}\slide@reset
+  \the\before@newslide
+  \set@slidesize}
+\newtoks\before@newslide
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidereset,\addtoslidereset}
+% "\addto@slidereset{foo,bar}" sets "\slide@reset" to
+% \begin{quote}
+%    "\slide@reset\do{foo}\do{bar}"
+% \end{quote}
+%    \begin{macrocode}
+\def\slide@reset{\do{footnote}}
+\def\slidereset#1{\def\slide@reset{}\addtoslidereset{#1}}
+\def\addtoslidereset#1{%
+  \edef\@tempa{#1}\expandafter\addto@slidereset\@tempa,\@nil,}
+\def\addto@slidereset#1,{%
+  \ifx\@nil#1\else
+    \@ifundefined{c@#1}%
+      {\@seminarerr{Counter `#1' not defined}\@ehd}%
+      {\expandafter\def\expandafter\slide@reset\expandafter{%
+        \slide@reset\do{#1}}}%
+    \expandafter\addto@slidereset
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@output}
+% "\os@test" checks whether according to some "\onlyslides" or "\notslides"
+% command, this slide should not be output; "\os@test" is defined in Section
+% \ref{os}.
+%    \begin{macrocode}
+\def\slide@output{%
+  \@makeslide
+  \@testfalse
+  \ifnotesonly\else
+    \iflandscape
+      \ifnum\@landscapeonly>-1 \os@test\fi
+    \else
+      \ifnum\@landscapeonly<1 \os@test\fi
+    \fi
+  \fi
+  \if@test
+    \reset@slideoutput
+    \@@makeslide
+    \process@slide
+  \fi
+  \refstepcounter{slide}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\reset@slideoutput}
+% Some things should be reset for the slide embellishments. E.g., you don't
+% want slide labels or headers and footers to be affected by the current font.
+%    \begin{macrocode}
+\def\reset@slideoutput{%
+  \let\par\@@par
+  \reset@font
+  \def\baselinestretch{1}%
+  \@nameuse{1\@ptsize @semptsize}%
+  \catcode`\ =10
+  \let\-\@dischyph \let\'\@acci \let\`\@accii \let\=\@acciii}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\ifcenterslides}
+% This is the flag for vertically centering slides.
+%    \begin{macrocode}
+\newif\ifcenterslides
+\centerslidestrue
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@makeslide,\@@makeslide}
+% Take care of footnotes and verticle positioning.
+%    \begin{macrocode}
+\def\@makeslide{%
+  \setbox\@slidebox\vbox{%
+    \unvbox\@cclv
+    \ifvoid\slide@footins\else
+      \vskip\skip\slide@footins
+      \footnoterule
+      \unvbox\slide@footins
+    \fi
+    \vskip\z@}}
+\def\@@makeslide{%
+  \overfullslide@warning
+  \setbox\@slidebox\hbox{%
+    \vfuzz=\slidefuzz\relax
+    \vbox to\slide@vsize{%
+    \ifcenterslides\vskip\z@ plus .0001fil \fi
+    \unvbox\@slidebox
+    \vskip\z@ plus .0001fil}%
+    \the\after@slidepage}%
+  \wd\@slidebox\textwidth}
+\def\overfullslide@warning{%
+  \dimen@\ht\@slidebox
+  \advance\dimen@-\slide@vsize\relax
+  \ifdim\dimen@>\slidefuzz\relax
+    \@warning{Slide \theslide\space overfull by \the\dimen@}%
+  \fi}
+\def\slidefuzz{2pt}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\after@slidepage}
+% "\after@slidepage" is executed at the end of each page of a slide
+% environment during the slide output routine. It is meant to reset things
+% that might have been set by "\special"'s within the slide.
+%    \begin{macrocode}
+\newtoks\after@slidepage
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Rotation}
+%
+% Rotation macros must be implemented by "\special"'s, such as in
+% "semcolor.sty". The interface for rotation is built into "seminar.sty",
+% however.
+%
+% \begin{macro}{\ifrotateheaders}
+% In the "slides" format, the slides can either be rotated before being placed
+% on the page, or the whole page can be rotated, including headers.
+% "\ifrotateheaders" controls which procedure is used.
+%    \begin{macrocode}
+\newif\ifrotateheaders
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\sliderotation}
+%    \begin{macrocode}
+\def\sliderotation#1{\@ifundefined{semsr@#1}%
+  {\@latexerr{Slide rotation `#1' not defined.}\@eha}%
+  {\@nameuse{semsr@#1}}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\semsr@none,\semsr@left,\semsr@right}
+% A slide rotation should define "\rotate@slide" to rotate "\@slidebox"..
+%    \begin{macrocode}
+\def\semsr@left{%
+  \def\rotate@slide{%
+    \setbox\@slidebox\hbox{\leftsliderotation{\box\@slidebox}}}}
+\def\semsr@right{%
+  \def\rotate@slide{%
+    \setbox\@slidebox\hbox{\rightsliderotation{\box\@slidebox}}}}
+\def\semsr@none{\let\rotate@slide\relax}
+\sliderotation{none}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\leftsliderotation,\rightsliderotation}
+%    \begin{macrocode}
+\def\leftsliderotation#1{%
+  \@seminarerr{\string\leftsliderotation\space has not been defined}%
+  \@ehd}
+\let\rightsliderotation\leftsliderotation
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\@ifrotateslide}
+%    \begin{macrocode}
+\def\@ifrotateslide#1{%
+  \ifx\rotate@slide\relax\else
+    \iflandscape\ifportrait#1\fi\else\ifportrait\else#1\fi\fi
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Slide output routines: $\setminus$process@slide\label{slideoutput}}
+%
+% This is the version-dependent stuff, where we decide what to do with the
+% slide.
+%
+% \begin{macro}{\process@slide}
+% "\process@@slide" is kept separate because it can be redefined for doing
+% overlays.
+%    \begin{macrocode}
+\def\process@slide{%
+  \slideframewidth=\inverseslidesmag\slideframewidth
+  \slideframesep=\inverseslidesmag\slideframesep
+  \fboxrule\slideframewidth
+  \fboxsep\slideframesep
+  \ifarticle
+    \@ifrotateslide\rotate@slide
+  \else
+    \ifrotateheaders\else\@ifrotateslide\rotate@slide\fi
+  \fi
+  \process@@slide}
+\def\process@@slide{\finish@slide\output@slide}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\finish@slide}
+%    \begin{macrocode}
+\def\finish@slide{%
+  \theslideframe
+  \add@slidelabel\slidelabel}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\output@slide}
+% In the "article" format, the slides are saved until the end of the slide
+% environment.
+%     \begin{macrocode}
+\ifarticle
+  \def\output@slide{%
+    \global\advance\slide@count1
+    \@ifundefined{slidebox@\the\slide@count}%
+      {{\globaldefs=1\expandafter
+        \new@slidebox\csname slidebox@\the\slide@count\endcsname}}{}%
+    \expandafter\global\expandafter\setbox\csname
+      slidebox@\the\slide@count\endcsname\box\@slidebox}
+%    \end{macrocode}
+% In the "slides" format, we use a modification of \LaTeX's "\@outputpage".
+% "\do@fancyput" is stuck in here in case "fancybox.sty" is being used.
+% "\fancyput@flag" is initialized in case it is not
+%    \begin{macrocode}
+\else
+  \def\output@slide{%
+    \begingroup
+      \hoffset=-\inverseslidesmag in
+      \voffset=-\inverseslidesmag in
+      \setslidelength\@tempdima{%
+        \ifportrait\paperwidth\else\paperheight\fi}
+      \setslidelength\@tempdimb{%
+        \ifportrait\paperheight\else\paperwidth\fi}
+      \ifrotateheaders
+        \@ifrotateslide{%
+          \dimen@=\@tempdima
+          \@tempdima=\@tempdimb
+          \@tempdimb=\dimen@}
+      \fi
+      % \oddsidemargin, \evensidemargin, \headheight, \footheight
+      % used for scratch:
+      \setslidelength\oddsidemargin\slideleftmargin
+      \setslidelength\evensidemargin\sliderightmargin
+      \setslidelength\headheight\slidetopmargin
+      \setslidelength\footheight\slidebottommargin
+      % Some page styles like to know \textwidth:
+      \textwidth=\@tempdima
+      \advance\textwidth-\oddsidemargin
+      \advance\textwidth-\evensidemargin
+      \setbox\@slidebox=\hbox to \@tempdima{%
+        \kern\oddsidemargin
+        \vbox to\@tempdimb{%
+          \ifnum\fancyput@flag>-1
+            \hbox{\kern-\oddsidemargin\do@fancyput}%
+          \fi
+          \let\label\@gobble
+          \let\index\@gobble
+          \let\glossary\@gobble
+          \vbox to\headheight{%
+            \vfill
+            \hbox{%
+              \slideheadfont\relax\strut
+              \hbox to\textwidth{\@oddhead}}%
+            \kern\z@}%
+          \vfill
+          \hbox to\textwidth{\hss\box\@slidebox\hss}%
+          \vfill
+          \vbox to\footheight{%
+            \hbox{%
+              \slidefootfont\relax\strut
+              \hbox to\textwidth{\@oddfoot}}%
+            \vfill}}%
+        \hss}%
+      \ifrotateheaders\@ifrotateslide\rotate@slide\fi
+      \insert@specials
+      \shipout\box\@slidebox
+    \endgroup
+    \let\firstmark\botmark}
+  \@ifundefined{fancyput@flag}{\def\fancyput@flag{-1}}{}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\output@savedslide}
+% Now we take care of the saved slides in the "article" format. Lots of things
+% can happen.
+%    \begin{macrocode}
+\newskip\slidesep
+\slidesep\intextsep
+\ifarticle
+  \def\fps@fslide{htbp}
+  \def\ftype@fslide{32}
+  \def\float@savedslide{%
+    \begingroup\@float{fslide}%
+      \centerline{\box\@slidebox}%
+    \end@float\endgroup}%
+  \@namedef{float*@savedslide}{%
+    \begingroup\@dblfloat{fslide}%
+      \centerline{\box\@slidebox}%
+    \end@dblfloat\endgroup}%
+  \def\center@slide{\hbox{%
+    \kern-\@totalleftmargin
+    \hbox to \columnwidth{\hss\box\@slidebox\hss}}}%
+  \def\onepercol@savedslide{%
+    \vbox to .996\textheight{\vss\center@slide\vss}\goodbreak}%
+  \def\twopercol@savedslide{%
+    \dimen@.5\textheight
+    \advance\dimen@-\slidesep
+    \ifdim\ht\@slidebox>\dimen@
+      \onepercol@savedslide
+    \else
+      \vbox to .498\textheight{\vss\center@slide\vss}\goodbreak
+    \fi}
+  \def\here@savedslide{%
+    \addvspace\slidesep\center@slide\addvspace\slidesep}
+  \@namedef{here*@savedslide}{%
+    \goodbreak \hrule \@height\z@ \nobreak \vskip\slidesep \nobreak
+    \center@slide
+    \nobreak \vskip\slidesep \nobreak \hrule\@height\z@ \goodbreak}
+\fi
+\ifarticle
+  \def\slideplacement#1{\@ifundefined{#1@savedslide}%
+    {\@seminarerr{Slide placement `#1' undefined}\@ehd}%
+    {\expandafter\let\expandafter\output@savedslide
+      \csname #1@savedslide\endcsname}}
+\else
+  \def\slideplacement#1{}
+\fi
+\ifarticle
+  \ifnotes
+    \ifportrait
+      \slideplacement{float}
+    \else
+      \slideplacement{float*}
+    \fi
+  \else
+    \ifportrait
+      \slideplacement{onepercol}
+    \else
+      \slideplacement{twopercol}
+    \fi
+  \fi
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\outputloop@savedslides}
+% This is the loop that spits out each of the saved slides. We start by
+% reinserting whatever was on the current page when the slide environment
+% started.
+%    \begin{macrocode}
+\ifarticle
+  \def\outputloop@savedslides{%
+    \global\maxdepth\@maxdepth
+    \ifvoid\not@slidebox\else
+      \dimen@=\dp\not@slidebox
+      \unvbox\not@slidebox
+      \hrule height\z@
+      \prevdepth\dimen@
+      \penalty\z@
+    \fi
+    \edef\slide@@count{\the\slide@count\relax}%
+    \slide@count\z@
+    \loop
+    \ifnum\slide@count<\slide@@count
+      \advance\slide@count1
+      \expandafter\setbox\expandafter\@slidebox\expandafter\box
+        \csname slidebox@\the\slide@count\endcsname
+      \output@savedslide
+    \repeat
+    \ifnotesonlystar\make@slidemarker\fi}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\make@slidemarker}
+%    \begin{macrocode}
+\def\make@slidemarker{%
+  \addvspace\slidesep
+  \moveleft\@totalleftmargin
+  \vbox{%
+    \hsize\columnwidth
+    \hrule height 1pt
+    \kern 8pt
+    \hbox to \columnwidth{%
+      \hss
+      \LARGE\bf\the@slidemarker
+      \hss}%
+    \kern 8pt
+    \hrule height 1pt}%
+  \addvspace\slidesep}
+\def\the@slidemarker{%
+  Slide%
+  \ifnum\c@slide=\first@slidemarker\else
+    s {\c@slide\first@slidemarker\relax\theslide} --\fi
+  { }\theslide}%
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Page numbering in the {\tt slides} format}
+%
+% In the "slides" format, we let the "page" counter be stepped as usual by the
+% output routine, but we don't use it for anything except perhaps to keep
+% track of the absolute page number. Instead, we have a counter "note" to keep
+% track of the pages of notes, and "\thepage" is set to "\thenote" for notes
+% and "\theslide" for slides (and "\theoverlay" for overlays and "\thelayer"
+% for layers).
+%
+% \begin{macro}{\c@note}
+% The "note" counter has to be stepped by the output routine, and reset by the
+% slide environments. In the "article" format, we just make the "note" counter
+% the same as the "page" counter.
+%    \begin{macrocode}
+\ifarticle
+  \let\c@note\c@page
+  \def\p@note{\p@page}
+  \def\thenote{\thepage}
+\else
+  \newcounter{note}
+  \def\thenote{\theslide-\arabic{note}}
+  \def\thepage{\thenote}
+  \addto@hook\after@slide{\setcounter{note}{1}}
+  \expandafter\def\expandafter\@outputpage\expandafter{%
+    \@outputpage\stepcounter{note}}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% Which counter should the dvi driver pay attention to when numbering the
+% pages in the "slides" format? This makes a difference when using the dvi
+% driver to select pages. If the driver numbers pages by the slide number,
+% then it is easier to use the driver to print selected slides.
+% However, this can be cumbersome when there are many pages of notes or
+% overlays, especially if the driver cannot pick out the $n^{th}$ occurence of
+% a page, because many pages will have the same page number. In this case,
+% keeping track of physical page numbers may be preferred. We allow both
+% options.
+%
+% By default, the dvi driver pays attention to the slide counter; i.e., this
+% counter is assigned register 0
+%    \begin{macrocode}
+\ifarticle\else
+  \let\c@page\c@slide
+  \countdef\c@slide=0
+  \c@slide=0
+  \c@page=1
+\fi
+%    \end{macrocode}
+%
+% \begin{macro}{\truepagenumbers}
+% This switches back to having the driver recognize physical page numbers.
+%    \begin{macrocode}
+\ifarticle
+  \let\truepagenumbers\relax
+\else
+  \def\truepagenumbers{%
+    \let\c@slide\c@page
+    \countdef\c@page=0
+    \c@page=1
+    \c@slide=0
+    \let\truepagenumbers\relax}
+\fi
+\addto@preamblecmds{\truepagenumbers}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Slide frames}
+%
+% \begin{macro}{\slideframewidth,\slideframesep}
+%    \begin{macrocode}
+\newdimen\slideframewidth \slideframewidth 4pt
+\newdimen\slideframesep \slideframesep .3in
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\newslideframe,\slideframe}
+%    \begin{macrocode}
+\def\newslideframe#1{%
+  \@ifnextchar[{\@newslideframe{#1}}{\@newslideframe{#1}[]}}
+\def\@newslideframe#1[#2]{%
+  \@namedef{semsfops@#1}{#2}%
+  \@namedef{semsf@#1}##1}
+\newslideframe{plain}{\fbox{#1}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slideframe,\@slideframe}
+%    \begin{macrocode}
+\def\slideframe{\@slideframe{slide}}
+\def\@slideframe#1{%
+  \@ifstar{\@testtrue\@@slideframe{#1}}{\@testfalse\@@slideframe{#1}}}
+\def\@@slideframe#1{%
+  \@ifnextchar[{\@@@slideframe{#1}}{\@@@slideframe{#1}[]}}
+\def\@@@slideframe#1[#2]#3{%
+  \def\@tempa{none}%
+  \def\@tempb{#3}%
+  \ifx\@tempa\@tempb
+    \@namedef{the#1frame}{\relax}%
+  \else
+    \ifx\@tempb\@empty
+      \@namedef{the#1frame}{}%
+    \else
+      \@ifundefined{semsf@#3}%
+        {\@seminarerr{Slide frame `#3' undefined}\@eha}%
+        {\if@test
+          \@@@@slideframe{#1}[#2]{#3}%
+        \else
+          \@namedef{the#1frame}{\setbox\@slidebox=\hbox{{%
+            \@nameuse{semsfops@#3}#2\@nameuse{semsf@#3}{\box\@slidebox}}}}%
+        \fi}%
+     \fi
+   \fi}
+\def\@@@@slideframe#1[#2]#3{%
+  \expandafter\let\expandafter\@tempa\csname the#1frame\endcsname
+  \edef\next{%
+    \noexpand\def\expandafter\noexpand\csname the#1frame\endcsname}%
+  \expandafter\next\expandafter{\@tempa
+    \setbox\@slidebox=\hbox{{%
+      \@nameuse{semsfops@#3}%
+      #2%
+      \@nameuse{semsf@#3}{\box\@slidebox}}}}}%
+\slideframe{plain}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Slide styles\label{slidestyles}}
+%
+% \begin{macro}{\slidestyle}
+%    \begin{macrocode}
+\def\slidestyle#1{\@ifundefined{ss@#1}%
+  {\@seminarerr{Slide style `#1' undefined}\@eha}%
+  {\@nameuse{ss@#1}}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\ss@empty,\ss@plain,\ss@plainbottom}
+% The "plain" slide style places the slide label on the left side of the
+% framed slide, centered vertically. The caption is set in a box with zero
+% width so that it does not affect the centering of the slide on the page. In
+% the "plainbottom" style, the label is centered at the bottom of the slide.
+%    \begin{macrocode}
+\def\ss@empty{\let\add@slidelabel\@gobble}
+\def\ss@left{\def\add@slidelabel##1{%
+  \setbox\@slidebox=\hbox{%
+    \vbox to \ht\@slidebox{\vss
+    \hbox to 0pt{\hss##1\hskip 15pt}%
+    \vss}\box\@slidebox}}}
+\def\ss@bottom{\def\add@slidelabel##1{%
+  \setbox\@slidebox=\vbox{\copy\@slidebox\vskip 9pt
+    \hbox to\wd\@slidebox{\hss##1\hss}}}}%
+\ifarticle
+  \ifportrait\slidestyle{bottom}\else\slidestyle{left}\fi
+\else
+  \slidestyle{empty}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidelabel}
+%    \begin{macrocode}
+\def\slidelabel{\bf Slide \theslide}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Page styles}
+%
+% \begin{macro}{\newpagestyle,\renewpagestyle}
+% The next two commands allow one to define new pages styles in the preamble
+% of a document without playing around with the catcode of "@".
+%    \begin{macrocode}
+\def\newpagestyle#1#2#3{%
+  \expandafter\newcommand\csname ps@#1\endcsname{%
+    \def\@oddhead{#2}\let\@evenhead\@oddhead
+    \def\@oddfoot{#3}\let\@evenfoot\@oddfoot}}
+\def\renewpagestyle#1#2#3{%
+  \expandafter\renewcommand\csname ps@#1\endcsname{%
+    \def\@oddhead{#2}\let\@evenhead\@oddhead
+    \def\@oddfoot{#3}\let\@evenfoot\@oddfoot}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidepagestyle}
+%    \begin{macrocode}
+\def\@ifgoodps#1{%
+  \@ifundefined{ps@#1}{\@seminarerr{Page style `#1' undefined}\@eha}}
+\def\slidepagestyle#1{%
+  \@ifgoodps{#1}%
+    {\ifslide\pagestyle{#1}\else\edef\slide@pagestyle{#1}\fi}}
+\def\ps@{}
+\slidepagestyle{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\ps@align}
+%    \begin{macrocode}
+\ifarticle
+  \def\ps@align{}
+\else
+  \def\ps@align{%
+    \def\@oddhead{\thepage\hfil+}\let\@evenhead\@oddhead
+    \def\@oddfoot{+\hfil+}\let\@evenfoot\@oddfoot}
+\fi
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slideheadfont,\slidefootfont}
+%    \begin{macrocode}
+\def\slideheadfont{\scriptsize}
+\def\slidefootfont{\scriptsize}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Magnification}
+%
+% \begin{macro}{\magstep,\magstepminus}
+% We extend the definition of "\magstep"$n$ to $n=0,\ldots,9$, and define an
+% analogous macro for reduction. The argument of "\@magstep" {\em must be a
+% count register}.
+%    \begin{macrocode}
+\def\magstep#1{\ifcase#1 \@m\or 1200\or 1440\or 1728\or
+  2074\or 2488\or 2986\or 3583\or 4300\or 5160\fi\relax}
+\def\magstepminus#1{%
+  \ifcase#1 \@m\or 833\or 694\or 579\or 482\or 401\fi\relax}
+\def\@magstep#1{%
+  \ifnum#1<\z@\magstepminus{-#1}\else\magstep#1\fi}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\invert@mag}
+% If "\cs" is a command sequence (not a count register) that expands to an
+% integer $n>0$, then "\invert@mag\cs" sets "\cs" to $1000 n^{-1}$. E.g.,
+% after the commands
+% \begin{Ex}
+% "\def\mymag{\magstep2}"
+% "\invert@mag\mymag"
+% \end{Ex}
+% the meaning of "\mymag" is ".694444". We use dimension registers to access
+% \TeX's internal arithmetic routines.
+%    \begin{macrocode}
+{\catcode`\p=12\catcode`\t=12
+  \gdef\@@inv@@mag#1pt#2{\def#2{#1}}}
+\def\invert@mag#1{\@tempdima=1000pt
+  \divide\@tempdima by #1\relax
+  \expandafter\@@inv@@mag\the\@tempdima#1}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@slidesmag,\@articlemag}
+% "\@slidesmag" and "\@articlemag" define "\inverseslidesmag" and
+% "\inverseartmag" for use by "\setslidelength", etc., using the "\invert@mag"
+% routine defined above. They also set the magnification of the document in
+% the "slides" or "article" format. Their arguments can be any magnification.
+%    \begin{macrocode}
+\def\@slidesmag#1{%
+  \@tempcnta=#1\relax%
+  \ifnum\@tempcnta>0
+    \edef\inverseslidesmag{\the\@tempcnta}%
+    \invert@mag\inverseslidesmag
+    \ifarticle\else\mag\@tempcnta\fi
+  \else
+    \@seminarerr{\string\@slidesmag\space argument must be an
+      integer equal to 1000 times the magnification}\@eha
+  \fi}
+\def\@articlemag#1{%
+  \@tempcnta=#1\relax%
+  \ifnum\@tempcnta>0
+    \edef\inverseartmag{\the\@tempcnta}%
+    \invert@mag\inverseartmag
+    \ifarticle\mag\@tempcnta\fi
+  \else
+    \@seminarerr{\string\articlemag\space argument must be an
+      integer equal to 1000 times the magnification}\@eha
+  \fi}
+\addto@preamblecmds{\@slidesmag\do\@articlemag}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidesmag,\articlemag}
+% "\slidesmag" and "\articlemag" are an interface to "\@slidesmag" and
+% "\@articlemag", and allow only "\magstep" type magnifications.
+%    \begin{macrocode}
+\newdimen\semin
+\newdimen\semcm
+\def\@semmagerr#1{%
+  \@seminarerr{\string#1 argument must be an integer
+    between -5 and 9}\@eha}
+\def\slidesmag#1{%
+  \@tempcnta=#1\relax
+  \ifnum\@tempcnta>-6
+    \ifnum\@tempcnta<10
+      \edef\the@slidesmag{\the\@tempcnta}%
+      \@slidesmag{\@magstep\@tempcnta}%
+    \else
+      \@semmagerr\slidesmag
+    \fi
+  \else
+    \@semmagerr\slidesmag
+  \fi
+  \setslidelength\semin\seminlength
+  \setslidelength\semcm\semcmlength}
+\def\seminlength{1in}
+\def\semcmlength{1cm}
+\def\articlemag#1{%
+  \@tempcnta=#1\relax
+  \ifnum\@tempcnta>-6
+    \ifnum\@tempcnta<10
+      \edef\the@articlemag{\the\@tempcnta}%
+      \@articlemag{\@magstep\@tempcnta}%
+    \else
+      \@semmagerr\articlemag
+    \fi
+  \else
+    \@semmagerr\articlemag
+  \fi}
+\addto@preamblecmds{\slidesmag\do\articlemag}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\setslidelength,\addtoslidelength}
+%    \begin{macrocode}
+\def\setslidelength#1#2{%
+  #1=#2\relax
+  #1=\inverseslidesmag#1}%
+\def\addtoslidelength#1#2{%
+  \dimen@=#2\relax
+  \advance#1 by \inverseslidesmag\dimen@}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\setartlength,\addtoartlength}
+%    \begin{macrocode}
+\def\setartlength#1#2{%
+  #1=#2\relax
+  #1=\inverseartmag#1}
+\def\addtoartlength#1#2{%
+  \dimen@=#2\relax
+  \advance#1 by \inverseartmag\dimen@}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@epsfsize,\epsfslidesize}
+%    \begin{macrocode}
+\def\slide@epsfsize#1#2{%
+  \ifdim\epsfxsize=0pt
+    \ifdim\epsfysize=0pt
+      \inverseslidesmag#1%
+    \else
+      0pt
+    \fi
+  \else
+    \inverseslidesmag\epsfxsize
+  \fi
+  \epsfysize
+  \ifdim\epsfysize=0pt
+    \ifdim\epsfxsize=0pt
+      \inverseslidesmag#2%
+    \else
+      0pt
+    \fi
+  \else
+    \inverseslidesmag\epsfysize
+  \fi}
+\def\epsfslidesize{\let\epsfsize\slide@epsfsize}
+%    \end{macrocode}
+% \end{macro}
+%
+% Now the default magnifications are set:
+%    \begin{macrocode}
+\slidesmag{4}
+\articlemag{0}
+%    \end{macrocode}
+%
+%
+% \section{Page parameters\label{pageparameters}}
+%
+% When the the document begins, the page parameters are scaled depending on
+% the format and the magnification for that format, so that it is as if the
+% parameters were set with "true" dimensions. This allows a user to change the
+% magnification in the preamble without having to go back and rescale the page
+% parameters.
+%
+%  \begin{macro}{\do@pageparameters}
+% First, we define "\do@pageparameters" like "\do@specials", but with all the
+% page parameters listed on page 163 of Lamport's \LaTeX{} User's Guide and
+% Reference Manual. Parameters can be added the same way commands are added to
+% "\@preamblecmds".
+%    \begin{macrocode}
+\def\do@pageparameters{%
+  \do\oddsidemargin
+  \do\evensidemargin
+  \do\marginparwidth
+  \do\marginparsep
+  \do\topmargin
+  \do\headheight
+  \do\headsep
+  \do\textheight
+  \do\textwidth
+  \do\topskip
+  \do\footskip
+  \do\footheight}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\scale@pageparameters}
+% Now we define "\scale@pageparameters", which is invoked at the beginning of
+% the document, to scale the page parameters.
+%    \begin{macrocode}
+\ifarticle
+  \def\scale@pageparameters{%
+    \begingroup
+      \def\do##1{\global##1=\inverseartmag##1\relax}%
+      \do@pageparameters
+    \endgroup}
+\else
+  \def\scale@pageparameters{%
+    \begingroup
+      \def\do##1{\global##1=\inverseslidesmag##1\relax}%
+      \do@pageparameters
+    \endgroup}
+\fi
+\addto@hook\before@document{\scale@pageparameters}
+\addto@preamblecmds{\scale@pageparameters\do\do@pageparameters}
+%    \end{macrocode}
+% \end{macro}
+%
+% \section{Omitting and including notes}
+%
+% \begin{macro}{\allversions,\endallversions,\allversions*,\endallversions*}
+% The "allversions" environments are processed in any version.
+%    \begin{macrocode}
+\def\allversions{}
+\let\endallversions\relax
+\@namedef{allversions*}{\@bsphack\globaldefs=1}
+\@namedef{endallversions*}{\@esphack}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@list,\addtoslidelist}
+% "\slide@list" stores the list of environments that are to be included with
+% the "slidesonly" selection. Environments are added to it using the
+% "\addtoslidelist" command.
+%    \begin{macrocode}
+\def\slide@list{slide,slide*,allversions,allversions*}
+\def\addtoslidelist#1{\xdef\slide@list{\slide@list,#1}}
+\addto@preamblecmds{\addtoslidelist}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\xcomment@hook}
+% The macro "\@xcomment", defined in "xcomment.sty", does the actual omitting
+% of notes in the "slidesonly" format. Only environments in "\slide@list" are
+% processed.
+%    \begin{macrocode}
+\ifslidesonly
+  \@ifundefined{xcomment@@@}{\@@input xcomment.sty }{}
+  \def\xcomment@hook{\@xcomment{@@@}{\slide@list}}
+  \newxcomment[]{note}
+\else
+  \def\note{\@bsphack}%
+  \def\endnote{\@esphack}%
+\fi
+\def\noxcomment{\def\xcomment@hook{}}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Omitting and including slides\label{os}}
+%
+% This is pretty bad code, but it works.
+%
+% \begin{macro}{\onlyslides,\notslides}
+% "\onlyslides" and "\notslides" store their arguments, which should expand to
+% a comma separated list of numbers and ranges, in the command sequence
+% "\os@list". It is not immediately expanded, because the argument may contain
+% references that are not yet defined; recall that the ".aux" file is
+% processed at the beginning of the document.
+%    \begin{macrocode}
+\def\os@list{}
+\newif\if@os
+\def\onlyslides#1{\def\os@list{#1}\@ostrue
+  \def\os@warning{\@warning{\string\onlyslides\space argument
+    contains undefined references}}}
+\def\notslides#1{\def\os@list{#1}\@osfalse
+  \def\os@warning{\@warning{\string\notslides\space argument
+    contains undefined references}}}
+\addto@preamblecmds{\onlyslides\do\notslides}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\os@expandlist}
+% "\os@expandlist" is invoked at the beginning of the document, after the
+% ".aux" files has been processed.
+%    \begin{macrocode}
+\addto@hook\after@document{%
+  \ifx\os@list\@empty\else\os@expandlist\fi}
+%    \end{macrocode}
+% "\os@expandlist" first expands the list, and then processes each
+% comma-separated entry with "\os@expandrange".
+%    \begin{macrocode}
+\def\os@expandlist{%
+  \let\os@@warning\relax
+  \begingroup
+    \def\ref##1{\@ifundefined{r@##1}{?}%
+      {\noexpand\@car\@nameuse{r@##1}\noexpand\@nil}}%
+    \edef\@tempd{\os@list}%
+    \xdef\os@list{}%
+    \@for\@tempc:=\@tempd
+      \do{\expandafter\os@expandrange\@tempc-:-:\@nil}%
+    \os@@warning
+  \endgroup
+  \let\os@expandrange\relax
+  \let\os@checknum\relax
+  \let\os@expandlist\relax}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\os@expandrange}
+% "\os@expandrange" expands entries of the form $m$-$n$ to $(m-1)$+$(n+1)$,
+% which will simplify checking slide numbers against the list ("+" is used as
+% a separator instead of "-" to allow for negative numbers). Entries that
+% consist of a single number $n$ are treated like a range $n$-$n$.
+%    \begin{macrocode}
+\def\os@expandrange#1-#2-#3\@nil{%
+  \def\@tempa{?}\def\@tempb{#1}%
+  \ifx\@tempa\@tempb
+    \let\os@@warning\os@warning
+  \else
+    \@tempcnta=#1\relax
+    \def\@tempb{#2}%
+    \ifx\@tempa\@tempb
+      \let\os@@warning\os@warning
+    \else
+      \def\@tempa{:}%
+      \ifx\@tempa\@tempb
+        \@tempcntb=\@tempcnta
+      \else
+        \@tempcntb=#2\relax
+      \fi
+      \advance\@tempcnta by -1
+      \advance\@tempcntb by 1
+      \ifx\os@list\@empty
+        \xdef\os@list{\the\@tempcnta+\the\@tempcntb}%
+      \else
+        \xdef\os@list{\os@list,\the\@tempcnta+\the\@tempcntb}%
+      \fi
+    \fi
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\os@test}
+% "\os@test" checks whether a slide should be processed. For each entry
+% $m$-$n$ in the list "\os@list", if the slide number is greater than $m$ and
+% less than $n$, "\if@test" is set to "\if@os". Recall that "\if@os" is
+% "\iftrue" is "\os@list" is a list of slides to be included, and is
+% "\iffalse" if "\os@list" is a list of slides to be excluded.
+%    \begin{macrocode}
+\def\os@test{%
+  \@testtrue
+  \iflandscape
+    \ifnum\@landscapeonly=-1 \@testfalse\fi
+  \else
+    \ifnum\@landscapeonly=1 \@testfalse\fi
+  \fi
+  \if@test
+    \ifx\os@list\@empty\else
+      \if@os\@testfalse\fi
+      \@for\@tempa:=\os@list\do{\expandafter\os@testrange\@tempa\@nil}%
+    \fi
+  \fi}
+\def\os@testrange#1+#2\@nil{%
+  \ifnum\c@slide>#1
+    \ifnum\c@slide<#2
+      \if@os\@testtrue\else\@testfalse\fi
+    \fi
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\onlynotestoo}
+%    \begin{macrocode}
+\def\onlynotestoo{%
+  \ifnotes\@testtrue\else\ifnotesonly\@testtrue\else\@testfalse\fi\fi
+  \if@test
+    \@ifundefined{xcomment@@@}{%
+      \edef\sem@temp{\the\catcode`\@}%
+      \catcode`\@=11
+      \@@input xcomment.sty
+      \catcode`\@=\sem@temp\relax}{}%
+    \def\xcomment@hook{\@xcomment{@@@}{\slide@list}}%
+    \addto@hook\after@slide\onlynotes@too
+  \fi}
+\def\onlynotes@too{%
+  \os@test
+  \if@test\gdef\do@end{}\else\gdef\do@end{\xc@begin}\fi}
+\addto@preamblecmds\onlynotestoo
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Font size declarations\label{fontsize}}
+%
+% \begin{macro}{\ptsize}
+% The "\ptsize{"$n$"}" command invokes a macro so that the font size
+% declarations are defined as in "art"$n$".sty", except that the font size
+% declarations only affect the sizes of fonts, and not the list or display
+% parameters. These parameters are set at the beginning of each slide
+% environment. "\ptsize" should only be used in slide environments.
+%    \begin{macrocode}
+\def\ptsize#1{%
+  \@ifundefined{#1@semptsize}%
+    {\@seminarerr{\string\ptsize\space `#1' not valid.}\@eha}%
+    {\ifslide
+      \sem@ptsize{#1}\large\normalsize
+    \else
+      \edef\slide@ptsize{#1}%
+    \fi}}
+\edef\slide@ptsize{1\@ptsize}%
+\def\slidefontsizes{\ptsize} %For backwards compatibility??
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slide@setsize}
+% This is a variant of "\@setsize" that makes the minimum space between lines
+% be "\slideskip" times the extra space between lines.
+%    \begin{macrocode}
+\def\slide@setsize#1#2#3#4{%
+  \@setsize{#1}{#2}{#3}{#4}%
+  \set@slideskip{#2}}
+\def\slide@@setsize#1#2#3#4{%
+  \slide@setsize{#1}{#2}{#3}{#4}\slidedisplayskips}
+\def\set@slideskip#1{%
+  \normallineskiplimit=#1
+  \advance\normallineskiplimit-\normalbaselineskip
+  \multiply\normallineskiplimit-1
+  \normallineskiplimit\slideskip\normallineskiplimit
+  \ifdim\normallineskiplimit<1pt\normallineskiplimit=1pt\fi
+  \normallineskip=\normallineskiplimit
+    minus \slideshrink\normallineskiplimit
+  \dimen@=\normalbaselineskip
+  \normalbaselineskip=\dimen@ minus \slideshrink\normallineskiplimit
+  \normalbaselines}
+\def\slideskip{.75}
+\def\slideshrink{.25}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\slidedisplayskips}
+% "\slidedisplayskips" sets the displays skips to smaller values than they
+% would usually have in the "article" document style.
+%    \begin{macrocode}
+\def\slidedisplayskips{%
+  \abovedisplayskip 1.75ex minus .35ex
+  \belowdisplayskip \abovedisplayskip
+  \abovedisplayshortskip .2ex minus .2ex
+  \belowdisplayshortskip 1ex minus .2ex}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\sem@ptsize}
+%    \begin{macrocode}
+\def\sem@ptsize#1{%
+  \@nameuse{#1@semptsize}%
+  \large\normalsize
+  \leftmargini\slideleftmargini\relax
+  \leftmarginii\slideleftmarginii\relax
+  \leftmarginiii\slideleftmarginiii\relax
+  \labelsep\slidelabelsep\relax
+  \parskip\slideparskip\relax
+  \parindent\slideparindent\relax
+  \slide@rightskip
+  \slide@listi
+  \skip\footins\slidefootins\relax
+  \footnotesep\slidefootnotesep\relax}
+\def\slidefootins{2ex minus .8ex}
+\def\slidefootnotesep{1.2ex}
+\def\slideparindent{\z@}
+\def\slideparskip{1ex minus .2ex}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\8@semptsize}
+%    \begin{macrocode}
+\@namedef{8@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{9.5pt}\viiipt\@viiipt}%
+  \def\small{\slide@@setsize\small{8pt}\viipt\@viipt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{8pt}\vipt\@vipt}%
+  \def\scriptsize{\slide@setsize\scriptsize{7pt}\vipt\@vipt}%
+  \def\tiny{\slide@setsize\tiny{6pt}\vpt\@vpt}%
+  \def\large{\slide@setsize\large{12pt}\xpt\@xpt}%
+  \def\Large{\slide@setsize\Large{14pt}\xiipt\@xiipt}%
+  \def\LARGE{\slide@setsize\LARGE{17pt}\xivpt\@xivpt}%
+  \def\huge{\slide@setsize\huge{20pt}\xviipt\@xviipt}%
+  \def\Huge{\slide@setsize\Huge{25pt}\xxpt\@xxpt}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\9@semptsize}
+%    \begin{macrocode}
+\@namedef{9@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{11pt}\ixpt\@ixpt}%
+  \def\small{\slide@@setsize\small{9.5pt}\viiipt\@viiipt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{8pt}\viipt\@viipt}%
+  \def\scriptsize{\slide@setsize\scriptsize{7pt}\vipt\@vipt}%
+  \def\tiny{\slide@setsize\tiny{6pt}\vpt\@vpt}%
+  \def\large{\slide@setsize\large{12pt}\xpt\@xpt}%
+  \def\Large{\slide@setsize\Large{14pt}\xiipt\@xiipt}%
+  \def\LARGE{\slide@setsize\LARGE{17pt}\xivpt\@xivpt}%
+  \def\huge{\slide@setsize\huge{20pt}\xviipt\@xviipt}%
+  \def\Huge{\slide@setsize\Huge{25pt}\xxpt\@xxpt}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\10@semptsize}
+%    \begin{macrocode}
+\@namedef{10@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{12pt}\xpt\@xpt}%
+  \def\small{\slide@@setsize\small{11pt}\ixpt\@ixpt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{9.5pt}\viiipt\@viiipt}%
+  \def\scriptsize{\slide@setsize\scriptsize{8pt}\viipt\@viipt}%
+  \def\tiny{\slide@setsize\tiny{6pt}\vpt\@vpt}%
+  \def\large{\slide@setsize\large{14pt}\xiipt\@xiipt}%
+  \def\Large{\slide@setsize\Large{18pt}\xivpt\@xivpt}%
+  \def\LARGE{\slide@setsize\LARGE{22pt}\xviipt\@xviipt}%
+  \def\huge{\slide@setsize\huge{25pt}\xxpt\@xxpt}%
+  \def\Huge{\slide@setsize\Huge{30pt}\xxvpt\@xxvpt}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\11@semptsize}
+%    \begin{macrocode}
+\@namedef{11@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{13.6pt}\xipt\@xipt}%
+  \def\small{\slide@@setsize\small{12pt}\xpt\@xpt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{11pt}\ixpt\@ixpt}%
+  \def\scriptsize{\slide@setsize\scriptsize{9.5pt}\viiipt\@viiipt}%
+  \def\tiny{\slide@setsize\tiny{7pt}\vipt\@vipt}%
+  \def\large{\slide@setsize\large{14pt}\xiipt\@xiipt}%
+  \def\Large{\slide@setsize\Large{18pt}\xivpt\@xivpt}%
+  \def\LARGE{\slide@setsize\LARGE{22pt}\xviipt\@xviipt}%
+  \def\huge{\slide@setsize\huge{25pt}\xxpt\@xxpt}%
+  \def\Huge{\slide@setsize\Huge{30pt}\xxvpt\@xxvpt}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\12@semptsize}
+%    \begin{macrocode}
+\@namedef{12@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{14.5pt}\xiipt\@xiipt}%
+  \def\small{\slide@@setsize\small{13.6pt}\xipt\@xipt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{12pt}\xpt\@xpt}%
+  \def\scriptsize{\slide@setsize\scriptsize{9.5pt}\viiipt\@viiipt}%
+  \def\tiny{\slide@setsize\tiny{7pt}\vipt\@vipt}%
+  \def\large{\slide@setsize\large{18pt}\xivpt\@xivpt}%
+  \def\Large{\slide@setsize\Large{22pt}\xviipt\@xviipt}%
+  \def\LARGE{\slide@setsize\LARGE{25pt}\xxpt\@xxpt}%
+  \def\huge{\slide@setsize\huge{30pt}\xxvpt\@xxvpt}%
+  \let\Huge\huge}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\14@semptsize}
+%    \begin{macrocode}
+\@namedef{14@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{18pt}\xivpt\@xivpt}%
+  \def\small{\slide@@setsize\small{14.5pt}\xiipt\@xiipt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{13.6pt}\xipt\@xipt}%
+  \def\scriptsize{\slide@setsize\scriptsize{12pt}\xpt\@xpt}%
+  \def\tiny{\slide@setsize\tiny{9.5pt}\viiipt\@viiipt}%
+  \def\large{\slide@setsize\large{22pt}\xviipt\@xviipt}%
+  \def\Large{\slide@setsize\Large{25pt}\xxpt\@xxpt}%
+  \def\LARGE{\slide@setsize\LARGE{30pt}\xxvpt\@xxvpt}%
+  \let\huge\LARGE
+  \let\Huge\LARGE}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\17@semptsize}
+%    \begin{macrocode}
+\@namedef{17@semptsize}{%
+  \def\@normalsize{\slide@@setsize\normalsize{22pt}\xviipt\@xviipt}%
+  \def\small{\slide@@setsize\small{18pt}\xivpt\@xivpt}%
+  \def\footnotesize{\slide@@setsize\footnotesize{14.5pt}\xiipt\@xiipt}%
+  \def\scriptsize{\slide@setsize\scriptsize{13.6pt}\xipt\@xipt}%
+  \def\tiny{\slide@setsize\tiny{12pt}\xpt\@xpt}%
+  \def\large{\slide@setsize\large{25pt}\xxpt\@xxpt}%
+  \def\Large{\slide@setsize\Large{30pt}\xxvpt\@xxvpt}%
+  \let\LARGE\Large
+  \let\huge\Large
+  \let\Huge\Large}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{The $\setminus$twoup macro}
+%
+% \begin{macro}{\twoup}
+% See "2up.sty" for details.
+%    \begin{macrocode}
+\def\twoup{\@ifnextchar[{\@twoup}{\@twoup[0]}}
+\ifarticle
+  \ifportrait
+    \def\@twoup[#1]{%
+      \@tempcnta=\the@articlemag\relax
+      \@tempcntb=\@tempcnta
+      \advance\@tempcntb by #1\relax
+      \advance\@tempcntb by -2\relax
+      \ifnum\@tempcntb>-6\relax
+        \@@input 2up.tex
+        \source{\@magstep\@tempcnta}{\paperheight}{\paperwidth}%
+        \target{\@magstep\@tempcntb}{\paperwidth}{\paperheight}%
+        \targetlayout{topbottom}%
+        \printlandscapefalse
+      \else
+        \@seminarerr{Article magnification is too low for
+          \string\twoup\space to handle}\@eha
+      \fi
+      \def\articlemag##1{\@semtwoupmagerr\articlemag}}
+  \else
+    \def\@twoup[#1]{%
+      \@tempcnta=\the@articlemag\relax
+      \@tempcntb=\@tempcnta
+      \advance\@tempcntb by #1\relax
+      \advance\@tempcntb by -2\relax
+      \ifnum\@tempcntb>-6\relax
+        \@@input 2up.tex
+        \source{\@magstep\@tempcnta}{\paperwidth}{\paperheight}%
+        \target{\@magstep\@tempcntb}{\paperheight}{\paperwidth}%
+        \if@twoside
+          \targetlayout{twosided}%
+        \fi
+        \printlandscapetrue
+      \else
+        \@seminarerr{Article magnification is too low for
+          \string\twoup\space to handle}\@eha
+      \fi
+      \def\articlemag##1{\@semtwoupmagerr\articlemag}}
+  \fi
+\else
+  \ifportrait
+    \def\@twoup[#1]{%
+      \@tempcnta=\the@slidesmag\relax
+      \@tempcntb=\@tempcnta
+      \advance\@tempcntb by #1\relax
+      \advance\@tempcntb by -3\relax
+      \ifnum\@tempcntb>-6\relax
+        \@@input 2up.tex
+        \source{\@magstep\@tempcnta}{\paperwidth}{\paperheight}%
+        \advance\@tempcnta by -3
+        \target{\@magstep\@tempcnta}{\paperheight}{\paperwidth}%
+        \printlandscapetrue
+      \else
+        \@seminarerr{Slides magnification is too low for
+          \string\twoup\space to handle}\@eha
+      \fi
+      \def\slidesmag##1{\@semtwoupmagerr\slidesmag}}
+  \else
+    \def\@twoup[#1]{%
+      \@tempcnta=\the@slidesmag\relax
+      \@tempcntb=\@tempcnta
+      \advance\@tempcntb by #1\relax
+      \advance\@tempcntb by -3\relax
+      \ifnum\@tempcntb>-6\relax
+        \@@input 2up.tex
+        \source{\@magstep\@tempcnta}{\paperheight}{\paperwidth}%
+        \target{\@magstep\@tempcntb}{\paperwidth}{\paperheight}%
+        \targetlayout{topbottom}%
+        \printlandscapefalse
+      \else
+        \@seminarerr{Slides magnification is too low for
+          \string\twoup\space to handle}\@eha
+      \fi
+      \def\slidesmag##1{\@semtwoupmargerr\slidesmag}}%
+  \fi
+\fi
+\def\@semtwoupmagerr#1{%
+  \@seminarerr{\string#1 must come before \string\twoup}\@eha}
+\addto@preamblecmds{\twoup\do\@twoup}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \section{Configuration file}
+%
+%    \begin{macrocode}
+\openin1 seminar.con
+\ifeof1\else\closein1 \relax\@@input seminar.con\fi
+%    \end{macrocode}
+%
+\endinput
+% END: seminar.doc

@@ -1,0 +1,1602 @@
+%  ____________________________________________________________________________
+% |                                                                           |
+% |                                                                           |
+% |                              spreadtab v0.4c                              |
+% |                                                                           |
+% |                              6 november 2014                              |
+% |                                                                           |
+% |___________________________________________________________________________|
+%
+% This file is spreadtab_doc_en.tex, the source code of the english manual of
+% the spreadtab package.
+%
+% Copyright Christian Tellechea 2009-2014
+% email : unbonpetit@openmailbox.org
+%
+% -------------------------------------------------------------------
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%
+%     http://www.latex-project.org/lppl.txt
+%
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% -------------------------------------------------------------------
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{libertine}
+\renewcommand*\oldstylenums[1]{{\fontfamily{fxlj}\selectfont #1}}
+\usepackage[scaled=0.8]{luximono}
+\usepackage[a4paper,margin=2.6cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{textcomp}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{arydshln}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage[autolanguage]{numprint}
+\usepackage{xspace}
+\usepackage[bottom]{footmisc}
+\usepackage{spreadtab}
+\usepackage[protrusion=true,final,verbose=true,babel=true]{microtype}
+\usepackage{fancyhdr}
+	\fancyhead[L]{}
+	\fancyhead[C]{\small\bfseries\ST}
+	\fancyhead[R]{\scriptsize\slshape \leftmark}
+	\fancyfoot[l]{\tiny \LaTeX ed by Christian \textsc{Tellechea}, the \today.}
+	\fancyfoot[c]{}
+	\fancyfoot[r]{\thepage}
+\usepackage[english]{babel}
+
+\usepackage{enumitem}
+\makeatletter
+\definecolor{ST@bckgcolor}{rgb}{0.87,0.9,1}
+\definecolor{ST@codebckgcolor}{rgb}{0.9,0.9,0.9}
+\definecolor{ST@keywordstc}{rgb}{0.7,0,0}
+\definecolor{ST@keywordslatex}{rgb}{0,0,1}
+\definecolor{ST@arguments}{rgb}{0,0,0}
+\definecolor{ST@comments}{rgb}{0.5,0.5,0.5}
+\lstset{%
+	language=[AlLaTeX]TeX,float=hbp,basicstyle=\footnotesize\ttfamily,identifierstyle=\color{ST@arguments},%
+	keywordstyle=\color{ST@keywordslatex},commentstyle=\itshape\color{ST@comments},%
+	columns=fixed,tabsize=4,frame=single,extendedchars=false,%
+	showspaces=false,showstringspaces=false,numbers=left,numberstyle=\tiny\ttfamily,%
+	breaklines=true,breakindent=3em,backgroundcolor=\color{ST@bckgcolor},breakautoindent=true,%
+	captionpos=t,xleftmargin=1em,xrightmargin=1em,lineskip=0pt,%
+	numbersep=1em,classoffset=1,%
+	morekeywords={% les macros et commandes de spreadtab
+		spreadtab,endspreadtab,SThiderow,SThidecol,STsavecell,STautoround,STmessage,STsetdecimalsep,STtransposecar,STdebug,STdisplaytab,STsetdisplaymarks,%
+		STnumericfieldmarker,STprintnum,STtextcell,STcopy,STtag,STmakegtag,STeol,fact,id,ifeq,ifgt,iflt,numtofrshortdate,%
+		numtoengshortdate,numtofrlongdate,numtoenglongdate,numtofrmonth,%
+		numtoengmonth,numtofrday,numtoengday,sum,rand,randint,sumprod,%
+		frshortdatetonum,engshortdatetonum,englongdatetonum,frlongdatetonum,gcd,lcm,tag,cell,row,col},%
+	keywordstyle=\color{ST@keywordstc},classoffset=0}
+
+%%%%%%%%%%% environnement OOcalc
+\newcount\cntlin
+\newcount\cntcol
+
+\newtoks\t@b
+\long\def\ifremain@lines#1\\#2\@nil{%
+	\csname @\ifx\@empty#2\@empty second\else first\fi oftwo\endcsname}
+\long\def\subst@eol#1\\#2\@nil{\addtot@b{#1\\\cline{1-1}\hdashline}%
+	\ifremain@lines#2\\\@nil{\addtot@b&\subst@eol#2\@nil}{\addtot@b{#2\end{tabular}}}}
+\long\def\collect@body#1\end{\subst@eol#1\@nil\end}
+
+\newcommand\addtot@b[1]{\t@b\expandafter{\the\t@b#1}}
+\newcommand\edftot@b[1]{\edef\temp@{#1}\expandafter\addtot@b\expandafter{\temp@}}
+
+\newenvironment{OOocalc}[2][1.5cm]{% #1=largeur colonnes #2 = nombre de colonnes
+	\newcolumntype w{>{\centering\arraybackslash}m{#1}}%
+	\arrayrulewidth0.4pt\dashlinedash0.4pt\relax\dashlinegap3pt
+	\global\cntlin\m@ne\global\cntcol\z@
+	\tabfont
+	\tabcolsep0pt
+	\t@b{\begin{tabular}{%
+		|>{\cellcolor{tabheadcolor}%
+			\global\cntcol\z@\global\advance\cntlin\@ne
+			\centering\arraybackslash
+			\ifnum\cntlin>\z@\tableheadformat\number\cntlin\fi}
+		m{2em}|*{#2}{w:}}%
+		\hline
+		\rowcolor{tabheadcolor}}%
+	\loop
+		\ifnum\cntcol<#2
+			\advance\cntcol\@ne
+			\addtot@b{&\multicolumn{1}{>\centering m{#1}|}}%
+			\edftot@b{{\noexpand\tableheadformat\@Alph\cntcol}}%
+	\repeat
+	\addtot@b{\\\hline&}%
+	\collect@body}{\the\t@b}
+\makeatother
+
+% commandes de personnalisation de OOcalc
+\newcommand*\tabfont{\fontfamily{phv}\selectfont\footnotesize}% police du tableau (helvetica ici)
+\newcommand*\tableheadformat{\bfseries}% police des en-têtes du tableau (en gras)
+\colorlet{tabheadcolor}{gray!40}% couleur de font des en-têtes du tableau
+\colorlet{palepink}{pink!80}
+\colorlet{lightpink}{pink!30}
+\colorlet{palegreen}{green!60}
+\colorlet{lightgreen}{green!30}
+\newcommand\CC[1]{\cellcolor{#1}}
+
+\newcommand\verbinline[1][]{\lstinline[breaklines=false,basicstyle=\normalsize\ttfamily,#1]}
+\newcommand\ST{\textsf{spreadtab}\xspace}
+\newcommand\falseverb[1]{\texttt{\detokenize{#1}}}
+
+\usepackage[bookmarks=true,bookmarksopen=true,colorlinks=true,hyperfootnotes=false,filecolor=black,linkcolor=blue,urlcolor=magenta,pdfauthor={Christian TELLECHEA},pdftitle={spreadtab},pdfsubject={Spreadtab provides spreadsheet features for LaTeX table environments},pdfkeywords={spreadtab},pdfcreator={LaTeX}]{hyperref}
+
+\begin{document}
+\parindent0pt\pagestyle{fancy}
+\begin{titlepage}
+	\null\par\vfill
+	\begin{center}
+		\begin{minipage}{0.75\linewidth}
+			\begin{center}
+				\Huge\bfseries \ST\par\vspace{5pt}
+				\small v\csname ST@ver\endcsname\par\vspace{25pt}
+				\normalsize User's manual
+			\end{center}
+		\end{minipage}
+	\end{center}
+	\vspace{1cm}
+	\begin{center}
+		Christian {\sc Tellechea}\par\small
+		\href{mailto:unbonpetit@openmailbox.org}{\texttt{\textbf{unbonpetit@openmailbox.org}}}\par\vspace{5pt}
+		\csname ST@eng@date\endcsname
+	\end{center}
+	\vfill
+	\begin{center}
+		\begin{minipage}{0.8\linewidth}
+			\noindent\hrulefill\par
+			\hfill\textbf{\textit{Abstract}}\hfill{}\medskip\par\footnotesize
+				This package provides spreadsheet features for \LaTeX{} table environments.\par\medskip
+				The main feature allows the user to construct tables in a manner similar to a spreadsheet where cells are used in formulas to generate values in other cells. The package computes the formulas in the correct order and finally displays the table with the numeric results.\par
+			\hrulefill
+		\end{minipage}
+	\end{center}
+\vfill{}
+\end{titlepage}
+
+\tableofcontents\newpage
+\parskip\medskipamount
+\section{Introduction}
+
+\subsection{Presentation}
+This package allows us to construct tables in a manner similar to a spreadsheet. The cells of a table have row and column indices and these can be used in formulas to generate values in other cells.
+
+The package requires $\varepsilon$-\TeX, \LaTeXe{} and the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/fp/}{\texttt{\textbf{fp}}} package, which performs arithmetic on cell values. Also, the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/xstring/}{\texttt{\textbf{xstring}}} package is needed in its \falseverb{v1.5d [2010/03/28]} version or later.\medskip
+
+The package is compatible with \emph{all} tabular environments, and assumes that `\verb=&=' is used to delimit columns and `\verb-\\-' to end lines (but see page~\pageref{STeol}). This  compatibility requirement led me to program \ST so that it works independently of the table environment. Thus, reading the table, processing and calculating the formulas is done \emph{before} the environment table `sees' the body of the table.\medskip
+
+Consequently, \ST proceeds in 3 main stages before \verbinline=\begin{<table environment>}= sees the table:
+\begin{itemize}
+	\item first, it reads the body of the table, divides it in lines and cells, and in each cell, seeks a possible formula;
+	\item then, it computes the formulas in the cells, taking care for each to previously calculate all the dependent cells. The calculations are done by the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/fp/}{\texttt{\textbf{fp}}} package;
+	\item finally, it is necessary to rebuild the table, replacing each formula by its numerical calculated value and handing over to the environment name specified by the user.
+\end{itemize}
+The syntax in both the following is allowed (and equivalent), where \verb-<name>- is the name of any table environment available with \LaTeX{} or with a package:\par\nobreak
+\begin{minipage}{0.48\linewidth}
+\begin{lstlisting}[backgroundcolor=\color{ST@codebckgcolor}]
+\begin{spreadtab}{{<name>}{<parameters>}}
+	table with formulas and numbers
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}\hfill or\hfill
+\begin{minipage}{0.48\linewidth}
+\begin{lstlisting}[backgroundcolor=\color{ST@codebckgcolor}]
+\spreadtab{{<name>}{<parameters>}}
+	table with formulas and numbers
+\endspreadtab
+\end{lstlisting}
+\end{minipage}
+
+After the work of \ST, we get a display as if we had written:
+\begin{lstlisting}[backgroundcolor=\color{ST@codebckgcolor}]
+\begin{<name>}{<parameters>}
+	table with numbers
+\end{<name>}
+\end{lstlisting}
+
+Although having features resembling those of a spreadsheet with \LaTeX{} is appreciable, the 3 stages described above take time, and above all, \verb-fp- is slow in its calculations. The \ST environment leads to \emph{much slower compilation} than with a classical table.
+
+Moreover, \ST \emph{cannot stand in for a spreadsheet program}. Indeed, it has very few features, and it does not provide visual assistance. This point may cause difficulty\footnote{I certify that, with use, this discomfort tends to disappear (if you do not work with huge tables, of course).} for big or complex tables. The syntax of \ST is also another difficulty. However, the advantage of this package is that it makes it possible to write \emph{in the \LaTeX{} code} tables involving calculation when these tables are usually exported\footnote{I mention the two main exportation programs: \href{http://calc2latex.sourceforge.net/}{\texttt{\textbf{cacl2latex}}} for `calc' (Open Office), and \href{http://www.ctan.org/tex-archive/support/excel2latex/}{\texttt{\textbf{excel2latex}}} for `excel' (Microsoft Office).} from a spreadsheet program to \LaTeX{} code. Consequently, it becomes possible to avoid the disadvantages of the exportation programs: fine tuning often necessary to obtain exactly what you want, exported tables containing the values only (formulas are lost when exportation is done), no compatibility with all types of environments, exportation must be started again if a single number or formula is modified in the table.
+
+\subsection{Motivation}
+A few months before I started to write this package, Derek \textsc{O'Connor} had pointed out that nothing was available in the world of \LaTeX{} packages to imitate --~even a little~-- the behaviour of spreadsheet programs. I found the challenge interesting and I started writing this package as a good programming exercise.
+
+The road was long before reaching this version and I especially want to thank Christophe \textsc{Casseau} for his early interest and for the suggestions he made, and more recently Derek \textsc{O'Connor} for his advice and for the constructive discussions we have had. I also thank Andrew \textsc{Parsloe} for proofreading the english translation of this manual.
+
+\section{Basic features}
+A table is a rectangular array of cells which may be viewed as a set of cells arranged in horizontal rows or vertical columns.
+
+\label{STeol}By default, \ST expects a `\verb-\\-' at the end of lines, which is usual in tables. This end of line marker can be changed via the \verbinline-\STeol{<macro>}- command. We can write for example \verbinline-\STeol{\tabularnewline}-. It is important to remember that the ends of lines to be inserted in the final table will always be `\verb-\\-' even if the end of line marker that \ST sees when it \emph{reads} the table is different.
+
+\subsection{Absolute references}
+A table cell  is identified by the pair \falseverb{<colref><rowref>}\footnote{Note: this is the opposite to the standard matrix convention}, where:
+\begin{itemize}
+	\item \verb|<colref>| is a letter from \falseverb a to \falseverb z, and \falseverb a is the first column on the left: it is limited to 26 columns, which should be sufficient for the majority of cases; the letter can be upper or lowercase;
+	\item \verb|<rowref>| is  a positive integer representing row number. The row number 1 is the top row.
+\end{itemize}
+Here are examples of absolutes references: \falseverb{b4} or \falseverb{C1} or \falseverb{d13}. Locations of cells appear clearly in the spreadsheet-like table below:
+\begin{center}
+\begin{OOocalc}[6em]{5}
+&&&&\\&&&&\\&&&&\\&&&&\\&&&&\\
+\end{OOocalc}
+\end{center}
+This example calculates the sum of each row and each column and then calculates the grand total:\par\nobreak
+\begin{minipage}{0.75\linewidth}
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{rr|r}}
+22       & 54         & a1+b1 \\
+43       & 65         & a2+b2 \\
+49       & 37         & a3+b3 \\
+\hline
+a1+a2+a3 & b1+b2+b3   & a4+b4
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.25\linewidth}
+\centering
+\begin{spreadtab}{{tabular}{rr|r}}
+22       & 54         & a1+b1 \\
+43       & 65         & a2+b2 \\
+49       & 37         & a3+b3 \\
+\hline
+a1+a2+a3 & b1+b2+b3   & a4+b4
+\end{spreadtab}
+\end{minipage}%
+
+For people familiar with maths, this other example calculates the first lines of Pascal's triangle:\par\nobreak
+\begin{minipage}{0.75\linewidth}
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{ccccc}}
+1  &       &       &       &    \\
+a1 & a1    &       &       &    \\
+a2 & a2+b2 & b2    &       &    \\
+a3 & a3+b3 & b3+c3 & c3    &    \\
+a2 & a4+b4 & b4+c4 & c4+d4 & d4
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.25\linewidth}
+\centering
+\begin{spreadtab}{{tabular}{ccccc}}
+1  &       &       &       &    \\
+a1 & a1    &       &       &    \\
+a2 & a2+b2 & b2    &       &    \\
+a3 & a3+b3 & b3+c3 & c3    &    \\
+a2 & a4+b4 & b4+c4 & c4+d4 & d4
+\end{spreadtab}
+\end{minipage}%
+
+\subsection{Relative references}
+To refer to a cell, it may be convenient to specify its position relative to where the formula is written. Thus, the relative coordinates of a cell are 2 relative numbers written using this syntax: \falseverb{[x,y]} where \falseverb x is the horizontal offset from the cell containing the formula and \falseverb y is the vertical offset. For example, \falseverb{[-2,3]} refers to the cell located 2 columns before (on the left) and 3 rows after (below) the cell where the formula is located.
+
+Here is the same table as above but the references are relatives and the \verbinline-matrix- environment of the \href{http://www.ctan.org/tex-archive/macros/latex/required/amslatex/math/}{\texttt{\textbf{amsmath}}} package is used:\par\nobreak
+\begin{minipage}{0.82\linewidth}
+\begin{lstlisting}
+$
+\begin{spreadtab}{{matrix}{}}
+1\\
+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]
+\end{spreadtab}
+$
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}{0.15\linewidth}
+\centering
+$
+\begin{spreadtab}{{matrix}{}}
+1\\
+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]\\
+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]+[0,-1] & [-1,-1]
+\end{spreadtab}
+$
+\end{minipage}%
+
+We note that relative references are more appropriate here, since only 2 different references are used: \falseverb{[0,-1]} which refers to the cell above and \falseverb{[-1,-1]} which refers to the cell located to the NW of the current cell.\medskip
+
+Absolute and relative references can be mixed in a formula.
+
+\subsection{Text cells}
+If you want to put only text in a cell, you must tell \ST that the cell should not be calculated. Simply place somewhere in the cell the character `\falseverb @' with its usual catcode 12. The cell will be ignored by \ST which will consider it as an inert cell impossible to reference\footnote{There is an exception, see page \pageref{datetonum}.} elsewhere in the table.
+
+Example:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|r|ccc|}}
+\hline
+@ values of $x$ & -5       &        -1 &        4 \\
+@ $f(x)=2x$        & 2*[0,-1] &  2*[0,-1] & 2*[0,-1] \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|ccc|}}
+\hline
+@ values of $x$ & -5       &        -1 &        4 \\
+@ $f(x)=2x$     & 2*[0,-1] &  2*[0,-1] & 2*[0,-1] \\\hline
+\end{spreadtab}
+\end{center}
+The  control sequence \verbinline=\STtextcell= expands to the character `\falseverb @'. It is possible to redefine it; for example, after \verbinline-\renewcommand\STtextcell{`}-, a cell containing the char \verb=`= will be understood as a text cell.
+
+Moreover, if a cell is empty or filled with spaces, \ST will consider it as a text cell.
+
+\subsection{Mixed cells}
+In reality, each cell is composed of two fields. The first is a \emph{numeric field} containing the formula; the second is a \emph{text field}, ignored by \falseverb{fp} and not taken into account for calculations:
+\begin{itemize}
+	\item if nothing is specified in a cell, the entire cell is the number field, and the text field is empty (this was the case for all table cells of Pascal's triangle seen above);
+	\item if the cell contains the `\falseverb @' character, then the entire cell is the text field. The numeric field is empty and inaccessible;
+	\item if the cell contains the marker `\verb-:=-', then the following argument between braces is the numeric field, and everthing else is the text field. The cell has this structure:\par
+		\hfil\verb-<text field>:={numeric field}<end of text field>-\hfil\null\par
+	The marker `\verb-:=-' is the expansion of the control sequence \verbinline-\STnumericfieldmarker-. It is possible to redefine it, for example:\par\smallskip
+	{\centering\verbinline-\renewcommand\STnumericfieldmarker{\=}-\par\smallskip}
+	In this case, the expansion of the marker `\verb-\=-'  would have no importance and would not be involved in the process. For \ST, it is only a token showing where the formula begins. This token is sought and recognized but is never expanded.
+\end{itemize}
+Once the \falseverb{numeric field} is computed, `\falseverb{:={numeric field}}' is replaced by the numeric value.
+
+Note that `\verb-:={numeric field}-' may be inside brackets, whatever be the level of nesting. For example, if a cell contains \verb-\textbf{:={a1+1}}- and if the numeric value of the cell \falseverb{a1} is 5, then finally, the cell will contain \verb-\textbf{6}-\medskip
+
+Here is a simple example:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|c|c||c|}}\hline
+value 1 : :={50} & value 2 : :={29} & average : \textbf{:={(a1+b1)/2}}\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|c|c||c|}}\hline
+value 1 : :={50} & value 2 : :={29} & average : \textbf{:={(a1+b1)/2}}\\\hline
+\end{spreadtab}
+\end{center}
+If `\verb-:=-' is written in a cell with an empty argument like this `\verb-:={}-', then the cell is understood as a text cell. In fact, `\verb-:={}-' behaves like `\verb-@-', but they are \emph{not} equivalent: `\verb-:={}-' allows the cell to receive a formula from another with \verbinline-\STcopy- (see next section) while it is impossible with `\verb-@-'.
+
+\subsection{Copy a formula}
+To avoid having to copy formulas into adjacent cells, the \ST package provides the \verbinline-\STcopy- command.
+
+This command must be written in a cell with this syntax:
+\begin{center}
+\verbinline-\STcopy{>-$x$\verbinline-,v-$y$\verbinline-}{formula}-
+\end{center}
+where $x$ and $y$ are positive numbers that represent horizontal and vertical offsets relative to the cell where the command is. With the cell containing the command (the source cell), these offsets define a range of cells which will receive the \verb-<formula>-\footnote{The copy can only be done to cells located on the right and below the cell containing the macro.}. The command \verbinline-\STcopy- must \emph{not} be in a cell where there is a numeric field marker `\verb-:=-'.
+
+Here is how the copy is made: it starts from the cell where the command \verbinline-\STcopy- is. For the other cells,  all the coordinates in the formula are modified taking into account the offsets from the source cell. For example, if the source cell contains the formula \verb-a1+b2+c3-, and the target cell is located 2 columns rightwards and 5 rows below then, this formula becomes: \verb-c6+d7+e8-. The formula can also contain relative references but, since they are relative, they are not modified.
+
+Preceded by `\verb-!-', a coordinate in a formula is not modified when the formula is copied. For example, if the source cell contains \verb-a!1+!b2+!c!3- and the target cell is located 2 columns rightwards and 5 rows below then, this formula becomes: \verb-c1+b7+c3-. The feature is compatible with relative coordinates. Let's suppose a cell contains this formula: \verb|[-1,!-1]+[!-1,1]+[!1,!2]|. As usual, let's say that this formula is copied to the cell located  2 columns rightwards and 5 rows below: this formula becomes: \verb|[-1,-6]+[-3,1]+[-1,-3]|.
+
+The `\verb-!-' character is the expansion of the control sequence \verbinline-\STtransposecar-. It may be changed to any other with \verbinline-\renewcommand\STtransposecar-\verb-{<char>}-. The `\verb-!-' character, used by default, keeps its 13 catcode and remains active if the \verb-babel- package is loaded with the \verb-frenchb- option.
+
+In `\verbinline-\STcopy{>-$x$\verbinline-,v-$y$\verbinline-}{formula}-', if $x$ is omitted, the copy is made to the cells rightwards, up to the right edge of the table. With $y$, it is the same: if this number is omitted, the copy is done to the cells below until the bottom of the table is reached. If $x$ or $y$ is equal to 0, the copy is limited to the column or row of the source cell. Instead of writing \verb-v0- or \verb->0-, it is possible to write \verb-v- or \verb->-.
+
+Here are some examples:
+\begin{tabular}{cl}\hline
+\verb-{>3,v1}- & copy to 3 columns rightwards and 1 row below\\
+\verb-{>3}- & copy to 3 cells on the right\\
+\verb-{v1}- & copy to the cell below\\
+\verb-{>}- & copy rightwards up to the right edge\\
+\verb-{v}- & copy below\\
+\verb-{v,>}- & copy to the right and below until the end of the table\\\hline
+\end{tabular}
+
+It is easy to generate the multiplication table from 1 to 10:
+
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|c|*{10}{c}|}}
+\hline
+@$\times$        & 1                     & \STcopy{>}{b1+1}  & & & & & & & & \\\hline
+1                & \STcopy{>,v}{!a2*b!1} &                   & & & & & & & & \\
+\STcopy{v}{a2+1} &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|c|*{10}{c}|}}
+\hline
+@$\times$        & 1                     & \STcopy{>}{b1+1}  & & & & & & & & \\\hline
+1                & \STcopy{>,v}{!a2*b!1} &                   & & & & & & & & \\
+\STcopy{v}{a2+1} &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\
+                 &                       &                   & & & & & & & & \\\hline
+\end{spreadtab}
+\end{center}
+
+If the numeric field of a target cell is not empty, it is not replaced and the copy is not done for this cell.
+
+If 2 or more \verbinline-\STcopy- commands in several source cells have the same target cell, then, the formula this latter receives is the one contained in the last \verbinline-\STcopy- command when the table is read from top left to bottom right. In the spreadsheet-like example below, the \verbinline-\STcopy- in the pink cell \falseverb{B1} has its target range partially covered by the one of the green cell \falseverb{C3}.
+\begin{center}
+\begin{OOocalc}[2.3cm]{6}
+1 &\CC{palepink}\ttfamily\textbackslash STcopy \{v,>\}\{!a1+1\} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} \\
+2 &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} ~\par~ \\
+3 &\CC{lightpink} &\CC{palegreen}\ttfamily\textbackslash STcopy \{>2,v1\}\{!a3*10\}&\CC{lightgreen} &\CC{lightgreen} &\CC{lightpink} \\
+4 &\CC{lightpink} &\CC{lightgreen} &\CC{lightgreen} &\CC{lightgreen} &\CC{lightpink}~\par~  \\
+5 &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink} &\CC{lightpink}~\par~  \\
+\end{OOocalc}
+\end{center}
+Here is this example, treated by \ST below. In this table, the cell \verb-b5- (numeric field alone) and the cell \verb-c5- (text field + numeric field) stay unchanged since their numeric fields are not empty:
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*6{c|}}}\hline
+1 &\STcopy{v,>}{!a1+1} &                        & & & \\\hline
+2 &                    &                        & & & \\\hline
+3 &                    & \STcopy{>2,v1}{!a3*10} & & & \\\hline
+4 &                    &                        & & & \\\hline
+5 &       -1           &       a:={0}b          & & & \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*6{c|}}}\hline
+1 &\STcopy{v,>}{!a1+1} &                        & & & \\\hline
+2 &                    &                        & & & \\\hline
+3 &                    & \STcopy{>2,v1}{!a3*10} & & & \\\hline
+4 &                    &                        & & & \\\hline
+5 &       -1           &       a:={0}b          & & & \\\hline
+\end{spreadtab}
+\end{center}
+As mentioned in the last chapter, you can also copy a formula to a text cell containing an empty numeric field (that is to say a cell containing `\verb-:={}-'). In this case, the formula is copied inside the brackets. On the other hand, a cell containing text `\verb-@-' cannot receive a formula when copying and the cell remains purely textual.
+
+Example :
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*6{c|}}}\hline
+1                  & 2   & 3      & 4              & 5 & 6 \\\hline
+X\STcopy{>}{a1+1}Y & @XY & X:={}Y & \textbf{:={}}  &   &   \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*6{c|}}}\hline
+1                  & 2   & 3      & 4              & 5 & 6 \\\hline
+X\STcopy{>}{a1+1}Y & @XY & X:={}Y & \textbf{:={}}  &   &   \\\hline
+\end{spreadtab}
+\end{center}
+
+\section{Features for formatting the table}
+\subsection{Decimal seprarator}
+The \verb-fp- package returns its results with the decimal point separator. After the job of \verb-fp-, \ST can change this decimal separator: everything happens as if the results returned by \verb-fp- were taking this into account. The command \verbinline-\STsetdecimalsep- takes a mandatory argument which is the character used as decimal separator:
+\begin{center}
+\verbinline-\STsetdecimalsep-\verb-{<char>}-
+\end{center}
+For example, French users should write this in the preamble of the document:
+\begin{center}
+\verbinline-\STsetdecimalsep{,}-
+\end{center}
+For numeric fields located in math mode, the comma is considered as a math punctuation, which explains why it is followed by a space. To pevent this behaviour, it can be written inside brackets:
+
+\begin{minipage}{0.65\linewidth}
+\begin{lstlisting}[backgroundcolor=\color{ST@codebckgcolor}]
+3,14 is not displayed like $3,14$.\par
+3,14 is displayed like     $3{,}14$
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}{0.35\linewidth}
+3,14 is not displayed like $3,14$.\par
+3,14 is displayed like     $3{,}14$
+\end{minipage}%
+
+When cells are in math mode, you can\footnote{It is preferable to use the \texttt{numprint} package to format the results. You can also change the math code of the comma: \texttt{\textbackslash mathcode`,="013B\textbackslash relax}. This trick puts the comma in the class 0 of the ordinary signs while its natural class is 6 (punctuation signs).} use this feature and ask \ST to replace the decimal point by a comma inside braces with the command \verbinline-\STsetdecimalsep{{,}}-. In these tables where each cell is in math mode, the space after the commas are neutralized in the second table:
+
+\begin{minipage}{0.65\linewidth}
+\begin{lstlisting}
+\STsetdecimalsep{,}
+\begin{spreadtab}{{tabular}{|*3{>{$}r<{$}}|}}\hline
+@x   & @y  & @\text{Average}\\\hline
+5    & -4  & (a2+b2)/2\\
+-6.1 & -8  & (a3+b3)/2\\
+9.85 & 3.7 & (a4+b4)/2\\\hline
+\end{spreadtab}\par\smallskip
+\STsetdecimalsep{{,}}
+\begin{spreadtab}{{tabular}{|*3{>{$}r<{$}}|}}\hline
+@x   & @y  & @\text{Average}\\\hline
+5    & -4  & (a2+b2)/2\\
+-6.1 & -8  & (a3+b3)/2\\
+9.85 & 3.7 & (a4+b4)/2\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.35\linewidth}
+\centering
+\STsetdecimalsep{,}
+\begin{spreadtab}{{tabular}{|*3{>{$}r<{$}}|}}\hline
+@x   & @y  & @\text{Average}\\\hline
+5    & -4  & (a2+b2)/2\\
+-6.1 & -8  & (a3+b3)/2\\
+9.85 & 3.7 & (a4+b4)/2\\\hline
+\end{spreadtab}\par\smallskip
+\STsetdecimalsep{{,}}
+\begin{spreadtab}{{tabular}{|*3{>{$}r<{$}}|}}\hline
+@x   & @y  & @\text{Average}\\\hline
+5    & -4  & (a2+b2)/2\\
+-6.1 & -8  & (a3+b3)/2\\
+9.85 & 3.7 & (a4+b4)/2\\\hline
+\end{spreadtab}
+\end{minipage}
+
+\subsection{Number formatting and the {\ttfamily fp} package}
+All calculations are made by the  \verb-\FPeval- macro\footnote{This macro accepts infix or postfix notation. Consequently, both can be used to write formulas in a cell. For example the infix formula `\falseverb{a1+b1}' is equivalent to the postfix ones `\falseverb{a1 b1 add}' or `\falseverb{a1 b1 +}'.} of the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/fp/}{\texttt{\textbf{fp}}} package. This package provides all necessary arithmetical functions along with various scientific and trigonometric functions. Calculations are made with 18 decimal digits of precision, and \falseverb{fp} displays \emph{all} the decimals!
+
+The number of digits displayed can be controlled in various ways:
+\begin{itemize}
+	\item the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/numprint/}{\texttt{\textbf{numprint}}} package can be used in order to properly display numbers;
+	\item \verb=fp= can round or truncate numbers with \verb-round(number,integer)- or \verb-trunc(number,integer)- but the syntax makes this tedious to write if this is needed for many cells;
+	\item \ST can round \emph{all} the numbers in the table with the macro \verbinline-\STautoround- whose argument is number of digits in the decimal part. If the argument is empty, no rounding is done. If the starred macro \verbinline-\STautoround*- is used, the decimal part is filled with 0 as necessary.
+\end{itemize}
+In this example, floating point numbers are rounded to 6 digits:\par\nobreak
+\begin{lstlisting}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{|l|*7{>{\centering\arraybackslash}m{1.35cm}|}}}
+\hline
+@$x$     & 1    & 2    & 3    & 4    & 5    & 6    & 7   \\\hline
+@$x^{-1}$& 1/b1 & 1/c1 & 1/d1 & 1/e1 & 1/f1 & 1/g1 & 1/h1\\\hline
+\end{spreadtab}\medskip
+
+\STautoround*{6}
+\begin{spreadtab}{{tabular}{|l|*7{>{\centering\arraybackslash}m{1.35cm}|}}}
+\hline
+@$x$     & 1    & 2    & 3    & 4    & 5    & 6    & 7   \\\hline
+@$x^{-1}$& 1/b1 & 1/c1 & 1/d1 & 1/e1 & 1/f1 & 1/g1 & 1/h1\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{|l|*7{>{\centering\arraybackslash}m{1.35cm}|}}}
+\hline
+@$x$     & 1    & 2    & 3    & 4    & 5    & 6    & 7   \\\hline
+@$x^{-1}$& 1/b1 & 1/c1 & 1/d1 & 1/e1 & 1/f1 & 1/g1 & 1/h1\\\hline
+\end{spreadtab}\medskip
+
+\STautoround*{6}
+\begin{spreadtab}{{tabular}{|l|*7{>{\centering\arraybackslash}m{1.35cm}|}}}
+\hline
+@$x$     & 1    & 2    & 3    & 4    & 5    & 6    & 7   \\\hline
+@$x^{-1}$& 1/b1 & 1/c1 & 1/d1 & 1/e1 & 1/f1 & 1/g1 & 1/h1\\\hline
+\end{spreadtab}
+\end{center}
+
+All the numbers contained in the final table, either typed as is or coming from a calculation are processed by the macro\verbinline-\STprintnum-. By default, this macro has no effect on its argument and is defined this way:
+\begin{center}
+	\verbinline-\newcommand\STprintnum[1]{#1}-
+\end{center}
+It is possible to round all the numbers via the \verbinline-\numprint- command from the \verb-numprint- package. To achieve this, the \verbinline-\STprintnum- command must be redefined:\par\nobreak
+\begin{lstlisting}
+\renewcommand\STprintnum[1]{\numprint{#1}}
+\nprounddigits{6}
+\begin{spreadtab}{{tabular}{cccccccc}}
+@$x$   & 1 &  2 & 3  & 4  & 5  & 6  &7   \\\hline
+@$1/x$ &1/b1&1/c1&1/d1&1/e1&1/f1&1/g1&1/h1
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\renewcommand\STprintnum[1]{\numprint{#1}}
+\nprounddigits{6}
+\begin{spreadtab}{{tabular}{cccccccc}}
+@$x$   & 1 &  2 & 3  & 4  & 5  & 6  &7   \\\hline
+@$1/x$ &1/b1&1/c1&1/d1&1/e1&1/f1&1/g1&1/h1
+\end{spreadtab}
+\end{center}
+
+Here is another similar example where we test if the number to display is negative with the command \verbinline-\FPifneg- from the \verb-fp- package. If this happens, the number is displayed in red. The command \verbinline-\STautoround- was preferred to \verbinline-\nprounddigits- from the \verb-numprint- package because the latter adds unnecessary 0's.
+\begin{lstlisting}
+\STsetdecimalsep{.}
+\renewcommand\STprintnum[1]{\FPifneg{#1}\color{red}\fi\numprint{#1}}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{cccccccc}}
+@$x$   & -1 &  2 & -3 & 4  & -5 & 6  & -7 \\\hline
+@$1/x$ &1/b1&1/c1&1/d1&1/e1&1/f1&1/g1&1/h1
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\STsetdecimalsep{.}
+\renewcommand\STprintnum[1]{\FPifneg{#1}\color{red}\fi\numprint{#1}}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{cccccccc}}
+@$x$   & -1 &  2 & -3 & 4  & -5 & 6  & -7 \\\hline
+@$1/x$ &1/b1&1/c1&1/d1&1/e1&1/f1&1/g1&1/h1
+\end{spreadtab}
+\end{center}
+
+\subsection{End of lines and horizontal rules}
+\ST recognizes the usual line breaks and horizontal rules \verb|\\| and \verb|\hline|. It is also possible to specify the optional argument in line break: \verb-\\[<dimension>]-.
+
+For horizontal rules, it is possible to use:\par\nobreak
+\begin{itemize}
+	\item \verb-\hline-;
+	\item \verb=\cline{x-y}= where \falseverb x and \falseverb y define the start and the end of the rule;
+	\item \verb=\hhline{<type>}= where \verb=<type>= is the type of rule (read the manual of the \href{http://www.ctan.org/tex-archive/macros/latex/required/tools/}{\texttt{\textbf{hhline}}} package).
+	\item any command of the \href{http://www.ctan.org/tex-archive/macros/latex/contrib/booktabs/}{\texttt{\textbf{booktabs}}} package: \verb-\toprule-, \verb-\midrule-, \verb-\bottomrule-, \verb-\cmidrule-, \verb-\addlinespace-, \verb-\morecmidrule- and \verb-\specialrule-. All the arguments of these macros, optional or mandatory are taken into account;
+	\item \verbinline-\noalign- and its mandatory argument can be written after \verb-\\-.
+\end{itemize}
+Example:
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{*5c}}
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]\\[1em]
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &       \\ \hline\hline
+[0,1] & [-1,1]       &              &              &       \\ \cline{2-4}
+1     &              &              &              &       \\ \hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{*5c}}
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]\\[1em]
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &       \\ \hline\hline
+[0,1] & [-1,1]       &              &              &       \\ \cline{2-4}
+1     &              &              &              &       \\ \hline
+\end{spreadtab}
+\end{center}
+
+\subsection{Hide a row or column}
+Sometimes, a column or a row is intended for intermediate calculations and does not need to be displayed in the final table. For this, \ST provides two control sequences \verbinline=\SThiderow= and \verbinline=\SThidecol= which, when placed in a cell, hide the row or column that contains the cell.
+
+An example:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|r|ccc|}}
+\hline
+@ values of $x$        & -1         & 0\SThidecol & 2          & 3          \\\hline
+@$f(x)=2x-1$           & 2*[0,-1]-1 & 2*[0,-1]-1  & 2*[0,-1]-1 & 2*[0,-1]-1 \\
+@$g(x)=x-10$\SThiderow & [0,-2]-10  & [0,-2]-10   & [0,-2]-10  & [0,-2]-10  \\
+@$h(x)=1-x$            & 1-[0,-3]   & 1-[0,-3]    & 1-[0,-3]   & 1-[0,-3]   \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|ccc|}}
+\hline
+@ values of $x$        & -1         & 0\SThidecol & 2          & 3          \\\hline
+@$f(x)=2x-1$           & 2*[0,-1]-1 & 2*[0,-1]-1  & 2*[0,-1]-1 & 2*[0,-1]-1 \\
+@$g(x)=x-10$\SThiderow & [0,-2]-10  & [0,-2]-10   & [0,-2]-10  & [0,-2]-10  \\
+@$h(x)=1-x$            & 1-[0,-3]   & 1-[0,-3]    & 1-[0,-3]   & 1-[0,-3]   \\\hline
+\end{spreadtab}
+\end{center}
+The row containing $g(x)$ and column corresponding to the value 0 are hidden.
+
+Remember that the hidden rows and columns are \emph{invisible} to the tabular environment chosen by the user. Thus, only 4 columns have been defined (\falseverb{|r|ccc|}) and not 5 as seen by \ST.
+
+Just to see the difference, here is the table obtained when setting 5 columns in the preamble and not hiding any row or column:\par\nobreak
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|cccc|}}
+\hline
+@ values of $x$  & -1         & 0           & 2          & 3          \\\hline
+@$f(x)=2x-1$     & 2*[0,-1]-1 & 2*[0,-1]-1  & 2*[0,-1]-1 & 2*[0,-1]-1 \\
+@$g(x)=x-10$     & [0,-2]-10  & [0,-2]-10   & [0,-2]-10  & [0,-2]-10  \\
+@$h(x)=1-x$      & 1-[0,-3]   & 1-[0,-3]    & 1-[0,-3]   & 1-[0,-3]   \\\hline
+\end{spreadtab}
+\end{center}
+
+\subsection{Save the result of a cell}
+It may be necessary to save the numerical value of a cell to display it outside a formula or even outside the table. Here is how to do it:
+\begin{center}
+\verbinline-\STsavecell{<control sequence>}{<absolute reference>}-
+\end{center}
+With a \verbinline-\global\def-\footnote{The \texttt{\string\def} command does not check if the macro it defines already exists.}, this command globally saves in \falseverb{<control sequence>} the result of the formula contained in the cell \falseverb{<absolute reference>}.\medskip
+
+Only absolute references can be used since this command must be placed in the optional argument of the \verbinline-spreadtab- environment.
+
+Example:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}[\STsavecell\result{c1}]{{tabular}{|c|c|c|c|c|}}
+\hline
+10 & a1+10 & b1+10 & a1+b1+c1 & @cell c1 : \result\\\hline
+\end{spreadtab}
+\par\medskip
+Here is the cell c1 : \result
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}[\STsavecell\result{c1}]{{tabular}{|c|c|c|c|c|}}
+\hline
+10 & a1+10 & b1+10 & a1+b1+c1 & @cell c1 : \result\\\hline
+\end{spreadtab}
+\par\medskip
+Here is the cell c1 : \result
+\end{center}
+In order to save several cells, the command \verbinline-\STsavecell- can be put several times in the optionnal argument.
+
+Example:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}[\STsavecell\hhh{b3}\STsavecell\mmm{c3}\STsavecell\sss{d3}]{{tabular}{|rc|}}\hline
+@Speed  (km/h)  &\SThidecol&\SThidecol&\SThidecol& 35 \\
+@distance (km)  &          &          &          & 180\\\hline
+@Time (h min s) & trunc(e2/e1,0) & trunc(60*(e2/e1-b3),0) & trunc(3600*(e2/e1-b3)-60*c3,1) &@\hhh\ h \mmm\ min \sss\ s\\\hline
+\end{spreadtab}\par\medskip
+It lasts more than \hhh\ hours.
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}[\STsavecell\hhh{b3}\STsavecell\mmm{c3}\STsavecell\sss{d3}]{{tabular}{|rc|}}\hline
+@Speed  (km/h)  &\SThidecol&\SThidecol&\SThidecol& 35 \\
+@distance (km)  &          &          &          & 180\\\hline
+@Time (h min s) & trunc(e2/e1,0) & trunc(60*(e2/e1-b3),0) & trunc(3600*(e2/e1-b3)-60*c3,1) &@\hhh\ h \mmm\ min \sss\ s\\\hline
+\end{spreadtab}\par\medskip
+It lasts more than \hhh\ hours.
+\end{center}
+
+\subsection{Display the value of a cell}
+In order to display the numeric field of a cell in a textual field, we have seen that we could save this value in a control sequence and use this control sequence anywhere in the table. The process is somewhat tedious\ldots{} Indeed, \verbinline-\STsavecell- is not intended to be used in such a way. Its aim is to save the value of a numeric field for further use \emph{outside} the table.
+
+There is a simpler way to display the numeric field of a cell in a textual field using the syntax \verb-<<reference>>- which is replaced by the numeric field of the cell \verb-reference-, where the \verb-reference- can be absolute or relative. If the text between \verb-<<- and \verb->>- is not a reference, then \verb-<<text>>- is left as is. The \verb-reference- must not contain any space; for example, if you write \verb-<< a1>>-, \ST does not uderstand it as a reference because of the space before `\verb-a1-'.
+
+Example in a textual cell \verb-a3-:
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{lr}}
+@Sell price             & 250  \\
+@Purchase price         & 216  \\\hline
+@Profit (<<b1>>-<<b2>>) & b1-b2
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{lr}}
+@Sell price             & 250  \\
+@Purchase price         & 216  \\\hline
+@Profit (<<b1>>-<<b2>>) & b1-b2
+\end{spreadtab}
+\end{center}
+Example in the mixed cell \verb-c1-:
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|c|c||c|}}\hline
+23 & 32 & Average $= \frac{<<a1>>+<<b1>>}{2}= :={(a1+b1)/2}$\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|c|c||c|}}\hline
+23 & 32 & Average $= \frac{<<a1>>+<<b1>>}{2}= :={(a1+b1)/2}$\\\hline
+\end{spreadtab}
+\end{center}
+The characters used to delimit the reference are set to `\verb-<<-' and `\verb->>-' by default. They can be modified with the \verbinline-\STsetdisplaymarks- command whose arguments contain the left and right delimiters. For example, if you write \verbinline-\STsetdisplaymarks{|}{|}-, you will write \verb-|reference|- in order to display the content of the numeric field of the cell \verb-reference-.
+
+\subsection{The use of \ttfamily\textbackslash multicolumn}
+\ST is compatible with the syntax \verbinline=\multicolumn{<n>}{<type>}{<content>}= which merges \falseverb{<n>} cells in a unique cell whose type and content are specified in the arguments.
+
+Even when using \verbinline=\multicolumn=, \ST maintains some consistency in the references. In this table where \verbinline-\multicolumn- is used, the absolute references are displayed:\par\nobreak
+\begin{center}
+\ttfamily
+\begin{tabular}{|*7{c|}}\hline
+a1&b1&c1&d1&e1&f1&g1\\\hline
+a2&\multicolumn{2}{l|}{b2}&d2&e2&f2&g2\\\hline
+\multicolumn{3}{|l|}{a3}&d3&\multicolumn{2}{l|}{e3}&g3\\\hline
+\end{tabular}
+\end{center}
+Thus, whatever the number of merged cells, the next cell has a column number that takes into account the number of merged cells.\medskip
+
+In the last line, cells \falseverb{a3}, \falseverb{b3} and \falseverb{c3} are merged and consequently, the cells \falseverb{b3} and \falseverb{c3} \emph{do not exist} for \ST: it is not possible to refer to \falseverb{b3} or \falseverb{c3} anywhere in the table.\medskip
+
+In this example, every number in the top line is the product of the 2 numbers below:\par\nobreak
+\begin{lstlisting}
+\newcolumntype{K}[1]{@{}>{\centering\arraybackslash}p{#1cm}@{}}
+\begin{spreadtab}{{tabular}{*6{K{0.5}}}}
+\cline{2-5}
+&\multicolumn{2}{|K{1}|}{:={a2*c2}} & \multicolumn{2}{K{1}|}{:={c2*e2}} &\\\hline
+\multicolumn{2}{|K{1}}{:=8}&\multicolumn{2}{|K{1}}{:=7}&\multicolumn{2}{|K{1}|}{:=6}\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\newcolumntype{K}[1]{@{}>{\centering\arraybackslash}p{#1cm}@{}}
+\begin{spreadtab}{{tabular}{*6{K{0.5}}}}
+\cline{2-5}
+&\multicolumn{2}{|K{1}|}{:={a2*c2}} & \multicolumn{2}{K{1}|}{:={c2*e2}} &\\\hline
+\multicolumn{2}{|K{1}}{:=8}&\multicolumn{2}{|K{1}}{:=7}&\multicolumn{2}{|K{1}|}{:=6}\\\hline
+\end{spreadtab}
+\end{center}
+The marker `\falseverb{:=}' is necessary in every cell where the command \verbinline-\multicolumn- is written. Without it, \ST would consider that the whole cell (i.e. \verb-\multicolumn{2}{|c|}{<formula>}-) as the formula, which is impossible to calculate.
+
+\section{Macro-functions}
+The \falseverb{fp} package provides a limited set of operations and functions. If these are not sufficient then \ST allows the advanced programmer to write macros using the operations and functions of \falseverb{fp}. This section presents the macro-functions currently available\footnote{Many others should be written soon and be available in future versions of the package.}. There will be more details on how to program macro functions in the next version of this manual.
+
+\subsection{Mathematical macro-functions}
+\subsubsection{Sum cells}
+The macro-function \verbinline=sum= sums one or several ranges of cells.
+
+It should be used like this: \verbinline=sum(<range 1>;<range 2>;...;<range n>)=, where a range of cells is:
+\begin{itemize}
+	\item either a single cell like \falseverb{a1} or \falseverb{[2,1]};
+	\item or a rectangular area bounded by the upper-left cell and lower-right with this syntax:\par{\centering\verb=<cell 1>:<cell 2>=\par}
+	Here are some examples of such areas: \falseverb{a2:d5}, \falseverb{[-1,-1]:[2,3]}, \falseverb{b4:[5,1]}.
+\end{itemize}
+In cell ranges, if a cell does not have a numeric field (empty cell or text cell or merged cell with \verbinline-\mutlicolumn-), it is seen as 0 by \verbinline-sum-.
+
+In the following table, the sum of the binomial coefficients of Pascal's triangle is calculated:\par\nobreak
+\begin{minipage}{0.75\linewidth}
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{*5c}}
+\multicolumn{5}{c}{sum: :={sum(a2:e6)}}\\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]  \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &         \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &         \\
+[0,1] & [-1,1]       &              &              &         \\
+1     &              &              &              &
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.25\linewidth}
+\centering
+\begin{spreadtab}{{tabular}{*5c}}
+\multicolumn{5}{c}{sum: :={sum(a2:e6)}}\\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]  \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &         \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &         \\
+[0,1] & [-1,1]       &              &              &         \\
+1     &              &              &              &
+\end{spreadtab}
+\end{minipage}%
+
+\subsubsection{The \texttt{fact} macro}
+The macro-function \verbinline=fact(<number>)= computes the factorial of its argument, assuming it is an \emph{integer} between 0 and 18 to avoid overflows\footnote{Indeed, for \falseverb{fp} the greatest integer is $10^{18}-1$. The factorial of 19 is greater than this.}. The \falseverb{<number>} can also be a reference to a cell whose numeric field contains an integer.\medskip
+
+Here are the factorials from 0 to 8:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{*9c}}
+  0     &   1    &   2    &   3    &   4    &   5    &    6   &   7    &8\\\hline
+fact(a1)&fact(b1)&fact(c1)&fact(d1)&fact(e1)&fact(f1)&fact(g1)&fact(h1)&fact(i1)
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{*9c}}
+  0     &   1    &   2    &   3    &   4    &   5    &    6   &   7    &8\\\hline
+fact(a1)&fact(b1)&fact(c1)&fact(d1)&fact(e1)&fact(f1)&fact(g1)&fact(h1)&fact(i1)
+\end{spreadtab}
+\end{center}
+
+\subsubsection{The \texttt{sumprod} macro}
+The function \verbinline=sumprod= multiplies the corresponding elements of 2 or more rectangular ranges and then adds these products.
+
+It should be used like this: \verbinline{sumprod(<range 1>;<range 2>;...;<range n>)}. All the ranges must have the same dimensions.
+
+In this simple example, the average age of a group of children aged from 10 to 15 years old is calculated:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{r*6c}}
+@\Ages & 10 & 11 & 12 & 13 & 14 & 15\\
+@Number & 5  & 8  & 20 & 55 & 9  & 3\\\hline
+@Average&\multicolumn{6}{l}{:={sumprod(b1:g1;b2:g2)/sum(b2:g2)}}
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{r*6c}}
+@Ages & 10 & 11 & 12 & 13 & 14 & 15\\
+@Number & 5  & 8  & 20 & 55 & 9  & 3\\\hline
+@Average&\multicolumn{6}{l}{:={sumprod(b1:g1;b2:g2)/sum(b2:g2)}}
+\end{spreadtab}
+\end{center}
+If any cell in the ranges is empty, pure text or merged with \verbinline-\multicolumn-, its numeric field is replaced by 0.
+
+\subsubsection{Random numbers}
+The macro-functions \verbinline-randint- and \verbinline-rand- each returns a random number depending on its argument.
+
+It should be noted that the seed initializing the random sequence depends on the date and the minute at which the compilation is done. Thus, the random sequence of numbers given by this function will change between two compilations made at different times. If random numbers need to be repeatable, the private macro \verb-\ST@seed- must be cancelled and a seed should be chosen for \falseverb{fp}. Here is the code to do this:\par\nobreak
+\begin{lstlisting}[backgroundcolor=\color{ST@codebckgcolor}]
+\makeatletter
+\renewcommand\ST@seed{}% redefines the private macro
+\makeatother
+\FPseed=27% gives a seed (any integer) to fp.
+\end{lstlisting}
+The macro-function \verbinline-randint([<number1>,]<number2>)- returns a random \emph{integer} depending on its arguments: \verb=<number1>= is an optional integer with default value 0. The random integer returned is in the interval \verb=[<number1>;=\linebreak[2]\verb=<number2>]=.
+
+The macro-function \verbinline-rand()- returns a random number between 0 and 1.\par\nobreak
+\begin{lstlisting}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{|l|cccc|}}\hline
+@numbers in [0;1]  &rand()        &rand()        &rand()        &rand()       \\
+@numbers in [-5;5] &randint(-5,5) &randint(-5,5) &randint(-5,5) &randint(-5,5)\\
+@numbers in [0;20] &randint(20)   &randint(20)   &randint(20)   &randint(20)  \\
+\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\STautoround{6}
+\begin{spreadtab}{{tabular}{|l|cccc|}}\hline
+@numbers in [0;1]  &rand()        &rand()        &rand()        &rand()       \\
+@numbers in [-5;5] &randint(-5,5) &randint(-5,5) &randint(-5,5) &randint(-5,5)\\
+@numbers in [0;20] &randint(20)   &randint(20)   &randint(20)   &randint(20)  \\
+\hline
+\end{spreadtab}
+\end{center}
+
+\subsubsection{GCD and LCM}
+The macro functions `gcd' and `lcm' compute the Greatest Common Divisor and the Least Common Multiple of the list of numbers in their argument:
+\begin{center}
+\verbinline-gcd(number1,number2,...,numberN)-\par
+\verbinline-lcm(number1,number2,...,numberN)-
+\end{center}
+Example :
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|r|r|r||c|c|}}\hline
+\multicolumn3{|c||}{@Numbers}& @GCD & @LCM \\\hline
+24 & 18 & 12 & \STcopy{v}{gcd(a2,b2,c2)} & \STcopy{v}{lcm(a2,b2,c2)}\\
+15 & 10 & 25 & & \\
+16 & 12 & 15 & & \\
+\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|r|r||c|c|}}\hline
+\multicolumn3{|c||}{@Numbers}& @GCD & @LCM \\\hline
+24 & 18 & 12 & \STcopy{v}{gcd(a2,b2,c2)} & \STcopy{v}{lcm(a2,b2,c2)}\\
+15 & 10 & 25 & & \\
+16 & 12 & 15 & & \\
+\hline
+\end{spreadtab}
+\end{center}
+
+\subsubsection{Scientific notation}
+The macro function `scitodec' converts a number written in scientific notation into a decimal number, understandable by \ST to achieve its calculations. The syntax is \verbinline-scitodec(<text>)-, where \verb-<text>- is:
+\begin{itemize}
+	\item a sequence of characters with the syntax \verb-<mantissa>EE<exponent>- where \verb-<mantissa>- is a decimal number and the \verb-<exponent>- is an integer. The `EE' may be written uppercase or lowercase.
+	
+	\verb-<mantissa>EE<exponent>- means the number $\text{\ttfamily <mantissa>}\times10^{\text{\ttfamily <exponent>}}$
+	\item a reference to the \emph{textual} field of a cell containing \verb-<mantissa>EE<exponent>-
+\end{itemize}
+Example :
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|r|r|}}\hline
+@Scientific notations    & @Decimal notations \\\hline
+@4EE2                    & \STcopy{v}{scitodec([-1,0])}\\
+@-3.1EE-3                & \\
+@15ee5                   & \\
+@-0.025ee7               & \\
+@2.125EE0                & \\
+@3.1575EE-4              & \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|r|}}\hline
+@Scientific notations    & @Decimal notations \\\hline
+@4EE2                    & \STcopy{v}{scitodec([-1,0])}\\
+@-3.1EE-3                & \\
+@15ee5                   & \\
+@-0.025ee7               & \\
+@2.125EE0                & \\
+@3.1575EE-4              & \\\hline
+\end{spreadtab}
+\end{center}
+
+\subsubsection{Identity}
+The simplest macro function is `\verbinline=id(<number>)='. It returns the number in its argument. Mathematically, it is not very useful, but with \ST, it makes possible the writing of mathematical expressions in arguments of macro functions where they are not otherwise allowed -- in the argument of \verbinline=sum= for example.
+
+In the code below, the \verbinline-id- macro function is used to compute the range of cells to add with \verbinline-sum-. In this example, the numeric field of the cell `a2' contains 8. Therefore, `\verbinline=sum([0,-1]:[id(a2-1),-1])/a2=' is equivalent to \verbinline=sum([0,-1]:[7,-1])/8=:
+
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{r*{10}c}}
+                       @Integers & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10\\
+Mean of the :={8} first integers & sum([0,-1]:[id(a2-1),-1])/a2          \\
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{r*{10}c}}
+                       @Integers & 1 & 2 & 3 & 4 & 5 & 6 & 7 & 8 & 9 & 10\\
+Mean of the :={8} first integers & sum([0,-1]:[id(a2-1),-1])/a2          \\
+\end{spreadtab}
+\end{center}
+
+\subsection{Tests}
+Three macro-functions provide tests:\par\nobreak
+\begin{center}
+\verbinline=ifeq(number1,number2,number3,number4)=\par
+\verbinline=ifgt(number1,number2,number3,number4)=\par
+\verbinline=iflt(number1,number2,number3,number4)=
+\end{center}
+\falseverb{number1} and \falseverb{number2} are compared:
+\begin{itemize}
+	\item for \verbinline-ifeq-, is \falseverb{number1} = \falseverb{number2}?
+	\item for \verbinline-ifgt-, is \falseverb{number1} > \falseverb{number2}?
+	\item for \verbinline-iflt-, is \falseverb{number1} < \falseverb{number2}?
+\end{itemize}
+If the test is positive, \falseverb{number3} is returned, otherwise it is \falseverb{number4}.
+
+Here are some values of the function
+$f(x)=\begin{cases}
+10  &\text{if }x<1\\
+0   &\text{if }x=1\\
+-10 &\text{if }x>1
+\end{cases}
+$\smallskip
+
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*2c|}}\hline
+@$x$       & @$f(x)$                               \\\hline
+-0.5       & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*2c|}}\hline
+@$x$       & @$f(x)$                               \\\hline
+-0.5       & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\
+[0,-1]+0.5 & iflt([-1,0],1,10,ifeq([-1,0],1,0,-10))\\\hline
+\end{spreadtab}
+\end{center}
+
+\subsection{Macro-functions manipulating dates}
+\subsubsection{Date to number with \ttfamily engshortdatetonum}\label{datetonum}
+The macro \verbinline-engshortdatetonum- converts a short date like 1789/7/14 to an integer which is the number of days passed since the 1st March of the year 0\footnote{This year 0 does not exist but this should not be a problem with recent dates.}. It is important to note that this macro-function requires a \emph{textual} argument and not a number or the result of a mathematical calculation. Therefore, if the argument of this macro-function refers to a cell, that cell \emph{must} be a text cell, i.e. a cell containing `\verb-@-' or `\verb-:={}-'.
+
+In the example below, the first two lines show how to refer to a text cell. The third line displays the date 0 on the left, and more interesting on the right, it shows how to calculate the number corresponding to the current date with the use of the \TeX{} counters \verbinline-\year-, \verbinline-\month- and \verbinline-\day- which contain the numbers of the current year, month and day.\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{cc}}
+@1789/7/14              & engshortdatetonum(a1)\\
+2001/1/1 :={}           & engshortdatetonum(a2)\\\hline
+engshortdatetonum(0/3/1) & engshortdatetonum(\number\year/\number\month/\number\day)
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{cc}}
+@1789/7/14              & engshortdatetonum(a1)\\
+2001/1/1 :={}           & engshortdatetonum(a2)\\\hline
+engshortdatetonum(0/3/1) & engshortdatetonum(\number\year/\number\month/\number\day)
+\end{spreadtab}
+\end{center}
+Another macro-function provides the same feature but with a long date like `December 25, 1789' or the string contained in \verbinline-\today-:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{cc}}
+englongdatetonum(February 13, 2005) & englongdatetonum(\today)\\
+@July 1, 1970                       & englongdatetonum(a2)
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{cc}}
+englongdatetonum(February 13, 2005) & englongdatetonum(\today)\\
+@July 1, 1970                       & englongdatetonum(a2)
+\end{spreadtab}
+\end{center}
+
+\subsubsection{From a number to a date}
+Several macro-functions translate a number into a date. All these macro-functions have in common that their result is \emph{text}. Therefore, the cells containing such results \emph{become cells containing text} and if the cell is composed of two fields, the numeric field becomes empty and `\verb-:={<formula>}-' is replaced by its result in the text field.
+
+These macro-functions are:
+\begin{itemize}
+	\item \verbinline-numtoengshortdate- translate a number into a short date like `1789/7/14';
+	\item \verbinline-numtoenglongdate- translate a number into a long date like `July 14, 1789';
+	\item \verbinline-numtoengmonth- given a number representing a date, it finds the name of the month;
+	\item \verbinline-numtoengday- same as above but it finds the name of the day.
+\end{itemize}
+Here is an example in which we consider 1000 days before and 1000 days after 2009/6/1. For each of these 2 dates, we calculate the short date, long date, month and day of the week.\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{cc}}                             \hline
+\multicolumn{2}{|c|}{@2009/6/1}                            \\\hline\hline
+1000      & numtoengshortdate(engshortdatetonum(a1)+[-1,0])\\
+1000      & numtoenglongdate(engshortdatetonum(a1)+[-1,0]) \\
+1000      & numtoengmonth(engshortdatetonum(a1)+[-1,0])    \\
+1000      & numtoengday(engshortdatetonum(a1)+[-1,0])      \\\hline
+-1000     & numtoengshortdate(engshortdatetonum(a1)+[-1,0])\\
+-1000     & numtoenglongdate(engshortdatetonum(a1)+[-1,0]) \\
+-1000     & numtoengmonth(engshortdatetonum(a1)+[-1,0])    \\
+-1000     & numtoengday(engshortdatetonum(a1)+[-1,0])
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{cc}}                             \hline
+\multicolumn{2}{|c|}{@2009/6/1}                            \\\hline\hline
+1000      & numtoengshortdate(engshortdatetonum(a1)+[-1,0])\\
+1000      & numtoenglongdate(engshortdatetonum(a1)+[-1,0]) \\
+1000      & numtoengmonth(engshortdatetonum(a1)+[-1,0])    \\
+1000      & numtoengday(engshortdatetonum(a1)+[-1,0])      \\\hline
+-1000     & numtoengshortdate(engshortdatetonum(a1)+[-1,0])\\
+-1000     & numtoenglongdate(engshortdatetonum(a1)+[-1,0]) \\
+-1000     & numtoengmonth(engshortdatetonum(a1)+[-1,0])    \\
+-1000     & numtoengday(engshortdatetonum(a1)+[-1,0])
+\end{spreadtab}
+\end{center}
+
+\subsection{Coordinate macro functions}\label{tag}
+Rather than referring to a cell by its coordinates which are difficult to remember and change if you insert a row or column, it is sometimes more convenient to give a name to a cell and refer to it later by name.
+
+The macro function `\verbinline-tag(<name>)-' gives a name to the cell in which it is located. This is not really a macro function like the others, since it returns nothing when put in a formula and disappears without causing any effect on the mathematical result. We can write `\verbinline-tag(<nom>)-' \emph{anywhere} in the numeric field of a cell. The \verb-<name>- can be any string of alphanumeric characters, but it is not advisable to put a letter and a number that could be understood as a reference to a cell, and would therefore be modified at a copy operation with \verbinline-\STcopy-. This macro function has an additional action, it saves via a \verbinline-\def- the numeric value of the cell in which it is located in order to be able to use later \emph{outside} the table via the purely expandable command \verbinline-\STtag{<name>}-.
+
+Later in the table, instead of writing the coordinates of the cell, we can write `\verbinline-cell(<name>)-', which is a macro function that returns the coordinates of the cell named \verb-<name>-. For example, if `\verbinline-tag(<name>)-' is written in the cell `\verb-B3-' and in a further cell, we write `\verbinline-cell(<name>)-', this macro function returns \verb-B3-.
+
+Here is an example where we add cells and the name `\verb-foo-' is given to the first number and the name `\verb-bar-' to the last. One can see that \verbinline-tag(foo)- is between `1' and `9' but at the end, since this macro function diappears, the numeric field of the cell will be `19':
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{r@{}r}}
+   & 15tag(foo)              \\
+@+ & 37                      \\
+@+ & 13                      \\
+@+ & 48                      \\
+@+ & 1tag(bar)9              \\\cline{2-2}
+   & sum(cell(foo):cell(bar))tag(baz)
+\end{spreadtab}
+
+foo=\STtag{foo}, bar=\STtag{bar}, baz=\STtag{baz}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{r@{}r}}
+   & 15tag(foo)              \\
+@+ & 37                      \\
+@+ & 13                      \\
+@+ & 48                      \\
+@+ & 1tag(bar)9              \\\cline{2-2}
+   & sum(cell(foo):cell(bar))tag(baz)
+\end{spreadtab}
+
+foo=\STtag{foo}, bar=\STtag{bar}, baz=\STtag{baz}
+\end{center}
+When the environment \ST is nested in another environment, the assignments made by the macro funtion \verbinline-tag- are \emph{local} in this environment and could not be accessed outside of this environment via \verbinline-\STtag-. In the example below, the table made with \ST is in a \verbinline-center- environment and we must use \verbinline-\STmakegtag{<name>}- to make global the previous saving of the numerical value contained in the cell marked by `tag(<name>)':
+
+\begin{minipage}{.6\linewidth}
+\begin{lstlisting}
+\begin{center}
+  \begin{spreadtab}{{tabular}{cccc}}\hline
+    6&9&17&21\\\hline
+    \multicolumn{4}{c}{average = :={sum(a1:d1)/4tag(avg)}}
+  \end{spreadtab}
+  \STmakegtag{avg}
+\end{center}
+The average is \STtag{avg}.
+\end{lstlisting}
+\end{minipage}\kern6pt
+\begin{minipage}{.3\linewidth}
+\begin{center}
+  \begin{spreadtab}{{tabular}{cccc}}\hline
+    6&9&17&21\\\hline
+    \multicolumn{4}{c}{average = :={sum(a1:d1)/4tag(avg)}}
+  \end{spreadtab}
+  \STmakegtag{avg}
+\end{center}
+The average is \STtag{avg}.
+\end{minipage}
+
+The argument of \verbinline-\STmakegtag- can be made of several names, separated with commas.
+
+Although at first sight less useful, \ST also provides the macro functions `\verbinline-row(<name>)-' and `\verbinline-col(<name>)-' that return the number of the row or column of the cell \verbinline-tag(<name>)-. Here is an example of how to calculate the average of a number of values; the first and last values are tagged `first' and `last' and therefore, the number of values is row(last)-row(first)+1:
+
+\begin{minipage}{0.6\linewidth}
+\begin{lstlisting}
+average = \begin{spreadtab}{{tabular}[b]{r}}
+7tag(first)\\9\\15\\6\\20\\13\\11\\55tag(last)\\
+\hline
+sum(cell(first):cell(last))/(row(last)-row(first)+1)
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}{0.35\linewidth}
+average = \begin{spreadtab}{{tabular}[b]{r}}
+7tag(first)\\9\\15\\6\\20\\13\\11\\55tag(last)\\
+\hline
+sum(cell(first):cell(last))/(row(last)-row(first)+1)
+\end{spreadtab}
+\end{minipage}
+
+\section{Particular care}
+\subsection{Defining new  commands with \ttfamily\textbackslash hline}
+It may be useful to define a new command to produce, for example, a double horizontal line:\par\nobreak
+\begin{center}
+\verbinline-\newcommand\dline{\hline\hline}-
+\end{center}
+and then try to use it in a table as in this simple example that computes the Fibonnacci sequence in the second line:
+\begin{center}
+\newcommand\dline{\hline\hline}
+\begin{spreadtab}{{tabular}{*7c}}
+0     & 1 & 2     & 3     & 4     & 5     & 6     \\\dline
+:={1} & 1 & a2+b2 & b2+c2 & c2+d2 & d2+e2 & e2+f2
+\end{spreadtab}
+\end{center}
+But, if you write the following code, there is a problem when compiling:\par\nobreak
+\begin{lstlisting}
+\newcommand\dline{\hline\hline}
+\begin{spreadtab}{{tabular}{*7c}}
+0 & 1 & 2     & 3     & 4     & 5     & 6     \\\dline
+1 & 1 & a2+b2 & b2+c2 & c2+d2 & d2+e2 & e2+f2
+\end{spreadtab}
+\end{lstlisting}
+In the log file, you can read that \verb-\FPeval- fails and complains:\par
+\hfill\falseverb{! Improper alphabetic constant.}\hfill\null
+
+The reason is simple, \verb-\dline- in line 4 is not recognized by \ST as a horizontal rule and therefore, \emph{it is placed in the cell in the next line}. For \ST, the cell \falseverb{b1} contains:\par
+\hfill\falseverb{\dline 1}\hfill\null
+
+Since there is no \verb-@- or \verb-:={<formula>}-, \ST considers that the whole cell is a numeric field and \verb-\FPeval- tries valiantly to calculate this content and obviously fails.
+
+To compile without error, the cell \falseverb{a2} \emph{must} contain a numeric field marker:\par\nobreak
+\begin{lstlisting}
+\newcommand\dline{\hline\hline}
+\begin{spreadtab}{{tabular}{*7c}}
+0     & 1 & 2     & 3     & 4     & 5     & 6     \\\dline
+:={1} & 1 & a2+b2 & b2+c2 & c2+d2 & d2+e2 & e2+f2
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\newcommand\dline{\hline\hline}
+\begin{spreadtab}{{tabular}{*7c}}
+0     & 1 & 2     & 3     & 4     & 5     & 6     \\\dline
+:={1} & 1 & a2+b2 & b2+c2 & c2+d2 & d2+e2 & e2+f2
+\end{spreadtab}
+\end{center}
+
+\subsection{The use of {\ttfamily\textbackslash multicolumn} and \ttfamily\textbackslash SThidecol}
+Firstly, in normal use, joint use of \verbinline |\multicolumn| and \verbinline-\SThiderow- should not happen, and most users should not encounter this situation and should not read this section.
+
+For the brave here is the problem: first, a hidden column \emph{must not} contain a cell with the command \verbinline-\multicolumn-! But what happens if a hidden column hides cells merged with \verbinline-\multicolumn-?
+
+In general, there is no compilation error or error messages, but there are some subtleties about the references that are a bit turned upside down in the line after the \verbinline-\multicolumn- command\ldots
+
+Let's take an example, and let's say that, in the following table, we want to merge the cell \falseverb{b2} to \falseverb{h2} and we also want to hide the colomns \falseverb{c}, \falseverb{d} and \falseverb{f}, here in gray:\par\nobreak
+\begin{center}
+\ttfamily
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
+\hline
+ a1 & b1 & \cellcolor[gray]{0.6}c1 & \cellcolor[gray]{0.6}d1 & e1 & \cellcolor[gray]{0.6}f1 & g1 & h1 & i1 & j1\\\hline
+ a2 & \multicolumn1c{b2} & \multicolumn1{>{\cellcolor[gray]{0.6}}c}{} & \multicolumn1{>{\cellcolor[gray]{0.6}}c}{} & \multicolumn1c{} & \multicolumn1{>{\cellcolor[gray]{0.6}}c}{} & \multicolumn1{c}{} & \multicolumn1{c|}{} & i2 & j2\\\hline
+\end{tabular}
+\end{center}
+There are 4 visible merged cells, so we write \verbinline-\multicolumn{4}- because hidden columns are never taken into account when counting the number of \verbinline-\multicolumn-.
+
+Then we count 4 letters from \falseverb{b} (this letter included): we obtain the letter \falseverb{e}. In the range \falseverb{b-e}, let's count: 2 gray hidden columns are included (\falseverb c and \falseverb d) and 1 hidden column is not included (\falseverb f). These numbers are important to understand the following, also let's call them $x$ and $y$ in the general case.
+
+The rule is:
+\begin{itemize}
+	\item it is necessary to add $y$ signs \verb-&- after \verbinline-\multicolumn- (in the example above, it would be 1);
+	\item references to columns of cells after the \verbinline-\multicolumn- will be shifted $x$ to the beginning of the alphabet. For the example given, if we want to refer to the cell \falseverb{i2}, we should write \falseverb{g2} instead of \falseverb{i2}.
+\end{itemize}
+Here is an example with a similar structure to the previous ($x=2$ and $y=1$) with simple formulas: add 1 to the number above.\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*{7}{c|}}}
+\hline
+1   & 2    & \SThidecol3 & \SThidecol4 & 5& \SThidecol6 & 7& 8& 9    & 10  \\\hline
+a1+1& \multicolumn4{l|}{:={b1+1}}         &                   & i1+1 & j1+1\\\hline
+a2+1& b2+1 &             &             &  &             &  &  & g2+1 & h2+1\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*{7}{c|}}}
+\hline
+1   & 2    & \SThidecol3 & \SThidecol4 & 5& \SThidecol6 & 7& 8& 9    & 10  \\\hline
+a1+1& \multicolumn4{l|}{:={b1+1}}         &                   & i1+1 & j1+1\\\hline
+a2+1& b2+1 &             &             &  &             &  &  & g2+1 & h2+1\\\hline
+\end{spreadtab}
+\end{center}
+And another example with  $x=1$ and $y=0$ where a single column is hidden \falseverb d:\par\nobreak
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*{9}{c|}}}
+\hline
+1   & 2    & 3 & \SThidecol4 & 5 & 6 & 7 & 8    & 9    & 10  \\\hline
+a1+1& \multicolumn6{l|}{:={b1+1}}               & i1+1 & j1+1\\\hline
+a2+1& b2+1 &   &             &   &   &   &      & h2+1 & i2+1\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*{9}{c|}}}
+\hline
+1   & 2    & 3 & \SThidecol4 & 5 & 6 & 7 & 8    & 9    & 10  \\\hline
+a1+1& \multicolumn6{l|}{:={b1+1}}               & i1+1 & j1+1\\\hline
+a2+1& b2+1 &   &             &   &   &   &      & h2+1 & i2+1\\\hline
+\end{spreadtab}
+\end{center}
+
+\subsection{Messages delivered by \ST}
+The package delivers error messages and aborts compilation in these cases:
+\begin{itemize}
+	\item a circular reference is found in a cell. In this case, the dependent cells are displayed;
+	\item a cell refers to an empty cell or a text cell when a non-empty numeric field is expected;
+	\item a cell refers to an undefined cell (outside the table);
+	\item a cell refers to a cell merged by a \verbinline-\multicolumn- command;
+	\item a relative reference has bad syntax.
+\end{itemize}
+The package can deliver informative messages (in the log file), which it does by default. If the user wants or not the delivery of informative messages, the syntax is \verbinline-\STmessage{true}- or \verbinline-\STmessage{false}-.
+
+To understand the meaning of these messages, let's take a simple table:\par\nobreak
+\begin{minipage}{0.65\linewidth}
+\begin{lstlisting}
+\STmessage{true}% already set by default
+\begin{spreadtab}{{tabular}{|cccc|c|}}\hline
+b1+1 & c1+1 & d1+1 & 10 & a1+b1+c1+d1\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\end{minipage}%
+\begin{minipage}{0.35\linewidth}
+\centering
+\begin{spreadtab}{{tabular}{|cccc|c|}}\hline
+b1+1 & c1+1 & d1+1 & 10 & a1+b1+c1+d1\\\hline
+\end{spreadtab}
+\end{minipage}
+
+Here are the messages deliverd by \ST:\par\nobreak
+\begin{lstlisting}
+[spreadtab] New spreadtab {tabular}{|cccc|c|}
+* reading tab: ok
+* computing formulas:
+     cell A1-B1-C1
+     cell B1
+     cell C1
+     cell D1
+     cell E1
+* building tab: ok
+[spreadtab] End of spreadtab
+\end{lstlisting}\medskip
+Preceded by a star, we recognize the 3 steps necessary for \ST to complete its task: reading the table, calculation of the formulas and building the final table.
+
+For the second step, cells are evaluated from top to bottom, left to right: at line 4 in the code above, \ST says that it begins by trying to calculate the first cell \falseverb{A1}. After a dash, we see that for this, it must first compute the cell \falseverb{B1}, which itself requires that the cell \falseverb{C1} is calculated: the latter can be calculated since it depends only on \falseverb{D1} which is a cell containing the number 10.
+
+In the following (lines 5 to 8), there is only one cell per line which means that when \ST tries to evaluate the cell, either it contains a number or dependent cells are already calculated.
+
+\subsection{Debug mode}
+To ease the use of \ST, a debug mode is available. It is activated when the command \verbinline-\STdebug- is written in the optional argument of the \verbinline-spreadtab- environment. This command changes the behavior of \ST which, instead of displaying the final table, displays one (or more) table(s) containing debugging information. This display is done just after \ST has read all the cells, and no calculating of formulas has yet taken place. There are as many tables as commands \verbinline-\STdebug-, provided that their argument is different. Only 3 arguments are possible:
+\begin{itemize}
+	\item \verbinline-\STdebug{formula}-: displays all the numeric fields and the ends of lines;
+	\item \verbinline-\STdebug{text}-: displays all the textual fields;
+	\item \verbinline-\STdebug{code}-: displays the internal code of the cells. Indeed, \ST assigns a code to every cell when it reads the table. Here are the possible values of this code:
+	\begin{enumerate}[label=\small\textbullet]
+		\item $-1$ if the cell is merged with \verbinline-\multicolumn-;
+		\item 0 if the cell is a text cell or is empty;
+		\item 1 if the numeric field of the cell contains a formula which will be computed later;
+		\item 2 if the numeric field of the cell contains a number.
+	\end{enumerate}
+\end{itemize}
+
+When the `debug mode' is activated, the final table is not displayed.
+
+Here is a table which will be used for the next example:
+
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|r|r|r|}}\hline
+@$x$              &@$y$                & @$x+y$\\\hline\hline
+22                & 54                 & \STcopy{v3}{a2+b2} \\
+43                & 65                 & \\
+49                & 37                 & \\\hline
+$Sx=:={a2+a3+a4}$ & $Sy=:={b2+b3+b4}$  & $Sx+Sy=:={}$\\\hline
+\multicolumn2{|r|}{$Sy-Sx=:={b5-a5}$}  & @\multicolumn1c{}\\\cline{1-2}
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|r|r|r|}}\hline
+@$x$              &@$y$                & @$x+y$\\\hline\hline
+22                & 54                 & \STcopy{v3}{a2+b2} \\
+43                & 65                 & \\
+49                & 37                 & \\\hline
+$Sx=:={a2+a3+a4}$ & $Sy=:={b2+b3+b4}$  & $Sx+Sy=:={}$\\\hline
+\multicolumn2{|r|}{$Sy-Sx=:={b5-a5}$}  & @\multicolumn1c{}\\\cline{1-2}
+\end{spreadtab}
+\end{center}
+Let's ask \ST to show the 3 possible debugging tables for the table above. To do this, just change line 1 in the code above to:
+
+\hfill\verbinline[basicstyle=\ttfamily\small]-\begin{spreadtab}[\STdebug{text}\STdebug{formula}\STdebug{code}]{{tabular}{|rr|r|}}\hline-\hfill\kern0pt
+\begin{center}
+\begin{spreadtab}[\STdebug{text}\STdebug{formula}\STdebug{code}]{{tabular}{|rr|r|}}\hline
+@$x$              &@$y$                & @$x+y$\\\hline\hline
+22                & 54                 & \STcopy{v3}{a2+b2} \\
+43                & 65                 & \\
+49                & 37                 & \\\hline
+$Sx=:={a2+a3+a4}$ & $Sy=:={b2+b3+b4}$  & $Sx+Sy=:={}$\\\hline
+\multicolumn2{|r|}{$Sy-Sx=:={b5-a5}$}  & @\multicolumn1c{}\\\cline{1-2}
+\end{spreadtab}
+\end{center}
+These 3 debugging tables may help to better understand what happens behind the scene when \ST works. We can observe that all cells with a numeric field (see table 2) have an internal code of 1 or 2 (see table 3) and an associated numeric field marker `\verb-:=-' in table 1. This marker represents the location where (by substitution) the result of the numeric field will be inserted. So from the contents of text fields in table 1 and, once calculated, the numeric fields, by a simple substitution, the cells are reconstituted to give those of the final table.
+
+In the debugging tables, cells containing the coordinates are grayed if the package \href{http://www.ctan.org/tex-archive/macros/latex/contrib/colortbl/}{\texttt{\textbf{colortbl}}} has been loaded; they are left white otherwise.
+
+\section{Examples}
+In the examples of this section, the numbers entered by the user are in \textcolor{black}{red} and the calculated numbers are in \textcolor{black}{black}
+
+In these tables, lots of tricks (struts, \verbinline-\multicolumn- commands) and packages (including the numprint package and its columns `N', which aligns the decimal points) were used to obtain a satisfactory result. The code is sometimes cumbersome and difficult to read, but these tables are not basic but well-groomed examples!
+
+\subsection{Pascal's triangle again!}
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{*7r}}
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]\\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &              &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &              &              &       \\
+[0,1] & [-1,1]       &              &              &              &              &       \\
+\color{red}:={1}&    &              &              &              &              &
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{*7r}}
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]\\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &              &       \\
+[0,1] & [-1,1]+[0,1] & [-1,1]       &              &              &              &       \\
+[0,1] & [-1,1]       &              &              &              &              &       \\
+\color{red}:={1}&    &              &              &              &              &
+\end{spreadtab}
+\end{center}
+
+\subsection{The convergence of a series}
+For people familiar with maths, here is the series of the exponential. Indeed,
+\[\forall x\in \mathbf{R}\qquad e^x=\sum_{k=0}^\infty\frac{x^k}{k!}\]
+and this table shows the speed of convergence for $x=0.5$
+\begin{lstlisting}
+\STautoround{15}
+\renewcommand\STprintnum[1]{\numprint{#1}}
+\begin{spreadtab}{{tabular}{cc}}
+\multicolumn{2}{c}{Convergence at $x=\color{red}:={0.5}$}\\[1.5ex]
+@$n$            & e^a1\SThidecol                & @ $\displaystyle e^{\numprint{<<a1>>}}-\sum_{k=0}^n\frac{\numprint{<<a1>>}^k}{k!}$\\[3ex]\hline
+\color{red}:={0}& a1^[-1,0]/fact([-1,0])        & \STcopy{v}{b!2-b3}\\
+\STcopy{v}{a3+1}& \STcopy{v}{a!1^a4/fact(a4)+b3}&                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\STautoround{15}
+\renewcommand\STprintnum[1]{\numprint{#1}}
+\begin{spreadtab}{{tabular}{cc}}
+\multicolumn{2}{c}{Convergence at $x=\color{red}:={0.5}$}\\[1.5ex]
+@$n$            & e^a1\SThidecol                & @ $\displaystyle e^{\numprint{<<a1>>}}-\sum_{k=0}^n\frac{\numprint{<<a1>>}^k}{k!}$\\[3ex]\hline
+\color{red}:={0}& a1^[-1,0]/fact([-1,0])        & \STcopy{v}{b!2-b3}\\
+\STcopy{v}{a3+1}& \STcopy{v}{a!1^a4/fact(a4)+b3}&                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\
+                &                               &                   \\\hline
+\end{spreadtab}
+\end{center}
+
+\subsection{Convergence to the golden ratio}
+In mathematical terms, the sequence $F_n$ of Fibonacci numbers is defined by the recurrence relation:\[F_0=1\qquad F_1=1\qquad F_{n+2}=F_{n+1}+F_n\]
+
+The golden ratio is the limit of the ratios of successive terms of the Fibonacci sequence. We show here that the quotients $F_{n+1}/F_n$ approximate the golden ratio $\varphi=\frac{1+\sqrt{5}}{2}$ alternately lower and higher than $\varphi$.\par\nobreak
+\begin{lstlisting}
+\STautoround{9}
+$\begin{spreadtab}{{array}{ccN39N{3}{9}}}
+@n               & @F_n              & @\hfill{\dfrac{F_n}{F_{n-1}}}\hfill\null& @\hfill{\varphi-\dfrac{F_n}{F_{n-1}}}\hfill\null\\[2ex]\hline
+\color{red}:=1   & \color{red}:=1    &                   &                      \\
+\STcopy{v}{a2+1} & \color{red}:=1    & \STcopy{v}{b3/b2} & (1+5^0.5)/2-[-1,0]   \\
+                 & \STcopy{v}{b2+b3} &                   & \STcopy{v}{d!3+1-c4} \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\\hline
+\end{spreadtab}$
+\end{lstlisting}
+\begin{center}
+\STautoround{9}
+$\begin{spreadtab}{{array}{ccN39N{3}{9}}}
+@n               & @F_n              & @\hfill{\dfrac{F_n}{F_{n-1}}}\hfill\null& @\hfill{\varphi-\dfrac{F_n}{F_{n-1}}}\hfill\null\\[2ex]\hline
+\color{red}:=1   & \color{red}:=1    &                   &                      \\
+\STcopy{v}{a2+1} & \color{red}:=1    & \STcopy{v}{b3/b2} & (1+5^0.5)/2-[-1,0]   \\
+                 & \STcopy{v}{b2+b3} &                   & \STcopy{v}{d!3+1-c4} \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\
+                 &                   &                   &                      \\\hline
+\end{spreadtab}$
+\end{center}
+
+\subsection{A billing table}
+Here is a billing table where the decimal points are aligned in columns with the column specifier `N' of the package \falseverb{numprint}.
+
+This table is generated by the environment \verb=tabularx= stretched to fit 80\% of the width of the line. The command \verbinline=\multicolumn= has been widely used for formatting:\par\nobreak
+\begin{lstlisting}
+\nprounddigits2
+\let\PC\%
+\newcommand\Mystrut{\rule[-1.2ex]{0pt}{4ex}}
+\newcommand\RED{\color{red}}
+\begin{spreadtab}{{tabularx}{0.8\linewidth}{|>\Mystrut X>\RED N42>\RED c N42>\RED c<\PC N42|}}
+\hline
+@Item &@\multicolumn1c{Price/U}& @\multicolumn1c{Qty} & @\multicolumn1c{Price} & @\multicolumn1c{Reduction} & @\textbf{Net}\\\hline
+@Item 1 & 5.99 & 20 & [-2,0]*[-1,0] & $-:={20}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 2 & 12   & 7  & [-2,0]*[-1,0] & $-:={10}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 3 & 4.50 & 40 & [-2,0]*[-1,0] & $-:={35}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 4 & 650  & 2  & [-2,0]*[-1,0] & $-:={15}$ & [-2,0]*(1-[-1,0]/100)\\\hline
+@\multicolumn6c{}\\[-1.5ex]\cline{4-6}% empty line and raise it a little
+@\multicolumn1c{\Mystrut}&@\multicolumn2{r|}{\textbf{Total}}& sum(d2:[0,-2]) & \multicolumn1c{$:={round(([1,0]/[-1,0]-1)*100,0)}\PC$} & {\fontseries{b}\selectfont}:={sum(f2:[0,-2])}\\
+\cline{4-6}
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\nprounddigits2
+\let\PC\%
+\newcommand\Mystrut{\rule[-1.2ex]{0pt}{4ex}}
+\newcommand\RED{\color{red}}
+\begin{spreadtab}{{tabularx}{0.8\linewidth}{|>\Mystrut X>\RED N42>\RED c N42>\RED c<\PC N42|}}
+\hline
+@Item &@\multicolumn1c{Price/U}& @\multicolumn1c{Qty} & @\multicolumn1c{Price} & @\multicolumn1c{Reduction} & @\textbf{Net}\\\hline
+@Item 1 & 5.99 & 20 & [-2,0]*[-1,0] & $-:={20}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 2 & 12   & 7  & [-2,0]*[-1,0] & $-:={10}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 3 & 4.50 & 40 & [-2,0]*[-1,0] & $-:={35}$ & [-2,0]*(1-[-1,0]/100)\\
+@Item 4 & 650  & 2  & [-2,0]*[-1,0] & $-:={15}$ & [-2,0]*(1-[-1,0]/100)\\\hline
+@\multicolumn6c{}\\[-1.5ex]\cline{4-6}% empty line and raise it a little
+@\multicolumn1c{\Mystrut}&@\multicolumn2{r|}{\textbf{Total}}& sum(d2:[0,-2]) & \multicolumn1c{$:={round(([1,0]/[-1,0]-1)*100,0)}\PC$} & {\fontseries{b}\selectfont}:={sum(f2:[0,-2])}\\
+\cline{4-6}
+\end{spreadtab}
+\end{center}
+
+\subsection{A magic square}
+\begin{lstlisting}
+\begin{spreadtab}{{tabular}{|*3{>{\hfill\rule[-0.4cm]{0pt}{1cm}$}m{0.7cm}<{$\hfill\null}|}}}
+\hline
+\color{red}:=2 & 5*b2-4*a1         & 3*a1-2*b2 \\\hline
+2*a1-b2        & \color{red}:={-1} & 3*b2-2*a1 \\\hline
+4*b2-3*a1      & 4*a1-3*b2         & 2*b2-a1   \\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\begin{spreadtab}{{tabular}{|*3{>{\hfill\rule[-0.4cm]{0pt}{1cm}$}m{0.7cm}<{$\hfill\null}|}}}
+\hline
+\color{red}:=2 & 5*b2-4*a1         & 3*a1-2*b2 \\\hline
+2*a1-b2        & \color{red}:={-1} & 3*b2-2*a1 \\\hline
+4*b2-3*a1      & 4*a1-3*b2         & 2*b2-a1   \\\hline
+\end{spreadtab}
+\end{center}
+
+\subsection{A pyramid of additions}
+Each number is the sum of two numbers located below it.
+\begin{lstlisting}
+\newlength\cellsize
+\setlength\cellsize{1.5cm}
+\newcolumntype{K}{@{}>{\rule{0pt}{2.5ex}\centering\arraybackslash$}p{\cellsize}<$@{}}
+\begin{spreadtab}{{tabular}{*{8}{@{}p{.5\cellsize}@{}}}}
+\cline{4-5}
+&&&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&&&\\\cline{3-6}
+&&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&&\\\cline{2-7}
+&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&\\\hline
+\multicolumn{2}{|K}{\color{red}:={-5}}&\multicolumn{2}{|K}{\color{red}:={3}}&\multicolumn{2}{|K}{\color{red}:={-2}}&\multicolumn{2}{|K|}{\color{red}:={-3}}\\\hline
+\end{spreadtab}
+\end{lstlisting}
+\begin{center}
+\newlength\cellsize
+\setlength\cellsize{1.5cm}
+\newcolumntype{K}{@{}>{\rule{0pt}{2.5ex}\centering\arraybackslash$}p{\cellsize}<$@{}}
+\begin{spreadtab}{{tabular}{*{8}{@{}p{.5\cellsize}@{}}}}
+\cline{4-5}
+&&&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&&&\\\cline{3-6}
+&&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&&\\\cline{2-7}
+&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K}{:={[-1,1]+[1,1]}}&\multicolumn{2}{|K|}{:={[-1,1]+[1,1]}}&\\\hline
+\multicolumn{2}{|K}{\color{red}:={-5}}&\multicolumn{2}{|K}{\color{red}:={3}}&\multicolumn{2}{|K}{\color{red}:={-2}}&\multicolumn{2}{|K|}{\color{red}:={-3}}\\\hline
+\end{spreadtab}
+\end{center}
+\medskip
+\parskip0pt
+\begin{center}
+$\star$\par
+$\star\quad\star$
+\end{center}\bigskip
+That's all. I hope you will find this package useful!\par\nobreak\medskip
+
+I thank you in advance for sending by \href{mailto:unbonpetit@openmailbox.org}{\texttt{\textbf{email}}} any bug you find, any macro-function or improvment you would like to be implemented, assuming that it must be \emph{realistic}. This package has to be modest and \ST is not excel or calc: it is impossible to implement some advanced features of these spreadsheets.\ldots\par\nobreak\bigskip
+Christian \textsc{Tellechea}
+\end{document}

@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# doit - make all or some example picture sets.
+
+# Usage: doit      # make them all
+#        doit nnx  # make nnx.pdf and snnx.pdf
+#
+# pictures are numbered 01, 02, etc.
+# nn[a-z] has code to typeset a \ctable; for nn[k-z] page layout will be shown
+# for each nn[a-z] two pdfs are generated:
+#      nn[a-z].pdf for the ctable picture
+# and snn[a-z].pdf for the source code verbatim.
+# The prefix (s) for source verbatims and (empty) for result files is set by PRE
+set=${1:-[0-9][0-9][a-z]}
+for j in $set; do
+   # source verbatim
+   { cat <<-'EOD'
+	\documentclass{article}
+	\usepackage[a4paper,margin=20mm,noheadfoot]{geometry}
+	\pagestyle{empty}
+	\begin{document}\ttfamily
+	\fontsize{10}{12 pt}\selectfont
+	\begin{verbatim}
+	EOD
+	grep -v "remove from source" $j
+	cat <<-'EOD'
+	\end{verbatim}
+	\end{document}
+	EOD
+   } >s$j.tex
+
+   mk --noprint --noview s$j.tex >/dev/null && mk -c s$j
+   pdfcrop s$j.pdf s$j.pdf >& /dev/null
+   # result
+   { echo '\documentclass[twoside]{article}'
+     [[ $j =~ [k-z] ]] && echo '\usepackage[papersize={56mm,40mm},showframe,margin=1mm,noheadfoot]{geometry}'
+     cat <<-'EOD'
+	\usepackage{ctable}
+	\usepackage{txfonts}
+	\pagestyle{empty}
+	\parindent0pt
+	\begin{document}
+	EOD
+     cat $j
+     echo '\end{document}'
+   } > $j.tex
+   mk --noprint --noview $j.tex >/dev/null && mk -c $j
+   pdfcrop $j.pdf $j.pdf >& /dev/null
+done

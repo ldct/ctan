@@ -1,0 +1,107 @@
+Last updated: September 29, 1995
+
+Possible things to do:
+
+1) Allow two different 'indexes' to write to a single file, so we can
+do things like mix entries using different counters, a la doc.sty, and
+add in any other features from doc.sty that seem useful.
+
+2) integrate the scheme descripted in autind.sty into the package.
+
+3) merge bibref files into index.dtx and properly document it
+
+
+a) Implement the scheme mentioned at the end of section 3 of the
+documentation to remove the limit on the number of indexes possible in
+a single document.
+
+b) Add an enhancement to draft mode that allows the words and phrases
+that are being indexed to be typeset in color or greyscale in the main
+text (for copy-editing purposes only).  Since currently the actual
+pieces of text that are typeset are not included in the markup, this
+will require a major overhaul of the semantics of the \index command.
+So, I'm thinking of having a package option that does something like
+this:
+
+First, the \newindex command would be changed to the following:
+
+    \newindex[counter]\CS{TITLE}
+
+where \CS is the command used to put entries into the index titled
+'TITLE', whose entries are labeled with the value of 'counter'.  E.g.,
+after
+
+    \newindex\aindex{Name Index}
+
+\aindex would put entries into the author index, much as would be done
+with '\index[aut]' in the current scheme.  This frees up the optional
+argument to be used for something else.  (Note that '\index' would
+remain undefined by default, and so would have to be defined with
+\newindex, just as a 'default' index has to be declared currently.)
+
+Note that the user no longer has to supply an explicit extension for
+the raw and processed files (i.e., the '.idx' and '.ind' files).
+Instead, each index will be be assigned an integer, and the associated
+output and input files will have extensions of the form '.oHH' and
+'.iHH', where HH is the hexadecimal representation of the index's
+number.  This will allow up to 256 indexes without violating the
+length 3 limit on extensions.  (As a special case, the first index
+declared could use '.idx' and '.ind' instead of '.o00' and '.i00'.)
+
+[Maybe better would be something 'indNNN.idx' and 'indNNN.ind', which
+would make makeindex marginally happier, but would prohibit keeping
+multiple documents using this feature in the same directory.  Or maybe
+'XXXXXXHH.idx' and 'XXXXXXHH.ind', where 'XXXXXX' is the first 6
+characters of \jobname (for a suitable definition of 'first 6
+characters').  Alternatively, prepend the number on to the front
+(HHfilename.ind), and let the operating system worry about what
+happens to long file names.]
+
+\printindex would be redefined to take one of the \CS's defined above
+as its (mandatory) argument.
+
+Then the syntax of the \index-like commands would be changed to the
+following:
+
+    \index{foo}           : typesets "foo" in the text and puts it in
+                            the index
+
+    \index[bar]{foo}      : typesets "foo" in the text and puts
+                            "bar@foo" in the index.  Useful for things
+                            like \index[alpha]{$\alpha$}.  I believe
+                            this case is common enough to warrant a
+                            shortcut.
+
+    \index*{foo}          : Can't think of anything useful for this to
+                            do, but see next:
+
+    \index*[bar]{foo}     : typesets "foo" in the text and puts "bar"
+                            in the index.
+
+A note about these last two forms: At first blush, it might seem
+reasonable to have \index*{foo} put 'foo' in the index and typeset
+nothing, thus allowing allow arbitrary text to be put into the index.
+However, not only would it then be unclear what \index*[bar]{foo}
+should do, but there would be no way of putting arbitrary text in the
+index while simultaneously associating it with some specific text in
+the document (consider, for example, \index*[animal!cat]{cat} or
+\index*[cat|see{goddess}]{cat}).  So, the proposed syntax seems
+better, although it still leaves \index*{foo} without any obvious
+function.
+
+Note that in all of this, the short forms ^ and _ have disappeared
+entirely.  C'est la vie.
+
+In this scheme, \disableindex\foo would make \foo an \index-like
+command that would gobble up it's arguments -- \disableindex\foo used
+instead of \newindex\foo{TITLE}, or is it possible to disable an
+\index command that's already been declared with \newindex?  Latter is
+obviously more desirable.
+
+c) Implement some sort of scheme for per-chapter indices.
+
+d) Have index.sty add sufficient information to the .log file that a
+simple script can parse it and automatically run makeindex the proper
+number of times with the proper arguments.
+
+e) Write such a script.

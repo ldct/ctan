@@ -1,0 +1,173 @@
+#!/usr/bin/perl
+#
+# Konvertiert den LaTeX-Jura-Style nach HTML.
+# Aufruf: jura2html <File>
+#
+# 14.6.1997 Carsten Gerlach (gerlo@iceland.in-berlin.de)
+#
+# Der Konverter geht davon aus, daß im Text \fn für \footnote und \q für \emph
+# verwendet wurde.
+#
+# Aus technischen Gründen wird das Inhaltsverzeichnis am Ende ausgegeben.
+#
+#
+
+
+# einige Standard-Ersetzungen
+sub htmlify {
+   $line =~ s/\\-//g;		# \- entfernen
+   $line =~ s:\\/: :g;		# \/ -> SPC
+   $line =~ s/\\ldots/.../g;	# \ldots -> ...
+   $line =~ s/\\&/&/g;		# \& -> &
+   $line =~ s/\\\\/<br>/g;	# \\ -> <br>
+   $line =~ s/"'/"/g;
+   $line =~ s/"`/"/g;		# Anführungsstriche
+   $line =~ s/---/-/g;
+   $line =~ s/--/-/g;		# --- und -- zu -
+   $line =~ s/ä/&auml/g;
+   $line =~ s/ö/&ouml/g;
+   $line =~ s/ü/&uuml/g;
+   $line =~ s/Ä/&Auml/g;
+   $line =~ s/Ö/&Ouml/g;
+   $line =~ s/Ü/&Uuml/g;
+   $line =~ s/ß/&szlig/g;	# Umlaute konvertieren
+   $line =~ s:\\q{([^{}]*)}:<i>\1</i>:g;	# \q{...} : kursiver Text
+   $line =~ s:{\\tt([^{}]*)}:<tt>\1</tt>:g;	# {\tt ...} : typewriter
+}
+
+
+%headings = (
+ "00", "A. ", "01", "B. ", "02", "C. ", "03", "D. ", "04", "E. ", "05", "F. ", "06", "G. ", "07", "H. ", "08", "I. ", "09", "J. ",
+ "10", "I. ", "11", "II. ", "12", "III. ", "13", "IV. ", "14", "V. ", "15", "VI. ", "16", "VII. ", "17", "VIII. ", "18", "IX. ", "19", "X. ",
+ "20", "1. ", "21", "2. ", "22", "3. ", "23", "4. ", "24", "5. ", "25", "6. ", "26", "7. ", "27", "8. ", "28", "9. ", "29", "10. ",
+ "30", "a) ", "31", "b) ", "32", "c) ", "33", "d) ", "34", "e) ", "35", "f) ", "36", "g) ", "37", "h) ", "38", "i) ", "39", "j) ",
+ "40", "aa) ", "41", "bb) ", "42", "cc) ", "43", "dd) ", "44", "ee) ", "45", "ff) ", "46", "gg) ", "47", "hh) ", "48", "ii) ", "49", "jj) ",
+);
+
+# Beginn der Bibliographie suchen
+while(!(($line = <>) =~ m/\\begin{jurabibliography}/)) {}
+
+#
+# Bibliographie einlesen
+#
+$/ = "\r\n\r\n";	# paragraph slurp mode
+$i = 0;
+while(!(($line = <>) =~ m/\\end{jurabibliography}/)) {
+  htmlify;
+  $line =~ s/(\n|\r)//g;	# newlines entfernen
+  if($line =~ m/\\jbibitem\s*			    # Beginn matchen
+		 { ( (?: [^}\\] | \\[^}]*} )* ) }   # 1. Autor
+		 [^{]*
+		 { ( (?: [^}\\] | \\[^}]*} )* ) }   # 2. Zitierung
+		 [^{]*
+		 { ( (?: [^}\\] | \\[^}]*} )* ) }   # 3. Kürzel
+		 \s*
+		 (.*)				    # 4. Titel
+		 /xs) {
+    $bibitem{"$3"} = $2;		# Zitierung nach Kürzel merken
+    $bibtext[$i++] = "<b>$1</b> $4";	# Einträge für Lit.verzeichnis
+  }
+}
+
+# Beginn des Textes suchen
+$/ = "\n";	# line slurp mode
+while(!(($line = <>) =~ m/\\mainmatter/)) {}
+
+print "<HTML><BODY>\n";
+
+#
+# Text bearbeiten
+#
+$toclevel = 0;
+$actnum[$toclevel] = -1;
+$footnotenum = 1;
+$tocnum = 0;
+$/ = "\r\n\r\n";	# paragraph slurp mode
+while($line = <>) {   
+  htmlify;
+  #
+  # \sub und \toc
+  #
+  if($line =~ m/\\sub{([^{}]*)}/) {
+   	$toclevel++;
+	$actnum[$toclevel] = 0;
+	$hd = $toclevel + 1;
+	$hdtxt = $headings{"$toclevel$actnum[$toclevel]"};
+	$line =~ s:\\sub{([^{}]*)}:<a name="toc$tocnum"><H$hd>$hdtxt\1</H$hd></a>:;
+	$toc = $toc . "<a href=\"#toc$tocnum\">$hdtxt$1</a><br>\n";
+   	$tocnum++;
+   }
+   if($line =~ m/\\toc{([^{}]*)}/) {
+	$actnum[$toclevel]++;
+	$hd = $toclevel + 1;
+	$hdtxt = $headings{"$toclevel$actnum[$toclevel]"};
+	$line =~ s:\\toc{([^{}]*)}:<a name="toc$tocnum"><H$hd>$hdtxt\1</H$hd></a>:; 
+	$toc = $toc . "<a href=\"#toc$tocnum\">$hdtxt$1</a><br>\n";
+	$tocnum++;	
+   }
+   #
+   # \levelup
+   #
+   while($line =~ m/\\levelup/g) {
+   	$toclevel--;
+   }
+   $line =~ s/\\levelup//g;
+   #
+   # \cite expandieren
+   #
+   $p1 = 0;
+   pos($line) = 0;
+   while($line =~ m/\\cite\[([^[]*)\]{([^{}]*)}/g) {
+	$p2 = pos;
+     	pos($line) = $p1;
+     	$cite = $bibitem{"$2"} . $1;
+     	$line =~ s/\\cite[^}]*}/$cite/;
+     	pos($line) = $p2;
+     	$p1 = $p2;
+   }
+   #
+   # \fn auflösen und merken
+   #
+   $p1 = 0;
+   pos($line) = 0;
+   while($line =~ m/\\fn{([^}]*)}/g) {
+	$footnotetxt[$footnotenum] = $1;
+	$p2 = pos;
+     	pos($line) = $p1;
+	$txt = " <a href=\"#fn$footnotenum\">[$footnotenum]</a>";
+	$line =~ s:\\fn{[^{}]*}:$txt:;
+     	pos($line) = $p2;
+     	$p1 = $p2;
+	$footnotenum++;
+   }
+   print "$line<P>";
+}
+
+#
+# Literaturverzeichnis ausgeben
+#
+print "<a name=\"toc$tocnum\"><H1>Literaturverzeichnis</H1></a>\n";
+$toc = $toc . "<a href=\"#toc$tocnum\">Literaturverzeichnis</a><br>\n";
+$tocnum++;
+for($i=0; $i < @bibtext; $i++) {
+  print "$bibtext[$i]<P>\n";
+}
+
+#
+# Fußnotenverzeichnis ausgeben
+#
+print "<a name=\"toc$tocnum\"><H1>Fu&szlignoten</H1></a>\n";
+$toc = $toc . "<a href=\"#toc$tocnum\">Fu&szlignoten</a><br>\n";
+$tocnum++;
+for($i=1; $i < @footnotetxt; $i++) {
+  print "<a name=\"fn$i\">[$i] $footnotetxt[$i]</a><P>\n";
+}
+
+#
+# Inhaltsverzeichnis ausgeben
+#
+print "<H1>Inhaltsverzeichnis</H1>\n";
+print $toc;
+
+print "</BODY></HTML>\n";
+

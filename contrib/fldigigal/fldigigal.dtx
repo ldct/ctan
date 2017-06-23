@@ -1,0 +1,452 @@
+%\iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% fldigigal.sty package,             2010-23-10        %%
+%% Copyright (C) 2010  D. P. Story                      %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+%<package>\ProvidesPackage{fldigigal}
+%<package> [2010/12/29 v0.5c fldigigal: Create a Flash Digital Gallery, Acrobat Distiller only (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+%\pdfstringdefDisableCommands{\let\\\textbackslash}
+%\EnableCrossrefs \CodelineIndex
+\begin{document}
+\def\CMD#1{\textbackslash#1}
+  \GetFileInfo{fldigigal.sty}
+  \title{\textsf{fldigigal}: Package for creating a Flash Digital Gallery}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{fldigigal.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+% \MakeShortVerb{|}
+% \StopEventually{}
+%
+% \DoNotIndex{\def,\edef,\gdef,\xdef,\global,\long,\let}
+% \DoNotIndex{\expandafter,\string,\the,\ifx,\else,\fi}
+% \DoNotIndex{\csname,\endcsname,\relax,\begingroup,\endgroup}
+% \DoNotIndex{\DeclareTextCommand,\DeclareTextCompositeCommand}
+% \DoNotIndex{\space,\@empty,\special}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+\RequirePackage{rmannot}[2010/12/22]
+%    \end{macrocode}
+%
+% \section{Introduction}
+%
+% \section{Implementation}
+% This package offers the \LaTeX/Distiller user the ability to create
+% \emph{Flash Photo Galleries}. There are several photo gallery layouts
+% to select from, and some dynamic options that can be specified. The
+% digital photographs (\textsf{JPG}, \textsf{PNG}, or \textsf{GIF}) may
+% be embedded in the PDF document, or may reside online and referenced by
+% an \textsf{URL}.
+%
+%    \begin{macro}{\fdgFolder} The path to the folder containing
+% the the \textsf{SWF} files of this distribution. This path is set through
+% the \texttt{fldigigal.cfg} file.
+%    \begin{macrocode}
+\newcommand{\fdgFolder}{C:/Users/Public/Documents/My TeX Files/%
+    tex/latex/aeb/aebpro/fldigigal/swf}
+%    \end{macrocode}
+%    \end{macro}
+% We input the file \texttt{fldigigal.cfg} which should contain a re-definition
+% of the command \cs{fdgFolder}, the path to the Flash Digital Gallery \textsf{SWFs}.
+%    \begin{macrocode}
+\InputIfFileExists{fldigigal.cfg}{}{}
+%    \end{macrocode}
+% \subsection{Main Code}
+% In this section we define the \cs{fdgXmlList} and \cs{fgRmAnnot}, and their
+% supporting cast of characters.
+%    \begin{macrocode}
+%    \end{macrocode}
+% An internal command for getting the rma object based on the current page and the
+% name of the annot.
+%    \begin{macrocode}
+\def\fdg@namegdef#1{\expandafter\gdef\csname #1\endcsname}
+\def\fdg@namexdef#1{\expandafter\xdef\csname #1\endcsname}
+%    \end{macrocode}
+% We define \cs{fdg@iso}, which, within the \cs{image} command, we declare that
+% \verb!\let\iso\fdg@iso!, defining the \cs{iso} command to enter special characters
+% in the \texttt{caption} attribute.
+%    \begin{macrocode}
+{\catcode`\#=12 \catcode`\&=12 \catcode`\!=6
+    \gdef\fdg@iso!1{&#!1;}
+}
+%    \end{macrocode}
+%    \begin{macro}{\fdgXmlList}
+% The \cs{fdgXmlList} command describes the photos to be displayed in the
+% digital gallery. Here is an example of the structure:
+%\begin{verbatim}
+%\fdgXmlList[showcount]{myDigis}{%
+%    \image{path=\myPhotosLocal/Chrysanthemum.jpg,caption=Chrysanthemum}
+%    \image{path=\myPhotosLocal/Desert.jpg,caption=Desert}
+%    \image{path=\myPhotosOnline/Hydrangeas.jpg,caption=Hydrangeas,online}
+%    \image{path=\myPhotosOnline/Jellyfish.jpg,caption=Jellyfish,online}
+%    \image{path=\myPhotosOnline/Koala.jpg,caption=Koala,online}
+%    \image{path=\myPhotosOnline/Lighthouse.jpg,caption=Lighthouse,online}
+%    \image{path=\myPhotosOnline/Penguins.jpg,caption=Penguins,online}
+%    \image{path=\myPhotosOnline/Tulips.jpg,caption=Tulips,online}
+%}
+%\end{verbatim}
+% The first optional argument takes any optional arguments; at this time, the
+% only option  is \texttt{showcount}, where the photo number and total number of
+% photos is displayed, e.g. \texttt{(2 of 8)}. The default is not to show the count.
+% The second parameter is the unique name of the gallery. The third parameter consists
+% of any number of image specifications. The \cs{image} command has three properties:
+% \texttt{path}, \texttt{caption}, and \texttt{online}. These are describe
+% in more detail below.
+%    \begin{macro}{path} The absolute path (url) to the photo; the path may be on a local
+% hard drive, or on the Internet. Paths may (should) be defined using the
+% the \cs{definePath}, defined in the \texttt{eforms} package.
+%\begin{verbatim}
+%   \definePath{\myPhotosOnline}{%
+%        http://www.math.uakron.edu/~dpstory/photos/pa_demo}
+%   \definePath{\myPhotosLocal}{%
+%        C:/Users/Public/Pictures/Sample Pictures}
+%\end{verbatim}
+%    \begin{macrocode}
+\define@key{fdgxml}{path}[]{\def\fdg@pa@path{#1}}
+%    \end{macrocode}
+%    \end{macro}
+% \DescribeMacro{caption} A (short) string that describes the photo. If the
+% \texttt{caption} key is not present, the filename of the digital photo is used.
+%    \begin{macrocode}
+\define@key{fdgxml}{caption}[]{\def\fdg@pa@caption{#1}}
+%    \end{macrocode}
+% \DescribeMacro{online} A Boolean key, which if true, signals that the path
+% to the photo is on the Internet (\texttt{http://}). If the \texttt{online} key is not
+% present, the path is assumed to be local, and the photo will be embedded in the PDF.
+%    \begin{macrocode}
+\define@boolkey{fdgxml}{online}[true]{}
+%    \end{macrocode}
+% We set the global defaults of these key-value pairs.
+%    \begin{macrocode}
+\setkeys{fdgxml}{path,caption,online=false}
+%    \end{macrocode}
+% We use this counter to count the digis as they are defined by the \cs{image}
+% macro.
+%    \begin{macrocode}
+\newcount\cntdigis
+%    \end{macrocode}
+% \DescribeMacro{\image} There are two definitions of the \cs{image} command:
+% \cs{fdg@cnt@images} and \cs{fdg@image}.\par\medskip\noindent
+% \cs{fdg@cnt@images} counts the number of images.
+%    \begin{macrocode}
+\def\fdg@cnt@images#1{\advance\cntdigis1 }
+%    \end{macrocode}
+% \cs{fdg@image} does all the work in writing the photo information to an XML file.
+%    \begin{macrocode}
+\def\fdg@image#1{\begingroup
+    \let\Name\rma@resource\let\urlName\rma@urlresource
+    \setkeys{fdgxml}{#1}%
+    \global\advance\cntdigis1
+%    \end{macrocode}
+% We expand the internal name of the digital resource. The name has the form
+% \texttt{Im<number>(<name>)}.
+%    \begin{macrocode}
+    \edef\@digiImgName{Im\the\cntdigis(\fdg@CurrDigiName)}%
+%    \end{macrocode}
+% Use \cs{saveNamedPath} to save this name and path.
+%    \begin{macrocode}
+    \saveNamedPath{\@digiImgName}{\fdg@pa@path}%
+%    \end{macrocode}
+% Get the basename and extension using the \cs{Name} command.
+%    \begin{macrocode}
+    \edef\fdg@NamedExp{\expandafter\Name\expandafter{\@digiImgName}}%
+%    \end{macrocode}
+% If the caption is empty, use the \texttt{basename.ext}
+%    \begin{macrocode}
+    \ifx\fdg@pa@caption\@empty\def\fdg@pa@caption{\fdg@NamedExp}\fi
+%    \end{macrocode}
+% If \texttt{online} is true, write the full url path to the xml using
+% the \cs{urlName} macro.
+%    \begin{macrocode}
+    \ifKV@fdgxml@online
+        \edef\fdg@urlNamedExp{%
+            \expandafter\urlName\expandafter{\@digiImgName}}%
+        \fdg@IWVO{\space\space\space\space
+        <image title='\fdg@pa@caption\fdg@cntOf{\the\cntdigis}'>%
+            \fdg@urlNamedExp</image>
+        }%
+    \else
+%    \end{macrocode}
+% If online is not listed, or is set to \texttt{false} we embed. We
+% accumulate all resources that are embedded in \cs{fdg@embededResources}
+%    \begin{macrocode}
+        \toks0=\expandafter{\fdg@embededResources}%
+        \ifx\fdg@embededResources\@empty
+            \xdef\fdg@embededResources{\@digiImgName}\else
+            \xdef\fdg@embededResources{\the\toks0,\@digiImgName}\fi
+        \fdg@IWVO{\space\space\space\space
+        <image title='\fdg@pa@caption\fdg@cntOf{\the\cntdigis}'>%
+            \fdg@NamedExp</image>
+        }%
+    \fi
+\endgroup}
+%    \end{macrocode}
+% Convenience macro for writing to the XML file
+%    \begin{macrocode}
+\def\fdg@IWVO{\immediate\write\verbatim@out}
+%    \end{macrocode}
+% A (internal) interface to the digi resources. The one argument
+% is the name of the gallery these digis are associated with.
+%    \begin{macrocode}
+\def\embededResources#1{\csname #1ERs\endcsname}
+%    \end{macrocode}
+% The internal name of the xmlList. The argument is the name of the gallery.
+%    \begin{macrocode}
+\def\xmlListiv#1{xmlList4#1}
+%    \end{macrocode}
+%    \begin{macro}{\fdgcntOf}
+% The internal command for writing the photo count is \cs{fdg@cntOf}. Initially,
+% we \cs{let} \cs{fdg@cntOf} to \cs{@gobble}
+%    \begin{macrocode}
+\let\fdg@cntOf\@gobble
+%    \end{macrocode}
+%    \begin{macrocode}
+\newcommand{\fdgcntOf}[1]{\space(#1 of \fdg@numDigis)}
+%    \end{macrocode}
+%    \end{macro}
+% The options of \cs{fdgXmlList}. If \texttt{true} the photo number is displayed, if \texttt{false},
+% the default, no photo number is displayed.\par\medskip\noindent
+% \DescribeMacro{showcount} When the \texttt{showcount} option is specified, we \cs{let} \cs{fdg@cntOf}
+% to \cs{fdgcntOf}. The command may be redefined. The first argument is the photo
+% number, the command \cs{fdg@numDigis} expands to the total number of photos.
+%    \begin{macrocode}
+\define@boolkey{fdgXML}{showcount}[true]{%
+    \ifKV@fdgXML@showcount\let\fdg@cntOf\fdgcntOf\else
+    \let\fdg@cntOf\@gobble\fi
+}
+%    \end{macrocode}
+%\DescribeMacro{nowrite} When we set this switch, we \cs{let}
+% \cs{fdg@IWVO} to \cs{@gobble}, and do not open a \cs{newwrite} stream.
+%    \begin{macrocode}
+\define@boolkey{fdgXML}{nowrite}[true]{}
+%    \end{macrocode}
+% Set the defaults for he \cs{fdgXML} family.
+%    \begin{macrocode}
+\setkeys{fdgXML}{showcount=false,nowrite=false}
+%    \end{macrocode}
+% Finally, we have the definition of \cs{fdgXmlList}.
+%    \begin{macrocode}
+\newcommand{\fdgXmlList}[3][]{%
+\begingroup
+    \setkeys{fdgXML}{#1}%
+    \ifKV@fdgXML@nowrite\let\fdg@IWVO\@gobble\fi
+    \cntdigis=0 \gdef\fdg@embededResources{}%
+    \ifKV@fdgXML@nowrite\else
+        \newwrite \fdg@writexmllist
+        \immediate\openout \fdg@writexmllist=#2.xml
+        \let\verbatim@out\fdg@writexmllist
+    \fi
+%    \end{macrocode}
+% Open he photos xml file and write the top level
+%    \begin{macrocode}
+    \fdg@IWVO{<photos>}%
+    \@ifundefined{#2@fdgdigis}{%
+        \fdg@namegdef{#2@fdgdigis}{#2}%
+        \def\fdg@CurrDigiName{#2}%
+    }{\PackageError{fldigigal}{Name already chosen}}%
+%    \end{macrocode}
+% The \texttt{\#3} parameter contains the \cs{image} listing.
+% we first count the number of images using \cs{fdg@cnt@images}.
+%    \begin{macrocode}
+    \let\image\fdg@cnt@images#3%
+    \edef\fdg@numDigis{\the\cntdigis}%
+%    \end{macrocode}
+% Now, we repeat, but this time with \cs{fdg@image}.
+%    \begin{macrocode}
+    \def\'{&apos;}\let\iso\fdg@iso
+    \cntdigis=0 \let\image\fdg@image#3%
+%    \end{macrocode}
+% Close out XML List
+%    \begin{macrocode}
+    \fdg@IWVO{</photos>}%
+    \ifKV@fdgXML@nowrite\else
+        \immediate\closeout \fdg@writexmllist
+    \fi
+\endgroup
+%    \end{macrocode}
+% Save the path to the newly created xml list under the name
+% \texttt{xmlList4<name>}
+%    \begin{macrocode}
+    \saveNamedPath{xmlList4#2}{\pathToSource/#2.xml}%
+%    \end{macrocode}
+% Define a command to save the embedded resources.
+%    \begin{macrocode}
+    \fdg@namexdef{#2ERs}{\ifx\fdg@embededResources\@empty\else,\fi
+        \fdg@embededResources}%
+}
+\@onlypreamble{\fdgXmlList}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\fgRmannot}
+% This is the command that actually places the SWF. It uses the \cs{rmAnnot} command
+% from the \textsf{rmannot} package.
+% \paragraph*{Define Key-Value Pairs.} We declare two keys for \cs{fgRmannot}: \texttt{gallery} and \texttt{flashvars}.
+% We use gallery to select the gallery (layout), and flashvars to set some basic
+% parameters of the SWF.
+%    \begin{macrocode}
+\define@key{fgRmAnnot}{flashvars}[]{\def\fgRmAnnot@flashvars{&#1}}
+\let\fgRmAnnot@flashvars\@empty
+\define@key{fgRmAnnot}{galleryopts}[]{\def\fgRmAnnot@galleryopts{#1}}
+%    \end{macrocode}
+% The `\cs{saveNamePath}' definitions for the three supported galleries.
+% I have a custom gallery for no apparent reason (actually, if I want to
+% create and test a new gallery, I can set it up to use the \texttt{custom} key.
+%    \begin{macrocode}
+\saveNamedPath{fdg_vt1}{\fdgFolder/fdg_vt1.swf}
+\saveNamedPath{fdg_ht1}{\fdgFolder/fdg_ht1.swf}
+\saveNamedPath{fdg_nt1}{\fdgFolder/fdg_nt1.swf}
+\saveNamedPath{custom}{\fdgFolder/fdg_vt1.swf}
+%    \end{macrocode}
+% \paragraph*{fgGalleryOpts keys.}We now define the key value pairs for the \texttt{fgGalleryOpts} family.
+% These are the keys as listed by \texttt{galleryopts}.
+%
+% \DescribeMacro{gallery} At this time, we offer four choices for a design, more to follow as I learn
+% more about Flash Pro CS5.
+%    \begin{macrocode}
+\define@choicekey+{fgGalleryOpts}{gallery}[\val\nr]%
+    {vthumbs1,hthumbs1,nothumbs1,custom}[vthumbs1]{%
+    \ifcase\nr\relax
+        \def\fgGalleryOpts@gallery{fdg_vt1}\or
+        \def\fgGalleryOpts@gallery{fdg_ht1}\or
+        \def\fgGalleryOpts@gallery{fdg_nt1}\or
+        \def\fgGalleryOpts@gallery{custom}\fi
+}{}
+%    \end{macrocode}
+% \DescribeMacro{trans} Some standard transitions for the photos.
+%    \begin{macrocode}
+\define@choicekey+{fgGalleryOpts}{trans}[\val\nr]%
+    {Blinds,Fade,Fly,Iris,Photo,PixelDissolve,Rotate,%
+    Squeeze,Wipe,Zoom,Random}[Random]{%
+        \edef\fgGalleryOpts@trans{\val}%
+}{}
+\let\fgGalleryOpts@trans\@empty
+%    \end{macrocode}
+% \DescribeMacro{delay} The amount of delay between the automatic display of
+% a new photo. The default is 6 (seconds)
+%    \begin{macrocode}
+\define@key{fgGalleryOpts}{delay}[6]{\def\fgGalleryOpts@delay{#1}}
+\let\fgGalleryOpts@delay\@empty
+%    \end{macrocode}
+% \DescribeMacro{auto} A Boolean switch, which if \texttt{true}, the photos are displayed
+% automatically, the delay is determined by the \texttt{delay} key. The default is \texttt{auto=true}.
+%    \begin{macrocode}
+\define@boolkey{fgGalleryOpts}{auto}[true]{%
+    \edef\fgGalleryOpts@auto{\ifKV@fgGalleryOpts@auto
+        true\else false\fi}}
+%    \end{macrocode}
+% \DescribeMacro{transOn} A Boolean switch, which if \texttt{true}, a transition effect is used to transition
+% between photos.
+%    \begin{macrocode}
+\define@boolkey{fgGalleryOpts}{transOn}[true]{%
+    \edef\fgGalleryOpts@transOn{\ifKV@fgGalleryOpts@transOn
+        true\else false\fi}}
+%    \end{macrocode}
+% \DescribeMacro{captionalign} For all galleries except for \texttt{fdg\_nt1} we can align
+% the position of the caption: \texttt{left}, \texttt{right}, or \texttt{center}. The default is \texttt{left}.
+%    \begin{macrocode}
+\define@choicekey+{fgGalleryOpts}{captionalign}[\val\nr]%
+    {left,right,center}[left]{%
+        \edef\fgGalleryOpts@captionalign{\val}%
+}{}
+\let\fgGalleryOpts@captionalign\@empty
+%    \end{macrocode}
+% \DescribeMacro{nocaptions} A Boolean switch, which if \texttt{true}, no caption is written the the caption bar.
+% The default is \texttt{false}, captions are written.
+%    \begin{macrocode}
+\define@boolkey{fgGalleryOpts}{nocaptions}[true]{%
+    \edef\fgGalleryOpts@nocaptions{\ifKV@fgGalleryOpts@nocaptions
+        true\else false\fi}}
+%    \end{macrocode}
+% \DescribeMacro{nocaptionstext} If \texttt{nocaptions} is set to \texttt{true}, the value of this
+% key is used as the caption for all the photos. If \texttt{nocaptionstext} is not listed, or has not value, the empty
+% string is used.
+%    \begin{macrocode}
+\define@key{fgGalleryOpts}{nocaptionstext}[]{%
+    \def\fgGalleryOpts@nocaptionstext{#1}}
+%    \end{macrocode}
+% Global defaults for the \texttt{fgGalleryOpts} family.
+%    \begin{macrocode}
+\setkeys{fgGalleryOpts}{gallery,transOn,auto=true,nocaptions=false,nocaptionstext}
+%    \end{macrocode}
+% \DescribeMacro{\fgRmAnnot} Now for the definition of \cs{fgRmAnnot}.
+%    \begin{macrocode}
+\newcommand{\fgRmAnnot}[2][]{\begingroup
+    \@ifundefined{#2@fdgdigis}%
+    {\PackageError{fldigigal}{The name `#2' is not defined
+    for\MessageBreak this \string\fgRmAnnot}{Gallery names
+    are defined using \string\fdgXmlList}}%
+%    \end{macrocode}
+% We get the key-value pairs for the \texttt{fgRmAnnot} family, then
+% within the \texttt{galleryopts} key, we process those options as well.
+%    \begin{macrocode}
+    \setkeys*{fgRmAnnot}{#1}\edef\XKV@rm@saved{\XKV@rm}%
+    \edef\tmp@setkeysEx{\noexpand\setkeys{fgGalleryOpts}%
+        {\fgRmAnnot@galleryopts}}\tmp@setkeysEx
+%    \end{macrocode}
+% We build part of the \texttt{flashvars} that correspond to this application.
+% The macro \cs{merged@flashvars} merges the flash variables entered directly
+% by the document author to control the \cs{rmAnnot}.
+%    \begin{macrocode}
+    \edef\merged@flashvars{\fgRmAnnot@flashvars%
+        \ifKV@fgGalleryOpts@auto\else&%
+        auto=\fgGalleryOpts@auto\fi
+        \ifx\fgGalleryOpts@delay\@empty\else&%
+        delay=\fgGalleryOpts@delay\fi
+        \ifx\fgGalleryOpts@trans\@empty\else&%
+        transitionType=\fgGalleryOpts@trans\fi
+        \ifKV@fgGalleryOpts@transOn\else&%
+        transitionOn=\fgGalleryOpts@transOn\fi
+        \ifx\fgGalleryOpts@captionalign\@empty\else&%
+        captionalign=\fgGalleryOpts@captionalign\fi
+        \ifKV@fgGalleryOpts@nocaptions&%
+        nocaptions=\fgGalleryOpts@nocaptions%
+        \ifx\gGalleryOpts@nocaptionstext\@empty\else&%
+        nocaptionstext=\fgGalleryOpts@nocaptionstext\fi\fi
+    }%
+%    \end{macrocode}
+% OK, now we create an \cs{rmAnnot} with the desired parameters.
+% We populate the \texttt{flashvars} key.
+%    \begin{macrocode}
+    \rmAnnot[\XKV@rm@saved,
+    flashvars={xmlPath=\Name{\xmlListiv{#2}}\merged@flashvars},%
+    resources={\xmlListiv{#2}\embededResources{#2}}%
+    ]{320bp}{240bp}{\fgGalleryOpts@gallery}%
+    \endgroup
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+\endinput
+History:
+    (2010/12/29 v0.5c) the auto option did not have a default value, fixed
+    (2010/12/25 v0.5b) version date referenced for the rmannot package was
+        incorrect, should read 2010/12/22.
+    (2010/12/25 v0.5a) remove some spurious spaces, and changed the size
+    of \fgRmAnnot from 640bp x 480bp to 320bp x 240bp
+    (2010/12/23 v0.5) First publication

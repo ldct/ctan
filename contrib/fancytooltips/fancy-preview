@@ -1,0 +1,448 @@
+#!/usr/bin/env perl
+# 
+# Copyright (C) 2012 by Robert Marik <marik@mendelu.cz>
+# ------------------------------------------------------
+# 
+# This file may be distributed and/or modified under the conditions of
+# the LaTeX Project Public License, either version 1.2 of this license
+# or (at your option) any later version.  The latest version of this
+# license is in:
+#
+#    http://www.latex-project.org/lppl.txt
+#
+# and version 1.2 or later is part of all distributions of LaTeX
+# version 1999/12/01 or later.
+#
+# fancy-preview
+# -------------
+#
+# This is a script which can be used to extract displayed equations,
+# theorem-like environments, figures and bibliography references and
+# attach this material as tooltip to LaTeX \ref, \eqref and \cite
+# comand. This has been requested by several (pdf)(La)TeX users. See
+# http://tex.stackexchange.com/questions/15356/showing-the-bibliographic-entry-in-a-popup-when-you-hover-over-the-citation-key
+# for some discussion and papers
+# http://permalink.gmane.org/gmane.comp.tex.pdftex/3898 and
+# http://www.math.huji.ac.il/~erezla/papers/continuity_semisimple.pdf
+# as demos of interactive PDF.
+#
+# Demos for the current script are at
+# http://user.mendelu.cz/marik/fancy-preview site. Basicaly, you can
+# find there PDF files with hyperref links. Each link is followed by a
+# button. This button is invisible in mathematical papers and blue
+# soap in presentations. 
+#
+# 1. add "\usepackage{hyperref}" to the preamble of your document (say
+#    filename.tex),
+#
+# 2. add blank line after each \bibitem command,
+#
+# 3. compile with command "bash fancy-preview filename" i.e. no tex
+#    extension is used in the command line
+#
+# 4. You may customize this script. 
+#
+# The script has been tested on Linux, Ubuntu 12.04,TeXlive 2011.
+#
+# It works as follows:
+# 1. We extract desired environments in two runs. We crop the PDF
+#    files and save the information relatex labels from aux file.
+# 2. We join the files together, we add some background and graphics
+#    to the tooltips.
+#
+#
+# Known bugs, limitations.
+# ------------------------
+#
+# * Do not use tags involving \ref command, do not use something like
+#   \tag{\ref{someting}-b} inside equation environment.
+# * Do not use the word tocindent in the labels.
+# * Do not use elsart class. Use for example article or elsarticle
+#   class.
+# * Each bibitem must be finished by a blank line.
+#
+#
+# History
+# -------
+#
+# June 12, 2012: advanced posibilities for configuration
+# May 24, 2012: bash script converted to Perl for better portability, tests on MS Windows.
+# May 7, 2012: initial Linux version in bash  
+#
+use strict;
+use Getopt::Long;
+
+my $filename = $ARGV[0];
+my $filename_noext = $filename;
+$filename_noext =~ s/\.tex//;
+my $aux_file=$filename_noext.".aux";
+my @tempfilenames=($filename_noext.".aux");
+my %latex =();
+
+# Setting for two passes of preview.sty
+$latex{'a'}='\makeatletter\def\nononotags{\def\@eqnnum{\relax}\def\tagform@##1{}}\makeatother\AtBeginDocument{\usepackage[pdftex,active,tightpage,displaymath]{preview}\nononotags}';
+$latex{'b'}='\AtEndDocument{\clearpage}\AtBeginDocument{\usepackage[pdftex,active,tightpage]{preview}\setlength\PreviewBorder{5pt}}';
+
+# Do not use third pass of preview.sty by default
+$latex{'c'}='';
+$latex{'a_extra'}='';
+$latex{'b_extra'}='';
+$latex{'pass_order'}="acb";
+
+# Hacks to get references (in the first pass). 
+# IMPORTANT: each bibitem must be finished by a blank line.
+$latex{'preview_bibitem'}='\AtBeginDocument{\newenvironment{fakebibitem}{\begin{minipage}{0.75\textwidth}}{\end{minipage}}\PreviewEnvironment{fakebibitem}\renewcommand\bibitem[2][]{\BIBITEM {#2}}\def\BIBITEM#1#2\par{\begin{fakebibitem} #2 \label{fancy:cite:#1}\end{fakebibitem}}}';
+$latex{'preview_biblatex'}='\AtBeginDocument{\PreviewEnvironment{fakebibitem}\def\fancycitation#1{\begin{fakebibitem}\setbox0=\hbox{\parbox{0.75\textwidth}{\fullcite{#1}\label{fancy:cite:#1}}}\pdfpagewidth=\wd0\pdfpageheight=\ht0\advance\pdfpageheight by \dp0\copy0\end{fakebibitem}\newpage}}\AtEndDocument{\input '.$filename_noext.'-fancybib.tmp}';
+
+# The environments for extraction in the second pass of preview.sty. 
+$latex{'environments'}="Theorem,theorem,lemma,corollary,definition";
+$latex{'snarfenvironments'}="figure";
+
+# The variable with initial commands for all pdflatex calls.
+$latex{'ini'}='\relax';
+my $pdflatex="pdflatex";
+my $bibtex="bibtex";
+my $pdfcrop="pdfcrop";
+
+# Default options for final compilation with fancytooltips. Change
+# "previewall" into "preview" to omit tooltips with target on the same
+# page (useful for presentations). You may also set this option from
+# the comand line. 
+my $fancy_options="previewall,nosoap";
+my $tooltipfile="";
+my $help=0;
+my $version=0;
+my $date="24.6.2012";
+my $versionnumber="0.2";
+
+# The code used in premable. Should define macro \tooltipwraper which
+# inserts the tooltip extracted in previous compilations into a box
+# with nontransparent background
+$latex{'tooltips_envelope_preamble'}='\usepackage{xcolor,tikz}\usetikzlibrary{shadows}\def\tooltipwraper#1{\begin{tikzpicture}\node[drop shadow,fill=yellow!30,draw=black!30, rounded corners=3pt,very thick]{#1};\end{tikzpicture}}';
+
+
+$latex{'biblatex'}='
+% from http://tex.stackexchange.com/questions/15356/showing-the-bibliographic-entry-in-a-popup-when-you-hover-over-the-citation-key/54831#54831
+% thanks to Audrey
+
+% Apply tooltip to "extratext" area just after inline citation links
+\DeclareFieldFormat{bibhyperref}{%
+  \tooltip*{\bibhyperref{#1}}{fancy:cite:\thefield{entrykey}}}
+
+% Define new citation commands that replace citation links with tooltips
+\DeclareFieldFormat{bibtooltip}{\tooltip{#1}{fancy:cite:\thefield{entrykey}}}
+\newrobustcmd*{\tooltiphook}{%
+  \AtNextCite{\DeclareFieldAlias{bibhyperref}{bibtooltip}}}
+\newrobustcmd*{\tooltipcite}{\tooltiphook\cite}
+\newrobustcmd*{\tooltipcites}{\tooltiphook\cites}
+
+% Apply tooltip to instance where numeric-comp uses \bibhyperref instead
+% of bibhyperref format
+\makeatletter
+\newbibmacro*{cite:dump:tooltip}{%
+  \ifnumgreater{\value{cbx@tempcnta}}{0}
+    {\ifnumgreater{\value{cbx@tempcnta}}{1}
+       {\bibrangedash}
+       {\multicitedelim}%
+     \tooltip*
+       {\bibhyperref[\cbx@lastkey]{%
+          \ifdef\cbx@lastprefix
+            {\printtext[prefixnumber]{\cbx@lastprefix}}
+            {}%
+          \printtext[labelnumber]{\cbx@lastnumber}}}
+       {fancy:cite:\cbx@lastkey}}
+    {}%
+  \setcounter{cbx@tempcnta}{0}%
+  \global\undef\cbx@lastprefix}
+\ifcsundef{abx@macro@\detokenize{cite:dump}}
+  {}{\renewbibmacro*{cite:dump}{\usebibmacro{cite:dump:tooltip}}}
+\makeatother
+';
+
+my %options=();
+GetOptions (
+"fancy_options=s"   => \$options{fancy_options},
+"pdfcrop=s"   => \$options{pdfcrop},
+"tooltips=s"   => \$options{tooltips},
+"ini_file=s"   => \$options{ini_file},
+"version"   => \$version,
+"help"  =>  \$help);
+
+if ($version)
+{
+    print "$versionnumber\n";
+    exit();
+}
+
+if ($help)
+{
+    my $help_text='
+This is fancy-preview script (R. Marik, http://user.mendelu.cz/marik)
+============================ 
+
+The script converts LaTeX files into PDF files. The references are
+followed by invisible buttons whih allow to show the target in a popup
+window.
+
+The homepage (last version, documentation, tips for users, examples)
+of the script is http://user.mendelu.cz/marik/fancy-preview
+
+OPTIONS:
+
+For detailed description see Section 3 of the manual to the
+fancytooltips package.
+
+ --fancy_options="text"   text is passed as optional parameter to
+                          fancytooltips package 
+
+ --pdfcrop="filename"     program to crop the boundaries of PDF file
+                           
+ --tooltips="filename"    the file filename.pdf contains hand-created
+                          tooltips and filename.tips optionally
+                          keywords to acces these tooltips
+
+ --ini_file="filename"    ini file with the configuration
+
+ --version                prints version and exists
+
+ --help                   prints help and exists
+
+EXAMPLES:
+Compile file.tex
+
+      perl fancy-preview file
+
+Compile file.tex, use pdfcrop2 to crop the boundary of PDF file, show
+only previews where the target is on the different page
+
+      ./fancy-preview file --fancy_options="preview" --pdfcrop="pdfcrop2"
+
+';
+    print $help_text;
+    exit();
+}
+
+
+#### Read configuration from ~/.fancy-preview.ini and ./fancy-preview.ini
+use Config::IniFiles;
+my($cfg);
+
+sub set_tex_variable
+{
+    if ($cfg->exists( 'latex', $_[0] )) {$latex{$_[0]}=$cfg->val( 'latex', $_[0]);}
+}
+
+sub read_config
+{
+    if ( -e $_[0]) 
+    {
+	$cfg = Config::IniFiles->new( -file => $_[0]);
+	if ($cfg->exists( 'main', 'pdfcrop' )) {$pdfcrop=$cfg->val( 'main', 'pdfcrop');}
+	if ($cfg->exists( 'main', 'fancy_options' )) {$fancy_options=$cfg->val( 'main', 'fancy_options');}
+	if ($cfg->exists( 'main', 'tooltips' )) {$tooltipfile=$cfg->val( 'main', 'tooltips');}
+	my @options=("tooltips_envelope_preamble","environments","snarfenvironments","a","a_extra","b","b_extra","c","ini","biblatex","pass_order");
+	foreach my $current_option (@options) {set_tex_variable($current_option);}
+    }
+}
+
+if ($options{ini_file})
+{
+    read_config($options{ini_file});
+}
+else
+{
+    read_config($ENV{"HOME"}."/.fancy-preview.ini");
+    read_config("./fancy-preview.ini");
+}
+#### end of configuration
+
+# command line overrides config file
+if ($options{fancy_options}) {$fancy_options=$options{fancy_options}};
+if ($options{pdfcrop}) {$pdfcrop=$options{pdfcrop}};
+if ($options{tooltips}) {$tooltipfile=$options{tooltips}};
+
+my $biblatex=0;
+
+# ----------------------------------------------------------------- 
+# We extract stuff from the TeX file, extract the label definition
+# from aux file and crop the PDF file. Since pdfcrop from texlive
+# creates large files, we allow customization (see
+# http://tex.stackexchange.com/questions/42236/pdfcrop-generates-larger-file
+# )
+
+unlink ("$filename_noext.aux");
+
+# The first compilation to create numbers for equations, theorems, figures, ...
+system("$pdflatex \"$latex{ini} \\input $filename\"");
+
+
+# We test if the file uses biblatex. If not, thebibliography is supposed.
+open(LOG, $filename_noext.".log");
+my @log_data=<LOG>;
+my @log_tmp = grep /^Package: biblatex/, @log_data;
+my $log_tmp_size=@log_tmp;
+if ($log_tmp_size>0) {$biblatex=1;}
+
+my $preview_references="";
+if ($biblatex)
+{
+    optbibtex();
+    open(AUX, $aux_file);
+    my @aux_data=<AUX>;
+    my @result=();
+    foreach $a (@aux_data)
+    {
+	if (($a =~ m/\\citation{/)&&($a !~ m/{biblatex-control}/))
+	{
+	    $a =~ s/\\citation{/\\fancycitation{/;
+	    push(@result, $a);
+	}
+    }
+    close(AUX);
+
+    sub uniq {
+	return keys %{{ map { $_ => 1 } @_ }};
+    }
+
+    open(AUXA, ">$filename_noext"."-fancybib.tmp");
+    foreach $a (sort(uniq(@result)))
+    {
+	print AUXA $a;
+    }
+    close(AUXA);
+    push (@tempfilenames,$filename_noext."-fancybib.tmp"); 
+    $preview_references=$latex{'preview_biblatex'};
+}
+else
+{
+    $preview_references=$latex{'preview_bibitem'};
+}
+
+system("$pdflatex \"$latex{ini}\\relax $latex{a}\\relax $latex{'a_extra'}\\relax $preview_references\\relax \\input $filename\"");
+parse_aux_file_and_crop("a");
+
+# The second pass, in this pass theorem-like environments are
+# extracted. Two passes are necessary, since numbered equations which
+# appear in theorems frequently have to been extracted separately (in
+# the first pass).
+
+if($latex{'environments'} ne "")
+{ 
+$latex{'b'}=$latex{'b'}.'\AtBeginDocument{\PreviewEnvironment[{[]}]{'.join('}\PreviewEnvironment[{[]}]{',split(/,/,$latex{'environments'}))."}}";
+}
+if($latex{'snarfenvironments'} ne "")
+{ 
+$latex{'b'}=$latex{'b'}.'\AtBeginDocument{\PreviewSnarfEnvironment[{[]}]{'.join('}\PreviewSnarfEnvironment[{[]}]{',split(/,/,$latex{'snarfenvironments'}))."}}";
+}
+$latex{'b'}=$latex{'b'}.$latex{'b_extra'};
+compile_parse_aux_file_and_crop("b");
+
+if($latex{'c'} ne "") 
+{
+    compile_parse_aux_file_and_crop("c");
+}
+else
+{
+    $latex{'pass_order'} =~ s/c//;
+}
+
+print "\n----------------------------------------------\n------ pdflatex genearting tooltips ----------\n----------------------------------------------";
+
+# We merge all the tooltips in one file.  If some hand created
+# tooltips are also present, we insert these tooltips first in a loop
+# (multido). Then we insert theorem-like environments (from the second
+# pass) and finaly equations and citations (from the first pass).
+
+my $opt_pdfpages_a="";
+my $opt_pdfpages_b="";
+my $inserttooltips='\insertttp{'.join('}\insertttp{',split(//,$latex{'pass_order'})).'}';
+
+if ($tooltipfile ne "")
+{
+    $opt_pdfpages_a='\usepackage{multido}';
+    $opt_pdfpages_b='\ifx\pdfpagewrapper\undefined\let\pdfpagewrapper\relax\fi\pdfximage{'.$tooltipfile.'.pdf}\edef\FancyPreviewTotalPages{\the\pdflastximagepages}\multido{\i=1+1}{\FancyPreviewTotalPages}{\setbox0=\hbox{\pdfpagewrapper{\includegraphics[page=\i]{'.$tooltipfile.'.pdf}}}\pdfpagewidth=\wd0 \pdfpageheight=\ht0 \advance \pdfpageheight by \dp0 \copy0\newpage}\newpage';
+}
+
+system("$pdflatex".' "\documentclass{minimal}\usepackage{graphicx}'.$opt_pdfpages_a.'\usepackage[papersize={5in,5in},margin=1pt]{geometry}'.$latex{'tooltips_envelope_preamble'}.'\usepackage[createtips]{fancytooltips}\newdimen\dist \dist=5pt\relax\begin{document}\pagestyle{empty}'.$opt_pdfpages_b.'\relax \gdef\savemaplabels#1#2#3#4{\xdef\temp{#2}} \def\fancypreviewnewlabel#1#2{\savemaplabels#2 \expandafter\ifx\csname keytip:#1:used\endcsname\relax \expandafter\def\csname keytip:#1:used\endcsname{used}\setbox0=\vbox{\kern\dist\hbox{\kern\dist\tooltipwraper{\includegraphics[page=\temp]{'.$filename_noext.'-\ttpfilename-crop.pdf}}\kern\dist}\kern\dist}\pdfpagewidth=\wd0 \pdfpageheight=\ht0 \advance \pdfpageheight by \dp0 \copy0 \keytip{#1}\newpage\fi}\def\insertttp#1{\def\ttpfilename{#1}\input '.$filename_noext.'-#1.tmp}'.$inserttooltips.'\end{document}"'); 
+
+if ($tooltipfile ne "")
+{
+open(TIPS1, ">>minimal.tips");
+open(TIPS2, "$tooltipfile.tips");
+while (<TIPS2>) { print TIPS1 $_; }
+close (TIPS1); 
+close (TIPS2); 
+}
+
+# If biblatex is used, we update the information in bib file and hack
+# the cite-like commands according to the example
+# http://tex.stackexchange.com/questions/15356/showing-the-bibliographic-entry-in-a-popup-when-you-hover-over-the-citation-key/54831#54831
+#
+
+$latex{'ini'}="";
+if ($biblatex)
+{
+    system("$pdflatex \"$latex{'ini'}\\relax \\input $filename\"");
+    system("$bibtex $filename_noext.aux");
+
+    open(BIBL, ">fancy-preview-biblatex-settings.tex");
+    print BIBL $latex{'biblatex'};
+    close (BIBL); 
+    push (@tempfilenames,"fancy-preview-biblatex-settings.tex");
+    $latex{'ini'}='\AtBeginDocument{\input fancy-preview-biblatex-settings.tex}';
+}
+
+for my $i (1 .. 4){
+    my $hypersetup='\hypersetup{colorlinks=true}';
+    print  "----------------------------------------------\n------ pdflatex final compilation $i ----------\n----------------------------------------------\n";
+    system("$pdflatex -jobname=$filename_noext \"$latex{'ini'}".'\RequirePackage{etoolbox}\PassOptionsToPackage{active,mouseover,movetips,filename=minimal,'.$fancy_options.'}{fancytooltips}\AtEndPreamble{\usepackage{fancytooltips}'.$hypersetup.'}\input '.$filename.'"') 
+}
+
+foreach my $deletefile (@tempfilenames) {unlink ($deletefile);} 
+
+print "\n ---------------------------------------------\n fancy-preview with options \"$fancy_options\" on \"$filename\" finished \n The output is in $filename_noext.pdf \n\n If the pdf file is too large, consider pdfcrop option\n and http://tex.stackexchange.com/questions/42236/pdfcrop-generates-larger-file\n ---------------------------------------------\n\n";
+
+
+sub parse_aux_file_and_crop
+{
+    # opens aux file, finds lines starting with \newlabel and not involving tocindent and writes them into tmp file
+    open(AUX, $aux_file);
+    my @aux_data=<AUX>;
+    my @filtered_data_tmp = grep /^\\newlabel/, @aux_data;
+    my @filtered_data = grep !/tocindent/, @filtered_data_tmp;
+    my $aux_file_a=$filename_noext."-".@_[0].".tmp";
+    open(AUXA, ">$aux_file_a");
+    foreach my $aa (@filtered_data)
+    {
+	$aa =~ s/\\newlabel{/\\fancypreviewnewlabel{/;
+	print AUXA $aa;
+    }
+    close (AUXA); 
+    close (AUX); 
+    push(@tempfilenames,$aux_file_a);
+    # crops the file
+    print "\nCropping PDF file, this may take some time ...\n";
+    system("$pdfcrop $filename_noext.pdf $filename_noext-@_[0]-crop.pdf");
+    push(@tempfilenames,"$filename_noext-@_[0]-crop.pdf");
+}
+
+
+sub compile_parse_aux_file_and_crop
+{
+ unlink ("$filename_noext.aux");
+ system("$pdflatex \"$latex{ini} \\input $filename\"");
+ optbibtex();
+ system("$pdflatex \"$latex{ini} $latex{$_[0]} \\input $filename\"");
+ parse_aux_file_and_crop($_[0]);
+}
+
+
+sub optbibtex
+{
+    # runs bibtex and pdflatex if biblatex has been detected ($biblatex variable is 1)
+    if ($biblatex)
+    {
+	system("$bibtex $filename_noext.aux");
+	system("$pdflatex \"$latex{ini} \\input $filename\"");
+    }
+}

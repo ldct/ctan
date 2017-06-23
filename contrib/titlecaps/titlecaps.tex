@@ -1,0 +1,416 @@
+\documentclass{article}
+\def\version{1.2}
+%% Copyright 2013 Steven B. Segletes
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Steven B. Segletes.
+%
+% V1.1  -Typographical corrections to docs.
+%       -Missing % added on line 356
+% V1.2  -Now works with \l and \aa  national symbols.
+%       -Replaced all occurrences of \roman with \romannumeral\value
+%       -Found two lines needing a trailing %
+%       -Added a trailing space following invocations of \catcode
+%
+\usepackage{titlecaps}
+\usepackage{needspace}
+\parskip 1em
+\parindent 0em
+\newcommand\rl{\rule{1em}{0in}}
+\def\tcp{\textsf{titlecaps}}
+\def\QL{\titlecap{quirks, tricks, and limitations}}
+\usepackage{verbatimbox}
+\let\vb\verb
+\def\bs{$\backslash$}
+\reversemarginpar
+\marginparwidth 1.6in
+\newcommand\margtt[1]{\marginpar{\hfill\ttfamily#1}}
+\newcommand\margcmd[1]{\marginpar{\hfill\ttfamily\char'134#1}}
+\begin{document}
+\begin{center}
+\LARGE The {\tcp} Package\\
+\rule{0em}{.7em}\small Routines for setting rich-text input into
+Titling Caps\\
+\rule{0em}{2.7em}\large Steven B. Segletes\\
+steven.b.segletes.civ@mail.mil\\
+\rule{0em}{1.7em}\today\\
+v\version
+\end{center}
+
+\Addlcwords{for a is but and with of in as the etc on to if}
+\section{\titlecap{description and commands}}
+
+The {\tcp} package is intended to be used to convert lower-cased text
+into titling caps, wherein the first letter of every word is
+capitalized, except for words designated to remain in lower case, for
+example prepositions and conjunctions.  While this function has been
+performed elsewhere, for example in the \textsf{stringstrings} package,
+it is here significantly enhanced.  The \textsf{stringstrings}
+implementation of titling caps is particularly limited because of its
+slow speed (I criticize \textsf{stringstrings} because I wrote it).
+Furthermore, that implementation only works on textual expressions,
+which do not contain any font-modification commands.  
+
+In contrast, the {\tcp} package is set up to work in conjunction with
+font-modification commands that change the family, series, or shape of
+the font.  Likewise, it will work with the fontsize changing commands
+(\vb|\tiny|, \vb|\scriptsize|\ldots\SoftSpace\vb|\Huge|) embedded in the
+argument.  It is also, unlike the \textsf{stringstrings} version, able
+to screen out most punctuation when deciding whether a word is
+predesignated as lower case.  Furthermore, it looks for symbols that
+might signify the beginning of a new text ``group'', such as (, [, \{,
+`, and -, and thereafter titles the word that follows, even though the
+first alphabetic letter is not technically at the lead of the ``word.''
+
+The primary commands that have been implemented in this package are the
+following:\\
+\itshape
+\rl\vb|\titlecap[|option\vb|]{|rich text\vb|}|\\
+\rl\vb|\Addlcwords{|designated lower-case space-separated word list\vb|}|\\
+\rl\vb|\Resetlcwords|\\
+\upshape
+In addition, the following auxiliary commands are also available:\\
+\itshape
+\rl\vb|\textnc{|text\verb|}|\\
+\rl\vb|\def\converttilde{|\textup{T} or \textup{F}\vb|}|\\
+\rl\vb|\noatinsidetc|\\
+\rl\vb|\usestringstringsnames|
+%   (addlcwords,resetlcwords,addlcword,capitalizetitle,getargs)
+\upshape
+
+~\\
+The \vb|\titlecap| command\margcmd{titlecap} is the primary contribution
+of this package.  It will (within constraints) capitalize the first
+letter of each word in the argument.  The primary constraint under which
+it operates is the existence of a predefined lower-cased word list that
+is set by the user, using the \verb|\Addlcwords|
+command\margcmd{Addlcwords}.  These predefined lower-cased words are
+passed as an argument to \verb|\Addlcwords| in a space-separated list.
+Subsequent invocations add to the existing list of predefined
+lower-cased words.  The user may clear the list of predefined
+lower-cased words through the issuance of the \verb|\Resetlcwords|
+command\margcmd{Resetlcwords}.
+
+When \verb|\titlecap| is invoked, it first breaks the argument into
+individual pieces that constitute ``words.''  Note, however, that these
+``words'' may include punctuation and text formatting commands
+interspersed with the actual text.  This is an essential challenge to
+overcome.
+
+After breaking the argument into words, \verb|\titlecap| will attempt to
+match each word of the argument to the list of predesignated lower-cased
+words.  In order to assist this process, the command (temporarily)
+screens out text-formatting commands and punctuation marks from the
+argument, so that their presence does not inhibit a word match with the
+lower-cased word list (see {\QL} for exceptions).  It
+flags matches, so that these matching words will not later be titled.
+
+The command will then reconstitute the ``words'' of the argument with
+their punctuation and font-changing commands intact.  In the default
+invocation, \verb|\titlecap| will capitalize the first word of the
+argument, even if that word is on the lower-cased word list.  This
+default may be overridden with the command's optional argument.
+Employing anything other than a capital ``P'' will treat the first word
+of the argument like any other word, meaning it will be title-capped
+only if it does not appear on the predesignated lower-cased word list.
+
+The algorithm that searches the ``words'' of the argument character by
+character, in order to titlecap the first letter of a word, is, generally
+speaking, able to process only textual content.  However, special
+provisions have been enacted to handle the following text-formatting
+commands within the argument of \verb|\titlecap|:
+
+\begin{minipage}{\textwidth}
+\rl
+\begin{tabular}{llll}
+\verb|\textup| & \verb|\upshape| & \verb|\tiny| & \verb|\Huge|\\
+\verb|\textit| & \verb|\itshape| & \verb|\scriptsize| &
+  \verb|\textnc|\footnote{This command is introduced by this package.}\\
+\verb|\textsc| & \verb|\scshape| & \verb|\footnotesize|&\\
+\verb|\textsl| & \verb|\slshape| & \verb|\small|&\\
+\verb|\textmd| & \verb|\mdseries| & \verb|\normalsize|&\\
+\verb|\textbf| & \verb|\bfseries| & \verb|\large|&\\
+\verb|\textrm| & \verb|\rmfamily| & \verb|\Large|&\\
+\verb|\textsf| & \verb|\sffamily| & \verb|\LARGE|&\\
+\verb|\texttt| & \verb|\ttfamily| & \verb|\huge|&\\
+\end{tabular}
+\end{minipage}
+
+Other macros can generally be handled in the argument to
+\verb|\titlecap| only if they expand to textual content.
+
+\needspace{3\baselineskip}
+Once the first word of the argument has been titled ``by force'' (or
+not, with the use of the optional argument), the command proceeds
+through each word, deciding whether or not to title the word, based on
+the lower-cased word flag that has previously been set.  The {\tcp}
+package can notably handle the titling of strings containing both
+diacritical marks found in various languages (such as \`o, \'o, \^o,
+\"o, \~o, \=o, \.o, \u o, \v o, \H o, \t{oo}, \c o, \d o, and \b o), as
+well as national symbols (such as \oe, \ae, \aa, \l, and \o).
+
+While punctuation had been earlier screened out in order to search for
+predefined lower-cased words, that is a slightly different problem from
+that of figuring out how to titlecap a punctuated word not on the
+lower-cased list.  While many punctuation marks trail a word and are,
+therefore, not a problem, several punctuation marks lead a word, or
+indicate a group separator, even in the absence of whitespace.
+\verb|\titlecap| must make sure that these sorts of punctuation marks do
+not inhibit the capitalization of the subsequent letter.  To this end,
+\verb|\titlecap| looks for instances of the following five characters:
+-, (, [, \{, and `, and flags the next character for possible
+capitalization (unless the word had been previously identified as
+predefined lower-cased [see {\QL}]).
+
+\section{\QL}
+
+While {\tcp} has been set up to run with certain embedded size and
+font-changing commands, it will not, in general, work with macros in the
+argument, unless the macros expand directly to a text string.
+
+The {\tcp} package is designed to screen out punctuation when searching
+for words that are pre-designated as lower-cased.  So, for example, the
+word (\textit{if}) or \textit{``if''} or [\textit{if} or \textit{if,}
+will all be found to match \textit{if} when it is predesignated as lower
+cased.  However, {\tcp} cannot screen out the curly braces \verb|\{| and
+\verb|\}| from the punctuation list.  Thus, \{if\} will be capitalized
+as \{If\} by \tcp.  A workaround is detailed in each of the next two
+paragraphs.
+
+To prevent a word from being titled (to force it into lower case), it
+can be immediately preceded by a \verb|\relax|.  In this way, the
+\verb|\relax| is titled, rather than the following word.  This method
+can be used to for one-time exceptions to titling, or to overcome the
+curly-brace problem described above, as in \verb|\{\relax if\}|.
+
+The package introduces a command, \verb|\textnc|\margcmd{textnc}
+(standing for ``text no-change'').  If used outside of the 
+\verb|\titlecap| argument, it is defined as \verb|\def\textnc#1{#1}|
+and so is leaves the argument intact.  Inside of the \verb|\titlecap|
+argument, however, it forces its argument to be
+independently considered as text, regardless of any surrounding
+punctuation or other characters.  Thus, this approach may also be used
+to address the curly-brace issue as \verb|\{\textnc{if}\}|.  In this
+case, ``if'' would be titled if it is not on the lower-cased word list,
+but left in lower case if it were on the lower-cased word list.  The
+\verb|\textnc| command is useful in a number of ways inside the argument
+to \verb|\titlecap|, but always to signify its argument is to be treated
+as a block of text, independently evaluated for its predesignated
+lower-cased content.
+
+If a separator like, let's say, a left paren, is used without
+whitespace, in the fashion of ``\verb|a(b)|,'' then neither \verb|a| nor
+\verb|b| could possibly be detected as lower-cased words, since
+the ``word'' without punctuation would be \verb|ab|, which is neither
+\verb|a| nor is it \verb|b|.  For individual instances or exceptions,
+the insertion of a \verb|\relax| prior to ``\verb|a|'' or ``\verb|b|''
+would prevent titling of these terms.  Alternately, the word
+``\verb|ab|'' could be added to the predesignated lower-cased words
+list, in which case, ``\verb|a(b)|'' would be preserved in lower case.
+A third (and perhaps preferred) method is the use of the
+\verb|\textnc{}| construct, which is introduced solely for the purpose
+of designating embedded text as a separate word grouping.  Thus,
+\verb|\textnc{a}(\textnc{b})| as an argument to \verb|\titlecap| would
+guarantee that both ``\verb|a|'' and ``\verb|b|'' would be independently
+examined for their presence in the lower-cased word list, irrespective
+of any surrounding punctuation.  In this paragraph, the letters
+``\verb|a|'' and ``\verb|b|'' have been used for simplicity, but could
+actually represent words or groups of words.
+
+By \LaTeX{} convention, expansion of the construct 
+``\vb|very \large big|'' will 
+associate the \vb|\large| as the first letter of \vb|big|, rather than
+as the last letter of \vb|very|.  Unfortunately, leaving it that way
+will screw up the titling of \vb|big|.  Thus, when adapting the use of
+fontsize changes to the {\tcp} package, the prior space is unskipped,
+and a space is added after the fontsize change invocation, so that the
+fontsize change command is at the end of the prior word, rather than at
+the beginning of the next word.  The one adverse side effect to this
+approach is that a space \textbf{will} appear after a fontsize command,
+even if one is not desired (for example, changing font size just prior
+to punctuation).  One can either issue a \vb|\unskip| following the
+fontsize change to back-gobble the newly introduced space, or else place
+the fontsize change following the punctuation.
+
+While \vb|\uppercase| will not work within the argument of a
+\vb|\titlecap|, it was found that enclosing part of the argument in
+double braces \margtt{\char'173\char'173~\char'175\char'175}will produce
+upper case for that double-enclosed text.  Thus,\\
+\rl\vb|\titlecap{This is a {{v\"ery}} big test}|\\
+will produce \titlecap{This is a {{v\"ery}} big test}.
+
+The implementation to make the fontsize change commands work within the
+arguments of \vb|\titlecap| required the use of \vb|\makeatletter|
+within \vb|\titlecap| itself (which is revoked with a
+\vb|\makeatother| upon exit from \vb|\titlecap|).  If that is not
+considered a ``good practice'' for your situation, then you can disable
+this feature with the command \vb|\noatintc|\margcmd{noatintc}.
+However, it is likely, at that point, that the fontsize changing
+commands as arguments will break the \vb|\titlecap| command.
+
+Except in the case of the various \vb|\text|\textit{xx}\vb|{}| commands,
+for which special provision has been made, and for the double-brace
+quirk mentioned above, the argument of \vb|\titlecap| should not contain
+braces used as group delimiters, for example, in the fashion of:\\
+\rl\vb|\titlecap{this is a {\itshape test of|\\ 
+\rl\rl\vb|the} emergency broadcast system}|\\ It may not break the code,
+but will likely not produce a desired result.  If groupings must be
+placed in the argument, using \verb|\textnc{}| to condition the argument
+is recommended.  Thus,\\ 
+\rl\vb|\titlecap{this is a \textnc{\itshape test of|\\
+\rl\rl\vb|the} emergency broadcast system}|\\
+will result in ``%
+\titlecap{this is a \textnc{\itshape test of the} emergency
+broadcast system}'' (of course, in this case, a \vb|\textit{}| would
+have worked directly, without a problem).
+
+There should be no direct use or need to nest \vb|\titlecap| commands.
+However, if it is absolutely necessary, the embedded invocation of
+\verb|\titlecap| should be expressed as\\
+\rl\verb|\titlecap{...\titlecap\textnc{...}...}|.
+
+\section{\titlecap{auxiliary commands}}
+
+In addition to the primary commands offered by this package, there are
+several auxiliary commands.  
+
+As described in the section {\QL}, the \verb|\textnc|\margcmd{textnc}
+command was introduced when additional grouping must occur inside the
+argument of a \verb|\titlecap| command.  The command \verb|\textnc|
+will itself make no changes to its argument, but will force
+\verb|\titlecap| to independtly evaluate the \verb|\textnc| argument for
+its lower-cased content, regardless of any surrounding punctuation or
+text.  The command may only be \textit{needed} within an argument to
+\verb|\titlecap|.  However, if your application requires its invocation
+outside of a \verb|\titlecap| argument, it will merely output the
+argument without any modification.
+
+By default, the {\tcp} package treats hardspaces ($\sim$) as characters and
+not white space. This default treatment can be changed by setting the
+following parameter: \verb|\def\converttilde{T}|\margcmd{converttilde}.
+Following that invocation, hardspaces in the argument of
+\verb|\titlecap| should be indistinguishable from white space.
+
+The command \verb|\noatinsidetc|\margcmd{noatinsidetc} was briefly
+described in {\QL}.  Its invocation will prevent the \verb|\titlecap|
+command from employing the \verb|\makeatletter| command, if this is
+considered bad practice for your setting.  However, its invocation will
+likely make the {\tcp} package unable to process fontsize command
+changes.
+
+The last of these auxiliary commands is
+\verb|\usestringstringsnames|\margcmd{usestringstringsnames}.  This
+command will redefine certain command names previously defined by the
+\textsf{stringstrings} package to instead use the corresponding commands
+of the {\tcp} package, in essence redirecting the \textsf{stringstrings}
+invocation to the current package.  The redirected commands include the
+following (note:  see the \textsf{stringstrings} package documentation
+for command arguments and options):\\
+\rl\verb|\addlcwords|\\
+\rl\verb|\resetlcwords|\\
+\rl\verb|\addlcword|\\
+\rl\verb|\getargs|\\
+\rl\verb|\capitalizetitle|\\
+If this command is invoked without the prior loading of the
+\textsf{stringstrings} package, these commands will still be enabled for
+subsequent use. Because the {\tcp} package produces output which can
+include font changes and other material that cannot be placed into an
+\verb|\edef|, the output of the quiet version of the newly redirected
+\verb|\capitalizetitle[q]| produces a \verb|\def\thestring{}| rather 
+than an \verb|\edef\thestring{}|.
+
+\section{Acknowledgements}
+
+I would like to acknowledge the assistance of David Carlisle who,
+through the \textsf{tex.stackexchange} website, assisted with both the
+string parsing and punctuation screening techniques of this package:
+
+\verb|http://tex.stackexchange.com/questions/101604/parsing-strings|\\
+\verb|-containing-diacritical-marks-macros|
+
+\verb|http://tex.stackexchange.com/questions/105735/ignoring|\\
+\verb|-punctuation-during-comparison|
+
+I would also like to thank Prof. Enrico Gregorio for his discovery of several
+bugs in the package and suggestions for fixes:
+
+\verb|http://tex.stackexchange.com/questions/225434/|\\
+\verb|how-to-workaround-conflict-between-greek-and-titlecaps|
+
+\clearpage
+\section{\titlecap{a \ttfamily\bs titlecap \rmfamily demonstration 
+for beginners,\\ expressed in \texttt{\bs titlecap}}}
+
+\Resetlcwords
+\Addlcwords{for a is but and with of in as the etc on to if}
+%\noatinsidetc
+\titlecap{% 
+%{ 
+to know that none of the words typed in this paragraph were initially
+upper cased might be of interest to you.  it is done to demonstrate the
+behavioral features of this package.  first, you should know the words
+that i have pre-designated as lower case.  they are:  ``for a is but and
+with of in as the etc on to if.''  you can define your own list.  note
+that punctuation, like the period following the word ``if'' did not mess
+up the search for lower case (nor did the quotation marks just now).
+punctuation which is screened out of the lower-cased word search pattern
+include . , : ; ( ) [ ] ? ! ` ' however, I cannot screen text braces;
+\{for example in\} is titled, versus (for example in), since the braces
+are not screened out in the search for pre-designated lower-case words
+like for and in.  However, \texttt{\bs textnc} provides a workaround:
+\{\textnc{for example in}\}.  titlecap will consider capitalizing
+following a (, [, \{, or - symbol, such as (abc-def).  you can use your
+text\textit{\relax xx} commands, like i just did here with the prior xx,
+but if you want the argument of that command to not be titled, you
+either need, in this example, to add \textit{xx} to the lowercase word
+list, which you can see i did not.  instead, i put ``\bs relax~xx'' as
+the argument, so that, in essence, the \bs relax was capitalized, not
+the x.  Or you could use \texttt{\bs textnc}.  here i demonstrate that
+text boldface, \textbf{as in the \bs textbf command}, also works fine,
+as do \texttt{texttt}, \textsl{textsl}, \textsc{textsc},
+\textsf{textsf}, \textit{etc}.  titlecap will work on diacritical marks,
+such as \"apfel, \c cacao \textit{etc.}, \scriptsize fontsize \LARGE
+changing commands\normalsize\unskip, as well as national symbols such as
+\o laf, \ae gis, \oe dipus, \aa ngstrom, and \l ucky. 
+the method will work with some
+things in math mode, capitalizing symbols if there is a leading space,
+$x^2$ can become $ x^2$, and it can process but it will not capitalize
+the greek symbols, such as $\alpha$, and will choke on most macros, if
+they are not direct character expansions.  additionally,
+\textsf{titlecaps} also works with font changing declarations, for
+example, \bs itshape\bs sffamily. \itshape\sffamily you can see that it
+works fine.  likewise, any subsequent \bs textxx command will, upon
+completion, return the font to its prior state, such as this
+\textbf{textbf of some text}.  you can see that i have returned to the
+prior font, which was italic sans-serif. now I will return to upright
+roman\upshape\rmfamily.  a condition that will not behave well is inner
+braces, such as \ttfamily \bs titlecap\{blah \{inner brace material\}
+blah-blah\}. \rmfamily see the section on quirks and limitations for a
+workaround involving \texttt{\bs textnc}.  titlecap will always
+capitalize the first word of the argument (\textbf{even if it is on the
+lower-case word list}), unless \texttt{\bs titlecap} is invoked with an
+optional argument that is anything other than a capital p.  in that case,
+the first word will be titled \textit{unless} it is on the lowercase
+word list.  for example, i will do a \bs titlecap[\relax s]\{\relax
+a~big~man\} and get ``\titlecap[s]\textnc{a big man}'' with the ``a''
+not titled.  i hope this package is useful to you, but as far as using
+\textsf{titlecaps} on such large paragraphs\ldots \textbf{do not try
+this at home!}}
+
+\section{Code Listing}
+
+\verbatiminput{titlecaps.sty}
+
+\end{document}
+
+
+

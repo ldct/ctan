@@ -1,0 +1,367 @@
+% +--------------------------------------------------+
+% | Typeset this file to get the documentation.      |
+% +--------------------------------------------------+
+%
+%% Copyright (C) 2012 Javier Bezos
+%% All Rights Reserved
+%% http://www.tex-tipografia.com
+%%
+%% This work may be distributed and/or modified under the conditions
+%% of the LaTeX Project Public License, either version 1.3 of this
+%% license or (at your option) any later version.  The latest version
+%% of this license is in
+%%     http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2003/12/01 or later.
+%%
+%% This work has the LPPL maintenance status "maintained".
+%%
+%% This Current Maintainer of this work is Javier Bezos.
+%%
+%% This work consists of the files soulpos.tex and soulpos.sty.
+
+\documentclass[a4paper,twocolumn]{article}
+
+\title{Underlining (and more) with soulpos}
+\author{Javier Bezos}
+\date{2012-02-25}
+
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathmorphing}
+
+% \usepackage{soul}
+\usepackage{soulpos}
+
+\renewcommand{\ulpostolerance}{12}
+
+\advance\textwidth16mm
+\advance\oddsidemargin-8mm
+
+\makeatletter
+\newenvironment{desc}
+  {\vskip2ex
+   \hrule
+   \trivlist\item[]}
+  {\endtrivlist}
+\makeatother
+
+\begin{document}
+
+\maketitle
+
+This package just combines \textsf{soul} with the \texttt{savepos}
+mechanism provided by the pdftex engine, so that you can create
+(almost) arbitrary underlining and similar ``decorations'', including
+rules, leaders and even pictures (\textsf{pgf}, \textsf{pstricks},
+etc.). Unlike \textsf{soul} underlines, which are built by repeating small
+elements, here each chunk of text to be underlined is a single
+element.
+
+The main drawback is obvious -- since it relies on \verb|\pdfsavepos|
+two passes are necessary.  Further, to prevent exhausting the hash
+table, the auxiliary file containing the information about each
+underline is read only when needed, which may impact performance
+negatively.\footnote{Actually, two files are created, with extensions
+\texttt{upa} and \texttt{upb}.}
+
+Internally \textsf{soul} knows to some point where a break happens,
+and this information may be used to set diferent styles depending on
+the position.
+
+This version (1.0) does almost no checking (e.g., to warn about the
+need for a new run), which is left for a later release.
+
+The package \textsf{soulutf8} is loaded if it (or \textsf{soul}) has 
+not been loaded before (note the UTF-8 encoding is not necessary for
+\textsf{soulutf8} to work).
+
+\section{Usage}
+
+Underlining macros are defined much like in \textsf{soul}.
+
+\begin{desc}
+\verb|\ulposdef{<name>}[<options>]{<commands>}|
+\end{desc}
+
+Defines an underline as \verb|<commands>|, which is placed in a box of
+width zero with either \verb|\llap| or \verb|\rlap|, as explained
+below.  Typically, \verb|<commands>| will contain a rule or leaders.
+If the text spans more than one line, then there will be several
+chunks to be undelined (one per line).
+
+You can use the following macros in \verb|<commands>|.
+
+\begin{desc}
+\verb|\ulwidth|
+\end{desc}
+
+The width of the text block to be underlined. A basic underlining is:
+\begin{verbatim}
+\ulposdef{\uline}{\rule[-.8ex]{\ulwidth}{.5pt}}
+\end{verbatim}
+
+\begin{desc}
+\verb|\ifulstarttype{<type>}{<true>}{<false>}|\qquad
+\verb|\ifulendtype{<type>}{<true>}{<false>}|
+\end{desc}
+
+These tests can be used in \verb|<commands>|, to set different underlining
+styles depending on where the current chunk begins or ends.  Here
+\verb|<type>| is: 0 if the very start or end of the underlined text, 1 if a
+space, 2 if a discretionary hyphen and 3 if an explicit hyphen. See 
+an example below.
+
+\begin{desc}
+\verb|\ulstarttype|\qquad\verb|\ulendtype|
+\end{desc}
+
+Macros storing the values described above, so that you can use
+\LaTeX{} conditionals (or \TeX{} ones). So, to check if the end is an
+hyphen, test \verb|\ulendtype>1|.
+
+\vskip2ex
+\hrule
+\vskip2ex
+
+Valid keys/values in \verb|<options>| are:
+
+\begin{description}
+\item[\texttt{xoffset}]
+This key provides a simple way to fix an unpleasant effect found in
+many programs when colouring the text background -- the colour starts
+and ends just at the edges of the first and last characters.  Just set
+the offset to a value larger than 0pt, as for example .1 em.  This
+value is added ($\times$2) to \verb|\ulwidth|, but no space is added
+to the text (which can be done with the \verb|gap| key).  Of course,
+you can still do finer adjustments in the definition of the underline,
+as shown in the samples below. You can use \verb|xoffset-start| and 
+\verb|xoffset-end| to set the corresponding values separately.
+
+\item[\texttt{gap}] It is equivalent to the outer space in
+\verb|\sodef|.  This value is \textit{not} added to \verb|\ulwidth|.
+You can use \verb|gap-start| and \verb|gap-end| to set the
+corresponding values separately.
+
+
+\item[\texttt{hyphens}] Sometimes excluding the hyphen from the
+underlined text could make sense.  Default is \verb|hyphens=include|
+but you can set it to \verb|hyphens=exclude|.
+
+
+\item[\texttt{overdraw}] By default underlines are drawn before the
+text is typeset (with \verb|\rlap|), so that they are placed behind.
+However, it can be drawn after (with \verb|\llap|), on top the text,
+with \verb|overdraw| or, equivalently, \verb|overdraw=true| (default
+is \verb|overdraw=false|).
+\end{description}
+
+\begin{desc}
+\verb|\ulpostolerance|
+\end{desc}
+
+The current algorithm is based on changes of the $y$ coordinate of
+savepos and therefore presumes a regular baseline.  Any increasing or
+decreasing of $y$ is considered a new chunk, but you can give a certain
+tolerance with, for example:
+\begin{verbatim}
+\renewcommand{\ulpostolerance}{12}
+\end{verbatim}
+
+\section{Future work}
+
+\begin{itemize}
+\item Warnings. 
+\item In short documents, providing an option for using the aux file.
+\item Redefinable macros.
+\item \texttt{offset}, including edges at line breaks.
+\item \texttt{.upb} is generated at the end of the run, so it might be
+used by another program to generate the decorations.  As of 1.0.
+however, its syntax is likely to change and therefore unsupported.
+\item Better manual.
+\item Improved performance.
+\item Fixing some issues in multicolumn text (it does not work if there 
+are just two lines, one at the left and the other at the right).
+\item Some predefined ``decorations''.
+\end{itemize}
+
+\newcommand\ulpossample[1]{%
+A single #1{word}.  Now #1{a few words}.  Longer:
+#1{this text spans several lines, so that you can see the behaviour of
+\textsf{soulpos} where there are line breaks}.\vskip2ex\hrule\vskip2ex}
+
+\section{Examples}
+
+%  \def\ulpostolerance{-78}
+
+\makeatletter
+\expandafter\def\expandafter\verbatim@font\expandafter{%
+  \verbatim@font\small}
+\makeatother
+
+\begin{verbatim}
+\ulposdef{\ulpgfA}{%
+  \raisebox{-.75ex}{%
+    \begin{tikzpicture}%
+    \clip (0,-1pt) rectangle (\ulwidth,1pt);
+    \draw[
+      color=black!40,
+      line width=.7pt,
+      decorate,
+      decoration=
+        {random steps,
+         segment length=1.5mm,
+         amplitude=.5pt}]
+    (0,0) -- +(\ulwidth+3pt,0);
+    \end{tikzpicture}}}
+\end{verbatim}
+
+\ulposdef\ulpgfA{%
+  \raisebox{-.75ex}{%
+    \begin{tikzpicture}%
+    \clip (0,-1pt) rectangle (\ulwidth,1pt);
+    \draw[
+      color=black!40,
+      line width=.7pt,
+      decorate,
+      decoration=
+        {random steps,segment length=1.5mm,amplitude=.5pt}]
+    (0,0) -- +(\ulwidth+3pt,0);
+    \end{tikzpicture}}}
+
+\ulpossample\ulpgfA
+
+\begin{verbatim}
+\ulposdef{\ulpgfB}{%
+  \raisebox{-.75ex}{%
+    \begin{tikzpicture}%
+    \clip (0,-1pt) rectangle (\ulwidth,1pt);
+    \draw[color=black!40,
+      line width=.7pt,
+      decorate,
+      decoration=
+        {snake,
+         amplitude=.3pt,
+         segment length=1mm,}]
+     (0,0) -- +(\ulwidth+3pt,0);
+     \end{tikzpicture}}}
+\end{verbatim}
+
+\ulposdef\ulpgfB{%
+ \raisebox{-.75ex}{%
+  \begin{tikzpicture}%
+  \clip (0,-1pt) rectangle (\ulwidth,1pt);
+  \draw[color=black!40,
+   line width=.7pt,
+   decorate,
+   decoration=
+     {snake, amplitude=.3pt,segment length=1mm,}]
+   (0,0) -- +(\ulwidth+3pt,0);
+   \end{tikzpicture}}}
+
+\ulpossample\ulpgfB
+
+\begin{verbatim}
+\ulposdef{\ulpgfC}[xoffset=.15em]{%
+  \ifulstarttype{0}%
+    {\def\arr{|}}%
+    {\def\arr{<}}%
+  \ifulendtype{0}%
+    {\edef\arr{\arr-|}}%
+    {\edef\arr{\arr->}}%
+  \raisebox{-.7ex}{%
+    \tikz
+    \draw[\arr,color=black!40,
+          line width=1pt]
+    (0,0) -- +(\ulwidth-1pt,0);}}
+\end{verbatim}
+
+\ulposdef\ulpgfC[xoffset=.15em]{%
+  \ifulstarttype{0}%
+    {\def\arr{|}}%
+    {\def\arr{<}}%
+  \ifulendtype{0}%
+    {\edef\arr{\arr-|}}%
+    {\edef\arr{\arr->}}%
+  \raisebox{-.7ex}{%
+    \tikz
+    \draw[\arr,color=black!40,
+          line width=1pt]
+    (0,0) -- +(\ulwidth-1pt,0);}}
+
+\ulpossample\ulpgfC
+
+\begin{verbatim}
+\ulposdef{\ulbgdD}{%
+  \mbox{%
+    \color{black!30}%
+    \rule[-.8ex]{\ulwidth}{13pt}}}
+\end{verbatim}
+
+\ulposdef\ulbgdD{%
+  \mbox{%
+    \color{black!30}%
+    \rule[-.8ex]{\ulwidth}{13pt}}}
+
+\ulpossample\ulbgdD
+
+\begin{verbatim}
+\ulposdef{\ulbgdE}[xoffset=.1em]{%
+  \mbox{%
+    \color{black!30}%
+    \rule[-.8ex]{\ulwidth}{13pt}}}
+\end{verbatim}
+
+\ulposdef\ulbgdE[xoffset=.1em]{%
+  \mbox{%
+    \color{black!30}%
+    \rule[-.8ex]{\ulwidth}{13pt}}}
+
+\ulpossample\ulbgdE
+
+\begin{verbatim}
+\ulposdef{\uldash}{%
+  \makebox[\ulwidth]{%
+    \color{blue}%
+    \xleaders\hbox to.27em
+      {\hss\rule[-.8ex]{.18em}{.5pt}\hss}%
+    \hfill}}
+\end{verbatim}
+
+\ulposdef\uldash{%
+  \makebox[\ulwidth]{%
+    \color{blue}%
+    \xleaders\hbox to.27em{\hss\rule[-.8ex]{.18em}{.5pt}\hss}\hfill}}
+
+\ulpossample\uldash
+
+\begin{verbatim}
+\ulposdef{\uldot}{%
+ \mbox{%
+   \raisebox{-.85ex}{%
+     \xleaders\hbox to.2em
+       {\hss\footnotesize.\hss}\hskip\ulwidth}}}
+\end{verbatim}
+
+\ulposdef\uldot{%
+ \mbox{%
+   \raisebox{-.85ex}{\xleaders\hbox to.2em{\hss\footnotesize.\hss}\hskip\ulwidth}}}
+
+\ulpossample\uldot
+
+\begin{verbatim}
+\ulposdef{\ulflag}{%
+  \mbox{%
+    \color{red}\rule[-.85ex]{.25\ulwidth}{1.5pt}%
+    \color{yellow}\rule[-.85ex]{.5\ulwidth}{1.5pt}%
+    \color{red}\rule[-.85ex]{.25\ulwidth}{1.5pt}}}
+\end{verbatim}
+
+\ulposdef\ulflag{%
+  \mbox{%
+    \color{red}\rule[-.85ex]{.25\ulwidth}{1.5pt}%
+    \color{yellow}\rule[-.85ex]{.5\ulwidth}{1.5pt}%
+    \color{red}\rule[-.85ex]{.25\ulwidth}{1.5pt}}}
+
+\ulpossample\ulflag
+
+\end{document}

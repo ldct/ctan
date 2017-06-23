@@ -1,0 +1,730 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Eq2DB.sty package,             2001-9-01             %%
+%% Copyright (C) 2014  D. P. Story                      %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{eq2db}
+%<package> [2016/01/02 v2.0 Save Exerquiz results to a Database, Email, or text file (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\makeatletter
+\renewcommand{\paragraph}{\@startsection{paragraph}{4}{0pt}{6pt}{-3pt}{\bfseries}}
+\makeatother
+\pdfstringdefDisableCommands{\let\\\textbackslash}%
+\EnableCrossrefs \CodelineIndex
+\let\pkg\textsf
+\let\env\texttt
+\let\opt\texttt
+\def\AEBBook{\textsl{{Acro\negthinspace\TeX} eDucation System Tools:
+    {\LaTeX} for interactive PDF documents}}
+\begin{document}
+  \GetFileInfo{eq2db.sty}
+  \title{The \texttt{eq2db} Package}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{eq2db.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+%    \section{Introduction}
+%
+% The \pkg{eq2db} package is meant to be used with the \pkg{exerquiz} package, one
+% of the components of the \textbf{{Acro\negthinspace\TeX} eDucation Bundle}.
+% The package is used to convert a quiz created by the \env{quiz} environment
+% of \pkg{exerquiz} to one that submits the quiz results to a server-side script.
+%
+% The package can be designed to submit PDF form data as FDF, HTML, or XML. In the latter
+% case, there are no supporting scripts; for FDF and HTML, I've written simple scripts that
+% can be used on the server-side.
+% \begin{itemize}
+% \item For FDF submittal, the FDF Toolkit is required. Server-side scripts for a Windows server are provided
+% for the \opt{eqRecord}, \opt{eqEmail}, and \opt{eqText} options. Additional details are found
+% in the \pkg{eq2db} documentation manual.
+%
+% \item For HTML submittal, I've written eight
+% server-side scripts for both Windows and Linux servers are provided.
+% The \opt{eqEmail} and \opt{eqText} options are supported. These are available from the
+% CD-ROM of my yet-to-be-submitted book, \AEBBook.
+% Refer to the \pkg{eq2db} documentation
+% manual for additional details.
+% \end{itemize}
+% Whether you submit as FDF, HTML, or XML is determined by the \opt{submitAs} option.
+%
+%    \section{Package Options}
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+\let\eq@optioncode\@empty
+%    \end{macrocode}
+%    \begin{macro}{eqRecord}
+% An option to store exerquiz data in a database, see \hyperref[eqrecord]{eqRecord}.
+%    \begin{macrocode}
+\DeclareOptionX{eqRecord}{\def\eq@optioncode{\input{eqrecord.def}}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{eqEmail}
+% An option to email exerquiz data to an instructor, see \hyperref[eqemail]{eqEmail}.
+%    \begin{macrocode}
+\DeclareOptionX{eqEmail}{\def\eq@optioncode{\input{eqemail.def}}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{eqText}
+% Save exerquiz data to a tab-delimited text field, see \hyperref[eqtext]{eqText}.
+%    \begin{macrocode}
+\DeclareOptionX{eqText}{\def\eq@optioncode{\input{eqtext.def}}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{taoas}
+% Private option for TAOAS
+%    \begin{macrocode}
+\DeclareOptionX{taoas}{\def\eq@optioncode{\input{taoas.def}}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{custom}
+% A option so developers can create their own custom set up for their own script.
+%    \begin{macrocode}
+\DeclareOptionX{custom}[eq2dbcus]{\def\eq@optioncode{\input{#1.def}}}
+\def\eq@optioncode{\input{eq2dbcus.def}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{tagged}
+% The exerquiz quiz results are put into a quasi-XML format.
+%    \begin{macrocode}
+\let\eqdb@YES=y \let\eqdb@NO=n
+\DeclareOptionX{tagged}{\let\eqdb@tagged\eqdb@YES}
+\let\eqdb@tagged\eqdb@NO
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{submitAs}
+% Allow user to submit as FDF, HTML, or XML. The scripts provided by this package
+% are designed FDF submittal. The other submittal types are offered for anyone wishing
+% to use this package for submitting forms to personally developed server-side scripts.
+%
+% When submitting as HTML and using the \texttt{eqText} option, the distribution does supply a
+% scripts \texttt{eqText\_html.asp} (windows) and \texttt{eqText\_html.ph}p (linux/unix).
+%    \begin{macrocode}
+\define@choicekey*+{eq2db.sty}{submitAs}[\val\nr]{FDF,HTML,XML}[FDF]{%
+    \ifcase\nr\relax
+    \def\eqdb@submitType{FDF}\or
+    \def\eqdb@submitType{HTML}\or
+    \def\eqdb@submitType{XML}\else
+    \def\eqdb@submitType{FDF}\fi
+    }{\PackageWarning{eq2db}{Bad choice for submitAs,
+    permissible values are\MessageBreak FDF, HTML, and XML.\MessageBreak
+    Using the default FDF}%
+}
+\def\eqdb@submitType{FDF}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+\ProcessOptionsX
+%    \end{macrocode}
+%    \begin{macrocode}
+\RequirePackage{exerquiz}
+%    \end{macrocode}
+%    \section{Main Code}
+% This code creates a way of hiding text fields. These fields are typically
+% used to hold data that is sent to server-side script on submission.
+%
+%\medskip\noindent
+% This is a token list to hold the list of hidden fields to be inserted into
+% the document. We also provide a command for initializing the token list.
+%    \begin{macrocode}
+\newtoks\addtohidden \addtohidden={}
+%    \end{macrocode}
+%\medskip\noindent
+% The macro \cs{eq@addHiddenTextFields} will be used to hold the accumulated
+% hidden fields as we add another hidden field to the token list.
+%    \begin{macrocode}
+\def\eq@addHiddenTextFields{}
+%    \end{macrocode}
+%    \begin{macro}{\addHiddenTextField}
+% This macro adds a new hidden text field to the token list
+% \cs{addtohidden}. The command takes three parameters,
+% the first of which is optional. The command
+% \cs{hiddenTextField} actually creates the text field.
+%\paragraph*{Parameters:}
+%\begin{verbatim}
+%[#1] = parameter to modify the parameters of the text field
+% #2  = field name of the field being constructed
+% #3  = default value of the field
+%\end{verbatim}
+%    \begin{macrocode}
+\renewcommand\addHiddenTextField[3][]{%
+    \addtohidden=\expandafter{\eq@addHiddenTextFields
+        \llap{\hiddenTextField[#1]{#2}{#3}}}%
+    \edef\eq@addHiddenTextFields{\the\addtohidden}%
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\hiddenTextField}
+%
+% This command actually creates a hidden text field \texttt{10bp} wide
+% and \texttt{10bp} high. It is used by \cs{addHiddenTextField}, but can
+% be used be the macro author as well. The command takes three parameters,
+% the first of which is optional.
+%\paragraph*{Parameters:}
+%\begin{verbatim}
+%[#1] = parameter to modify the parameters of the text field
+% #2  = field name of the field being constructed
+% #3  = default value of the field
+%\end{verbatim}
+%    \begin{macrocode}
+\newcommand\hiddenTextField[3][]{\textField
+    [\DV{#3}\V{#3}\F2#1]{#2}{10bp}{10bp}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\populateHiddenField}
+% Command for populating the value of a (hidden) text field at run time. This is executed
+% by the `End Quiz' button.
+%\paragraph*{Parameters:}
+%\begin{verbatim}
+% #1 = field name of the field
+% #2  = field value. Strings need to be enclosed in double quotes
+%\end{verbatim}
+%    \begin{macrocode}
+\newtoks\populatehiddenfields \populatehiddenfields={}
+\def\eq@populateHiddenFields{}
+\def\eq@initializepopulate{\gdef\eq@populateHiddenFields{}%
+    \global\populatehiddenfields={}}
+\renewcommand\populateHiddenField[2]{%
+    \populatehiddenfields=\expandafter{\eq@populateHiddenFields
+        this.getField("#1").value=#2;\jsR\jsT\jsT}%
+    \edef\eq@populateHiddenFields{\the\populatehiddenfields}%
+}
+\def\eq@clearHiddenFields{\global\let\eq@populateHiddenFields=\@empty
+    \global\let\eq@addHiddenTextFields=\@empty
+}
+%    \end{macrocode}
+%    \end{macro}
+% These hidden fields are created under the `End Quiz' button or link, and are populated
+% when the user clicks on `End Quiz'. The following flag, set to \texttt{n} will be set
+% to \texttt{y} when the fields are created, in this way, we can avoid creating them
+% more than once.
+%    \begin{macrocode}
+\let\basicFieldsSet\eqdb@NO
+%    \end{macrocode}
+% \DescribeMacro{\rtnURL} For a non-FDF submittal, after the user submits, he must return to some
+% web page. Use \cs{rtnURL} to pass the return url to the server-side script. The command
+% \cs{definePath} is defined in \textsf{eforms}. Usage:
+%\begin{verbatim}
+%   \rtnURL{http://www.math.uakron.edu/~dpstory}
+%\end{verbatim}
+%    \begin{macrocode}
+\providecommand{\rtnURL}{\definePath{\thisRtnURL}}
+\let\thisRtnURL\@empty
+%    \end{macrocode}
+% \paragraph*{Input option code.} Now input the chosen option.
+%    \begin{macrocode}
+\eq@optioncode
+%    \end{macrocode}
+% \section{Tagged Responses}
+% An option for this package is \texttt{tagged}, when the document
+% author takes this option, the quiz responses are sent out in an
+% XML-like encoding.
+%
+% The JavaScript function \texttt{gatherTaggedQuizData} builds up a
+% "tagged" response string, which contains various pieces of
+% information about the quiz results.
+%    \begin{macrocode}
+\ifx\eqdb@tagged\eqdb@YES
+\begin{insDLJS}[gatherTaggedQuizData]{eqtagged}%
+{Eq2db: Gather Tagged Data}
+function gatherTaggedQuizData(currQuiz,filename,nQuestions) {
+    var hasGroupedResp=false;
+    var xmlResp="";
+    var cResponses="<results id=\""+currQuiz+"\" file=\""+filename%
++"\" n=\""+nQuestions+"\">";
+    var eqCredit;
+    for ( var i=1; i <= nQuestions; i++)
+    {
+        if (typeof RightWrong[i] == "undefined") RightWrong[i]=0;
+        if (typeof Responses[i] == "undefined") { %
+Responses[i]=""; eqCredit=0; }
+        if ( typeof ProbDist[i] == "undefined" )  ProbDist[i]=0;
+        if (typeof ProbType[i] == "undefined") ProbType[i]="na";
+        else eqCredit=ProbDist[i];
+%        eqCredit=(typeof ProbValue[i] == "number") ? 0 : %
+%( ProbValue[i][0]==0 )? ProbValue[i][2] : ProbDist[i];
+        hasGroupedResp=( (typeof ProbValue[i] == "object") &&  %
+(ProbValue[i][0]==1) );
+        cResponses += "<question n=\"" + i + "\" type=\""
+            + aPointType[i][1]+"\"";
+        cResponses += " ptype=\""+ProbType[i]+"\"";
+        switch ( aPointType[i][1] ) {
+            case "grp":
+                if ( hasGroupedResp ) {
+                    var f=this.getField("grpobj."+currQuiz+"."+i);
+                    var l=f.getArray().length;
+                    RightWrong[i].length=l+1;
+                    Responses[i].length=l+1;
+                    if (hasGroupedResp)
+                        cResponses += %
+" points=\""+ProbValue[i][2] + "\"";
+                    else
+                        cResponses += %
+" points=\""+aPointType[i][0] + "\"";
+                    cResponses += " credit=\""+eqCredit + "\"";
+                    xmlResp="";
+                    for ( var j=1; j < RightWrong[i].length; j++) {
+                        if ( typeof RightWrong[i][j] == "undefined" ) %
+RightWrong[i][j]=0;
+                        xmlResp += %
+( typeof Responses[i][j] == "undefined" ) ? %
+"<grpvalue></grpvalue>" : "<grpvalue>"+Responses[i][j]+"</grpvalue>";
+                }
+                    cResponses += %
+" correct=\"["+RightWrong[i].slice(1)+"]\">";
+                    cResponses += "<value>"+xmlResp+"</value>";
+                } else {
+                    cResponses += " points=\""+aPointType[i][0] + "\"";
+                    cResponses += " credit=\""+eqCredit + "\"";
+                    cResponses += " correct=\""+RightWrong[i]+"\">";
+                    cResponses += "<value>"+Responses[i]+"</value>";
+                }
+                break;
+            case "ms":
+                cResponses += " points=\""+aPointType[i][0] + "\"";
+                cResponses += " credit=\""+eqCredit + "\"";
+                if ( typeof RightWrong[i][2] == "undefined" ) {
+                    cResponses += " correct=\"0\">";
+                    cResponses += "<value></value>";
+                } else {
+                    var f=this.getField("mck."+currQuiz+"."+i);
+                    var l=f.getArray().length;
+                    RightWrong[i][2].length=l+1;
+                    Responses[i].length=l+1;
+                    RightWrong[i][2].shift();
+                    cResponses += %
+" correct=\""+RightWrong[i].toSource()+"\">";
+                    xmlResp="";
+                    for ( var j=1; j < RightWrong[i][2].length; j++) {
+                        if (typeof RightWrong[i][2][j] == "undefined") %
+RightWrong[i][2][j]=0;
+                        xmlResp +=
+( typeof Responses[i][j] == "undefined" ) ? %
+"<msvalue></msvalue>" : "<msvalue>"+Responses[i][j]+"</msvalue>";
+                    }
+                    cResponses += "<value>"+xmlResp+"</value>";
+                }
+                break;
+            default:
+                cResponses += " points=\""+aPointType[i][0] + "\"";
+                cResponses += " credit=\""+eqCredit + "\"";
+                cResponses += " correct=\""+RightWrong[i]+"\">";
+                cResponses += "<value>"+Responses[i]+"</value>";
+        }
+        cResponses += "</question>";
+    }
+    cResponses += "</results>";
+    return cResponses;
+}
+\end{insDLJS}
+\fi
+%</package>
+%    \end{macrocode}
+% \section{eqRecord}\label{eqrecord}
+% Save quiz results to a database. The \texttt{eqRecord} option is meant to
+% be used with the ASP code \textsf{eqRecord.asp}.
+%
+% The form the macro \cs{eqSubmit} is
+%\begin{verbatim}
+%\eqSubmit{http://..../eqRecord.asp\#FDF}
+%           {database_name}{table_name}
+%\end{verbatim}
+% The first parameter is the URL to the \textsf{eqRecord.asp} script. The second is the
+% DNS of the database. The third parameter is the name of the table into which the
+% quiz data is to be stored.
+% For example,
+%\begin{verbatim}
+%\eqSubmit{http://localhost/scripts/eqRecord.asp\#FDF}
+%   {eqQuiz}{Math101}
+%\end{verbatim}
+% As with \textsf{eqRecord}, the first parameter of the \texttt{quiz} environment is
+% the name of the quiz begin taken.
+%\begin{verbatim}
+%\begin{quiz*}{Quiz1}
+%...
+%\end{quiz*}
+%\end{verbatim}
+%    \begin{macrocode}
+%<*eqrecord>
+%    \end{macrocode}
+%    \begin{macro}{\eq@insertHiddenFields}
+% Create and add the hidden text fields for this option. The macro
+% \cs{eq@insert\-Hid\-den\-Fields} is defined in \textsf{exerquiz} as
+% empty. Now we redefine it for the purpose of inserting hidden text
+% fields.
+%    \begin{macrocode}
+\def\eq@insertHiddenFields{%
+    \ifx\basicFieldsSet\eqdb@NO
+        \addHiddenTextField{dbName}{}%
+        \addHiddenTextField{dbTable}{}%
+        \addHiddenTextField{quizName}{}%
+        \global\let\basicFieldsSet\eqdb@YES
+    \fi
+    \addHiddenTextField{\curr@quiz.numQuestions}{\thequestionno}%
+    \addHiddenTextField{\curr@quiz.numCorrect}{}%
+    \addHiddenTextField{\curr@quiz.Responses}{}%
+    \eq@addHiddenTextFields
+    \eq@clearHiddenFields
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\eq@URL}
+% The JavaScript of the `End Quiz' button has a command \cs{eq@submitURL}, which has
+% an empty definition for quizzes that are not to be submitted.  We define this
+% macro appropriately. We populate each of the hidden fields and submit.
+%    \begin{macrocode}
+\def\eq@submitURL{%
+    this.getField("dbName").value="\db@Name";\jsR\jsT\jsT
+    this.getField("dbTable").value="\db@Table";\jsR\jsT\jsT
+    this.getField("quizName").value="\curr@quiz";\jsR\jsT\jsT
+    this.getField("\curr@quiz.numCorrect").value=Score;\jsR\jsT\jsT
+    var aPointType=new Array(\aPointType);\jsR\jsT\jsT
+\ifx\eqdb@tagged\eqdb@YES
+    var cResponses=gatherTaggedQuizData("\currQuiz",%
+    this.documentFileName,\thequestionno);\jsR\jsT\jsT
+\else
+    var cResponses=Responses.toString().substr(1);\jsR\jsT\jsT
+\fi
+    this.getField("\curr@quiz.Responses").value=cResponses;\jsR\jsT\jsT
+    \eq@populateHiddenFields
+    var aSubmitFields=new Array("\curr@quiz","IdInfo",%
+        "dbName","dbTable","quizName");\jsR\jsT\jsT
+    \priorSubmitQuiz
+    this.submitForm(\eq@CGI,true,false,aSubmitFields);\jsR\jsT\jsT
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</eqrecord>
+%    \end{macrocode}
+% \section{eqEmail}\label{eqemail}
+%    \begin{macrocode}
+%<*eqemail>
+%    \end{macrocode}
+% Report results via e-mail. The \texttt{eqEmail} option is meant to
+% be used with the ASP code \textsf{eqEmail.asp}. When the user
+% submits his/her quiz, \textsf{eqEmail} builds an e-mail message
+% the body of which are the quiz results, and sends it to the
+% instructor.
+%
+% The form the macro \cs{eqSubmit} is\vskip6pt
+%\begin{verbatim}
+%   \eqSubmit{http://..../eqEmail.asp\#FDF}
+%       {instr@someedu.edu}{course}
+%\end{verbatim}
+% The first parameter is the URL to the \textsf{eqEmail.asp} script. The second is the
+% e-mail address to which the quiz results is to be sent. The third parameter is the
+% course name.
+% For example,
+%\begin{verbatim}
+%   \eqSubmit{http://localhost/scripts/eqEmail.asp\#FDF}
+%       {dpstory@uakron.edu}{Math101}
+%\end{verbatim}
+% As with \textsf{eqRecord}, the first parameter of the \texttt{quiz} environment is
+% the name of the quiz begin taken.
+%\begin{verbatim}
+%   \begin{quiz*}{Quiz1}
+%   ...
+%   \end{quiz*}
+%\end{verbatim}
+%    \begin{macro}{\eq@insertHiddenFields}
+% Create and add the hidden text fields for this option. The macro
+% \cs{eq@insert\-Hid\-den\-Fields} is defined in \textsf{exerquiz} as
+% empty. Now we redefine it for the purpose of inserting hidden text
+% fields.
+%    \begin{macrocode}
+\def\htmlSubmitType{HTML}
+\def\insertHTMLs{,"pdfFileName","rtnURL"}
+\def\eq@insertHiddenFields{%
+    \ifx\basicFieldsSet\eqdb@NO
+        \addHiddenTextField{mailTo}{}%
+        \addHiddenTextField{courseName}{}%
+        \addHiddenTextField{quizName}{}%
+%    \end{macrocode}
+% If submitting as HTML, we'll include \texttt{pdfFileName} and \texttt{rtnURL}.
+%    \begin{macrocode}
+        \ifx\eqdb@submitType\htmlSubmitType
+        \addHiddenTextField{pdfFileName}{}
+        \addHiddenTextField{rtnURL}{\thisRtnURL}\fi
+        \global\let\basicFieldsSet\eqdb@YES
+    \fi
+    \addHiddenTextField{\curr@quiz.ptScore}{}
+    \addHiddenTextField{\curr@quiz.nPointTotal}{\theeqpointvalue}
+    \addHiddenTextField{\curr@quiz.numQuestions}{\thequestionno}%
+    \addHiddenTextField{\curr@quiz.numCorrect}{}%
+    \addHiddenTextField{\curr@quiz.Responses}{}%
+    \eq@addHiddenTextFields
+    \eq@clearHiddenFields
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\eq@submitURL}
+% The JavaScript of the `End Quiz' button has a command \cs{eq@submitURL}, which has
+% an empty definition for quizzes that are not to be submitted.  We define this
+% macro appropriately. We populate each of the hidden fields and submit.
+%    \begin{macrocode}
+\def\eq@submitURL{%
+    this.getField("mailTo").value="\db@Name";\jsR\jsT\jsT
+    this.getField("courseName").value="\db@Table";\jsR\jsT\jsT
+    this.getField("quizName").value="\curr@quiz";\jsR\jsT\jsT
+    this.getField("\curr@quiz.numCorrect").value=Score;\jsR\jsT\jsT
+    this.getField("\curr@quiz.ptScore").value=ptScore;\jsR\jsT\jsT
+%    \end{macrocode}
+% When submitting as HTML, populate the field \texttt{pdfFileName}.
+%    \begin{macrocode}
+\ifx\eqdb@submitType\htmlSubmitType
+    this.getField("pdfFileName").value=%
+        this.documentFileName;\jsR\jsT\jsT
+\fi
+    var aPointType=new Array(\aPointType);\jsR\jsT\jsT
+\ifx\eqdb@tagged\eqdb@YES
+    var cResponses=gatherTaggedQuizData("\currQuiz",%
+        this.documentFileName,\thequestionno);\jsR\jsT\jsT
+\else
+    var cResponses=Responses.toString().substr(1);\jsR\jsT\jsT
+\fi
+    this.getField("\curr@quiz.Responses").value=cResponses;\jsR\jsT\jsT
+    \eq@populateHiddenFields
+    var aSubmitFields=new Array("\curr@quiz","IdInfo",%
+        "mailTo","courseName","quizName"%
+%    \end{macrocode}
+% If submitting as HTML, we include \cs{insertHTMLs} into the list
+% of fields to submit.
+%    \begin{macrocode}
+\ifx\eqdb@submitType\htmlSubmitType\insertHTMLs\fi);\jsR\jsT\jsT
+    \priorSubmitQuiz
+    this.submitForm({cURL: \eq@CGI,bEmpty: false,%
+        aFields: aSubmitFields,%
+        cSubmitAs: "\eqdb@submitType" });\jsR\jsT\jsT
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</eqemail>
+%    \end{macrocode}
+% \section{eqText}\label{eqtext}
+%    \begin{macrocode}
+%<*eqtext>
+%    \end{macrocode}
+% Record the quiz results in a text tab delimited text file. The
+% distribution provides three scripts: (1) \texttt{eqText.asp} submitting
+% as FDF to a windows server; when submitting as HTML, (2)
+% \texttt{eqText\_html.asp} (windows), and (3) \texttt{eqText\_html.ph}p
+% (linux/unix).
+%
+%
+% The form the macro \cs{eqSubmit} is\vskip6pt
+%\begin{verbatim}
+%\usepackage[eqText,tagged]{eq2db}
+%\eqSubmit{http://..../eqText.asp\#FDF}
+%       {<path to text file>}{<course name>}
+%\end{verbatim}
+% The first parameter is the URL to the \textsf{eqText.asp} script. The second is the
+% path on the server to where the text file is located. The third parameter is the
+% course name.
+% For example,
+%\begin{verbatim}
+%   \eqSubmit{http://localhost/scripts/eqText.asp\#FDF}
+%       {c:/Inetpub/DB/qResults.txt}{Math101}
+%\end{verbatim}
+% For submitting as HTML
+%\begin{verbatim}
+% \usepackage[submitAs=html,eqText,tagged]{eq2db}
+%   \eqSubmit{http://..../eqText_h.asp}         % for window servers
+%       {<path to text file>}{<course name>}
+%or
+%   \eqSubmit{http://..../eqText_h.php}         % for linux/unix servers
+%       {<path to text file>}{<course name>}
+%\end{verbatim}
+% As with \textsf{eqRecord}, the first parameter of the \texttt{quiz} environment is
+% the name of the quiz begin taken.
+%\begin{verbatim}
+%\begin{quiz*}{Quiz1}
+%...
+%\end{quiz*}
+%\end{verbatim}
+%    \begin{macro}{\eq@insertHiddenFields}
+% Create and add the hidden text fields for this option. The macro
+% \cs{eq@insert\-Hid\-den\-Fields} is defined in \textsf{exerquiz} as
+% empty. Now we redefine it for the purpose of inserting hidden text
+% fields.
+%
+% For HTML submittal, we define \DescribeMacro{\insertHTMLs}\cs{insertHTMLs}, additional fields to be
+% submitted.
+%    \begin{macrocode}
+\def\htmlSubmitType{HTML}
+\def\insertHTMLs{,"pdfFileName","rtnURL"}
+\def\eq@insertHiddenFields{%
+    \ifx\basicFieldsSet\eqdb@NO
+        \addHiddenTextField{pathToTxtFile}{}%
+        \addHiddenTextField{courseName}{}%
+        \addHiddenTextField{quizName}{}%
+%    \end{macrocode}
+% If submitting as HTML, we'll include \texttt{pdfFileName} and \texttt{rtnURL}.
+%    \begin{macrocode}
+        \ifx\eqdb@submitType\htmlSubmitType
+        \addHiddenTextField{pdfFileName}{}
+        \addHiddenTextField{rtnURL}{\thisRtnURL}\fi
+        \global\let\basicFieldsSet\eqdb@YES
+    \fi
+    \addHiddenTextField{\curr@quiz.ptScore}{}
+    \addHiddenTextField{\curr@quiz.nPointTotal}{\theeqpointvalue}
+    \addHiddenTextField{\curr@quiz.numQuestions}{\thequestionno}%
+    \addHiddenTextField{\curr@quiz.numCorrect}{}%
+    \addHiddenTextField{\curr@quiz.Responses}{}%
+    \eq@addHiddenTextFields
+    \eq@clearHiddenFields
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\eq@submitURL}
+% The JavaScript of the `End Quiz' button has a command \cs{eq@submitURL}, which has
+% an empty definition for quizzes that are not to be submitted.  We define this
+% macro appropriately. We populate each of the hidden fields and submit.
+%    \begin{macrocode}
+\def\eq@submitURL{%
+    this.getField("pathToTxtFile").value="\db@Name";\jsR\jsT\jsT
+    this.getField("courseName").value="\db@Table";\jsR\jsT\jsT
+    this.getField("quizName").value="\curr@quiz";\jsR\jsT\jsT
+    this.getField("\curr@quiz.numCorrect").value=Score;\jsR\jsT\jsT
+    this.getField("\curr@quiz.ptScore").value=ptScore;\jsR\jsT\jsT
+%    \end{macrocode}
+% When submitting as HTML, populate the field \texttt{pdfFileName}.
+%    \begin{macrocode}
+\ifx\eqdb@submitType\htmlSubmitType
+    this.getField("pdfFileName").value=%
+        this.documentFileName;\jsR\jsT\jsT
+\fi
+    var aPointType=new Array(\aPointType);\jsR\jsT\jsT
+\ifx\eqdb@tagged\eqdb@YES
+    var cResponses=gatherTaggedQuizData("\currQuiz",%
+this.documentFileName,\thequestionno);\jsR\jsT\jsT
+\else
+    var cResponses=Responses.toString().substr(1);\jsR\jsT\jsT
+\fi
+    this.getField("\curr@quiz.Responses").value=cResponses;\jsR\jsT\jsT
+    \eq@populateHiddenFields
+    var aSubmitFields=new Array("IdInfo","\curr@quiz",%
+    "pathToTxtFile","courseName","quizName"%
+%    \end{macrocode}
+% If submitting as HTML, we include \cs{insertHTMLs} into the list
+% of fields to submit.
+%    \begin{macrocode}
+\ifx\eqdb@submitType\htmlSubmitType\insertHTMLs\fi);\jsR\jsT\jsT
+    \priorSubmitQuiz
+    this.submitForm({cURL: \eq@CGI,bEmpty: true,%
+aFields: aSubmitFields,cSubmitAs: "\eqdb@submitType" });\jsR\jsT\jsT
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</eqtext>
+%    \end{macrocode}
+% \section{TAOAS}
+%  TAOAS (The AcroTeX Online Assessment System) is an online quiz system under development.
+% It is not publicly available.
+%    \begin{macrocode}
+%<*taoas>
+%    \end{macrocode}
+%    \begin{macro}{\eq@insertHiddenFields}
+% Create and add the hidden text fields for this option. The macro
+% \cs{eq@insert\-Hid\-den\-Fields} is defined in \textsf{exerquiz} as
+% empty. Now we redefine it for the purpose of inserting hidden text
+% fields.
+%    \begin{macrocode}
+\def\eq@insertHiddenFields{%
+    \ifx\basicFieldsSet\eqdb@NO
+        \addHiddenTextField{dbName}{}%
+        \addHiddenTextField{dbTable}{}%
+        \addHiddenTextField{quizName}{}%
+        \addHiddenTextField{UserValid}{false}%
+        \addHiddenTextField{SID}{}%
+        \addHiddenTextField{randomID}{}%
+        \addHiddenTextField{fileName}{\jobname}%
+        \ifeq@noquizsolutions
+            \addHiddenTextField{requestSolutions}{false}%
+        \else
+            \addHiddenTextField{requestSolutions}{true}%
+        \fi
+        \global\let\basicFieldsSet\eqdb@YES
+    \fi
+%    \end{macrocode}
+% (4/28/10) Added the field \texttt{Admin} (possible values \texttt{Yes}, \texttt{No}, or empty)
+%    \begin{macrocode}
+    \addHiddenTextField{Admin}{}%
+    \addHiddenTextField{\curr@quiz.numCorrect}{}%
+    \addHiddenTextField{\curr@quiz.numQuestions}{\thequestionno}%
+    \addHiddenTextField{\curr@quiz.ptScore}{}%
+    \addHiddenTextField{\curr@quiz.nPointTotal}{\theeqpointvalue}
+    \addHiddenTextField{\curr@quiz.Responses}{}%
+    \eq@addHiddenTextFields
+    \eq@clearHiddenFields
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\eq@submitURL}
+% The JavaScript of the `End Quiz' button has a command \cs{eq@submitURL}, which has
+% an empty definition for quizzes that are not to be submitted.  We define this
+% macro appropriately. We populate each of the hidden fields and submit.
+%    \begin{macrocode}
+\def\eq@true{true}
+\def\eq@submitURL{%
+    this.getField("dbName").value=dbName;\jsR\jsT\jsT
+    this.getField("dbTable").value="\db@Table";\jsR\jsT\jsT
+    this.getField("quizName").value="\curr@quiz";\jsR\jsT\jsT
+%    \end{macrocode}
+% (05/03/10) When \cs{correctionsOn} is \texttt{false} (defined in the taoas package),
+% the document is a survey, or some other document that does not require a score.
+% So, we put in a large (in absolute value) negative number as a signal. The \texttt{manage.asp}
+% and the \texttt{\_viewresults.asp} script files then look for a value of -1000 and replaces
+% it in the Score field with \texttt{N/A}.
+%    \begin{macrocode}
+\ifx\correctionsOn\eq@true
+    this.getField("\curr@quiz.numCorrect").value=Score;\jsR\jsT\jsT
+    this.getField("\curr@quiz.ptScore").value=ptScore;\jsR\jsT\jsT
+\else
+    this.getField("\curr@quiz.numCorrect").value=-1000;\jsR\jsT\jsT
+    this.getField("\curr@quiz.ptScore").value=-1000;\jsR\jsT\jsT
+\fi
+    var aPointType=new Array(\aPointType);\jsR\jsT\jsT
+\ifx\eqdb@tagged\eqdb@YES
+    var cResponses=gatherTaggedQuizData("\currQuiz",%
+        this.documentFileName,\thequestionno);\jsR\jsT\jsT
+\else
+    var cResponses=Responses.toString().substr(1);\jsR\jsT\jsT
+\fi
+    this.getField("\curr@quiz.Responses").value=cResponses;\jsR\jsT\jsT
+    \eq@populateHiddenFields
+    var aSubmitFields=new Array("\curr@quiz","IdInfo",%
+        "randomID","dbName","dbTable","quizName","fileName",%
+        "requestSolutions");\jsR\jsT\jsT
+    \priorSubmitQuiz
+    this.submitForm(submitURL,true,false,aSubmitFields);\jsR\jsT\jsT
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</taoas>
+%    \end{macrocode}
+\endinput

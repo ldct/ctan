@@ -1,0 +1,430 @@
+% use useacrobat option with pdftex and xetex if you have acrobat
+% use nopro if you don't have acrobat
+\documentclass{article}
+\usepackage[%
+    web={
+        pro,
+        designv,
+        tight,
+        centertitlepage,
+    },
+    aebxmp,
+]{aeb_pro}
+
+
+\DeclareDocInfo
+{
+    title=The AeB Pro Package\texorpdfstring{\\[1ex]}{: }Doc/Page Events \& Fullscreen Support,
+    author=D. P. Story,
+    university=Acro\negthinspace\TeX.Net,
+    email=dpstory@acrotex.net,
+    subject=Test file for the AeB Pro package,
+    keywords={Adobe Acrobat, JavaScript},
+    talksite=\url{http://www.acrotex.net},
+    talkdate={January 12, 2007},
+    copyrightStatus=True,
+    copyrightNotice={Copyright (C) \the\year, D. P. Story},
+    copyrightInfoURL=http://www.acrotex.net
+}
+\talkdateLabel{Published:}
+
+\newcommand{\cs}[1]{\texttt{\char`\\#1}}
+\newcommand\newtopic{\par\ifdim\lastskip>0pt\relax\vskip-\lastskip\fi
+\vskip\medskipamount\noindent}
+\newenvironment{sverbatim}
+{\par\footnotesize\verbatim}{\endverbatim}
+
+%
+% Environments for setting the will and did things
+% Advanced > Document Processing > Set Document Actions
+%
+\begin{willClose}
+console.println("willClose");
+\end{willClose}
+
+\begin{willSave}
+console.println("willSave");
+\end{willSave}
+
+\begin{didSave}
+console.println("didSave");
+\end{didSave}
+
+\begin{willPrint}
+console.println("willPrint");
+\end{willPrint}
+
+\begin{didPrint}
+console.println("didPrint");
+\end{didPrint}
+
+%
+% Set the default full screen transition behavior
+%
+\setDefaultFS
+{%
+    fullscreen,
+    cursor=delay,
+    Trans=Random,
+    loop,
+    escape
+}
+%
+% This command has been around from insDLJS for many years,
+% used for first page open actions
+%
+\OpenAction{\JS{%
+%    console.show();\r
+    console.clear();\r
+    console.println("Show the output of the page actions");
+}}
+%
+% Here, you can add an event that occurs with every page open
+% There is a command to cancel this out
+%
+\begin{everyPageOpen}
+var str = "every page open";
+console.println(str + ": page " + (this.pageNum+1));
+\end{everyPageOpen}
+%
+% Here, you can add an event that occurs with every page close
+% There is a command to cancel this out
+%
+\begin{everyPageClose}
+var str = "every page close";
+console.println(str + ": page " + (this.pageNum+1));
+\end{everyPageClose}
+%
+% To add an additional page open event to the first page, you
+% can use either the \OpenAction of insdljs, or you can use
+% this command indirectly through the addJSToPageOpen environment
+% in the preamble.
+%
+\begin{addJSToPageOpen}
+var str = "This should be the first page"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageOpen}
+
+%
+% To add an additional page close event to the first page, use
+% the addJSToPageClose environment in the preamble.
+%
+\begin{addJSToPageClose}
+var str = "This is the close action for the first page!"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageClose}
+
+\begin{document}
+
+\setPageTransitionAt{1,\atPage{test}-\atPage{exam},7}{Trans=Blend,PageDur=20,TransDur=5}
+%
+% This environment allows you to set a page open event at a particular page
+% if known. We can specify page ranges by marking the page with a \label,
+% then referencing that page with a special command \atPage, like so.
+%
+\begin{addJSToPageOpenAt}{1,\atPage{test}-\atPage{exam}}
+var str = ("Add to open page at pages between \\\\atPage{test} and \\\\atPage{exam}; Page " + (this.pageNum+1));
+console.println(str);
+\end{addJSToPageOpenAt}
+%
+% This environment allows you to set a page close event at a particular page
+% if known.
+%
+\begin{addJSToPageCloseAt}{5-8,12,15-}
+var str = "Add to close page at page " + (this.pageNum+1);
+console.println(str);
+\end{addJSToPageCloseAt}
+
+%------------------ \maketitle ---------------------------------------
+
+\maketitle
+
+\tableofcontents
+
+%------------------ Document Content ---------------------------------
+
+\section{Document Actions}
+
+In this section we outline the various commands and environments for
+creating document and page actions for a PDF document.
+
+\newtopic As you read through this section, keep the console
+window open to see the various page events reporting back to the
+console.
+
+\subsection{Document Level JavaScripts}
+
+Creating  document level JavaScript has been part of AeB for many years, use the
+\texttt{insDLJS} environment, as documented in \texttt{webeqman.pdf}.
+
+\subsection{Set Document Actions}
+
+The AeB Pro provides environments for the events willClose,
+willSave, didSave, willPrint and didPrint JavaScript events.
+Corresponding {\LaTeX} environments are created: \texttt{willClose},
+\texttt{willSave}, \texttt{didSave}, \texttt{willPrint} and
+\texttt{didPrint}. These are illustrated in the preamble of this
+document.
+
+\subsection{Open/Close Page Actions}
+
+When a page opens or closes a JavaScript occurs. Predefined JavaScript can execute
+in reaction to these events. AeB Pro provides several commands and environments.
+
+\subsubsection{Open/Close Page Actions for First Page}
+
+Because of the way AeB was originally written---\textsf{exerquiz}, actually---,
+the first page is a special case.
+
+There is a command, \cs{OpenAction}, that is part of the \texttt{insdljs} package for several years, that
+is used to introduce open page actions:
+
+\begin{sverbatim}
+\OpenAction{\JS{%
+    console.show();\r
+    console.clear();\r
+    console.println("Show the output of the page actions");
+}}
+\end{sverbatim}
+This command goes in the preamble to define action for the first page. This command is capable of defining
+non-JavaScript action, see the documentation of \texttt{insdljs} for some details.
+
+Environments, defined in AeB Pro, but uses macros from \texttt{insdljs} are
+\texttt{addJSToPageOpen} and \texttt{addJSToPageClose}.  When placed in the preamble, these
+provide JavaScript support for page open/close events of the first page. In the preamble of this document, you'll find
+
+\begin{sverbatim}
+\begin{addJSToPageOpen}
+var str = "This should be the first page"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageOpen}
+\end{sverbatim}
+and
+\begin{sverbatim}
+\begin{addJSToPageClose}
+var str = "This is the close action for the first page!"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageClose}
+\end{sverbatim}
+
+\subsubsection{Open/Close Page Actions for the other Pages}
+
+The same two environments \texttt{addJSToPageOpen} and \texttt{addJSToPageClose} can be used
+in the body of the text to generate open or close actions for the page on which they appear.
+It's a rather hit or miss proposition because the tex compiler may break the page at an unexpected location
+and the environments are processed on the page following the one you wanted them to appear on.
+
+\newtopic Just below this paragraph are \texttt{addJSToPageOpen} and \texttt{addJSToPageClose} environments.
+Will the effects defined by these environments appear on this page or the next?
+%
+% These two environments allow you to set the page open and page close actions for
+% the current page. They do not overwrite the action created by the At versions
+% of the same environment.
+%
+\begin{addJSToPageOpen}
+var str = "Local open action"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageOpen}
+
+\begin{addJSToPageClose}
+var str = "Local Close action!"
+console.println(str + ": page " + (this.pageNum+1));
+\end{addJSToPageClose}
+
+\newtopic Another approach to trying to place \texttt{addJSToPageOpen} or \texttt{addJSTo\-Page\-Close}
+on the page you want is to use the \texttt{addJSToPageOpenAt} or \texttt{addJSToPageCloseAt} environments.
+These are the same of their cousins, but are more powerful. Each of these takes an argument that specifies
+the page, pages, and/or page ranges of the open/close effects you want.  These two commands can go in the
+preamble, but I recommend putting them just after the \verb!\begin{document}! and before \cs{maketitle}, as
+illustrated in this document.
+
+The two environments take a comma-delimited list of pages and page ranges, for example, an argument might
+be \verb!{2-6,9,12,15-}!. This argument states that the open or close JavaScript listed in the environment
+should execute on pages 2 through 6, page 9, page 11, and pages 15 through the end of the document. Very cool!
+
+This is all well and good if you know exactly which pages are the
+ones you want the effects to appear. What's even more cool is that
+you can use {\LaTeX}'s cross-referencing mechanism to specify the
+pages. By placing these environments after \verb!\begin{document}!,
+the cross referencing information (the \texttt{.aux}) has been input
+and you can use \cs{atPage}, a special simplified version of
+\cs{pageref}, to reference the pages. See the verbatim listing
+below.
+
+\begin{sverbatim}
+\begin{addJSToPageOpenAt}{1,\atPage{test}-\atPage{exam}}
+var str = "Add to open page at pages between \\\\atPage{test} and \\\\atPage{exam} "
+    + (this.pageNum+1);
+console.println(str);
+\end{addJSToPageOpenAt}
+\end{sverbatim}
+In the above, we specify a range \verb!\atPage{test}-\atPage{exam}!, which when expanded
+becomes a range of \pageref*{test}-\pageref*{exam}. If the first page number is larger than
+the second number, the two numbers are switched; consequently, \verb!\atPage{exam}-\atPage{test}!
+yields the same results.
+\begin{sverbatim}
+\begin{addJSToPageCloseAt}{5-8,12,15-}
+var str = "Add to close page at page " + (this.pageNum+1);
+console.println(str);
+\end{addJSToPageCloseAt}
+\end{sverbatim}
+Notice that in the \texttt{addJSToPageOpenAt} environment above,
+page 1 was specified. This specification is ignored. You do remember
+that the first page events need to be defined in the preamble, don't
+you.
+
+\subsubsection{Every Page Open/Close Events}
+
+As an additional feature, there may be an occasion where you want to
+define an event for every page. These are handled separately from the earlier
+mentioned open/closed events so one does not overwrite the other. These environments
+are \texttt{everyPageOpen} and \texttt{everyPageClose}. They can go in the preamble, or anywhere.
+They will take effect on the page they are processed on.  Using these environments a second time
+overwrites any earlier definition. To cancel out the every page action you can use
+\cs{canceleveryPageOpen} and \cs{canceleveryPageClose}.  The environments that appear
+in the preamble are
+
+\begin{sverbatim}
+\begin{everyPageOpen}
+var str = "every page open";
+console.println(str + ": page " + (this.pageNum+1));
+\end{everyPageOpen}
+
+\begin{everyPageClose}
+var str = "every page close";
+console.println(str + ": page " + (this.pageNum+1));
+\end{everyPageClose}
+\end{sverbatim}
+
+\section{Fullscreen Control}
+
+In this section we present the controlling commands for default
+fullscreen mode and for defining page transition effects.
+
+\subsection{\texorpdfstring{\protect\cs{setDefaultFS}}{\textbackslash setDefaultFS}}
+
+Set the default fullscreen behavior of Adobe Reader/Acrobat by using \cs{setDefaultFS}
+in the preamble. This command takes a number of arguments using \texttt{xkeyval}, each key
+correspond to a JavaScript property of the fullscreen object.
+
+\newtopic In the preamble of this document, I have placed \cs{setDefaultFS} specifying
+that the document should go into fullscreen mode with a random transition for its default
+transition effect.
+
+\begin{sverbatim}
+\setDefaultFS
+{%
+    fullscreen,
+    cursor=delay,
+    Trans=Random,
+    loop,
+    escape
+}
+\end{sverbatim}
+See the AeB Pro documentation for full documentation on these properties.
+
+\subsection{Page Transition Effects}
+
+There are two commands \cs{setPageTransition} and
+\cs{setPageTransitionAt}. The former sets the transition effects for
+the page on which it is processed. It suffers from the same malady
+as do \texttt{addJSToPageOpen} and \texttt{addJSToPageClose}, you
+have to hit the page you want. The latter command is the same
+remedy, as illustrated below.
+
+\begin{sverbatim}
+\setPageTransitionAt{1,\atPage{test}-\atPage{exam},7}{Trans=Blend,PageDur=20,TransDur=5}
+\end{sverbatim}
+See the AeB Pro documentation for full documentation on these properties.
+
+\newpage
+\parindent0pt
+
+\section{Test}\label{test}
+
+Hi world! Page \thepage
+
+\newpage
+
+Again, hi! Page \thepage
+
+\newpage
+
+
+\begin{addJSToPageOpen}
+app.beep(0);
+\end{addJSToPageOpen}
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+
+\newpage
+
+
+Canceling every open page
+
+\canceleveryPageOpen
+
+\newpage
+\section{Exam}\label{exam}
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+\begin{everyPageOpen}
+var z = "every page open, reset";
+console.println(z + ": page " + (this.pageNum+1));
+\end{everyPageOpen}
+
+Introducing the AeB Pro Family!
+
+\newtopic Resetting every page open this page
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\newpage
+
+Introducing the AeB Pro Family!
+
+\end{document}

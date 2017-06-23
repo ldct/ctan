@@ -1,0 +1,174 @@
+#!/bin/sh
+# $Id: install-tds,v 3.16 2011/03/14 20:14:00 krisrose Exp $
+#
+# sh(1) installation of Xy-pic into a TeX Directory Structure system.
+# Copyright (c) 1997  Kristoffer H. Rose  <krisrose@tug.org>
+#
+# This file is part of the Xy-pic macro package.
+# Copyright (c) 1991-2011  Kristoffer H. Rose  <krisrose@tug.org>
+# See the README and INSTALL files for further information.
+#
+# The Xy-pic package is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# The Xy-pic package is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this package; if not, see http://www.gnu.org/licenses/.
+
+# check that we are in the right place (and get version :)
+
+# greet
+echo ''
+echo ' Welcome to the Xy-pic TDS-compliant installation script!'
+echo ' Copyright (c) 1997-1998 by krisrose@tug.org'
+echo ' Xy-pic is free software: see the User's Guide for details.'
+echo ''
+echo ' The author has seriously tried to ensure the portability of'
+echo ' this script among all un*x platforms, however, if you experience'
+echo ' problems then don't hesitate to contact me.'
+echo ''
+echo ' See the file INSTALL for details about what this script does.'
+
+# record the argument as TEXMF
+: ${TEXMF:=$1}
+
+# if no TEXMF specified try to figure it out
+: ${TEXMF:=`kpsewhich --expand-var='$TEXMFMAIN' 2>/dev/null`}
+: ${TEXMF:=`kpsexpand '$TEXMFMAIN' 2>/dev/null`}
+: ${TEXMF:=`kpsewhich --expand-var='$TEXMF' 2>/dev/null`}
+: ${TEXMF:=`kpsexpand '$TEXMF' 2>/dev/null`}
+
+if [ -d "$TEXMF" ]
+then
+    echo ''
+    echo "TEXMF directory $TEXMF found."
+else
+    echo ''
+    echo 'ERROR: I could not find the TEXMF directory (tried '"$TEXMF"')!' >&2
+    echo 'Usage: ./support/install-tds [TEXMF]' >&2
+    echo 'Xy-pic installation aborted.'
+    exit 2
+fi
+
+# get confirmation
+echo ''
+echo ' This script will install Xy-pic under the indicated TEXMF tree.'
+echo ' We assume that it is the root of a standard TeX Directory Structure.'
+echo ''
+echo ' Also we asume that the commands find, grep, mkdir, and cp, conform'
+echo ' to their POSIX specification and can be found in the standard path.'
+echo ''
+echo 'Type <enter> to continue (anything else to stop - this is your last chance):'
+read reply
+if [ -z "$reply" ];
+then
+    echo ''
+    echo 'Thanks: proceeding with the installation.'
+else
+    echo 'Xy-pic installation aborted.'
+    exit 1
+fi
+
+# warn user about obsolete files
+echo ''
+echo 'Checking for obsolete files.'
+if [ -d "$TEXMF/dvips/xypic" ]
+then
+
+    files=`find "$TEXMF/dvips" -name "xy*.map" -print 2>/dev/null`
+    if [ -n "$files" ]
+    then
+	echo 'WARNING: xy*.map files exist:'
+	echo $files
+    fi
+
+    files=`find "$TEXMF/dvips" -name psfonts.map -print 2>/dev/null`
+    files=`grep -svl '^xy' $files /dev/null`
+    if [ -n "$files" ]
+    then
+	echo 'WARNING: psfonts.map xy*-font mappings exist in:'
+	echo "$files"
+    fi
+
+    files=`find "$TEXMF/fonts/type1" -name "xy*.pf?" -print 2>/dev/null \
+	   | grep -v "$TEXMF/fonts/type1/public/xypic/xy.*[.]pfb"`
+    if [ -n "$files" ]
+    then
+	echo 'WARNING: xy*.pfa or xy*.pfb files exist:'
+	echo "$files"
+    fi
+
+fi
+
+# function for installing simple files in a directory
+installd () {
+    text=$1; shift
+    dir=`eval 'echo ${'$#'}'`	# extract last parameter
+    echo "Installing $text in $dir."
+    if mkdir -p "$dir"; then cp -f "$@"
+    else
+	echo ' WARNING: could not make directory - files not installed.'
+    fi
+}
+
+# do the actual installation
+echo ''
+echo 'Installing Xy-pic...'
+
+installd "1. administrivia" \
+    README CATALOG TRAILER INSTALL MANIFEST VERSIONS *COPYING \
+    Xy-pic.html Xy-logo.png \
+    "$TEXMF/doc/generic/xypic"
+installd "2. macros"             texinputs/*    "$TEXMF/tex/generic/xypic"
+installd "3. font metrics"	 texfonts/*.tfm "$TEXMF/fonts/tfm/public/xypic"
+installd "4. font sources"	 mfinputs/*.mf  "$TEXMF/fonts/source/public/xypic"
+installd "5. ps type1 fonts"     type1/*.pfb    "$TEXMF/fonts/type1/public/xypic"
+installd "6. ps pfm fonts"	 pfm/*.pfm      "$TEXMF/fonts/pfm/public/xypic"
+installd "7. afm metrics"        afm/*.afm      "$TEXMF/fonts/afm/public/xypic"
+installd "8. ps headers" 	 ps/*           "$TEXMF/dvips/xypic"
+installd "9. ps font maps" 	 map/*          "$TEXMF/fonts/map/dvips/xypic"
+installd "10. ps font encodings" enc/*          "$TEXMF/fonts/enc/dvips/xypic"
+installd "11. documentation"     doc/xyguide.pdf doc/xyrefer.pdf "$TEXMF/doc/generic/xypic"
+
+# done
+echo "Xy-pic installation done."
+exit
+
+# $Log: install-tds,v $
+# Revision 3.16  2011/03/14 20:14:00  krisrose
+# Preparing for release 3.8.6.
+#
+# Revision 3.15  2010/07/26 11:21:02  krisrose
+# 3.8.3 version oopses
+#
+# Revision 3.14  2010/07/06 22:43:56  krisrose
+# Release 3.8.3.
+#
+# Revision 3.13  2010/06/10 18:45:49  krisrose
+# Reference to GPL by URL.
+#
+# Revision 3.12  2010/06/08 07:28:43  krisrose
+# Identify .map file.
+#
+# Revision 3.11  2010/06/07 04:16:53  krisrose
+# Fix forgotten enc files.
+#
+# Revision 3.10  2010/05/09 22:11:05  krisrose
+# Loose /usr/bin prefixes.
+#
+# Revision 3.9  2010/04/22 14:52:09  krisrose
+# Documentation up to date. Install PDF encoding files and XYLU metric files.
+#
+# Revision 3.8  2010/04/16 06:06:51  krisrose
+# Preparing for a new release...
+#
+# Revision 3.7  1999/02/16 15:12:50  krisrose
+# Interim release (Y&Y fonts now free).
+#
+# New with release 3.5...changed significantly for 3.6.

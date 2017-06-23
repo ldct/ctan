@@ -1,0 +1,123 @@
+%!TEX TS-program = lualatex
+% !BIB TS-program = biber
+
+\documentclass[a4paper]{scrartcl}
+\RequirePackage{luatex85}
+\usepackage{fontspec}
+\setmainfont[Extension=.otf,UprightFont= CharterITCStd-Regular,
+Path = /Users/simi/FontExplorerX/C/Charter ITC Std/,
+BoldFont = *-Bold,
+ItalicFont = *-Italic,
+BoldItalicFont = *-BoldItalic,
+             Ligatures = TeX] 
+            {Charter ITC Std}
+\setsansfont[Extension=.ttf,UprightFont=nimbus-sans-l_regular,BoldFont=nimbus-sans-l_bold,Path=/Users/simi/FontExplorerX/N/Nimbus Sans L/]{Nimbus Sans L}	
+\setmonofont[]{Courier New}
+\newfontfamily\cyrillicfont[Extension=.ttf,
+	UprightFont= LinLibertine_Re-4.4.1,
+	Path=/Users/simi/FontExplorerX/L/Linux Libertine/]
+	{Linux Libertine}
+%\usepackage[base]{babel}
+\usepackage{polyglossia}
+\setdefaultlanguage[latesthyphen,spelling=new,babelshorthands=true]{german}
+\setotherlanguage{russian}
+\usepackage{graphicx}
+\usepackage{btxdockit}
+\usepackage[german=guillemets]{csquotes}
+\usepackage[citestyle=fiwi,bibstyle=fiwi,dashed,backend=biber,xindy=true,titleindex=subitem]{biblatex}
+\newbibmacro*{altscript:cyrillic-font}[1]{%
+{\cyrillicfont{\textsc{#1}}}}
+\ExecuteBibliographyOptions{bibencoding=utf8}
+\ExecuteBibliographyOptions{backref=false}
+
+%Index
+\RequirePackage{filecontents}
+
+\begin{filecontents*}{dissff.xdy}
+(define-location-class "arabic-page-numbers" ("arabic-numbers") :min-range-length 1)
+(markup-range :class "arabic-page-numbers" :close "\,f." :length 1 :ignore-end)
+(markup-range :class "arabic-page-numbers" :close "\,ff." :length 2 :ignore-end)
+(markup-range :sep "--")
+
+(markup-index :open  "\begin{theindex}
+		\RaggedRight
+			~n"
+	      :close "~n~n\end{theindex}~n"
+	      :tree)
+
+(markup-letter-group :open-head "~n\letterGroup{"
+		     :close-head "}{}~n")
+		     
+(markup-letter-group :open-head "~n\letterGroup{1--9}{"
+		     :close-head "}~n"
+		     :group "default")
+\end{filecontents*}
+\begin{filecontents*}{diss.xdy}
+(merge-rule "altscript\:(.*)-font(.*)" "\2" :eregexp :again)
+
+(merge-rule "\\film\{(.*)" "\1~b2" :eregexp :again)
+(merge-rule "\\film  \{(.*)" "\1~b2" :eregexp :again)
+(merge-rule "\\film \{(.*)" "\1~b2" :eregexp :again)
+
+(merge-rule "\\textsc\{(.*)" "\1~b2" :eregexp :again)
+(merge-rule "\\textsc\  \{(.*)" "\1~b2" :eregexp :again)
+
+(merge-rule "\\emph  \{(.*)" "\1~b1" :eregexp :again)
+(merge-rule "\\emph\{(.*)" "\1~b1" :eregexp :again)
+(merge-rule "\\emph  \{(.*)" "\1~b1" :eregexp :again)
+
+(merge-rule "The (.*)" "\1~,The" :again)
+(merge-rule "La (.*)" "\1~,La" :again)
+(merge-rule "Le (.*)" "\1~,Le" :again)
+(merge-rule "Die (.*)" "\1~,Die" :again)
+(merge-rule "Der (.*)" "\1~,Der" :again)
+(merge-rule "Das (.*)" "\1~,Das" :again)
+(merge-rule "von (.*)" "\1~,von" :again)
+(merge-rule "Un (.*)" "\1~,Un" :again)
+(merge-rule "A (.*)" "\1~,A" :again)
+
+(merge-rule "\\textcyr  \{(.*)\}/(.*)" "\2" :again)
+(merge-rule "\\textcyr  \{(.*)\}\\addslash (.*)" "\2" :again)
+(merge-rule "\\textcyr\{(.*)\}\\addslash (.*)" "\2" :again)
+(merge-rule "\\textcyr\{(.*)\}\}/(.*)" "\2" :again)
+(sort-rule "Ž" "z")
+\end{filecontents*}
+\usepackage{imakeidx}
+%\def\xindyopt{-M diss -M texindy -M dissff -L german-din}
+\def\xindyopt{-C utf8 -M diss -M texindy -M dissff}
+
+\makeindex[program=truexindy,options=\xindyopt]
+\indexsetup{firstpagestyle=empty,%
+headers={Index}{Index}}   
+\newcommand\letterGroup[2]{%
+    \par
+    \textbf{#1}%
+    \par\nopagebreak
+    }
+
+\ExecuteBibliographyOptions{bibencoding=utf8}
+\addbibresource{examples.bib} 
+\fullcitefilm
+
+
+\begin{document}
+\title{biblatex-fiwi}\subtitle{Beispiele für den Einsatz von xindy, titleindex und alternatetitle}\date{}\maketitle
+\noindent Dieses Dokument zeigt die Darstellungsweise von \sty{biblatex-fiwi} mit den Optionen \opt{xindy} und \opt{titleindex=subitem} sowie dem Feld \bibfield{alternatetitle}.\\ \\
+
+\noindent Zuerst zitieren wir ein paar Filme: \citefilm{Haller.D:1965}, \citefilm{Liebeneiner.W:1952}, \citefilm{Bradley.D:1960}, \citefilm{Coppola.F:1972a}, \citefilm{Kaufman.P:1978}, \citefilm{Siegel.D:1956} und \citefilm{Menzies.W:1953}.
+
+Dann zitieren wir einen Filmtitel mit alternativem russischen Titel: \citefilm{Protazanov.Y:1924}.
+
+Man beachte, dass bei wiederholten Zitaten nur der Filmtitel ausgegeben wird: \citefilm{Haller.D:1965}, \citefilm{Liebeneiner.W:1952}. Bei Filmen mit identischem Titel wird aber weiterhin das Jahr ausgegeben: \citefilm{Kaufman.P:1978}, \citefilm{Siegel.D:1956}.
+
+Dann folgen verschiedene Fernsehserien- und sendungen: \citefilm{Ball.A:2003a}, \citeepisode{Reardon.J:1994a}, \citefilm{Newton:2012a}, \citefilm{Wuergel.H:2012d} und \citefilm{Wuergel.H:2012b}.
+
+Dann einen Haufen Texte: \textcite{sklovskij.v:1969a} \textcite{Spiegel.S:2010c}, \textcite{Muller.A:2010a}, \textcite{Wells.H:1908}, \textcite{Spiegel.S:2007b}, \textcite{Lukian.1981}, \textcite{Kepler.J:1993}, \citetitle{Coleridge:1983a}, \textcite{vonMatt.P:2002}, \textcite{Keitz.U:2004a}, \textcite{Wells.HG:1980}, \textcite{Ackerman.Strickland:1981}, \textcite{Anderson.P:1971a}, \textcite{Gaudreault.A:1993}, \textcite{Poe.E:1982c}, \textcite{Poe.E:1999a}, \textcite{Parrinder.P:1980}, \textcite{Wells.H:1980*2}, \textcite{James.H:2004a}, \textcite{James.H:2007a}, \textcite{Hedeler.W:2005a}, \textcite{Ballhausen.T:2009a}, \textcite{Zymner.R:2003a}, \textcite{Zymner.R:2011a}, \textcite{Nelmes.J:2011b}, \textcite{Kuhn.A:1990*2,Blish.J:1973a,Dureau.Y:2005a}, \textcite{Todorov.T:1992}, \textcite{Bordwell.D:2004a} und \textcite{Kirchner.A:2008a}.
+
+\defbibheading{film}{\addsec{Filmographie}}
+
+\printbibliography[nottype=movie]
+\newrefcontext[sorting=title]
+\printbibliography[type=movie,heading=film]
+\printindex
+\end{document}

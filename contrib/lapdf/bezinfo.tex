@@ -1,0 +1,433 @@
+\documentclass[titlepage,a4paper,11pt]{report}
+\usepackage{shortvrb}
+\usepackage{array}
+\usepackage[color]{lapdf}
+
+\textheight24.92cm
+\textwidth15.92cm
+\oddsidemargin0cm
+\evensidemargin0cm
+\topmargin-0.3cm
+\headheight0cm
+\topskip0cm
+\headsep0cm
+\unitlength1cm
+
+\MakeShortVerb{\|}
+
+\def\it{\textit}
+\def\tt{\texttt}
+\def\sf{\textsf}
+\def\bf{\textbf}
+\def\em{\textit}
+\def\mr{\mathrm}
+\def\mb{\mathbf}
+\def\fr{\frac}
+\def\qq{\qquad}
+
+\def\syn{\item[Syntax]}
+\def\fun{\item[Function]}
+\def\exa{\item[Example]}
+\def\see{\item[See Also]}
+
+% -------------------------------------------
+\title{
+ \bf{\Huge Bezier Curves} \\ \vspace{0.6cm}
+ \bf{An Introduction}}
+\author{ \\
+ Detlef Reimers\\
+ detlefreimers@gmx.de\\
+ http://detlefreimers.de}
+\date{\today}
+
+% -------------------------------------------------------------------------
+\begin{document}
+
+\parindent0cm
+\maketitle
+
+% -------------------------------------------------------------------------
+\chapter{Bezier Curve Basics}
+\section{Linear Interpolation}
+This section will give you a basic introduction to bezier curves. We begin
+with the simplest curve form, a straight line. We can express any point
+$\mb{x}$ on this straight line by the two given points and the parameter $t$:
+\begin{equation}
+  \mb{x}=\mb{x}(t)=(t-1)\mb{a}+t\mb{b}.
+\end{equation}
+For $t=0$ the straight line passes through $\mb{a}$, and for $t=1$
+it passes through $\mb{b}$. For $0\le t\le 1$ the point $\mb{x}$
+is between $\mb{a}$ and $\mb{b}$, while for all other values of $t$
+it is outside (see Figure 1).
+\begin{center}
+\begin{lapdf}(6,3.6)(0,-0.3)
+  \Dash(0)
+  \Red
+  \Line(0,0)(6,3) \Stroke
+  \Point(1)(1,0.5)
+  \Point(0)(2.5,1.25)
+  \Point(1)(5,2.5)
+  \Text(1,0.7,bc){$\mb{a}$}
+  \Text(2.5,1.45,bc){$\mb{x}$}
+  \Text(5,2.7,bc){$\mb{b}$}
+  \Text(1.8,0.5,bc){$t$}
+  \Text(2.5,0.7,bc){:}
+  \Text(4.1,1.5,bc){$1-t$}
+\end{lapdf}
+
+\it{\bf{Figure 1}: Line interpolation on a straight line}
+\end{center}
+The point $\mb{x}$ divides the straight line segment between $\mb{a}$
+and $\mb{b}$ in the ratio $t:1-t$ and any point on the straight line can be
+calculated by changing this parameter. If t lies between $\mb{a}$ and
+$\mb{b}$, then $t\in [0,1]$. We can remove this restriction for $t$, if
+we define $t=(u-a)/(b-a)$ with $u\in [a,b]$, we get:
+\begin{equation}
+  \mb{x}=\mb{x}(t)=\fr{b-u}{b-a}\mb{a}+\fr{u-a}{b-a}\mb{b}.
+\end{equation}
+For $u=a$ the point is $\mb{x}=\mb{a}$ and for $u=b$ it is $\mb{x}=\mb{b}$
+accordingly. Notice, that the value of the ratio $t:1-t$ did not change
+after this reparametrisation.
+\begin{equation}
+  ratio(\mb{a,x,b}):=\fr{t}{1-t}=\fr{u-a}{b-u}.
+\end{equation}
+One of the most fundamental properties of the linear interpolation is its
+\it{affine invariance}. This means, if you apply any affine map like
+translation, scaling, rotation, shearing or parallel projection to the
+points and then calculate $\mb{x}$, the result will the same as if you first
+calculated the point and then applied the affine map to the three points.
+
+It should also be mentioned, that from a numerical point of view the linear
+interpolation is a stable mathematical operation. This means that small changes
+in the supplied values never lead to sudden great changes in the result. The well
+known Horner's schema for instance, which can be used to evaluate polynomials,
+is a bad example in this area.
+
+\section{Quadratic Bezier Curves}
+We now want to use the results from the linear case to develop the
+most elementary nonlinear curve form, the \it{parabola}. The main idea
+is very simple: we use repeated linear interpolations to compute a point
+on a parabola (a quadratic curve). Let $\mb{p}_0,\mb{p}_1,\mb{p}_2$ be
+three given points and let $t\in \mb{\Re}$. Now we build:
+\begin{eqnarray*}
+  \mb{p}_0^1(t) & = & (1-t)\mb{p}_0+t\mb{p}_1 \\
+  \mb{p}_1^1(t) & = & (1-t)\mb{p}_1+t\mb{p}_2 \\
+  \mb{p}_0^2(t) & = & (1-t)\mb{p}_0^1(t)+t\mb{p}_1^1(t).
+\end{eqnarray*}
+Inserting the first two equations into the third one, we get:
+\begin{eqnarray}
+  \mb{p}_0^2(t) & = & (1-t)^2\mb{p}_0+2(1-t)t\mb{p}_1+t^2\mb{p}_2.
+\end{eqnarray}
+This formula represents a quadratic expression in $t$. We use the
+superscript here to denote the curve degree. So, we can say that
+$\mb{p}_0^2$ traces out a parabolic curve, if $t$ varies from $-\infty$
+to $+\infty$. The first three expressions clearly show that we only used
+repeated linear interpolation to compute a curve point and we can state,
+that this curve construction is \it{affine invariant}. Look at Figure 2
+for the geometric construction of the curve point $\mb{p}_0^2$ for $t=1/3$.
+\begin{center}
+\begin{lapdf}(10,7.6)(0,0.2)
+  \Setwidth(0.01)
+  \Black
+  \Polygon(1,2)(7,7)(9,1) \Stroke
+  \Dash(1)
+  \Line(3,3.667)(7.667,5) \Stroke
+  \Dash(0)
+  \Setwidth(0.02)
+  \Red
+  \Curve(64)(1,2)(7,7)(9,1) \Stroke
+  \Point(1)(1,2)
+  \Point(1)(7,7)
+  \Point(1)(9,1)
+  \Point(1)(3,3.667)
+  \Point(1)(7.667,5)
+  \Point(0)(4.556,4.111)
+  \Text(1,1.6,bc){$\mb{p}_0$}
+  \Text(7,7.2,bc){$\mb{p}_1$}
+  \Text(9,0.6,bc){$\mb{p}_2$}
+  \Text(2.7,3.7,bc){$\mb{p}_0^1$}
+  \Text(8,4.9,bc){$\mb{p}_1^1$}
+  \Text(4.556,3.62,bc){$\mb{p}_0^2$}
+\end{lapdf}
+
+\it{\bf{Figure 2}: Repeated Line interpolation on a parabola}
+\end{center}
+For $t\in [0,1]$ the curve lies in the triangle formed by
+$\mb{p}_0,\mb{p}_1,\mb{p}_2$. This is called the \it{convex hull property}.
+As special points we have $\mb{p}^2(0)=\mb{p}_0$ and $\mb{p}^2(1)=\mb{p}_2$.
+If the point $\mb{p}_1$ only lies on the curve, it must be a straight line.
+The construction also shows the following property:
+\begin{equation}
+  ratio(\mb{p}_0,\mb{p}_0^1,\mb{p}_1)=ratio(\mb{p}_1,\mb{p}_1^1,\mb{p}_2)
+  =ratio(\mb{p}_0^1,\mb{p}_0^2,\mb{p}_1^1)=\fr{t}{1-t}.
+\end{equation}
+All ratios are equal, this proves the affine invariance of the curve
+construction. If you look at the generated curve, you see that for $t=0$
+the curve is tangent to the line $\mb{p}_0\mb{p}_1$ and for $t=1$ it is
+tangent to the line $\mb{p}_1\mb{p}_2$. We come back to this fact later.
+
+The geometric construction is based on the principle of repeated linear
+interpolation and the curve point is obtained by the last interpolation.
+This principle is the underlying concept for the construction of all
+\it{bezier curves} of any degree $n$. If we want to construct an $n$
+degree curve, we need $n+1$ \it{control points}. The number of linear
+interpolations, needed to compute a point on a curve of degree $n$, is:
+\begin{equation}
+  N=\fr{n(n+1)}{2}
+\end{equation}
+
+\section{Cubic Bezier Curves}
+Parabolas cannot form real space curves, because the three control points
+always build a plane. This leads us to the next class of curves, the cubic
+curves.
+
+Here we have four control points $\mb{p}_0,\mb{p}_1,\mb{p}_2,,\mb{p}_3$
+and let $t\in \mb{\Re}$. We compute a curve point with the following
+construction:
+\begin{eqnarray*}
+  \mb{p}_0^1(t) & = & (1-t)\mb{p}_0+t\mb{p}_1 \\
+  \mb{p}_1^1(t) & = & (1-t)\mb{p}_1+t\mb{p}_2 \\
+  \mb{p}_2^1(t) & = & (1-t)\mb{p}_2+t\mb{p}_3 \\
+  \mb{p}_0^2(t) & = & (1-t)\mb{p}_0^1(t)+t\mb{p}_1^1(t) \\
+  \mb{p}_1^2(t) & = & (1-t)\mb{p}_1^1(t)+t\mb{p}_2^1(t) \\
+  \mb{p}_0^3(t) & = & (1-t)\mb{p}_0^2(t)+t\mb{p}_1^2(t).
+\end{eqnarray*}
+Inserting the first three equations into the next two, we obtain:
+\begin{eqnarray*}
+  \mb{p}_0^2(t) & = & (1-t)^2\mb{p}_0+2(1-t)t\mb{p}_1+t^2\mb{p}_2 \\
+  \mb{p}_1^2(t) & = & (1-t)^2\mb{p}_1+2(1-t)t\mb{p}_2+t^2\mb{p}_3.
+\end{eqnarray*}
+Again, we insert these two equations into the last one, and get this:
+\begin{eqnarray*}
+  \mb{p}_0^3(t) & = & (1-t)^3\mb{p}_0+2(1-t)^2t\mb{p}_1+(1-t)t^2\mb{p}_2
+  +(1-t)^2t\mb{p}_1+2(1-t)t^2\mb{p}_2+t^3\mb{p}_3.
+\end{eqnarray*}
+After some simplifications, we obtain this result:
+\begin{eqnarray}
+  \mb{p}_0^3(t)=(1-t)^3\mb{p}_0+3(1-t)^2t\mb{p}_1+3(1-t)t^2\mb{p}_2
+  +t^3\mb{p}_3.
+\end{eqnarray}
+Now, $\mb{p}_0^3$ is our point on the curve at parameter value $t$ and
+we see that the construction is principally the same as in the quadratic
+case. In Figure 3 you see the geometric construction for $t=1/2$:
+\begin{center}
+\begin{lapdf}(10,7.4)(0,0.3)
+  \Setwidth(0.01)
+  \Black
+  \Polygon(1,2)(4,7)(8,6)(9,1) \Stroke
+  \Dash(1)
+  \Polygon(2.5,4.5)(6,6.5)(8.5,3.5) \Stroke
+  \Line(4.25,5.5)(7.25,5) \Stroke
+  \Dash(0)
+  \Setwidth(0.02)
+  \Red
+  \Curve(64)(1,2)(4,7)(8,6)(9,1) \Stroke
+  \Point(1)(1,2)
+  \Point(1)(4,7)
+  \Point(1)(8,6)
+  \Point(1)(9,1)
+  \Point(1)(2.5,4.5)
+  \Point(1)(6,6.5)
+  \Point(1)(8.5,3.5)
+  \Point(1)(4.25,5.5)
+  \Point(1)(7.25,5)
+  \Point(0)(5.75,5.25)
+  \Text(1,1.6,bc){$\mb{p}_0$}
+  \Text(4,7.2,bc){$\mb{p}_1$}
+  \Text(8,6.2,bc){$\mb{p}_2$}
+  \Text(9,0.6,bc){$\mb{p}_3$}
+  \Text(2.2,4.5,bc){$\mb{p}_0^1$}
+  \Text(6,6.7,bc){$\mb{p}_1^1$}
+  \Text(8.8,3.5,bc){$\mb{p}_2^1$}
+  \Text(4.0,5.6,bc){$\mb{p}_0^2$}
+  \Text(7.5,5.1,bc){$\mb{p}_1^2$}
+  \Text(5.75,4.7,bc){$\mb{p}_0^3$}
+\end{lapdf}
+
+\it{\bf{Figure 3}: Repeated Line interpolation on a cubic}
+\end{center}
+From equation (7) we see, that this is a cubic expression in $t$, so
+the obtained curve is a cubic curve. This is the first curve form that
+can build space curves, because four control points can live in space
+and not only in a plane.
+
+This curve is also affine invariant and we need 6 linear interpolations,
+to compute a point $\mb{p}_0^3$ on the curve. If we look at the curve
+form, we see that for $t=0$ the curve is tangent to the line
+$\mb{p}_0\mb{p}_1$ and for $t=1$ it is tangent to the line
+$\mb{p}_1\mb{p}_2$. We already mentioned this fact for the parabola.
+Cubic curve are always inside the convex hull of the four control points.
+
+Parametric cubic curves have much more form variations than parabolas,
+they can have inflection points, nodes (points of self intersection)
+or even a cusp (point, in which the curve has two tangents). Therefore
+these cubic curves are used as the major curve forms in Postscript, PDF
+or in vector drawing and CAD programs.
+
+\section{Rational Quadratic Bezier Curves}
+As last curve form I want to introduce rational quadratic bezier curves.
+They are very important, because they can exactly produce conic curves like
+parabolas, hyperbolas, ellipses and circles.
+
+These curves are a generalisation of their so called integral counterparts,
+because they include them but they have even more form variations than
+the integral bezier curves.
+
+Generally spoken, rational curves lie in another space as integral curves.
+If you draw a circle on a piece of paper and rotate the paper in front of
+your eyes, you'll see an ellipse. It's a so called projection of the circle.
+If you repeat this experiment with a parabola, you might see a hyperbola.
+If we look at this subject backwards, we can state that every rational
+quadratic bezier curve in 3D-space can be seen as a projection of an
+integral quadratic bezier curve in the plane. This is fundamental for the
+understanding of rational bezier curves.
+
+We can deal with rational curves just the way we did with integral curves,
+but we have to put them first in a so called homogeneous space. This has
+one more coordinate, the weight of a point. In the rational case, every
+bezier point has an $x$-value, an $y$-value and a weight $w$. In normal
+space, each point of a bezier curve has the weight $w=1$. This weight can
+be interpreted as the $z$-coordinate of a point.
+
+Here is the mathematical description of a rational quadratic bezier curve:
+\begin{eqnarray}
+  \mb{p}(t) & = & \fr{(1-t)^2w_0\mb{p}_0+2(1-t)tw_1\mb{p}_1+t^2w_2\mb{p}_2}
+     {(1-t)^2w_0+2(1-t)tw_1+t^2w_2}.
+\end{eqnarray}
+As you can see, every point is associated with it's own weight. This is the
+general form of a rational quadratic bezier curve. With some more involved
+math it can be translated into a simpler form, which is called the
+\it{standard form} and it looks like this:
+\begin{eqnarray}
+  \mb{p}(t) & = & \fr{(1-t)^2\mb{p}_0+2(1-t)tw\mb{p}_1+t^2\mb{p}_2}
+     {(1-t)^2+2(1-t)tw+t^2}.
+\end{eqnarray}
+The outer weights $w_0$ and $w_2$ are gone (their value is 1) and the central inner weight is transformed to $w$. The term \it{rational} simply reflects the fact, that every rational bezier curve is build from a rational expression, which is much more complicated then the expression for integral curves.
+
+But now comes the magic of homogeneous coordinates. If we do the following
+transformation at the very beginning of our curve calculation:
+\begin{eqnarray}
+  x \rightarrow x \cdot w & y \rightarrow y \cdot w & z \rightarrow w,
+\end{eqnarray}
+we can compute the curve points without any fractional math in the same way
+as we did in the integral case. But before we draw the point, we have to
+transform it back to the so called affine space (here: our normal 2D-space)
+with the following caculations:
+\begin{eqnarray}
+  x \rightarrow x / w & y \rightarrow y / w & z \rightarrow 1,
+\end{eqnarray}
+I'm not going to explain the mathematical background, but I want to mention
+that this is the reason, why homogeneous coordinates are used in so many
+advanced graphic algorithms. If we go back to our paper example, we can say
+that changing from affine space to homogeneous space is like the projective
+view of the original shape and changing it back gives us the original. In the style file you can look up the |Rcurve| macro to see how this is
+implemented in \TeX. \it{Figure 4} shows several conic curves, which all share the same bezier points, only the inner weight $w$ changes.
+\begin{center}
+\begin{lapdf}(11,9.5)(-5.5,-3.3)
+  \Setwidth(0.01)
+  \Black
+  \Polygon(-5,0.5)(2,6)(5,-0.5) \Stroke
+  \Dash(1)
+  \Line(-1,-3)(2,6) \Stroke
+  \Dash(0)
+  \Setwidth(0.02)
+  \Red
+  \Rcurve(64)(-5,0.5,1)(2,6,3)(5,-0.5,1) \Stroke
+  \Green
+  \Rcurve(64)(-5,0.5,1)(2,6,1)(5,-0.5,1) \Stroke
+  \Blue
+  \Rcurve(64)(-5,0.5,3)(2,6,1)(5,-0.5,3) \Stroke
+  \Cyan
+  \Rcurve(64)(-5,0.5,3)(2,6,0)(5,-0.5,1) \Stroke
+  \Magenta
+  \Rcurve(96)(-5,0.5,3)(2,6,-1)(5,-0.5,3) \Stroke
+  \Point(1)(-5,0.5)
+  \Point(1)(2,6)
+  \Point(1)(5,-0.5)
+  \Point(1)(1.5,4.5)
+  \Point(1)(1,3)
+  \Point(1)(0.5,1.5)
+  \Point(1)(0,0)
+  \Point(1)(-1,-3)
+  \Text(-5.1,0.55,br){$P_0$}
+  \Text(2,6.2,bc){$P_1$}
+  \Text(5.1,-0.5,bl){$P_2$}
+  \Text(-0.9,-3,bl){$-1/3$}
+  \Text(0.15,0.05,bl){$w=0$}
+  \Text(0.65,1.5,bl){$1/3$}
+  \Text(1.15,3.05,bl){$1$}
+  \Text(1.62,4.55,bl){$3$}
+  \Text(-5.6,5.5,tl){$w^2>1$: Hyperbola}
+  \Text(-5.6,4.9,tl){$w^2=1$: Parabola}
+  \Text(-5.6,4.3,tl){$w^2<1$: Ellipse}
+  \Text(-5.6,3.7,tl){$w^2=0$: Line}
+\end{lapdf}
+
+\it{\bf{Figure 4}: Various conic arcs defined by $w=(3,1,1/3,0,-1/3)$}.
+\end{center}
+To the left of the picture is the curve form classification corresponding to
+different values of $w$. You may ask now: ``\it{Where is the circle?}''. Well, that's no real problem. Without any proof here follows the answer. Let's first name the angle, formed by the bezier polygon. We call it $a$. As we saw before, the circle is simply a special case of an ellipse. The ellipse is actually a circle, if the following condition holds:
+\begin{eqnarray}
+  w & = & \cos(a).
+\end{eqnarray}
+Here is an example of a circle, build with two rational quadratic bezier curves:
+\begin{center}
+\begin{lapdf}(6,8)(-3,-2.6)
+  \Setwidth(0.01)
+  \Black
+  \Polygon(+2.167,+1.25)(+0.00,+5.0)(-2.167,+1.25) \Stroke
+  \Setwidth(0.02)
+  \Red
+  \Rmoveto(+2.167,+1.25,2)
+  \Rcurveto(64)(+0.00,+5.0,1)(-2.167,+1.25,2)
+  \Rcurveto(96)(+0.00,+5.0,-1)(+2.167,+1.25,2) \Stroke
+  \Point(1)(+2.167,+1.25)
+  \Point(1)(+0.00,+5.0)
+  \Point(1)(-2.167,+1.25)
+  \Text(0,4.6,tc){$a$}
+  \Text(1,4.73,tl){$w=\cos 60^\circ=0.5$}
+  \Text(0,2.2,tc){$w=0.5$}
+  \Text(0,-2.2,bc){$w=-0.5$}
+  \Text(-2.24,+1.29,br){$P_0$}
+  \Text(+0.05,+5.13,bc){$P_1$}
+  \Text(+2.22,+1.28,bl){$P_2$}
+\end{lapdf}
+
+\it{\bf{Figure 5}: A full circle with two rational quadratic bezier curves.}
+\end{center}
+Both curves share the same bezier points, but the lower one (the complementary curve) has negative weight $-w$. Everytime you want to draw the complementary rational curve, you only have to negate the weight value.
+
+Now it's up to you. I hope, this short introduction into the world of bezier
+curves has risen your appetite. There are many good books around, which deal
+with this subject. Look at the end of this paper for some suggestions.
+
+\section{Additional Readings}
+Depending on the levels of insight you want to achieve, there are lots of
+good books and free literature on the market and on the internet. I want
+to give you some suggestions for literature, that will help you to learn
+more about graphics programming.
+
+\begin{thebibliography}{0}
+  \bibitem{1} MORTENSON M.E.: \textsl{Mathematics for Computer Graphics
+  Applications},
+  Industrial Press, Inc., 2 ed. 1999.
+
+  \bibitem{2} FOLEY, VAN DAM.: \textsl{Computer Graphics -- Principles
+   and Practice}, Addison-Wesley, 2 ed. 1996.
+
+  \bibitem{3} PAETH, ALAN W.: \textsl{Graphics GEMS I-V},
+  AP Professional, 1995.
+
+  \bibitem{4} ABRASH, MICHAEL.: \textsl{Graphics Programming Black Book},
+  Coriolis Group Books, 1997.
+
+  \bibitem{5} FARIN G.: \it{Curves and Surfaces For Computer Aided
+   Geometric Design -- A Practical Guide}, Academic Press, 2 ed. 1999.
+
+  \bibitem{6} FARIN G.: \it{NURBS -- from Projective Geometry to
+   Practical Use}, A K Peters Ltd., Natick, MA, 2 ed. 1990.
+
+  \bibitem{7} PIEGL L. \& TILLER W.: \it{The NURBS Book}, Springer, 2 ed. 1997.
+\end{thebibliography}
+
+\end{document}

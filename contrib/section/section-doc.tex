@@ -1,0 +1,506 @@
+\documentclass[pagesize=auto, numbers=enddot]{scrartcl}
+
+\usepackage{fixltx2e}
+\usepackage{etex}
+\usepackage{xspace}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcommand*{\mail}[1]{\href{mailto:#1}{\texttt{#1}}}
+\newcommand*{\pkg}[1]{\textsf{#1}}
+\newcommand*{\cls}[1]{\textsf{#1}}
+\newcommand*{\cs}[1]{\texttt{\textbackslash#1}}
+\makeatletter
+\newcommand*{\cmd}[1]{\cs{\expandafter\@gobble\string#1}}
+\makeatother
+\newcommand*{\meta}[1]{\textlangle\textsl{#1}\textrangle}
+\newcommand*{\marg}[1]{\texttt{\{}\meta{#1}\texttt{\}}}
+\newcommand*{\oarg}[1]{\texttt{[}\meta{#1}\texttt{]}}
+
+\addtokomafont{title}{\rmfamily}
+\deffootnote{1em}{1em}{\textsuperscript{\thefootnotemark}}
+
+\title{The \pkg{section} package\thanks{This manual corresponds to \pkg{section.sty}~v1.4, dated~10 Mar 99.}}
+\author{Oliver Pretzel\thanks{\mail{o.pretzel@ic.ac.uk}}}
+\date{10 Mar 99}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  \noindent
+  Leslie Lamport in writing \LaTeX\ assumed that authors would write
+  complete \texttt{.sty} (\texttt{.clo}) files to implement the design decisions for their
+  publications. However, the overwhelming majority of \LaTeX\ publications use the
+  standard styles supplied by Lamport. These implement a particular set of
+  typographic conventions, which while consistent are not of universal validity,
+  for instance many publishers and authors would like a full stop:
+  `4. Introduction'
+  rather than
+  `4 Introduction'.
+
+  This file modifies the standard classes so that other conventions can be
+  more easily implemented. Careful use of the file will allow a greater
+  variation in the appearance of \LaTeX\ documents.
+\end{abstract}
+
+
+\setcounter{section}{-1}
+\section{Changes to section implementation.}
+
+The file redefines the way \LaTeX\ deals with negative indents for section
+headings, placing the number in the margin and the heading itself flush
+with the margin. With negative indents it sets starred section headings
+flush (as it does when \cmd{\thesection} is empty.
+Standard \LaTeX\ indenting can be produced by typing
+%
+\begin{verbatim}
+>> \let\ifind\iffalse
+\end{verbatim}
+%
+This file's version can be reestablished by typing
+%
+\begin{verbatim}
+>> \let\ifind\ifdim
+\end{verbatim}
+
+The file also changes the way \LaTeX\ reacts to empty numbers when sections have
+non-negative indents, placing the heading where the number would go, rather
+than further indented (as in standard \LaTeX).
+This effect can be removed by redefining an internal macro \cmd{\@makesvsec} (see
+below).
+
+The indents, pre- and postskips for section headings are placed in registers
+so that they are constant throughout a document and (just as the heading sizes)
+do not react to surrounding size changes. You can change this back to ordinary
+\LaTeX\ behaviour by \cmd{\def}ing them as macros rather than setting the register
+values (in that case you should probably use \verb|\smaller\larger| from
+\pkg{SMALLER.STY} for the \cmd{\...size} commands).
+
+\emph{WARNING}\quad\LaTeX\ typesets headings that run on by manipulating \cmd{\everypar}. If you
+make local changes to the heading style of such a section inside braces or a
+group you must ensure that a non-empty paragraph occurs before the closing
+brace. Otherwise some strange effects may occur, because the \cmd{\everypar} tokens
+will be evaluated outside the group (this is a feature of \LaTeX, not of
+\pkg{SECTION.STY}). If your group ends with an empty section of this type just
+follow it with \cmd{\leavevmode} or an explicit space: \verb*|\ |.
+
+A detailed description of the format of \LaTeX\ sectioning commands is given
+below (in paragraph~\ref{sec:9}). This is partially taken from the file \texttt{LATEX.TEX}.
+We first list the macros for local control which you can use without knowing
+this structure.
+
+The file sets vertical distances that \LaTeX\ expressed in terms of `em's and
+`ex's in equivalent `\cmd{\baselineskip}'s, as `em' is a measure of the horizontal
+size of a font and `ex' is not a true measure of the full height of a line.
+Earlier vesions used `ex's.
+
+The original values are placed as comments.
+
+
+\section{Sizing commands for Parts, Chapters and Titles etc}
+
+These are set to \cmd{\large} or whatever
+%
+\begin{flushleft}
+  \begin{tabular}{@{}>{\texttt{>{}> }}lll@{}}
+    \cmd{\chsize}:  & Chapter, Part Heading    & (\verb|\LARGE\large|)     \\
+    \cmd{\hdsize}:  & Chapter, Part Title Text & (\verb|\Huge\huge\LARGE|) \\
+    \cmd{\ttsize}:  & Title of Document        & (\verb|\Huge\huge\LARGE|) \\
+    \cmd{\ausize}:  & Author                   & (\verb|\LARGE\Large|)     \\
+    \cmd{\dasize}:  & Date.                    & (\verb|\Large\large|)     \\
+    \cmd{\secsize}: & Section                  & (\verb|\Large\large|)     \\
+    \cmd{\subsize}: & Subsection               & (\verb|\large\normalsize|)
+  \end{tabular}
+\end{flushleft}
+%
+\texttt{subsubsection} and below use \cmd{\normalsize}
+
+
+\section{Layout commands for headings.}
+
+\begin{itemize}
+\item
+  \cmd{\hdpos}: Positioning of heading (\cmd{\raggedright}) (\cmd{\centering} \cmd{\raggedleft})
+  (see section~\ref{sec:9});
+
+\item counter \texttt{hddpth} (default~0) \\
+  Maximum section level for \cmd{\hdpos} (chapters and parts \emph{ALWAYS} use \texttt{hdpos}).
+  To centre section headings and above:
+\begin{verbatim}
+\let\hdpos\centering\setcounter{hddepth}{1}
+\end{verbatim}
+
+\item \cmd{\fpind}: Indenting of first paragraph after \cmd{\Part} \cmd{\Chapter}
+  and also to override setting via \meta{preskip} for sections.
+  \cmd{\let} to \cmd{\@afterindenttrue} to indent, \cmd{\@afterindentfalse} for flush,
+  \cmd{\relax}: flush after \cmd{\Part} \cmd{\Chapter}, negative \meta{preskip}s; indented otherwise
+  (\LaTeX\ default behaviour).
+\end{itemize}
+
+
+\section{Fonts}
+
+\begin{itemize}
+\item \cmd{\ttfnt}: font for title entries.
+\item \cmd{\hdfnt}: font for all other headings (Part, Chapter \dots\ subparagraph).
+\item \cmd{\fefnt}: font for theorem headings and description labels (\texttt{fe} = feature).
+\item \cmd{\thfnt}: font for theorem statements.
+\item \cmd{\pgfnt}: font for page numbers.
+\item \cmd{\mkfnt}: font for page headings (\texttt{mk} = mark).
+\item \cmd{\mkcse}: case for page headings.
+  These can also be used to add other initial commands such as spaces or
+  symbols.
+\end{itemize}
+
+
+\section{Optional punctuation (standard|my preference)} %|
+
+These marks are transferred via auxiliary files for tables of contents etc.
+They should be \cmd{\def}'d if their current value is to be transferred, and \cmd{\let}
+if the value in force when the file auxiliary is read should be used.
+
+\begin{flushleft}
+  \begin{tabular}{@{}>{\texttt{>{}> }}lll@{}}
+    \cmd{\hddot} & (\verb+{}+|\verb+.+) & (after inline headings, theorems etc)                       \\ %|
+    \cmd{\cpdot} & (\verb+:+|\verb+.+)  & (in figure/table captions - also apears in list of figures. \\ %|
+    \cmd{\nmdot} & (\verb+{}+|\verb+.+) & (after section numbers etc)                                 \\ %|
+  \end{tabular}
+\end{flushleft}
+%
+If these are \cmd{\let} to a single letter they are not expanded in the
+\texttt{.toc}\dots\ files. So to remove \cmd{\cpdot} from list of figures:
+%
+\begin{verbatim}
+\let\cpdot\relax\listoffigures\let\cpdot:
+\end{verbatim}
+
+
+\section{Spacing parameters.}
+
+The macros for chapters and parts have been altered so that all the
+vertical spacing commands are in a single macro in each case.
+%
+\begin{itemize}
+\item
+  \cmd{\part} inserts initial vertical space directly (preceded by \verb+\hbox{}+ if it
+  is to be immovable) and passes the space between Part n  and title
+  in  \cmd{\@tempskipa} and the space below the heading in \cmd{\@tempskipb}.
+
+\item
+  Both \cmd{\chapter} and \cmd{\chapter*} call \cmd{\@makechapterhead}\marg{chaptertitle}.
+  This passes \marg{chaptertitle} on to \cmd{\@makeschapterhead} together with the
+  vertical spacing. Default setting is
+%
+\begin{verbatim}
+\def\@makechapterhead#1{%
+  \hbox{}\@makeschapterhead{#1}{50\p@}{20\p@}{40\p@}}
+\end{verbatim}
+%
+  \verb+\hbox{}+ makes first skip immovable,
+  the first length is space above the heading,
+  The second is the space between Chapter nn and the chapter title
+  The third is the space below the heading.
+  For both Part and Chapter the middle space is removed if either the
+  section name or title are missing.
+  If both are missing, the first space is also removed
+
+\item
+  \begin{sloppypar}
+    For sections and below the spaces are kept in registers:
+    \cmd{\secpreskp} and \cmd{\secpsrskp} \cmd{\secindent} used for \cmd{\section}
+    \cmd{\subpreskp} and \cmd{\subpstskp} \cmd{\subindent} used for \cmd{\subsection}/\cmd{\subsubsection}
+    \cmd{\paragraph} uses \cmd{\subindent} \cmd{\subpreskp} \cmd{\parpstskp}
+    \cmd{\subparagraph} uses \cmd{\parindent} \cmd{\subpreskp} \cmd{\parpstskp}
+  \end{sloppypar}
+
+\item
+  \cmd{\secindent} \cmd{\subindent}\quad Heading indentation
+
+\item
+  \cmd{\secpreskp} \cmd{\subpreskp}\quad Space before
+
+\item
+  \cmd{\secpstskp} \cmd{\subpstskp} \cmd{\parpstskp}\quad Space after.
+\end{itemize}
+
+
+\section{Internal modifications}
+
+Sections with negative indents have heading flush with margin.
+
+If \cmd{\thesection} is \cmd{\empty}
+%
+\begin{flushleft}
+  \verb+\let\thesection\empty+ or \verb+\def\thesection{}+
+\end{flushleft}
+%
+then \texttt{section} does not step the section counter.
+If the section produces empty output for a value then
+the section will start flush at the margin or \cmd{\secindent} if it is positive
+and there will be no \cmd{\nmdot}.
+It will produce (flush) page headings and a table of contents entry.
+Similarly if \cmd{\thechapter} or \cmd{\thepart} are defined to be empty they will
+suppress the heading line `Chapter\dots'\ and not step the counter.
+To restore standard \LaTeX\ behaviour temporarily define \cmd{\thesection} to be
+\cmd{\empty}
+%
+\begin{verbatim}
+\def\thesection{\empty}
+\end{verbatim}
+%
+In that case you can adjust post number spacing in the heading.
+%
+\begin{verbatim}
+\section[Heading]{\hskip-1em Heading}
+\end{verbatim}
+%
+You can also redefine \cmd{\@makesecdot} see paragraph~\ref{sec:7}.
+
+\emph{WARNING}\quad\cmd{\let}ting \cmd{\thesection} etc to an unexpandable token (like \cmd{\relax}) will
+cause strange effects under \LaTeX\ because its value will not be expanded.
+
+\cmd{\maketitle} suppresses page headings (\verb+\thispagestyle{empty}+) and only resets
+\cmd{\@title} etc locally. So place in a group if you want to preserve these for
+later reference (eg.\ in headers).
+
+
+\section{New internal macros}
+\label{sec:7}
+
+Place any modifications in the section \texttt{REDEFINITIONS} of the main code
+%
+\begin{itemize}
+\item \cmd{\@secdot} contains section number and \cmd{\nmdot} if the number is non-empty.
+
+\item \cmd{\@makesecdot}\marg{NAME} defines \cmd{\@secdot}.
+  To make \LaTeX\ step the section counter independently of the definition
+  of \cmd{\thesection} and always print \cmd{\nmdot}:
+\begin{verbatim}
+\def\@makesecdot#1{\refstepcounter{#1}%
+    \edef\@secdot{\csname the#1\endcsname}}
+\end{verbatim}
+  If you want \cmd{\nmdot} suppressed when \cmd{\thesection} produces no output:
+\begin{verbatim}
+\def\@makesecdot#1{\refstepcounter{#1}%
+  \edef\@secdot{%
+    \expandafter\@gobifnul\csname the#1\endcsname\nmdot}}
+\end{verbatim}
+
+\item \cmd{\@makesvsec}\marg{INDENT} defines the \cmd{\@svsec} macro used by \LaTeX\ to typeset the
+  section number\dots Its parameter is the indent so that it can react
+  differently to negative indents. (it does \emph{NOT} make the indent).
+  To obtain standard \LaTeX\ behaviour:
+\begin{verbatim}
+\def\@makesvsec#1{\def\@svsec{\@secdot\quad}}
+\end{verbatim}
+  To make positioning commands apply to the heading ignoring the number:
+\begin{verbatim}
+\def\@makesvsec#1{\def\@svsec{\llap{@secdot\quad}}}
+\end{verbatim}
+  Do \emph{NOT} forget the \verb+#1+.
+
+\item \cmd{\@contmark}\marg{NAME}\marg{LEVEL}\marg{HEADING} makes contents line and sectionmark.
+\end{itemize}
+
+Contents headlines are defined by
+%
+\begin{itemize}
+\item \cmd{\@tocheadline}\quad
+ This allows these lines to be adjusted similarly to the \cmd{\@dotted\-tocline}
+ commands for other contents lines. The format of these is defined below (in
+ paragraph~\ref{sec:11}).
+
+\item \verb+@tocpagenum#1+ sets \verb+#1+ flush right in \cmd{\@tocheadline}. \\
+  Redefine (\verb+\let\@tocpagenum\@gobble+) to remove page numbers.
+\begin{verbatim}
+\def\l@part{\@tocheadline{0}{2.25em}{3em}{\let\@tocpagenum\@gobble
+      \centering\large\bf}}
+\end{verbatim}
+  Centres parts lines of contents but leaves chapters unchanged
+\begin{verbatim}
+\def\l@part{\@tocheadline{0}{2.25em}{3em}{\let\@tocpagenum\@gobble
+      \centering\def\numberline##1{\hskip-\secindent
+      \hbox to\secindent{##1\hfil}}\large\bf}}#
+\end{verbatim}
+  Same but centring ignores part number.
+\begin{verbatim}
+\def\l@part{\@tocheadline{0}{2.25em}{3em}{\let\@tocpagenum\@gobble
+      \centering\def\numberline##1{\hfilneg
+      \hbox to\z@{##1\hss}\hfil}\large\bf}}
+\end{verbatim}
+  Centres heading with number flush left\\
+  Contents lines use \cmd{\secindent} as a temporary register
+
+\item \cmd{\makeheading} (set to \cmd{\section*}, \cmd{\chapter*})
+ Makes headings for contents, index etc.
+ To put Contents itself in the contents list, redefine (locally):
+\begin{verbatim}
+\let\thesection\empty\let\makeheading\section
+\end{verbatim}
+\end{itemize}
+
+
+\section{Additional macros}
+
+\begin{itemize}
+\item \cmd{\@ifempty}\marg{test}\marg{yes}\marg{no} like \cmd{\@ifundefined} but tests for empty
+  (fails iff test starts with \verb+~+ of catcode~12 (other)).
+\item \cmd{\@gobifnul}\marg{a}\marg{b} = \cmd{\@ifempty}\marg{a}\verb+{}{+\meta{a}\meta{b}\verb+}+.
+\end{itemize}
+
+
+\section{Description of sectioning values}
+\label{sec:9}
+
+\cmd{\@startsection}\marg{NAME}\marg{LEVEL}\marg{INDENT}\marg{PRESKIP}\marg{POSTSKIP} \\
+\hphantom{\cmd{\@startsection}}\marg{STYLE}\meta{optional~\texttt{*}}\oarg{ALTHEADING}\marg{HEADING} \\
+Generic command to start a section.
+%
+\begin{flushleft}
+  \begin{tabular}{@{}p{0.2\linewidth}@{\makebox[0.03\linewidth]{:}}p{0.77\linewidth}@{}}
+    \meta{NAME}       & e.\,g.,\ `\texttt{subsection}' must be the name of a section counter                                                          \\
+    \meta{LEVEL}      & a number, denoting depth of section~-- section~=~1; number increases down the hierarchy.                                      \\
+    \meta{INDENT}     & Indentation of heading from left margin                                                                                       \\
+    \meta{PRESKIP}    & Absolute value~=~skip to leave above the heading. If negative, then paragraph indent of text following heading is suppressed. \\
+    \meta{POSTSKIP}   & if positive, then skip to leave below heading, else negative of skip to leave to right of run-on heading.                     \\
+    \meta{ALTHEADING} & for page headings and contents.                                                                                               \\
+    \meta{STYLE}      & commands to set style
+  \end{tabular}
+\end{flushleft}
+%
+If `\texttt{*}' missing, then increments the counter.  If it is present, then
+there should be no \meta{ALTHEADING} argument.
+Uses the counter `\texttt{secnumdepth}' whose value is the highest section
+level that is to be numbered and entered into \cmd{\@dottedtocline}.
+
+
+\section{Treatment of Section Entries}
+
+\begin{description}
+\item[\meta{NAME} (fixed)]
+  Determines the counter to use.
+
+\item[\meta{LEVEL} (fixed)]
+  If level is greater than \verb|\counter{secnumdepth}| (default~2) no
+  indexentry or number
+
+\item[\meta{INDENTS}:]
+  \cmd{\secindent} (sections), \cmd{\subindent} (subsections, \dots\ ,paragraphs).
+  Subparagraphs have \cmd{\parindent} fixed. These are dimensions.
+
+  Recommended: $\pm\cmd{\parindent}$ or 0\,pt
+
+  If indent is negative then \pkg{SECTION.STY} causes the section number to be set
+  flush right that distance from margin. Heading or text follows at the margin
+  itself.
+
+  Unnumbered headings are set at the margin if indent is negative. If the
+  indent is non-negative they are set flush left with the number position.
+
+\item[\meta{PRESKIPS}]
+  \cmd{\secpreskp} (sections), \cmd{\subpreskp} (subsections \dots\ subparagraphs)
+
+\item[\meta{POSTSKIPS}]
+  \cmd{\secpstskp} (sections), \cmd{\subpstskp} (subsections, subsubsections) \\
+  \cmd{\parpstskp} (paragraphs, subparagraphs)
+
+  Recommended: leave \meta{PRESKIPS}' abs values unchanged, They are set $-$ve to
+  have flush first paragraphs. Use \cmd{\secpreskp}--\cmd{\secpreskp} to indent them. \\
+  Recommended: set \meta{POSTSKIPS} to $-1$\,em or $-\cmd{\parindent}$ to make sections run on.
+
+  By assigning these values to registers \pkg{SECTION.STY} makes them independent of
+  the surrounding font and size. Set the registers if you want this, redefine
+  them as macros if you want them to be font and size dependent.
+
+\item[\meta{STYLE}]
+  \cmd{\secsize} \cmd{\subsize} \cmd{\hdfnt} size and fonts.
+  \cmd{\secsize} for sections,
+  \cmd{\subsize} for subsections.
+  Subsubsections and below have \cmd{\normalsize} (fixed).
+  \cmd{\hdfnt} is universal for all headings.
+\end{description}
+
+
+\section{Contents entries.}
+\label{sec:11}
+
+\cmd{\@tocheadline}\marg{LEVEL}\marg{PRESKIP}\marg{INDENT}\marg{STYLE} \\
+\hphantom{\cmd{\@tocheadline}}\marg{ENTRY}\marg{PAGENUM} \\
+\cmd{\@dottedtocline}\marg{LEVEL}\marg{MARGIN}\marg{INDENT}\marg{ENTRY}\marg{PAGENUM}
+
+\begin{flushleft}
+  \begin{tabular}{@{}p{0.145\linewidth}@{\makebox[0.03\linewidth]{:}}p{0.825\linewidth}@{}}
+    \meta{LEVEL}   & determines if entry made.                                                                                            \\
+    \meta{PRESKIP} & vertical gap above.                                                                                                  \\
+    \meta{INDENT}  & This must leave enough room for the chapter or section number \newline It is added to the margin for the next level. \\
+    \meta{MARGIN}  & Left margin inherited from level above (zero for headlines).                                                         \\
+    \meta{STYLE}   & Font sizing and setting.                                                                                             \\
+  \end{tabular}
+\end{flushleft}
+%
+\LaTeX\ assumes that the \meta{ENTRY} for sections be defined by a macro \cmd{\l@section}.
+These are defined in the standard document styles but can be changed.
+All entries of the \cmd{\l@section} commands are fixed. \pkg{SECTION.STY} does not
+change the commands using \cmd{\@dottedtocline} in the style file. Those that do
+not do so (\cmd{\l@part}, \cmd{\l@chapter}) are modified to use \cmd{\@tocheadline}.
+
+\meta{INDENT} for sections in \cls{article} and chapters in \cls{report} is rather tight at
+1.5\,em. If you increase it should also increase the \meta{MARGIN}S for lower
+sections.
+
+
+\section{The following internal \LaTeX\ macros are redefined:}
+
+\begin{flushleft}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.3\linewidth}p{0.67\linewidth}@{}}
+    \cmd{\part} \cmd{\@part} \cmd{\@spart} \cmd{\@endpart} \cmd{\@chapter} \cmd{\@schapter} & (also \cs{fi} moved) \\
+    \cmd{\@makechapterhead} \cmd{\@makeschapterhead} & functions of these have been significantly changed. \\
+    \cmd{\ps@headings} \cmd{\ps@myheadings} \\
+    \cmd{\section} \cmd{\subsection} \cmd{\subsubsection} \cmd{\paragraph} \cmd{\subparagraph} \\
+    \cmd{\thebibliography} \cmd{\theindex} \\
+    \cmd{\@begintheorem} \cmd{\@oparbegintheorem} \\
+    \cmd{\@makecaption} & optional style features added \\
+    \cmd{\@startsection} & \cmd{\fpind} and does not pass \verb|#4| to \cmd{\@sect}, \cmd{\@ssect} \\
+    \cmd{\@sect}, \cmd{\@ssect} & ignored parameter removed \newline \cmd{\llap} \cmd{\@secdot} used to adjust spacing if \cmd{\p@section} defined used for number style. calls \cmd{\@makesecdot} \newline \cmd{\@sect} only: \cmd{\@makesvsec} and \cmd{\@contmark}, which is moved in \cmd{\@svsechd} so that \cmd{\unskip} in \cmd{\@xsect} works). \\
+    \cmd{\maketitle} \cmd{\@maketitle} & suppress page number, reset \cmd{\@title}\dots\ locally \\
+    \cmd{\numberline} & adds space after number, so overfull box if too close to heading. \\
+  \end{tabular}
+\end{flushleft}
+
+
+\section*{Changes}
+
+\begin{description}
+\item[Ver 1.3 (3. Apr 98)]
+  If $\cmd{\secindent} < 0$, then \cmd{\section*} produces a flush heading, not outdented.
+  \cmd{\hdpos} takes level as parameter and is used for all sections, not just
+  \cmd{\part} and \cmd{\chapter}.
+  `ex' measurements replaced by \cmd{\baselineskip} equivalents.
+
+\item[Ver 1.31]
+  Bugfix: \cmd{\relax} added to \cmd{\@alph}, \cmd{\@Alph} to enable use with \cmd{\@ifempty} test.
+
+\item[Ver 1.32]
+  \begin{sloppypar}
+    Bugfixes: \cmd{\hdpos} added to \cmd{\@ssect}, unused macro \cmd{\secpos} removed,
+    \cmd{\nobreak} added after \cmd{\thechapter} in \cmd{\makechapterhead}
+  \end{sloppypar}
+
+\item[Ver 1.4]
+  \cmd{\hdpos} made simple macro again. Counter \cmd{\hddepth} determines when it
+  should be used. Functions of \cmd{\@makechapterhead}, \cmd{\@smakechapterhead}
+  changed to make editing vertical spacing of chapters easier.
+  \cmd{\part}\cmd{\@part}\cmd{\@spart} rewritten so that all spacing info in \cmd{\part}.
+  \cmd{\part} calls \cmd{\@spart} which finishes off the heading.
+\end{description}
+%
+Memory use $< 200$ words.
+
+\end{document}

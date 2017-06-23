@@ -1,0 +1,173 @@
+\documentclass[a4paper,uplatex]{jsarticle}
+
+\usepackage{otf}
+\usepackage{enumitem}
+\usepackage{shortvrb}
+\MakeShortVerb{\|}
+\newcommand{\PkgName}{\textsf{WTRef}}
+\newcommand{\Meta}[1]{$\langle$\mbox{}\textit{#1}\mbox{}$\rangle$}
+\newenvironment{syntax}{\begin{quote}\small}{\end{quote}}
+
+\title{\PkgName パッケージ (v0.3.2)}
+\author{朝倉卓人 (wtsnjp)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+WTシリーズは著者が\LaTeX 文書作成にあたってよく利用するマクロを集めたものである．
+\PkgName パッケージはこのWTシリーズを構成するパッケージの1つであり，\LaTeX オリジナルの
+相互参照機能を拡張してスコープの指定と名前空間の分離，参照形式の柔軟な指定を可能にする．
+サポート対象は任意の\TeX エンジンと\LaTeXe の組み合わせで，動作には\textsf{xkeyval}
+パッケージが必要である．
+\end{abstract}
+
+\section{動作要件}
+
+\PkgName パッケージの動作要件は以下の通りである．
+%
+\begin{itemize}
+\item \TeX エンジン：任意
+\item \TeX フォーマット：\LaTeXe
+\item ドキュメントクラス：任意
+\item 依存パッケージ：\textsf{xkeyval}
+\end{itemize}
+
+\section{パッケージ読み込み}
+
+読み込みには |\usepackage| 命令を用いる．オプションは存在しない．
+%
+\begin{syntax}
+|\usepackage{wtref}|
+\end{syntax}
+
+\section{相互参照命令}
+
+\subsection{相互参照命令の新設}
+
+|\newref| 命令を用いて相互参照に用いる2つの命令を新設することができる．この命令は
+プリアンブルでのみ使用可能である．
+%
+\begin{syntax}
+|\newref[|\Meta{options}|]{|\Meta{ref types}|}|
+\end{syntax}
+
+上記書式中の\Meta{ref types}は\Meta{ref type}のカンマ区切りリストである．\Meta{ref type}は
+制御綴に使用できる文字のみで構成された文字列で（半角英字のみにしておくことを推奨），空で
+あってはならない．なお\Meta{ref types}の先頭・末尾およびカンマ前後の連続する空白は
+すべて無視される．
+
+|\newref| 命令は指定した\Meta{ref type}に応じて |\|\Meta{ref type}|label|，
+|\|\Meta{ref type}|ref| という形をもつ，新しい2つの命令を定義する．ここで前者の命令を
+\textbf{ラベル命令}，後者の命令を\textbf{参照命令}と呼ぶことにする．|\newref| 命令は同名の
+命令が既に存在していても，その定義を上書きするので\Meta{ref type}は注意して選ぶ必要がある．
+
+また，\Meta{options}には以下の内容をkey-valueリストで指定可能である：
+%
+\begin{description}[font=\normalfont]
+%
+\item[|namespace=|\Meta{string}]
+与えられた値を用いて\Meta{namespace}を``\Meta{string}|:|''に設定する．|namespace|キーも
+|nonamespace|キーも指定しない場合，および|namespace|に与えた\Meta{string}が空文字列であった
+場合\Meta{namespace}は``\Meta{ref type}|:|''に設定される．
+%
+\item[|nonamespace|]
+このキーを指定すると，\Meta{namespace}は空となる．すなわち，名前空間機能を無効化できる．
+なお，|nonamespace|キーに値を指定してもエラーにはならないが，単に無視される．
+%
+\item[|scope=|\Meta{counter}]
+スコープとして利用するカウンタを指定する．\Meta{counter}には任意の\LaTeX カウンタを指定する
+ことが可能だが，文書内で一意性のあるカウンタを指定することが望ましい．これにより\Meta{scope}は
+``|\the|\Meta{counter}|:|''の形に設定される．
+\end{description}
+%
+これらの設定は，\Meta{ref types}で指定したすべての\Meta{ref type}に対応する相互参照命令に
+ついて適用される．
+
+ここで\Meta{options}に何も指定しない場合\Meta{namespace}は\Meta{ref type}が転用されて
+``\Meta{ref type}|:|''の形となり\Meta{scope}は空に設定される．言い換えると，デフォルトでは
+名前空間機能が有効，スコープ機能は無効に設定されている．
+
+\subsection{ラベル命令}
+
+\subsubsection{機能と使い方}
+
+ラベル命令はラベルを付けるときに用いる．使い方は\LaTeX の |\label| 命令とまったく同様である．
+以下にラベル命令の例 |\exlabel| を用いるときの書式を示しておく．
+%
+\begin{syntax}
+|\exlabel{|\Meta{label}|}|
+\end{syntax}
+
+\subsubsection{内部処理}
+
+ラベル命令は最終的に次のような形に展開される．
+%
+\begin{syntax}
+|\label{|\Meta{namespace}\Meta{scope}\Meta{label}|}|
+\end{syntax}
+
+\subsection{参照命令}
+
+参照命令は対応するラベル命令によってラベル付けされた番号を，指定した書式で印字するための
+命令である．例として |\exref| の使い方を以下に示す．
+%
+\begin{syntax}
+|\exref[|\Meta{the scope}|]{|\Meta{label list}|}|
+\end{syntax}
+
+参照するラベルが同じスコープ内に存在する場合は\Meta{the scope}は省略可能である．
+\Meta{the scope}に参照先のスコープに対応する``|\the|\Meta{counter}''の出力を直接記入することで
+スコープの範囲外からラベルを参照することが可能である．なお，スコープ機能が無効
+（|\newref| によって相互参照命令を定義する際に\Meta{options}で |scope| キーを指定しなかった
+場合）のときは，\Meta{the scope}は常に無視される．
+
+また，引数にはカンマ区切りで複数の参照先ラベルを指定することが可能である．
+\Meta{label list}の先頭・末尾およびカンマ前後の連続する空白はすべて無視される．
+複数のラベルを指定した場合，デフォルトでは該当する番号がカンマ区切りで出力される．この出力書式
+は後述する参照書式変更命令 |\setrefstyle| を用いて柔軟にカスタマイズすることができる．
+
+\section{参照書式変更命令}
+
+|\setrefstyle| 命令を用いると，参照命令による出力を柔軟にカスタマイズすることができる．
+最初に |\setrefstyle| 命令の書式を示しておく．
+%
+\begin{syntax}
+|\setrefstyle{|\Meta{ref types}|}{|\Meta{options}|}|
+\end{syntax}
+
+これにより\Meta{ref types}中に含まれる\Meta{ref type}に対応する参照命令が出力する内容の
+書式を変更できる．この |\setrefstyle| 命令はプリアンブルに限らず\LaTeX 文書ソース中全域で
+使用可能であり，設定の有効範囲は |{| や |}| によるブロックの制御を受ける．
+
+\Meta{options}には以下の内容をkey-valueリストで指定可能である：
+%
+\begin{description}[font=\normalfont]
+\item[|refcmd=|\Meta{command}]
+\Meta{label list}に与えたラベルの数だけ，指定した\Meta{command}が繰り返し実行・印字される．
+\Meta{command}中に記入された |#1| は適切に整形されたラベル名に置換される．
+規定値は |\ref{#1}|．
+%
+\item[|sep=|\Meta{command}]
+\Meta{label list}に3つ以上のラベルが記入されているときに，|refcmd| の各出力の間に印字
+する区切りの内容を指定する．ただし，最後の区切りは |last sep| に指定した値となる．
+規定値は |{,\space}|．
+%
+\item[|last sep|(|=|\Meta{command})]
+\Meta{label list}に複数のラベルが記入されている際に出力される，最後の区切りを指定する．
+|=| 以降を記入せず，単に |last sep| と指定した場合，最後の区切りには |sep| の値が適用される．
+規定値は値指定なし（つまり |sep| の値に従属）．
+%
+\item[|prefix=|\Meta{command}]
+参照命令を使用したとき，最初に実行・印字される内容を指定する．
+規定値は |{}|．
+%
+\item[|suffix=|\Meta{command}]
+参照命令を使用したとき，最後に実行・印字される内容を指定する．
+規定値は |{}|．
+\end{description}
+%
+これらの設定は，明示的に指定したもの以外はそれ以前の設定がそのまま引き継がれる．
+
+\end{document}

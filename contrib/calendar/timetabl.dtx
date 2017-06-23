@@ -1,0 +1,772 @@
+%\iffalse
+%
+% file: timetabl.dtx
+% Copyright (C) 1996-1997 by Frank Bennett.  All rights reserved.
+%
+% IMPORTANT NOTICE:
+% 
+% You are not allowed to change this file.  You may however copy
+% this file to a file with a different name and then change the
+% copy if (a) you do not charge for the modified code, (b) you
+% acknowledge the author of this file in the new file, if it
+% is distributed to others, and (c) you attach these same
+% conditions to the new file.
+% 
+% You are not allowed to distribute this file alone.  You are not
+% allowed to take money for the distribution or use of this file
+% (or a changed version) except for a nominal charge for copying
+% etc.
+% 
+% You are allowed to distribute this file under the condition that
+% it is distributed with all of its contents, intact.
+% 
+% For error reports, or offers to help make this a more powerful,
+% friendlier, and altogether more thrilling package, please contact me on
+% fb@soas.ac.uk.  Better yet, make a contribution to
+% my pension.  Account details available on request.
+%
+%\fi
+%
+% \def\fileversion{3.1.1.1}
+% \def\filedate{1998/01/17 18:15:28}
+%
+% \iffalse
+%
+%<*driver>
+\documentclass{ltxdoc}
+%\CodelineIndex
+%\EnableCrossrefs
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{timetabl.dtx}
+\end{document}
+%</driver>
+%\fi
+%
+% \changes{v1.0}{1997/02/26}{First release version, implementing
+%  a suggestion from Miroslav Novak.}
+% \changes{v1.1}{1997/03/08}{Added \cs{protected@edef} to labels
+%  definition, so my wife's birthday can be indicated in color
+%  in our travel itinerary\ldots but it didn't work.  Colors
+%  in labels come up with an empty color.  Problem occurs only if the
+%  \cs{textcolor} command is at the start of the label, so
+%  this is probably do to an unnecessary \cs{expandafter}.}
+% \changes{v1.1}{1997/03/08}{Added time type declaration to
+%  pinpoint times for consistency.}
+% \changes{v1.2}{1997/05/15}{Merged improved preliminary matter from
+%  the revised monthly.dtx package.}
+% \changes{v1.3}{1997/09/24}{Oops.  Seem to have released without
+%  completing the changes.  File now works again.  Converted to
+%  package (from class) in the process.}
+% \changes{v1.4}{1997/10/18}{New public release of all styles
+%  and modules incorporating global bug-fixes.}
+%
+%\iffalse
+% Source tree moved under RCS
+% ---------------------------
+% timetabl.dtx,v
+% Revision 3.1.1.1  1998/01/17 18:15:28  root
+% Release code, checksum verified
+%
+% Revision 3.1  1998/01/17 17:15:17  root
+% Release code
+%
+% Revision 2.5  1998/01/16 17:41:30  root
+% *** empty log message ***
+%
+% Revision 2.4  1998/01/15 10:20:31  root
+% Two typos: vline changed to vrule, and labelstrutbuf now
+% set using W, not the actual text.
+%
+% Revision 2.3  1997/11/26 07:49:48  bennett
+% Fixed typeface options, added footer, provided new option
+% to stretch label height, added color support.
+%
+% Revision 2.2  1997/11/07 10:44:05  root
+% Release code.
+%
+% Revision 2.1.1.4  1997/11/07 08:45:09  root
+% Added documentation for the new "notimes" option.  Wrote
+% documentation notes for existing options that were unexplained.
+%
+% Revision 2.1.1.3  1997/11/07 08:11:13  root
+% Further changes to implement selective inclusion of times.
+% Fixed error in option definitions controlling typeface
+% selection.
+%
+% Revision 2.1.1.2  1997/11/07 03:23:22  root
+% Added code to suppress times in entries if desired.
+%
+% Revision 2.1.1.1  1997/11/04 05:06:07  root
+% Development branch
+%
+% Revision 2.1  1997/11/01 14:51:25  bennett
+% Release code.
+%
+% Revision 1.2  1997/10/29 19:54:57  bennett
+% Fixed error in RCS variable 1998/01/17 18:15:28 in the ProvidesPackage
+% declaration.
+%
+% Revision 1.1  1997/10/29 08:17:52  root
+% Initial revision
+%
+%\fi
+%
+% \title{User's Guide to the Timetable
+%    package\thanks{This file is version number
+%    \fileversion{}.  It was last revised on
+%    \filedate{}.}}
+%
+% \author{Frank G. Bennett, Jr.}
+%
+% \maketitle
+%
+% \setcounter{StandardModuleDepth}{1}
+% \DeleteShortVerb{\|}
+% \MakeShortVerb{\"}
+%
+% \CheckSum{641}
+%
+% Please see the file \texttt{calguide.tex} for details on
+% the use of this package.
+% 
+%\StopEventually{\PrintIndex}
+%
+% \subsection{The Package File}
+%
+% Load a bunch of useful code.
+%
+%    \begin{macrocode}
+%<*package>
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesPackage{timetabl}
+          [1998/01/17 18:15:28 3.1.1.1 Timetable (Frank Bennett)]
+%    \end{macrocode}
+% Define a few boolean switches, which are needed to process
+% the style options.
+%    \begin{macrocode}
+\newif\ifttbl@usecolor
+\newif\ifttbl@verbose
+%    \end{macrocode}
+% Define some more variables and switches for use in the body
+% of the style.
+%    \begin{macrocode}
+\newlength\ttbl@tablewidth
+\newlength{\ttbl@hw}
+\newlength{\ttbl@templen}
+\newlength{\ttbl@widthlessboxes}
+\newlength{\ttbl@timetextlen}
+\newtoks\ttbl@tempreg@a
+\newtoks\ttbl@tempreg@b
+\newcount\ttbl@tempcount
+\newcount\ttbl@start
+\newcount\ttbl@end
+\newcount\ttbl@minuteblocks
+\newcount\ttbl@boxes
+\newcount\ttbl@days
+\newcount\ttbl@blocks
+\newcount\ttbl@time@start
+\newcount\ttbl@time@end
+\newcount\ttbl@hours@start
+\newcount\ttbl@minutes@start
+\newcount\ttbl@hours@end
+\newcount\ttbl@minutes@end
+\newcount\ttbl@minute@base
+%    \end{macrocode}
+%
+% \subsection{Options}
+%
+% We include the language support offered to all styles in the bundle.
+%    \begin{macrocode}
+\input calopts.cfg
+\InputIfFileExists{dates.cfg}{}{}
+\ProcessOptions
+%    \end{macrocode}
+%
+% \subsection{Option Postprocessing}
+%
+% Now that the options lists are available to us,
+% we can start loading packages.  The following packages
+% are always loaded, and always with the same options.
+%    \begin{macrocode}
+\RequirePackage{array}[1996/06/14]
+\RequirePackage{calendar}
+\RequirePackage{longtable}
+\RequirePackage{rotating}
+%    \end{macrocode}
+% We get ready to set the dimensions
+% of the table that will contain the calendar??
+%    \begin{macrocode}
+  \def\ttbl@settablewidth{%
+    \setlength{\ttbl@tablewidth}{\hsize}}%
+%    \end{macrocode}
+% Turn off the listing of days in the Calendar style.
+% It only works well for monthly calendars.
+%    \begin{macrocode}
+\tracingdates=0%
+%    \end{macrocode}
+% Set up a list of options for the Calendar style engine
+% to use with the "keyval" parser.
+%    \begin{macrocode}
+\define@key{opt}{leftspace}{\setlength{\LTleft}{#1}}
+\define@key{opt}{rightspace}{\setlength{\LTright}{#1}}
+\define@key{opt}{width}{\setlength{\ttbl@tablewidth}{#1}}
+\define@key{opt}{title}{\def\ttbl@title{#1}}
+\define@key{opt}{start}{\@settime\ttbl@start#1{}}
+\define@key{opt}{end}{\@settime\ttbl@end#1{}}
+\define@key{opt}{blockminutes}{\ttbl@minuteblocks=#1}
+\define@key{opt}{blocks}{\@setblocks#1,,{}}
+\define@key{opt}{labels}{\@extractlabels#1,,{}}
+\define@key{opt}{timeitemface}{\def\ttbl@timeitemface##1{{#1{##1}}}}
+\define@key{opt}{timelabelface}{\def\ttbl@timelabelface##1{{#1{##1}}}}
+\define@key{opt}{itemface}{\def\ttbl@itemface##1{{#1{##1}}}}
+\define@key{opt}{titleface}{\def\ttbl@titleface##1{{#1{##1}}}}
+\define@key{opt}{labelface}{\def\ttbl@labelface##1{{#1{##1}}}}
+\define@key{opt}{notimes}[f]{\@ttbl@usetimesfalse}
+\define@key{opt}{footer}{\def\ttbl@foot{#1}}
+\define@key{opt}{extralabelheight}{\ttbl@extralabelheight=#1}
+\newlength\ttbl@extralabelheight
+\newlength\ttbl@labelstrut%
+\newlength\ttbl@labelstrutbuf%
+%    \end{macrocode}
+%
+% Before setting default values, 
+% provide a set of parsing macros for use in scanning
+% some of the options fed to the "keyval" parser.
+% Doing this here allows us to specify the defaults in a
+% human readable syntax.
+%
+%    \begin{macrocode}
+\def\@settime#1#2:#3#{%
+  \ttbl@tempcount=#2%
+  \multiply\ttbl@tempcount by60%
+  \advance\ttbl@tempcount by#3%
+  \global#1\ttbl@tempcount}
+\def\@splitblocks#1-#2#{%
+  \def\@blockstarttext{#1}%
+  \def\@blockendtext{#2}}
+\def\@setblocks#1,#2#{%
+  \ifcat$#1$%
+    \let\next\@gobble%
+  \else%
+    \let\next\@setblocks%
+    \global\advance\ttbl@blocks by 1%
+    \@splitblocks#1{}%
+    \expandafter\@settime%
+      \expandafter\ttbl@time@start\@blockstarttext{}%
+    \expandafter\@settime%
+      \expandafter\ttbl@time@end\@blockendtext{}%
+    \let\ttbl@tempmac\ttbl@blocklist%
+    \edef\ttbl@blocklist{%
+      \ttbl@tempmac\the\ttbl@time@start-\the\ttbl@time@end,}%
+  \fi%
+    \next#2{}}
+\def\ttbl@chopblock#1-#2,#3#{%
+  \global\ttbl@time@start=#1%
+  \global\ttbl@time@end=#2%
+  \gdef\ttbl@blocklist{#3}}%
+\def\ttbl@labellist{}%
+\def\@extractlabels#1,#2#{%
+  \ifcat$#1$%
+    \ttbl@tempreg@a=\expandafter{\ttbl@labellist}%
+    \edef\ttbl@label##1{%
+      \noexpand\ifcase##1\the\ttbl@tempreg@a\noexpand\fi}%
+    \let\next\@gobble%
+  \else%
+    \let\next\@extractlabels%
+    \let\ttbl@tempmac\ttbl@labellist%
+    \expandafter\def%
+      \expandafter\ttbl@labellist%
+      \expandafter{%
+      \ttbl@tempmac\or #1}%
+  \fi%
+    \next#2{}}
+%    \end{macrocode}
+%
+% Set up default values for the "keyval" options.
+%
+%    \begin{macrocode}
+\def\ttbl@title{Conference Schedule}
+\@settime\ttbl@start8:00{}
+\@settime\ttbl@end17:00{}
+\ttbl@minuteblocks=60%
+\def\ttbl@blocklist{}%
+\def\ttbl@label#1{\themonth\space\theday}%
+\def\ttbl@timeitemface#1{{\small{#1}}}%
+\def\ttbl@timelabelface#1{{\small\textbf{#1}}}%
+\def\ttbl@itemface#1{{\small\textit{#1}}}%
+\def\ttbl@titleface#1{{\large\textbf{#1}}}%
+\def\ttbl@labelface#1{{\textbf{#1}}}%
+\newif\if@ttbl@usetimes%
+\@ttbl@usetimestrue%
+\def\ttbl@foot{}%
+%    \end{macrocode}
+%
+%
+% Define the calendar.  As for all Calendar styles,
+% this is done using "\newcalendar" with 17 arguments.
+%
+%    \begin{macrocode}
+\newcalendar%
+%    \end{macrocode}
+%
+% Name the new calendar environment.
+%
+%    \begin{macrocode}
+{timetable}
+%    \end{macrocode}
+%
+% Select an off-the-shelf macro for printing
+% that will dump printable
+% items on DVI.
+%
+%    \begin{macrocode}
+{\cal@insert}
+%    \end{macrocode}
+%
+% Be indifferent to the starting day of the week.
+% ("0" through "6" specify Sunday through Saturday).
+%
+%    \begin{macrocode}
+{7}
+%    \end{macrocode}
+%
+% Set the number of items in a group (the whole timetable, in this case).
+%
+%    \begin{macrocode}
+{\ttbl@boxes}
+%    \end{macrocode}
+%
+% Set the number of items in a subgroup (a line, in this case).
+%
+%    \begin{macrocode}
+{\ttbl@days}
+%    \end{macrocode}
+%
+% Use the ampersand table separator before all items
+% but the first in a subgroup.
+%
+%    \begin{macrocode}
+{&}
+%    \end{macrocode}
+%
+% Select a zigzig algorithm that increments the
+% day at each item, and jumps back to the start
+% day at the end of each subgroup.  The use of
+% "\ttbl@gettimes" here is unsightly, but for the time
+% being this gives us a way to sneak in a non-printing
+% calculation in advance of the first item in a new
+% subgroup.
+%
+%    \begin{macrocode}
+{z\ttbl@gettimes}
+%    \end{macrocode}
+%
+% Specify the header.  This has to be built on the fly
+% in the Timetable style, since all of the sizes
+% are determined from user options.  So just give the
+% name of the macro here.
+%    \begin{macrocode}
+{\extrarowheight=3pt\ttbl@header}
+%    \end{macrocode}
+%
+% Specify the tail of the table.  Remember to terminate
+% landscape if it was requested.
+%
+%    \begin{macrocode}
+{\\\hline\end{longtable}}%
+%    \end{macrocode}
+%
+% This will never be used in this style, because our
+% text consists of a single group.
+%
+%    \begin{macrocode}
+{\cal@footer\newpage\cal@header}
+%    \end{macrocode}
+%
+% Specify how to break the end of a subgroup.
+% In this case, we end the table line and add
+% a time block that must be generated on the fly.
+%
+%    \begin{macrocode}
+{\\\hline\ttbl@timecoltext}
+%    \end{macrocode}
+%
+% Set a couple of Calendar toggles before
+% scanning the date contained in the "timetable"
+% environment.
+%
+%    \begin{macrocode}
+{\dates@requiremonthtrue\dates@requiredaytrue}
+%    \end{macrocode}
+%
+% "\cal@range@start", "\cal@range@end" and "\dates@date"
+% are all set internally, so we just provide information
+% here.  Remember to adjust human-readable dates with
+% "\caldate" when changing "\dates@date", and
+% long dates with "\dates@fix" when adjusting
+% the human readable stuff.
+%
+%    \begin{macrocode}
+{\message{^^JStart: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+  \dates@date\cal@range@end%
+  \caldate%
+  \message{^^JEnd: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+  \dates@date\cal@range@start%
+  \caldate%
+%    \end{macrocode}
+%
+% \textit{Set the length of the conference in \texttt{ttbl@days}.}
+%
+%    \begin{macrocode}
+  \ttbl@days\cal@range@end%
+  \advance\ttbl@days by-\cal@range@start%
+  \advance\ttbl@days by1%
+%    \end{macrocode}
+%
+% \textit{Set the number of boxes in a group.  The number of
+% vertical blocks will already have been set if
+% the \texttt{blocks} option was used, so bypass that if
+% appropriate.}
+%
+%    \begin{macrocode}
+\ifcat$\ttbl@blocklist$%
+  \ttbl@blocks\ttbl@end%
+  \advance\ttbl@blocks by-\ttbl@start%
+  \divide\ttbl@blocks by\ttbl@minuteblocks%
+\fi%
+\ttbl@boxes\ttbl@blocks%
+\multiply\ttbl@boxes by\ttbl@days%
+%    \end{macrocode}
+%
+% \textit{Prepare an algorithm to derive the start and
+% end time of a block from the value of the
+% counter \texttt{cal@group@count} and set values in
+% \texttt{ttbl@time@start}, \texttt{ttbl@time@end}
+% and \texttt{ttbl@timecoltext}.}
+%
+%    \begin{macrocode}
+  \def\ttbl@gettimes{%
+    \ifcat$\ttbl@blocklist$%
+      \ttbl@time@start\cal@group@count%
+      \divide\ttbl@time@start by\ttbl@days%
+      \multiply\ttbl@time@start by\ttbl@minuteblocks%
+      \global\advance\ttbl@time@start by\ttbl@start%
+      \ttbl@time@end\ttbl@time@start%
+      \global\advance\ttbl@time@end by\ttbl@minuteblocks%
+    \else%
+      \expandafter\ttbl@chopblock\ttbl@blocklist-,{}%
+    \fi%
+      \mod{60}\ttbl@time@start\ttbl@minutes@start%
+      \ttbl@hours@start\dates@three%
+      \divide\ttbl@hours@start by60%
+      \mod{60}\ttbl@time@end\ttbl@minutes@end%
+      \ttbl@hours@end\dates@three%
+      \divide\ttbl@hours@end by60%
+      \ifnum\ttbl@minutes@start<10%
+        \edef\ttbl@minutes@start@mac{0\the\ttbl@minutes@start}%
+      \else%
+        \edef\ttbl@minutes@start@mac{\the\ttbl@minutes@start}%
+      \fi%
+      \ifnum\ttbl@minutes@end<10%
+        \edef\ttbl@minutes@end@mac{0\the\ttbl@minutes@end}%
+      \else%
+        \edef\ttbl@minutes@end@mac{\the\ttbl@minutes@end}%
+      \fi%
+      \xdef\ttbl@timecoltext{%
+        \noexpand\vbox{\vfil\vskip4pt%
+        \noexpand\begin{sideways}%
+        \noexpand\ttbl@timelabelface{%
+          \the\ttbl@hours@end:\ttbl@minutes@end@mac%
+        $\noexpand\leftarrow$%
+        \the\ttbl@hours@start:\ttbl@minutes@start@mac}%
+        \noexpand\end{sideways}%
+        \vfil}
+      &}}%
+%    \end{macrocode}
+%
+% \textit{Set the dimensions of the table.  We don't have
+% to worry about the vertical dimensions; we leave that
+% to longtable.}
+%
+% \textit{First let the user know what we're planning to do.}
+%
+%    \begin{macrocode}
+\ttbl@tablewidth\textwidth%
+\message{Package Timetable: %
+  setting table \the\ttbl@tablewidth\space in width.^^J}%
+%    \end{macrocode}
+%
+% \textit{The rules surrounding the first (time) column.}
+%
+%    \begin{macrocode}
+  \setlength{\ttbl@widthlessboxes}{2\arrayrulewidth}%
+%    \end{macrocode}
+%
+% \textit{The rules at the end of the text columns.}
+%
+%    \begin{macrocode}
+  \addtolength{\ttbl@widthlessboxes}{\ttbl@days\arrayrulewidth}%
+%    \end{macrocode}
+%
+% \textit{The space between the rules and the neighbouring text.}
+%
+%    \begin{macrocode}
+  \addtolength{\ttbl@widthlessboxes}{2\tabcolsep}%
+  \setlength{\ttbl@templen}{2\tabcolsep}%
+  \addtolength{\ttbl@widthlessboxes}{\ttbl@days\ttbl@templen}%
+%    \end{macrocode}
+%
+% \textit{The width of the time text.}
+%
+%    \begin{macrocode}
+  \settoheight{\ttbl@timetextlen}{\ttbl@timelabelface{99:99--99:99}}%
+  \settodepth{\ttbl@templen}{\ttbl@timelabelface{99:99--99:99}}%
+  \addtolength{\ttbl@timetextlen}{\ttbl@templen}%
+  \addtolength{\ttbl@widthlessboxes}{\ttbl@timetextlen}%
+%    \end{macrocode}
+%
+% \textit{Everything else is for the text columns.}
+%
+%    \begin{macrocode}
+  \setlength{\ttbl@hw}{\ttbl@tablewidth}%
+  \addtolength{\ttbl@hw}{-\ttbl@widthlessboxes}%
+  \divide\ttbl@hw by\ttbl@days%
+%    \end{macrocode}
+%
+% \textit{Prepare the macro that will generate a table
+% header with an appropriate number of columns
+% in appropriate sizes.}
+%
+% \textit{First we make up a unit in the width of the
+% time text, as determined above.  We make that
+% the first chunk of the format.}
+%
+%    \begin{macrocode}
+\edef\ttbl@firstunit{%
+  m{\the\ttbl@timetextlen}%
+  \noexpand|}%
+\ttbl@tempreg@a=\expandafter{\expandafter|\ttbl@firstunit}%
+%    \end{macrocode}
+%
+% \textit{Then we make up a similar chunk, but with the
+% length of the day columns, and store it in a register.}
+%
+%    \begin{macrocode}
+\edef\ttbl@dayunit{%
+  m{\the\ttbl@hw}%
+  \noexpand|}%
+\ttbl@tempreg@b=\expandafter{\ttbl@dayunit}%
+%    \end{macrocode}
+%
+% \textit{Within a loop, we add the day unit format chunk
+% to the format string until we have a chunk for
+% each day in the conference.}
+%
+%    \begin{macrocode}
+\ttbl@tempcount=1%
+\loop%
+ \edef\ttbl@tempmac{\the\ttbl@tempreg@a\the\ttbl@tempreg@b}%
+ \ttbl@tempreg@a=\expandafter{\ttbl@tempmac}%
+\ifnum\ttbl@tempcount<\ttbl@days%
+  \advance\ttbl@tempcount by1%
+\repeat%
+%    \end{macrocode}
+%
+% \textit{Within another loop, we build the labels.
+%  This is inelegant, but it works.  We maintain
+%  two counters in the loop, since the macro "ttbl@label"
+%  might be looking for a date or the column number.}
+%    \begin{macrocode}
+  \global\settoheight\ttbl@labelstrutbuf{\ttbl@labelface{W}}%
+  \global\advance\ttbl@labelstrutbuf by\ttbl@extralabelheight\relax%
+  \ifnum\ttbl@labelstrutbuf>\ttbl@labelstrut%
+    \global\ttbl@labelstrut\ttbl@labelstrutbuf%
+  \fi%
+  \def\ttbl@labeltext{}%
+  \dates@date=\cal@range@start%
+  \caldate%
+  \ttbl@tempcount=1%
+  \ttbl@tempreg@b={}%
+  \loop%
+   \protected@edef\ttbl@labeltext{\the\ttbl@tempreg@b&%
+     \noexpand\multicolumn{1}{c|}{%
+       \noexpand\ttbl@labelface{%
+          \ttbl@label{\ttbl@tempcount}}}}%
+   \ttbl@tempreg@b=\expandafter{\ttbl@labeltext}%
+  \ifnum\dates@date<\cal@range@end%
+    \advance\dates@date by1%
+    \caldate%
+    \advance\ttbl@tempcount by1%
+  \repeat%
+%    \end{macrocode}
+%
+% \textit{Reset the starting date.}
+%
+%    \begin{macrocode}
+  \dates@date\cal@range@start%
+  \caldate%
+%    \end{macrocode}
+%
+% \textit{Then we put the rest of the basic header
+% stuff around the string.  We use \texttt{protected@edef}
+% so that robust commands can be used in the title and
+% the labels.  Note the conditional use of "landscape".}
+%
+%    \begin{macrocode}
+  \ttbl@tempcount\ttbl@days%
+  \advance\ttbl@tempcount by1%
+  \protected@edef\ttbl@header{%
+    \noexpand\begin{longtable}{\the\ttbl@tempreg@a}%
+    \noexpand\multicolumn{\ttbl@tempcount}{c}%
+      {\noexpand\ttbl@titleface{\ttbl@title}}%
+    \noexpand\\\noexpand\hline%
+    \noexpand\vrule width0pt depth 0pt height\ttbl@labelstrut\relax%
+    \the\ttbl@tempreg@b\noexpand\\%
+      \noexpand\hline\noexpand\hline\noexpand\endhead%
+      \ifcat$\ttbl@foot$\else%
+        \noexpand\multicolumn{\ttbl@tempcount}{l}%
+          {\noexpand\ttbl@foot}\noexpand\\%
+        \noexpand\endfoot%
+      \fi%
+    \noexpand\ttbl@timecoltext}}%
+%    \end{macrocode}
+%
+% Specify the divider to be placed between entries
+% within a time\-table box.
+%
+%    \begin{macrocode}
+{\par\medskip}%
+%    \end{macrocode}
+%
+% Use the standard Calendar item-fetching macros to
+% grab classes of items.  We only need appointments
+% (things with a time associated with them) in this case,
+% and we specify the range of the current box to
+% limit the entries that are grabbed for current use.
+%
+%    \begin{macrocode}
+{\cal@get@appointments[\ttbl@time@start/\ttbl@time@end]}%
+%    \end{macrocode}
+%
+% Prepare macro text that will set the text to
+% "\longtext" on the first entry, and "\shorttext"
+% with braces thereafter.  If no "\longtext"
+% exists, use the "\shorttext" for everything.
+%
+%    \begin{macrocode}
+{\relax%
+  \ifnum\dates@time@start>0\relax%
+%    \end{macrocode}
+%
+%  \textit{We print a short entry for anything that starts
+% outside the slot we are dealing with.}
+%
+%    \begin{macrocode}
+    \ifnum\dates@time@start<\ttbl@time@start%
+      \protected@edef\cal@entry@text{%
+        \noexpand\cal@textcolor{\calcolor}{%
+          \noexpand\ttbl@itemface{%
+            \noexpand$\noexpand<\noexpand$%
+          \theshorttext\if@ttbl@usetimes, to \cal@appt@end@text\fi%
+          \noexpand$\noexpand>\noexpand$}}}%
+%    \end{macrocode}
+%
+% \textit{All other conforming entries get the long text.}
+%
+%    \begin{macrocode}
+    \else%
+      \ifnum\dates@time@start<\dates@time@end%
+        \protected@edef\cal@entry@text{%
+         \if@ttbl@usetimes%
+          \noexpand\ttbl@timeitemface{%
+            \cal@appt@start@text%
+            --%
+            \cal@appt@end@text}%
+            \space%
+         \fi%
+         \noexpand\cal@textcolor{\calcolor}{%
+           \noexpand\ttbl@itemface{%
+             \thelongtext}}}%
+      \else%
+        \protected@edef\cal@entry@text{%
+         \if@ttbl@usetimes%
+          \noexpand\ttbl@timeitemface{%
+           \cal@appt@start@text}%
+           \space%
+         \fi%
+         \noexpand\cal@textcolor{\calcolor}{%
+           \noexpand\ttbl@itemface{%
+              \thelongtext}}}%
+      \fi%
+    \fi%
+  \fi}%
+%    \end{macrocode}
+%
+% Chuck the assembled stack of appointments into
+% the box.
+%
+%    \begin{macrocode}
+{\theappointments}
+%    \end{macrocode}
+%</package>
+%
+%\iffalse
+%
+% \section{The Installation File}
+%
+%    \begin{macrocode}
+%<*installer>
+\def\batchfile{timetabl.ins}
+\input docstrip.tex
+\keepsilent
+\preamble
+This file is part of the Calendar package,
+Copyright (C) 1996-1997 by Frank Bennett, Jr.
+All rights reserved.
+------------------------------------------
+% IMPORTANT NOTICE:
+% 
+% You are not allowed to change this file.  You may however copy
+% this file to a file with a different name and then change the
+% copy if (a) you do not charge for the modified code, (b) you
+% acknowledge the author of this file in the new file, if it
+% is distributed to others, and (c) you attach these same
+% conditions to the new file.
+% 
+% You are not allowed to distribute this file alone.  You are not
+% allowed to take money for the distribution or use of this file
+% (or a changed version) except for a nominal charge for copying
+% etc.
+% 
+% You are allowed to distribute this file under the condition that
+% it is distributed with all of its contents, intact.
+% 
+% For error reports, or offers to help make this a more powerful,
+% friendlier, and altogether more thrilling package, please contact me on
+% fb@soas.ac.uk.  Better yet, make a contribution to
+% my pension.  Account details available on request.
+%
+\endpreamble
+
+\generate{\file{timetabl.sty}{\from{timetabl.dtx}{package}}
+   }
+
+\Msg{***********************************************************}
+\Msg{*}
+\Msg{* To finish the installation, you have to move the following}
+\Msg{* file into a directory searched by TeX:}
+\Msg{*}
+\Msg{* \space\space timetabl.sty}
+\Msg{*}
+\Msg{***********************************************************}
+
+%</installer>
+%    \end{macrocode}
+%\fi
+% \Finale \PrintChanges
+
+
+

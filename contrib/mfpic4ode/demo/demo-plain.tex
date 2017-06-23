@@ -1,0 +1,368 @@
+% compile with pdftex demo-plain; mpost portret; pdftex demo-plain
+\input multido
+\input mfpic
+
+\usemetapost
+\opengraphsfile{portret}
+\tlabelsep{3pt}
+\usemplabels
+
+
+\def\frac#1#2{{#1 \over #2}}
+\mfpicunit=1cm
+
+\input mfpic4ode
+
+
+
+
+
+\centerline{\bf Test file for mfpic4ode package}
+\centerline{Robert Ma\v r\'\i k}
+\centerline{January 3, 2008}
+
+\bigskip
+
+See the source file {\tt demo-plain.tex} for comments in the \TeX{} code.
+
+\clipmfpic
+\bigskip
+\centerline{\bf Logistic equation}
+Here we draw a simple picture which describes stability of stationary
+points of teh equation and then draw phase portrait of the equation.
+
+$$      x'=
+      {{r}\cdot\left(1-{x\over K}\right)x}
+$$
+
+% We set parameters for logistic equation
+\mfsrc{r:=1;K:=0.98;}
+
+% We set parameters for drawing and for the ODE solver
+\mfsrc{ODEarrowlength:=0.07; ODEstep:=0.02; ODEstepcount:=500;}
+
+% We define the equation
+\ODEdefineequation{r*y*(1-(y/K))}
+
+Stability and sign of the right--hand side.
+
+\mfpic[5][3]{-0.1}{1.5}{-0.1}{0.5}
+  \axes
+  \xmarks{K}
+  \tlabel[tc](K,0){$K$}
+  \tlabel[bc](0,ypos){$\smash{f(x)}$}
+  \tlabel[cl](xpos,0){$x$}
+
+  % This code draws arrows on x axis, the arrow points to the right if
+  % $f(x)$ is positive and to the left if f(x) is negative. If the
+  % starting point of the arrow is x_0 and the final point x_1 and if
+  % the function changes sign between x_0 and x_1, the arrow from x_0
+  % is not drawn
+  \multido{\r=0.01+0.2}{8}{\ODEharrow{\r}}
+
+  \pen{1pt}
+  \draw[rgb(0,0.5,0)]\parafcn{0,1.5,0.1}{(t,ODErhs(1,t))}
+  \draw[red]\parafcn{0,1.5,0.1}{(t,ODErhs(1,t))}
+  \draw[blue]\parafcn{0,K,0.1}{(t,ODErhs(1,t))}
+\endmfpic
+
+
+\mfsrc{ODEarrowlength:=0.3;}
+
+
+Phase portrait
+
+\mfpic[1][4]{-0.1}{10}{-0.1}{1.5}
+  \axes
+  \ymarks{K}
+  \tlabel[cr](0,K){$K$}
+  \penwd{1pt}
+  \tlabel[tc](xpos,0){$t$}
+  \tlabel[bc](0,ypos){$x$}
+  \pen{0.7pt}
+
+  % This code draws arrows in 19x15 points and draws three integral
+  % curves
+
+  \multido{\r=0.0+0.1}{15}
+  {\multido{\R=0.0+0.5}{19}
+    {\ODEarrow{\R}{\r}}}
+  \trajectories{0,0.3;0,0.01;0,1.4}
+
+\endmfpic
+
+\bigskip
+\centerline{\bf Logistic equation with harvesting}
+
+Similar to the previous picture, but both pictures are drawn together
+to see the relations between them.
+
+$$      x'=
+      {{r}\cdot\left(1-\frac x{{K}}\right)x}-{p}
+$$
+
+% We set parameters for logistic equation with harvesting and define
+% this equation.
+\mfsrc{r:=1;K:=0.98;lov:=0.15;}
+\ODEdefineequation{r*y*(1-(y/K))-lov}
+
+% If the equation possesses stationary points, we store them into
+% variables meza and mezb. If not, we set these variables to negative
+% values (and the are not drawn in view of mfpicclip option.
+\mfsrc{if (r**2*(K**2)-4*r*lov*K)<0: meza:=-1;mezb:=-1.1 
+  else: meza:=(r*K-sqrt(r**2*(K**2)-4*r*lov*K))/(2*r);
+  mezb:=(r*K+sqrt(r**2*(K**2)-4*r*lov*K))/(2*r) 
+  fi;}
+
+
+\hbox to \hsize{\hss\mfpic[1][4]{-0.1}{10}{-0.1}{1.3}
+  \axes
+  \ymarks{K}
+  \tlabel[cr](0,K){$K$}
+  \penwd{1pt}
+  \tlabel[tc](xpos,0){$t$}
+  \tlabel[bc](0,ypos){$x$}
+  
+  % here we draw lines - stationary solutions stored in meza and mezb
+  % variables
+  \draw[gray(0.5)]\dashed\lines{(0,meza),(xpos,meza)}
+  \draw[gray(0.5)]\dashed\lines{(0,mezb),(xpos,mezb)}
+
+  % We draw direction field using metapost cycle. Another option is to
+  % use multido command as in the previous example.
+  \mfsrc{for j=0 step 0.07 until 1.2:
+    for i:=0 step 0.5 until 10:}
+  \ODEarrow{i}{j}
+  \mfsrc{endfor;endfor;}
+
+  % We draw trajectories using black color.
+  \drawcolor{black}
+  \trajectories{0,0.1;0,0.2;0,0.4;0,0.6;0,0.8;0,1.1}
+\endmfpic\qquad
+% On the right we draw the right hand side of the equation
+\mfpic[3][4]{-0.15}{0.6}{-0.1}{1.3}
+  \axes
+  \ymarks{K}
+  \tlabel[cr](0,K){$K$}
+  \tlabel[br](xpos,0){$f(x)$}
+  \tlabel[bc](0,ypos){$x$}
+  \pen{1pt}
+
+  % This code draws the graph of right-hand side of logistic equation
+  % without harvesting.
+  \drawcolor{gray(0.7)}\draw\parafcn{0,1.2,0.1}{(ODErhs(1,t)+lov,t)}
+
+  % This code draws the graph of right-hand side. We use the blue
+  % color for positivce and red color for negative parts. We draw also
+  % arrows which are determined by the sigh of the right-hand side of
+  % the equation.
+  \drawcolor{red}\draw\parafcn{0,1.2,0.1}{(ODErhs(1,t),t)}
+  \drawcolor{blue}\parafcn{meza,mezb,0.05}{(ODErhs(1,t),t)}
+  \multido{\r=0.1+0.15}{7}{\ODEvarrow{\r}}
+\endmfpic\hss}
+
+\bigskip
+\centerline{\bf Three numerical methods for ODEs}
+
+Here we draw solution of ODE using all three available numerical
+methods. We use big step to see the difference between Euler,
+Runge--Kutta and fourth order Runge--Kutta method.
+$$    y'=x+y^3\qquad  y(0)=1
+$$
+  \leavevmode
+  \mfpic[20][5]{0}{0.5}{0.9}{2.4}
+    % We set-up parameters
+    \mfsrc{ODEarrowlength:=0.5;}
+    \ODEdefineequation{x+(y**3)}
+    \pen{1pt}\tlabelsep{1pt}
+
+    % We set up parameters for small step
+    \nomplabels
+    \drawcolor{green}
+    \mfsrc{ODEstep:=0.02; ODEstepcount:=30;}
+    \trajectoryRKF{0}{1}
+    \tlabel[tr](0.39,2.4){\bf{Exact solution}}
+
+    % We use bigger step to see the difference between various
+    % methods.
+    \mfsrc{ODEstep:=0.2; ODEstepcount:=2;}
+
+    % We draw trajectory by Euler method
+    \drawcolor{black}
+    \trajectory{0}{1}
+    \tlabel[bl](0.4,1.6){\bf{Euler}}
+    \tlabel[tl](0,1){\bf{$k_1$}}
+    \tlabel[tl](0.2,1.2){\bf{$k_1$ for second step}}
+    
+    % We draw trajectory by Runge-Kutta method
+    \drawcolor{rgb(0.5,0.5,0.5)}
+    \trajectoryRK{0}{1}
+    \tlabel[cl](0.4,2.05){\bf{RK}}
+    \tlabel[tl](0.1,1.1){\bf{$k_2$}}
+    
+    % We draw trajectory by fourth order Runge-Kutta method
+    \drawcolor{rgb(1,0,0)}
+    \trajectoryRKF{0}{1}
+    \tlabel[tl](0.4,2.15){\bf{RK4}}
+    
+    \tlabelsep{3pt}
+
+    % We draw direction field using blue arrows and metapost cycle
+    \penwd{1pt}
+    \drawcolor{blue}\headcolor{blue}
+    \mfsrc{for j=0.9 step 0.1 until 2.3:
+      for i:=0 step 0.05 until 0.5:}
+    \ODEarrow{i}{j}
+    \mfsrc{endfor;endfor;}
+    
+    
+    \drawcolor{black}
+    \doaxes{lbrt}
+    \bmarks{0,0.2,0.4}
+    \tmarks{0,0.2,0.4}
+    \lmarks{1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,2,2.2}
+    \pointcolor{red}
+    \pointfilltrue
+    \point[4pt]{(0,1)}
+    
+    % We draw some other and bigger arrows in the direction field. The
+    % slopes of hese arrows are important for the first step by Euler
+    % and Ruge-Kutta method and the second step by Euler method.
+    \pen{2pt}
+    \mfsrc{ODEarrowlength:=1;}
+    \colorODEarrowfalse
+    \drawcolor{red}\headcolor{red}
+    \ODEarrows{0,1;0.1,1.1}
+    \ODEarrow{0.2}{1.2}
+    
+    \axislabels{b}[tc]{{$0$}0,{$0.2$}0.2,{$0.4$}0.4}
+    \axislabels{l}[cr]{{$0.8$}0.8,{$1$}1,{$1.2$}1.2,{$1.4$}1.4,{$1.6$}1.6,{$1.8$}1.8,{$2$}2,{$2.2$}2.2,{$2.4$}2.4}
+  \endmfpic
+  
+
+\bigskip
+\centerline{\bf Autonomous systems}
+ 
+% The color arrows have no sense in the phase portrait of autonomous
+% system.
+\colorODEarrowfalse
+
+We draw the phase portrait of autonomous system, nulclines, invariant
+set between nulclines, trajectories. We draw arrows in regular grid
+and add few more arrows on nulclines and outside the regular grid.
+
+\mfsrc{TIMEstep:=0.05; TIMEend:=30;}
+
+\mfpic
+  [0.5]{-2}{15}{-2}{15}
+  \nomplabels
+  \tlabel[cc](8,15.5){\bf Competing species}
+  \usemplabels
+
+  % We set up parameters, define equations, define functions which
+  % describe nulclines and store stationary points into variables z10,
+  % z11, z12, z1.
+
+  \mfsrc{a:=11;b:=1;c:=0.8;k:=10;l:=1.1;m:=1.2;}
+  \mfsrc{ODEarrowlength:=0.3;}
+  \ASdefineequations{x*(a-b*x-c*y)}{y*(k-l*x-m*y)}
+  \fdef{xnulklina}{x}{(a-b*x)/c}
+  \fdef{ynulklina}{x}{(k-l*x)/m}
+  \mfsrc{z10=(0,a/c);z11=(0,k/m);z12=(a/b,0);z13=(k/l,0);}
+
+  % Here we draw a gray polygon - invariant set fot the system.
+  \pen{0.3pt}
+  \gfill[gray(0.7)]\lclosed\lines{z10,z11,z13,z12}
+  \axes
+  \tlabel[bc](0,ypos){$y$}
+  \tlabel[cl](xpos,0){$x$}
+  
+  \pointsize=3pt
+  
+  \pointfilltrue\pointcolor{red}\point{(a/b,0)}
+  \draw[red]\function{0,a/b,1}{xnulklina(x)}
+  \draw[red]\lines{(0,0),(0,ypos)}
+  \tlabel[cr](x10,y10){$a\over c$}
+  \tlabel[tc](x12,y12){$a\over b$}
+    
+  \pointfilltrue\pointcolor{green}\point{(0,k/m)}
+  \draw[green]\function{0,k/l,1}{ynulklina(x)}
+  \draw[green]\lines{(0,0),(xpos,0)}
+  \tlabel[cr](x11,y11){$\alpha\over \beta$}
+  \tlabel[tc](x13,y13){$\alpha\over \gamma$}
+  
+  
+  \penwd{1.5pt}
+  \drawcolor{gray(0.25)}\headcolor{gray(0.25)}
+  \ASarrows{0,6;0,11;7,0;9,0;4.5,0;13,0;2,0;0,14;0,2}
+  \ASarrows{3,3;8,7;13,2;3,14}
+  \ASarrows{4,ynulklina(4);5,ynulklina(5);6,ynulklina(6);
+    1.7,ynulklina(1.7)}
+  \ASarrows{0.5,xnulklina(0.5);1.8,xnulklina(1.8);6,xnulklina(6);4,xnulklina(4);
+    7.5,xnulklina(7.5)}
+  
+  \drawcolor{black}
+  \AStrajectories{12,12;8,12;4,12;0.2,3;1,3;6,12;1,1;1,0.12;0.3,14}
+  \mfsrc{TIMEstep:=-0.05; TIMEend:=5;}
+  \AStrajectories{12,12;8,12;4,12;0.2,3;1,3;6,12;1,1;1,0.12;0.3,14}
+  \penwd{0.5pt}
+  \drawcolor{gray(0.5)}
+  \headcolor{gray(0.5)}
+  \multido{\r=0.5+1}{15}{\multido{\R=0.5+1}{15}{\ASarrow{\R}{\r}}}
+
+  
+\endmfpic
+
+
+\break
+\bigskip
+\centerline{\bf Predator prey system with HollingII response function}
+
+
+
+
+\mfpic[2]{-0.1}{4}{-0.1}{3}
+  % we define functions and parameters, right hand sides of the system
+  % and a function which defines nulcline
+  \mfsrc{r:=1;K:=3;a:=1;k:=0.8;P:=1;Alfa:=0.42;}
+  \fdef{funkceV}{x}{a*x/(x+P)}
+  \ASdefineequations{r*x*(1-(x/K))-funkceV(x)*y}{(-Alfa+k*funkceV(x))*y}
+  \fdef{xnulklina}{x}{r*(1-(x/K))*(x+P)/a}
+  \mfsrc{ODEarrowlength:=0.2;}
+
+  % Here we draw axes and nulclines
+  \axes
+  \tlabel[bc](0,ypos){$y$}
+  \tlabel[cl](xpos,0){$x$}
+  \draw[red]\function{0,K,0.1}{xnulklina(x)}
+  \draw[green]\lines{(P/((k*a/Alfa)-1),0),(P/((k*a/Alfa)-1),ypos)}
+  
+  % Here we draw some arrows on nulclines and then arrows in the plane
+  \penwd{0.5pt}
+  \drawcolor{gray(0.25)}\headcolor{gray(0.25)}
+  \ASarrows{P/((k*a/Alfa)-1),1;P/((k*a/Alfa)-1),2;P/((k*a/Alfa)-1),0.5;P/((k*a/Alfa)-1),1.5}
+  \ASarrows{0,xnulklina(0);0.5,xnulklina(0.5);1,xnulklina(1);1.5,xnulklina(1.5);2,xnulklina(2);2.25,xnulklina(2.25)}
+  \multido{\r=0.1+0.25}{20}{\multido{\R=0.1+0.25}{20}{\ASarrow{\R}{\r}}}
+  
+  %% We draw trajectory with IC x=2, y=2
+  \drawcolor{black}
+  \mfsrc{TIMEstep:=0.05; TIMEend:=10;}
+  \AStrajectoryRKF{2}{2}      
+  %% We continue the trajectory (spiral) from the last point
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+  \AStrajectoryRKF{x1}{y1}      
+
+  %% We continue backwards
+  \mfsrc{TIMEstep:=-0.05;}
+  \AStrajectoryRKF{2}{2}      
+  
+\endmfpic
+
+
+\closegraphsfile
+\end

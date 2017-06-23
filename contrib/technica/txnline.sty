@@ -1,0 +1,178 @@
+\NeedsTeXFormat{LaTeX2e}[1994/11/04]
+\ProvidesPackage{txnline} [2006/10/15 Technica]
+%
+% Most of the code in this package comes from version 3.10a of the
+% package "lineno" by Stephan I. B\"ottcher. The current version of
+% "lineno" is available on CTAN at tex-archive/macros/latex/contrib/lineno                   
+%
+% The package is NOT a replacement for "lineno": for one thing, it does
+% not ever print a line number. 
+%
+% Copyright Gianfranco Boggio-Togna	2006
+%
+% This program may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version~1.2
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+% http://www.latex-project.org/lppl.txt
+% and version 1.2 or later is part of all distributions of LaTeX  
+% version 1999/12/01 or later.
+%
+% This program consists of the file txnline.sty
+%
+\def \TXNl@linenopenalty  {-100000\relax}
+\mathchardef \TXNl@linenopenaltypar = 32000
+
+\newcount \TXNl@linenumber
+\global \TXNl@linenumber	= \@ne
+
+\newcount \TXNl@linenumber@par
+\global \TXNl@linenumber@par	= \z@
+
+\def \TXNl@lineate #1{%
+  \ifx #1\relax
+    \par
+    \ifx \TXNl@UserProcessLine \@gobble
+	\else
+      \let \TXNl@UserProcessLine = \@gobble
+      \TXNl@nolinenumbers 
+	\fi
+  \else
+    \ifx \TXNl@UserProcessLine \@gobble
+      \let \TXNl@UserProcessLine = #1\relax
+      \TXNl@linenumbers 
+	\fi
+  \fi
+}
+
+\let \TXNl@output = \output
+\newtoks \output
+\output = \expandafter{\the\TXNl@output}
+
+\TXNl@output = {%
+  \TXNl@LineNoTest
+  \if@tempswa
+    \ifnum \holdinginserts = \thr@@
+      \@tempswafalse
+    \fi
+    \if@tempswa
+      \the\output
+      \ifnum \holdinginserts = -\thr@@
+        \global \holdinginserts = \thr@@
+      \fi
+    \else
+      \global \holdinginserts = -\thr@@
+      \unvbox \@cclv
+      \ifnum \outputpenalty = \@M
+      \else
+        \penalty \outputpenalty
+      \fi
+    \fi
+  \else  
+    \TXNl@ProcessLine
+  \fi
+}
+
+\def \TXNl@LineNoTest {%
+  \let \@@par = \@@@par
+  \ifnum \interlinepenalty < -\TXNl@linenopenaltypar
+     \advance \interlinepenalty by -\TXNl@linenopenalty
+     \TXNl@nobreaktrue
+  \fi
+  \@tempswatrue
+  \ifnum \outputpenalty > -\TXNl@linenopenaltypar
+  \else
+    \ifnum \outputpenalty > -188000\relax
+      \@tempswafalse
+    \fi
+  \fi
+}
+
+\def \TXNl@nobreaktrue {\let \if@nobreak = \iftrue}
+
+\let \TXNl@UserProcessLine = \@gobble
+
+\def \TXNl@ProcessLine {%
+   \boxmaxdepth= \maxdimen
+   \setbox \z@ = \vbox {\unvbox\@cclv}%
+   \dimen@ = \dp\z@ 
+   \global \advance \TXNl@linenumber@par by \@ne
+   \count@ = \TXNl@linenumber@par
+   \ifnum \outputpenalty = -\TXNl@linenopenaltypar
+     \global \TXNl@linenumber@par = \z@
+     \count@ = -\count@
+   \fi
+   \expandafter \TXNl@UserProcessLine \expandafter {\the\count@}%
+   \global \advance \TXNl@linenumber	by \@ne
+   \ifnum \outputpenalty = -\TXNl@linenopenaltypar
+   \else
+     \@tempcnta = \outputpenalty
+     \advance \@tempcnta by -\TXNl@linenopenalty
+     \penalty \@tempcnta
+   \fi
+}
+
+\let \@@@par = \@@par
+
+\def \TXNl@linenumberpar {%
+  \ifvmode
+    \@@@par
+  \else
+    \ifinner
+      \@@@par
+    \else
+      \advance \interlinepenalty by \TXNl@linenopenalty
+      \edef \TXNl@linenoprevgraf {\the\prevgraf}%
+      \global \holdinginserts = \thr@@
+      \@@@par
+      \ifnum \TXNl@linenoprevgraf < \prevgraf
+        \penalty  -\TXNl@linenopenaltypar
+      \fi
+      \kern \z@
+      \global \holdinginserts =\z@
+      \advance \interlinepenalty by -\TXNl@linenopenalty
+    \fi
+  \fi
+}
+
+\newif \ifTXNl@lineating
+\newif \ifTXNl@waslineating
+
+\def \TXNl@suspend {%
+  \ifTXNl@lineating
+	%\typeout{suspend \the\TXNl@linenumber}%
+    \TXNl@waslineatingtrue
+    \TXNl@nolinenumbers
+  \fi
+}
+\def \TXNl@resume {%
+  \ifTXNl@waslineating
+	%\typeout{resume \the\TXNl@linenumber}%
+    \TXNl@waslineatingfalse
+    \TXNl@linenumbers
+  \fi
+}
+
+\def \TXNl@linenumbers {%
+  \let \@@par = \TXNl@linenumberpar
+  \ifx \@par \@@@par
+    \let \@par = \TXNl@linenumberpar
+  \fi
+  \ifx \par \@@@par
+    \let \par = \TXNl@linenumberpar
+  \fi
+  \TXNl@lineatingtrue
+}
+
+\def\TXNl@nolinenumbers {%
+  \let \@@par = \@@@par
+  \ifx \@par \TXNl@linenumberpar
+    \let \@par = \@@@par
+  \fi
+  \ifx \par \TXNl@linenumberpar
+    \let \par = \@@@par
+  \fi
+  \TXNl@lineatingfalse
+}
+\advance \maxdeadcycles by 100
+

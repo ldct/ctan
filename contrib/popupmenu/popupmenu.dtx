@@ -1,0 +1,261 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% popupmenu.sty package,           2009-10-15          %%
+%% Copyright (C) 2009  D. P. Story                      %%
+%%   dpstory@acrotex.net                                %%
+%%   storyd@nwfsc.edu                                   %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{popupmenu}
+%<package> [2010/09/18 v1.0 Provides support for popup menus (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\pdfstringdefDisableCommands{\let\\\textbackslash}%
+\EnableCrossrefs \CodelineIndex
+\OnlyDescription  % comment out for implementation details
+\begin{document}
+  \GetFileInfo{popupmenu.sty}
+  \title{The \textsf{popupmenu} Package}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@acrotex.net}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{popupmenu.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+% This is a short package that provides environments and commands for building
+% a popup menu using JavaScript. The command \cs{popUpMenu} uses the Acrobat JavaScript
+% method \texttt{app.popUpMenuEx}. This latter method requires you to pass to it a
+% structured menu listing of the menu items to be displayed in the popup menu, and the actions
+% to be taken when a menu item is selected. The environments \texttt{popupmenu} and
+% \texttt{submenu} are defined for the purpose of creating this hierarchical structure.
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+%    \end{macrocode}
+% According to the JavaScript manual, the \texttt{app.popUpMenuEx} method takes
+% one or more \texttt{MenuItem} objects. The {\LaTeX} access to the properties of this object are documented
+% as follows (taken verbatim from the JavaScript reference):
+%    \begin{macro}{title}
+% The menu item name, which is the string to appear on the menu item. The value of
+% \texttt{"-"} is reserved to draw a separator line in the menu.
+%    \begin{macro}{marked}
+% (optional) A Boolean value specifying whether the item is to be marked with a
+% check. The default is \texttt{false} (not marked).
+%    \begin{macro}{enabled}
+% (optional) A Boolean value specifying whether the item is to appear enabled or
+% grayed out. The default is \texttt{true} (enabled).
+%    \begin{macro}{return}
+% (optional) A string to be returned when the menu item is selected. The default is the
+% value of cName.
+%    \begin{macrocode}
+\define@key{menustruct}{title}[]{\def\menustruct@title{#1}}
+\define@boolkey{menustruct}{marked}[true]{}
+\define@boolkey{menustruct}{enabled}[true]{}
+\define@key{menustruct}{return}[]{\def\menustruct@return{#1}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+% We use the command \cs{pum@holdtoks} to hold the menu items as they are processed
+% in the environment, and use \cs{@AddToMenuToks} to add to the items.
+%    \begin{macrocode}
+\let\pum@holdtoks\@empty
+\newcommand{\@AddToMenuToks}{\g@addto@macro\pum@holdtoks}
+%    \end{macrocode}
+%    \begin{environment}{popupmenu}
+% We begin by defining our menu structure using the
+% \texttt{popupmenu} environment. Within this environment,
+% we list the items in the menu using \cs{item} and
+% the \texttt{submenu} menu if there are sub menus.
+%
+% The \texttt{popupmenu} command requires one parameter, this command is
+% used to create both a command and a JavaScript variable. The name is
+% passed to the \cs{popUpMenu} command, while the command version of the
+% name expands to the menu structure. The menu structure can be placed
+% at the document level, or as part of a push button action.
+% Here is an example of usage:\par
+% \begin{verbatim}
+%\urlPath{\aebhome}{http://www.math.uakron.edu/~dpstory}
+%\begin{popupmenu}{myMenu}
+%    \item{title=AeB,return=\aebhome/webeq.html}
+%    \item{title=-}
+%    \begin{submenu}{title=AeB Pro Family}
+%        \item{title=Home page, return=\aebhome/aeb_pro.html}
+%        \item{title=Graphicxsp, return=\aebhome/graphicxsp.html}
+%    \end{submenu}
+%    \item{title=eqExam, return=\aebhome/eqexam.html}
+%\end{popupmenu}
+%\end{verbatim}
+%The above definition can be conveniently placed in the preamble, though it can
+% appear anywhere before it is used, obviously. Now to use the menu structure,
+% all we need is a push button or link to create a JavaScript action:
+%\begin{verbatim}
+%   \pushButton[\CA{Packages}\AA{\AAMouseEnter{\JS{%
+%       \myMenu\r
+%       var cChoice = \popUpMenu(myMenu);\r
+%       if ( cChoice != null ) app.launchURL(cChoice);
+%   }}}]{menu}{}{11bp}
+%\end{verbatim}
+% The above example uses the \textsf{eforms} package, but a push button from \textsf{hyperref} will do too.
+% The \texttt{app.popUpMenuEx} method returns the return value, which we, in turn, process. In this
+% case, the return is a URL, which we launch.
+%
+% If we have placed \cs{myMenu} at the document level, the line \verb!\myMenu\r! would not be needed.
+% If you are using the same menu several times in the document, put it at the document level to reduce
+% file size.
+%
+% Also, in the above example, you see how the name, \texttt{myMenu}, passed as an argument
+% of the popupmenu environment is used as a name and as a command: The name is passed to
+% \cs{popUpMenu}, while the command expands to the menu structure that is referenced by the name.
+%    \begin{macrocode}
+%    \end{macrocode}
+%    \begin{macro}{\itemindex}
+% We generate the index of each menu item. \cs{itemindex} is
+% the index of the menu structure array; for example,
+% \cs{itemindex} might expand to \texttt{[0]}, \texttt{[1].oSubMenu[3]}, or \texttt{[2].oSubMenu[3].oSubMenu[0]}.
+% If \cs{itemindex} is included in the return value (possibly as an array entry), we can
+% know the item the use selected
+%\begin{verbatim}
+%var aChoice=processMenu(AeBMenu);
+%if (aChoice!=null) {
+%    var thisChoice=aChoice[0]; // this is a string
+%    var thistitle=eval("AeBMenu"+thisChoice+".cName");
+%    app.alert(thistitle);
+%}
+%\end{verbatim}
+% The above code gets the return array, then uses it to get the title of the item
+% selected,
+%    \begin{macrocode}
+\newcount\pum@cnt
+\def\pum@updateindex{\global\advance\pum@cnt\@ne
+   \edef\pum@rc{\pum@topindex[\the\pum@cnt]}\edef\itemindex{'\pum@rc'}}
+\def\pum@initIndexMenu#1{\global\pum@cnt=-1\relax\edef\pum@rc{#1}%
+   \edef\pum@topindex{\pum@rc}}
+%    \end{macrocode}
+%    \end{macro}
+% We are now ready to define the \texttt{popupmenu} environment. The environment
+% takes one required parameter, a name that is used as a JavaScript variable.
+% This name is also used to create a command.
+%    \begin{macrocode}
+\newenvironment{popupmenu}[1]{\pum@initIndexMenu{}%
+    \let\pum@holdtoks\@empty
+    \toks@={\pum@mytab}\@makeother\~
+%    \end{macrocode}
+% We initialize with a \cs{@gobble}, which eats up the leading comma (,)
+% that is placed there by the code below.
+%    \begin{macrocode}
+    \gdef\msarg{#1}\@AddToMenuToks{\@gobble}%
+    \let\item\pum@item
+}{%
+    \expandafter\xdef\csname\msarg\endcsname{%
+        var \msarg\space = [ \pum@holdtoks^^J];}%
+}
+%    \end{macrocode}
+%    \end{environment}
+%    \begin{macro}{\pum@item}
+% At the startup of the \texttt{popupmenu} environment, we \verb|\let\item\pum@item|.
+% The definition of \cs{pum@item} takes one argument, the properties described above.
+%    \begin{macrocode}
+\newcommand{\pum@item}[1]{\pum@updateindex
+    \edef\tmp@exp{\noexpand
+    \setkeys{menustruct}{title,marked=false,enabled,return,#1}}\tmp@exp
+    \edef\tmp@exp{,^^J\the\toks@
+        {cName: "\menustruct@title"%
+        \ifKV@menustruct@marked, bMarked: true\fi%
+     \ifKV@menustruct@enabled\else, bEnabled: false\fi%
+     \ifx\menustruct@return\@empty\else,
+     cReturn: "\menustruct@return"\fi}}%
+     \expandafter\@AddToMenuToks\expandafter{\tmp@exp}%
+}
+%    \end{macrocode}
+%    \end{macro}
+% Some technical matters, we need unmatched braces, so we define
+% \cs{pum@lbrace} and \cs{pum@rbrace}.
+%    \begin{macrocode}
+\begingroup
+\catcode`<=1 \catcode`\>=2 \@makeother\{ \@makeother\}
+\gdef\pum@lbrace<{>\gdef\pum@rbrace<}>
+\endgroup
+\def\pum@mytab{\space\space\space\space}
+%    \end{macrocode}
+%    \begin{environment}{submenu}
+% Used to create a submenu of a menu item. The top level menu item has no return value,
+% it can be marked but cannot be dis-enabled (\texttt{enabled=false}).
+%
+% The argument of \texttt{submenu} are any of the menu item properties, however, only
+% \texttt{title} and \texttt{marked} will be recognized.
+%
+% The JavaScript property, \texttt{oSubMenu}, of the menu structure passed to
+% the method \texttt{app.popUpMenuEx} has  no {\LaTeX} counterpart. This property
+% key-value pair is automatically inserted by the \texttt{submenu}
+% environment.
+%    \begin{macrocode}
+\newenvironment{submenu}[1]{\pum@updateindex
+    \xdef\saved@pum@cnt{\the\pum@cnt}%
+    \pum@initIndexMenu{\pum@rc.oSubMenu}\edef\temp@toks{\the\toks@}%
+    \toks@=\expandafter{\temp@toks\pum@mytab}%
+    \setkeys{menustruct}{title,marked=false,enabled,return,#1}%
+    \edef\tmp@exp{,^^J\the\toks@
+        \noexpand\pum@lbrace cName: "\menustruct@title"%
+        \ifKV@menustruct@marked, bMarked: true\fi%
+        \ifKV@menustruct@enabled\else, bEnabled: false\fi,
+        oSubMenu:^^J\the\toks@[}%
+%    \end{macrocode}
+% Again, we \cs{@gobble} up the leading comma (,).
+%    \begin{macrocode}
+     \expandafter\@AddToMenuToks\expandafter{\tmp@exp\@gobble}%
+}{%
+    \edef\tmp@exp{^^J\the\toks@ ]\pum@rbrace}%
+    \expandafter\@AddToMenuToks\expandafter{\tmp@exp}%
+    \global\pum@cnt\saved@pum@cnt
+}
+%    \end{macrocode}
+%    \end{environment}
+%    \begin{macro}{\popUpMenu}
+% The \cs{popUpMenu} command takes one argument, the name pass to a
+% popupmenu environment.  The command expands to the \texttt{app.popUpMenuEx}
+% method. The document author must then process the return value in some way.
+% The argument is enclosed in parentheses, this is so we can use \cs{popUpMenu}
+% at the document level, we can pass it an argument there.
+%    \begin{macrocode}
+\def\popUpMenu(#1){app.popUpMenuEx.apply( app, #1 )}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\urlPath}
+% A convenience command to save a url path. The string is normalized using
+% the \textsf{hyperref} command \cs{hyper@normalise}. Though we don't require
+% any other packages, you can't do much unless you use \textsf{hyperref} as well.
+%    \begin{macrocode}
+\providecommand{\urlPath}[1]{\def\pum@urlName{#1}%
+    \hyper@normalise\pum@urlPath}
+\def\pum@urlPath#1{\expandafter\xdef\pum@urlName{#1}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+%  \Finale
+\endinput
+History:
+    (2010/09/18 v.8) Replaced \count\z@ by \pun@cnt, and change the
+        increment to global. The index was not correct when there were several
+        submenus.
+    (2009/10/20 v.7) Added \itemindex, which calculates the index of the menu item
+        selected. Can be passed to the handling code as part of the return value.

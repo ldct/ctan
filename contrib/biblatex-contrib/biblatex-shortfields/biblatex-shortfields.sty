@@ -1,0 +1,143 @@
+%% Copyright 2017-… Maïeul Rouquette
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Maïeul Rouquette
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{biblatex-shortfields}[2017/04/09 v1.0.0 Print unique list of short fields]
+\providecommand{\biblatex@claves}{}%
+% 1. Use short version of fields instead of long version 
+\renewbibmacro*{series+number}{%
+  \iffieldundef{shortseries}{\printfield{series}}{\printfield{shortseries}}%
+  \setunit*{\addspace}%
+  \printfield{number}%
+  \newunit}
+
+\renewbibmacro*{journal}{%
+  \iffieldundef{shortjournal}{%
+  \iffieldundef{journaltitle}%
+    {}%
+    {\printtext[journaltitle]{%
+       \printfield[titlecase]{journaltitle}%
+       \setunit{\subtitlepunct}%
+       \printfield[titlecase]{journalsubtitle}}}%
+  }{%
+    \printtext[journaltitle]{\printfield[titlecase]{shortjournal}}%
+  }%
+}%
+  
+
+% 2. Custom sorting scheme
+  
+\DeclareSortingScheme{shortfields}{
+  \sort{
+    \field{claves_definition}
+    \field{shortjournal}
+    \field{shortseries}
+  }
+  \sort{
+    \field{series}
+    \field{journaltitle}
+  }
+}
+
+%3. Bibcheck
+
+\defbibcheck{shortfields}{%
+  %First, the entrytype NOT corresponding to claves
+  \iffieldundef{claves_definition}%
+    {% If not the corresponding to a claves
+    \ifboolexpr{%
+      (test{\iffieldundef{shortseries}} or test{\iffieldundef{series}})%
+       and%
+      (test {\iffieldundef{shortjournal}} or test {\iffieldundef{journaltitle}})%
+      }{%
+      \skipentry%
+    }{%
+      %For series
+      \ifboolexpr{%
+        test {\iffieldundef{series}}%
+        and% 
+        test {\iffieldundef{shortseries}}%
+        }{}%
+          {%
+            \ifcsdef{\strfield{shortseries}=\strfield{series}}{%
+            \skipentry%
+          }{%
+            \savefieldcs{series}{\strfield{shortseries}=\strfield{series}}%
+          }%
+        }%
+      % For journal
+      \ifboolexpr{%
+        test {\iffieldundef{journaltitle}}%
+        and%
+        test {\iffieldundef{shortjournal}}%
+        }{}%
+          {%
+          \ifcsdef{\strfield{shortjournal}=\strfield{journaltitle}}{%
+          \skipentry%
+          }{%
+          \savefieldcs{journaltitle}{\strfield{shortjournal}=\strfield{journaltitle}}%
+        }%
+      }%
+    }%
+   }%
+   {}%
+}%
+
+
+\newlength{\shortfieldswidth}
+\setlength{\shortfieldswidth}{4em}
+\defbibenvironment{shortfields}
+  {%
+  \let\old@blx@driver\blx@driver%
+  \ifdef{\clavesadddashinset}{%
+    \clavesadddashinset%Add the dash inside set (modify default style)
+    \renewcommand{\entrysetpunct}{\endgraf}%Break between set of an enty
+  }{}%
+  \renewcommand{\blx@driver}[1]{\blx@bbx@shortfields}%
+  \list{%
+    \iffieldundef{claves_definition}%
+      {%
+      \printfield{shortseries}%
+      \printfield[journaltitle]{shortjournal}%
+      }%
+      {\printfield[claves_definition]{entrykey}}%
+    }%
+    {%
+     \labelwidth\shortfieldswidth
+     \labelsep\biblabelsep
+     \leftmargin\labelwidth
+     \advance\leftmargin\labelsep
+     \itemsep\bibitemsep
+     \parsep\bibparsep
+     \def\makelabel##1{##1\hss}}}
+  {\endlist}
+  {\item}
+
+\DeclareBibliographyDriver{shortfields}{%
+  \iffieldundef{claves_definition}%
+    {%
+    \printfield{series}%
+    \printfield{journaltitle}%
+    }%
+    {\let\blx@driver\old@blx@driver\blx@driver{\thefield{entrytype}}}%
+}
+
+% The use level command
+\newcommand{\printbibshortfields}[1][title=\biblistname]{%
+  \begin{refcontext}[sorting=shortfields]
+  \printbibliography[check=shortfields,env=shortfields,#1]%
+  \end{refcontext}
+}
+
+
+\endinput

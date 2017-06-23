@@ -1,0 +1,366 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Version: 28 Dec 2005
+%%                                                     changelog at end
+%%
+%%     Primitive Linguistics Tree Formatter
+%%
+%% Copyright (c) 1991, 2005, 2006 Avery DeLano Andrews 3rd
+%% These macros can be redistributed and/or modified under the terms
+%% of the LaTeX Project Public License Distributed from CTAN
+%% archives in directory macros/latex/base/lppl.txt.
+%%
+%%      Parameter-list handling technique cribbed from gloss.sty
+%%         by Marcel R. van der Goot (1990).
+%%      Advice and some edits by Christopher D Manning
+%%
+%% License: LaTeX Project Public License
+%%
+%% Usage:  \tree{...}      prints out a formatted tree.
+%%         \treenode{...}  puts formatted tree into \treebox reg.
+%%            either leaves \treewidth reg = width of tree
+%%                          \treecenter reg. = `center' of tree
+%%
+%%         {...} above is a `tree list', of the form:
+%%           {{<terminal>}}
+%%           {<mother>, <d1>,  <dn>}, where each di is a treelist.
+%%            
+%%         e.g.  {S, {NP, {Det, {{the}}, {N, {{dog}}}}, {VP, {{barked}}}}
+%%
+%%         The double braces around terminals are annoying, but I haven't
+%%          been clever enough to avoid them.  <terminal> & <mother>
+%%          can be any well-balanced material, (feature-structures,
+%%          stacks of nodes & annotations ...
+%%
+%%  Parameters:
+%%    \sisterskip (dimen)     default spacing between sisters
+%%    \daughterskip (dimen)   default vert. mother-daughter spacing
+%%
+%%  Fiddles:
+%%    \daughtergap{<dimen>} in a mother node sets mother-daughter
+%%       spacing to <dimen> for daughters of that node.
+%%    \sistergap{<dimen>} in a node spaces it <dimen> horizontally
+%%       from its *preceeding* sister
+%%
+%%  LFG Specials:
+%%    To make life easier for LFG people, there are two commands for
+%%    doing annotated nodes, \tnode for terminals, \ntnode for nonterminals.
+%%    Both are defined in terms of \node from Emma Pease's tree.sty, so they
+%%    take two braced arguments, the node tag and the node specification.
+%%
+%%    The node tag is as in tree.sty, but the node specification is a
+%%    series of levels separated by `/' (if you want to combine levels
+%%    with GPSG slash notation, groupany level containing a slash in
+%%    braces).  With \ntnode, the upper levels are set in math mode
+%%    and the bottommost in restricted horizontal; with \tnode, the
+%%    upper levels are set in math mode and the bottommost in restricted
+%%    horizontal with italic font.
+%%
+%%    Annotation are now by default in the current mode (usually text).
+%%    If you want to switch on automatic math mode for annotations, you
+%%    can do it by redefining the \nodeannotation command as follows:
+%%
+%%      \def\nodeannotation#1{$#1$}
+%%
+%%   If you want to terminals to be, say slanted rather than italics, you can
+%%   do it by redefining \tstyle as follows:
+%%   
+%%      \def\tstyle{\sl}
+%%
+%%  If you want to use the stacking, etc., facilities, but not the
+%%  line-drawing (which depends on tree.sty), you can redefine \node
+%%  to effectively do nothing:
+%%
+%%      \def\node#1#2{#2}
+%%
+%%
+%%  General Remarks:
+%%
+%%    Coded for reader's comfort, not computer's speed, according
+%%    to my rather inexperienced lights.
+%%
+%%    Processes nodes on a left-corner schedule, first packing
+%%    daughters into an hbox, then mother into another hbox,
+%%    then both into a vtop (vbox with alignment along the top).
+%%
+%%    Improvements & Suggestions welcome.  Please notify to:
+%%
+%%      Avery D Andrews
+%%      School of Language Studies
+%%      Faculty of Arts
+%%      The Australian national University
+%%      Acton ACT 2600
+%%
+%%      email:  Avery.Andrews@anu.edu.au
+%%
+%%    Changelog:
+%%      27 Dec 2005: \nodeannotation bugfixed
+%%                   \sistergap bug fixed
+%%
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\csname LingTreesLoaded\endcsname
+\let\LingTreesLoaded\endinput
+
+\ifx\LingTreesWithoutPSTricks\relax\input tree-dvips.sty\else
+\ifx\PSTTreeDvipsEmuLoaded\endinput\else\input pst-tree-dvips-emu.sty\fi\relax\fi\relax
+
+\def\CR{
+}
+{
+\catcode`\_=11     % sets underbar to letter
+\catcode` =9       % causes spaces to be ignored
+\catcode`\^^M=9    % causes <CR> to be ignored
+
+\newbox\treebox        % box register for returned tree
+\newbox\mother_box     %     " for mother
+\newbox\daughter_box   %     " for local accumulation of daughters
+\newbox\daughterr_box  %     " for upward comm. of dtrs
+\newbox\stack_box      % for calculating widths for centering annotations
+
+\newskip\sisterskip     % default space between sisters
+\newskip\sister_skip    % space before current sister
+\newdimen\daughterskip  % default mother-daughter space (vert)
+\newdimen\daughter_skip % current  "
+\newdimen\stack_width   % for calculating widths for centering annotations
+\newskip\annoteskip     % default space between annotations
+
+\global\sisterskip=2em
+\global\daughterskip=2ex
+\global\annoteskip=0ex
+
+\newdimen\treewidth
+\newdimen\treecenter
+\newdimen\mother_offset
+\newdimen\first_center
+\newdimen\last_center
+\newdimen\daughter_center
+\newdimen\raise_daughter
+
+
+\newdimen\daughter_spread
+\newcount\daughter_count
+\newcount\treerationum
+\newcount\treeratiodenom
+\global\treerationum=0
+\global\treeratiodenom=0
+\gdef\treeslantratio#1{\@treeslantratio[#1]}
+\gdef\@treeslantratio[#1/#2]{%
+\treerationum=#1
+\treeratiodenom=#2
+}
+
+\newdimen\treedotwidth
+\global\treedotwidth=0.6pt
+
+\newdimen\nodewidth
+\newdimen\node_width
+\global\nodewidth=0em
+\gdef\@nwbox#1{\hbox{\makebox[\node_width][c]{#1}}}
+\gdef\@ifnodewidthzero#1#2{\ifdim\node_width=0em #1\else #2\fi}
+\gdef\@fwbox#1{\@ifnodewidthzero{\hbox{#1}}{\@nwbox{#1}}}
+
+\gdef\setnodewidth#1{\global\node_width=#1}
+
+\gdef\daughtergap#1{\global\daughter_skip=#1} % chris: should remove global?
+\gdef\sistergap#1{\global\sister_skip=#1}       % avery: no, doesn't work.  wish I could
+                                                %  remember how it was supposed to!
+
+% was: \gdef\tree#1{\tree_node#1,.\leavevmode\box\treebox}
+\gdef\tree#1{\tree_node#1,.\ifvmode\leavevmode\fi\hbox{\box\treebox}}
+          % formats tree & prints it out.
+          % sets treewidth & treecenter
+
+\gdef\treenode#1{\tree_node#1,.}  % formats tree & puts it in treebox
+          % sets treewidth & treecenter
+
+\gdef\treeann#1{\node_ann{#1}}          % annotation stack
+
+% for centered tree in math mode. cdm Mar 1996
+\gdef\treecent#1{\tree_node#1,.\ifvmode\leavevmode\fi\vcenter{\box\treebox}}
+
+\gdef\tree_node#1,#2.{
+   \def\daughters{#2}
+   \ifx\daughters\empty   % if terminal
+%      \message{terminal\CR}
+      \global\setbox\treebox=\@fwbox{#1}
+%      \message{got_term}
+      \global\treewidth=\wd\treebox
+      \global\treecenter=.5\treewidth
+   \else
+%      \message{get daughters}
+      \global\node_width=\nodewidth%\message{RestoreA\CR}
+      \get_daughters#2.
+%      \message{got daughters}
+      \global\node_width=\nodewidth%\message{RestoreB\CR}
+      \ifnum\treeratiodenom=0
+        \daughtergap{\daughterskip}
+      \else
+        \ifnum\daughter_count=1
+           \daughtergap{\daughterskip}
+         \else
+           \daughter_spread=\last_center
+           \advance \daughter_spread by -\first_center
+           \multiply \daughter_spread by \treerationum
+           \divide\daughter_spread by \treeratiodenom
+           \daughtergap{\daughter_spread}
+         \fi
+      \fi
+      \setbox\mother_box=\@fwbox{#1}
+%      \message{got mother\CR}
+      \ifdim\ht\mother_box=0em
+         \advance\daughter_skip by -2\nodemargin
+      \fi
+      \mother_offset=\daughter_center
+      \advance\mother_offset by -.5\wd\mother_box  % width to center of mother
+      \ifdim\mother_offset>0pt
+           \global\setbox\treebox=\vtop{
+                    \hbox{\hskip\mother_offset\unhbox\mother_box}
+                    \vskip\daughter_skip
+                    \box\daughterr_box}
+      \else
+           \global\setbox\treebox=\vtop{
+                    \box\mother_box
+                    \vskip\daughter_skip
+                    \hbox{\hskip-\mother_offset\unhbox\daughterr_box}}
+      \fi
+      \@ifnodewidthzero
+        {\global\treewidth=\wd\treebox}
+        {\global\treewidth=\node_width}
+      \global\treecenter=\daughter_center
+      \ifdim\mother_offset<0pt
+        \global\advance\treecenter by -\mother_offset
+      \fi
+%      \global\node_width=\nodewidth\message{Restore\CR}
+   \fi
+}
+
+\gdef\d@mmy.{}  % We call this when we are at the end.  A no-op, but you
+    % get better performance if you use no-ops! [cdm]
+
+\gdef\d@@mmy.{}{} % two-argument version.
+
+\gdef\get_daughters#1,#2.{
+%   \global\node_width=\nodewidth\message{PreRestore\noexpand\node_width\CR}
+   {\treenode#1}     %  process first daughter
+%   \message{got first daughter\CR}
+   \first_center=\treecenter
+   \last_center=\treewidth
+   \daughter_count=1
+   \setbox\daughter_box=\hbox{\raise\raise_daughter\box\treebox}
+   \def\more{#2}
+   \ifx\more\empty
+     \global\daughter_center=\first_center
+     \global\setbox\daughterr_box=\box\daughter_box
+     \let\more=\d@mmy
+   \else
+     \let\more=\more_daughters
+   \fi
+   \more#2.
+   \@ifnodewidthzero{}
+     {\global\setbox\daughterr_box=\@fwbox{\box\daughterr_box}
+      \global\daughter_center=.5\node_width
+     }
+}
+
+\gdef\more_daughters#1,#2.{
+   \sistergap{\sisterskip}
+   \node_width=\nodewidth
+   {\treenode#1}
+   \advance\daughter_count by 1
+   \@ifnodewidthzero  % leave out sisterskip for fixed width
+     {\setbox\daughter_box=\hbox{
+        \unhbox\daughter_box\hskip\sister_skip\raise\raise_daughter\box\treebox}}
+     {\setbox\daughter_box=\hbox{
+        \unhbox\daughter_box\raise\raise_daughter\box\treebox}}
+   \def\more{#2}
+   \ifx\more\empty
+      \advance\last_center by \treecenter
+      \@ifnodewidthzero
+        {\advance\last_center by \sister_skip}
+        {}
+      \advance\last_center by \first_center
+      \divide\last_center by 2
+      \global\daughter_center=\last_center
+      \global\setbox\daughterr_box=\box\daughter_box  
+      \let\more=\d@mmy
+   \else
+      \advance\last_center by \treewidth
+      \@ifnodewidthzero
+        {\advance\last_center by \sister_skip}
+        {}
+      \let\more=\more_daughters
+   \fi
+   \more#2.
+   \sistergap{\sisterskip}
+}
+
+
+\gdef\ntnode#1#2{
+  \def\t_style{\ntstyle}
+  \node{#1}{\node_ann{#2}}
+}
+
+\global\let\tstyle=\it
+\global\let\ntstyle=\rm
+
+\gdef\tnode#1#2{
+  \def\t_style{\tstyle}
+  \node{#1}{\node_ann{#2}}
+}
+
+\gdef\node_ann#1{
+  \global\stack_width=0pt
+  \get_widths#1/.
+  \vtop{\stack_ann#1/.}
+}
+
+\gdef\stack_ann#1/#2.{
+  \def\more{#2}
+  \ifx\more\empty
+    \ifdim\stack_width=0em
+      \hbox to\stack_width{\vbox to 0em{}}
+      \global\raise_daughter=\ht\strutbox
+    \else
+      \hbox to \stack_width{\strut\hss\t_style {\nodeannotation{#1}}\hss}
+      \global\raise_daughter=0ex
+    \fi
+    \let\more=\d@mmy
+  \else
+    \hbox to \stack_width{\hss {\nodeannotation{#1}}\hss}\vskip\annoteskip
+    \let\more=\stack_ann
+  \fi
+  \more#2.
+ }
+
+% Default used to be math, (for f-descriptions?) but this was a pain!
+% \gdef\nodeannotation#1{$#1$}
+\gdef\nodeannotation#1{#1}
+
+\gdef\get_widths#1/#2.{
+  \def\more{#2}
+  \ifx\more\empty
+     \setbox\stack_box=\hbox{\t_style \nodeannotation{#1}}
+     \let\more=\d@mmy
+  \else
+     \setbox\stack_box=\hbox{\nodeannotation{#1}}
+     \let\more=\get_widths
+  \fi
+  \ifdim\stack_width<\wd\stack_box
+    \global\stack_width=\wd\stack_box
+  \fi
+  \more#2.
+}
+
+}  % end group & restore standard catcodes
+
+%% Changelog
+%%
+%% 26 Feb 2006
+%%  get vertical spacing with no-label nodes to work
+%%  \setnodewidth command and ancilliaries working
+%%
+%% 28 Dec 2005
+%%   fix bugs with \nodeannotation and \sistergap
+%%
+%% 21 Sep 1997
+

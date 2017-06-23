@@ -1,0 +1,364 @@
+\documentclass[
+  use-a4-paper,
+  use-10pt-font,
+  final-version,
+  use-UK-English,
+  fancy-section-headings,
+  frame-section-numbers,
+  para-abstract-style,
+  inputfile,
+  input-config-file,
+  no-hyperref-messages,
+  wrapquote
+]{amltxdoc}
+
+\makeatletter
+\hfuzz1pt\vfuzz2pt
+\makeindex
+\WrapQuotes
+\AfterAfterStartOfDocument{%
+  \def\amd@sectitlefmt{\centering\Large\sffamily\color{secheadcolor}}%
+}
+\let\footnote\ltsfootnote
+\extrarowheight=2pt
+\arrayrulecolor{yellow}
+
+\begin{document}
+
+\begin{frontmatter}
+\title{}
+\titlenotes[t1,t2]{%
+  The package is available at \url{\titleurltext}.\sep
+  This user manual corresponds to version~0.5 of the package.
+}
+\subtitle{}
+\titleurl{http://mirror.ctan.org/macros/latex/contrib/keyreader/}
+\author{Ahmed Musa\authorref{a1}}
+\authornotes[a1]{%
+  The University of Central Lancashire, Preston, UK. \email{amusa22@gmail.com}.
+}
+\def\abstractname{\textsf{Summary}}
+\begin{abstract}
+  \small
+  The \pkg{keyreader} bundle is platform independent \latex package that provides robustness and some extensions to the \pkg'{xkeyval}. However, it isn't completely independent of the \pkg'{xkeyval}. It preserves braces in key values throughout parsing and saves estate when defining keys. Also, the command \fx{\krdsetkeys} allows unbalanced conditionals to be parsed as values of keys. Furthermore, when the command \fx{\krddefinekeys} is used, keys are initialized as soon as they are defined, and, unlike in the \pkg'{xkeyval}, admissible alternate values of choice keys can have individual callbacks. The looping macros of the \pkg'{xkeyval} are redefined, to increase robustness. The command \fx{\define@key} of the \pkg'{xkeyval} has had two of its subordinate commands redefined, to offset a complaint about the grabbing of the key's callback when defining keys with \fx{\define@key}. This user manual assumes that the reader is familiar with some of the functions and user interfaces of the \pkg'{xkeyval}. The \fx{\krdkeys} command ... Unlike the \pkg'{xkeyval}, the \pkg'{keyreader} can be loaded before \hx{\documentclass} and this feature doesn't affect its ability to later filter class options-list for options that have values.
+\end{abstract}
+
+\let\licensename\relax
+\begin{license}
+\xwmcolorbox[textalign=justified,outerframecolor=blue,innerframecolor=orange,width=.985\hsize]{%
+  This work (\ie, all the files in the \pkg'{keyreader} bundle) may be distributed and/or modified under the conditions of the \lppl, either version~1.3 of this license or any later version.
+  \endgraff
+  The \lppl maintenance status of this software is \quoted{author-maintained}. This software is provided \quoted{as it is}, without warranty of any kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose.
+  \endgraf
+  \centerline{\makered{\CopyrightYear}}\vspace{-.8\baselineskip}\relax
+}
+\end{license}
+\end{frontmatter}
+
+\begingroup
+\normalcolor\normalfont
+\hrule
+\vskip 1ex plus 1pt minus 1pt
+\def\contentsname{\centerline{\Large\textcolor{blue}{Contents}}}
+\hypersetup{linkcolor=blue}
+\textsf{\tableofcontents}
+\hrule
+\endgroup
+
+\docsection(sec:motivation){Motivation}
+
+The \pkg'{keyreader} predated the \pkg'{ltxkeys} and was developed to make key parsing by the \pkg'{xkeyval} robust (in the sense of preserving outer braces in key values throughout parsing and enabling the parsing of key values with unbalanced conditionals), as well as reduce the amount of typing that is required for defining several keys. To achieve robustness in key parsing, the \fx{\setkeys} command of the \pkg'{xkeyval} has been patched and renamed \fx{\krdsetkeys}. The \pkg'{xkeyval}'s \fx{\setkeys} remains unchanged, to avoid breaking existing codes that rely on it's current form. Some other low-level commands of \pkg'{xkeyval} have been patched and renamed. The \pkg'{keyreader} provides commands for compactly defining and setting all types of key (ordinary, command, boolean, and choice). Also, the \pkg'{keyreader} introduces the concept of callbacks for the alternate/admissible values of choice keys defined via the command \fx{\krddefinekeys}. Moreover, when \fx{\krddefinekeys} is used, keys are automatically set/initialized as soon as they are defined. This provides default definitions for the key macros and functions. Boolean keys are initialized with a value of \hx{false} irrespective of their default values.
+
+The \pkg'{keyreader} has been used as a development platform for the \pkg'{ltxkeys} because the \pkg'{xkeyval}, on which the \pkg'{keyreader} is based, has been quite stable for some years, its inherent shortcomings not withstanding. Has the user ever tried to pass to \pkg'{xkeyval}'s \fx{\setkeys} an unbalanced conditional as the value of a key? He/she will quickly be hit by the error message \quoted{! Incomplete \hx{\ifx}; all text was ignored after line \ldots}, or something similar. This limitation has been removed by the \pkg'{keyreader}\footnote{But, in general, parsing unbalanced conditionals isn't advisable in \tex.}.
+
+
+The packages in the \pkg{keyreader} bundle are ...
+
+
+\docsection(sec:definingkeys){Defining keys}
+
+The syntax for defining keys is:
+
+\start{newmacro}[\krddefinekeys]
+\krddefinekeys|*[|A(kprefix)]{|A(kfamily)}[|A(mprefix)]{|A(keylist)}
+\finish{newmacro}
+\fxim*{\krddefinekeys}
+
+The optional \ang{kprefix} and mandatory \ang{kfamily} have unambiguous connotations. The optional \ang{mprefix} is the macro prefix, in the parlance of the \pkg'{xkeyval}. The default values of \ang{kprefix} and \ang{mprefix} are \ffx'{KV,krdmp}, respectively.
+
+\start'{macro}[Syntax of key keylist]
+\krddefinekeys[<pref>]{<fam>}[<mp>]{
+  ord/<key>/<dft>/<f1>;
+  cmd/<key>/<dft>/<f1>;
+  bool/<key>/<dft>/<f1>;
+  bool+/<key>/<dft>/<f1>/<f2>;
+  choice/<key>/<dft>/<nominations>/<f1>;
+  choice+/<key>/<dft>/<nominations>/<f1>/<f2>;
+}
+\finish{macro}
+
+In the case of ordinary, command and boolean keys, \ang{keylist} has the syntax
+
+\start'{macro}[Syntax of key keylist]
+{
+  |A(keytype-1)/|A(keyname-1)/|A(default-1)/|A(callback-1);
+  |A(keytype-2)/|A(keyname-2)/|A(default-2)/|A(callback-2);
+  ...
+  |A(keytype-n)/|A(keyname-n)/|A(default-n)/|A(callback-n);
+}
+\finish{macro}
+
+The list parser for \ang{keylist} is invariably \qsemicolon. Hence, if the user has \qsemicolon in \ang{callback}, it has to be wrapped in curly braces, to hide it from \tex's scanner. \ang{keytype} can be any member of the list \leftbrace\fx{ord} (ordinary key), \fx{cmd} (command key), \fx{bool} (boolean key), \fx{choice} (choice key)\rightbrace.
+
+For choice keys, \ang{keylist} has the syntax
+
+\start'{macro}[Syntax of key keylist]
+{
+  |A(keytype-1)/|A(keyname-1)/|A(default-1)/|A(alt)/|A(callback-1);
+  |A(keytype-2)/|A(keyname-2)/|A(default-2)/|A(alt)/|A(callback-2);
+  ...
+  |A(keytype-n)/|A(keyname-n)/|A(default-n)/|A(alt)/|A(callback-n);
+}
+\finish{macro}
+
+The \emph{alternate values} (also called \emph{nominations} or \emph{admissible list of user input}) \ang{alt} has the syntax
+
+\start'{macro}[Syntax of alternate list for choice keys]
+|A(value-1).do=|A(callback-1),
+|A(value-2).do=|A(callback-2),
+...
+|A(value-n).do=|A(callback-n),
+\finish{macro}
+
+The list parser in this case is invariably \qcomma.
+
+The star (\redstar*) sign on \fx{\krddefinekeys} is an optional suffix. If it is present, then only definable (\ie, non-existent) keys will be defined. The existence of a key depends on \ang{kprefix} and \ang{kfamily}, since keys are name-spaced.
+
+\ltsnote
+Choice keys defined by \fx{\krddefinekeys} are of the \stform of choice keys (see the \pkg'{xkeyval} guide). Hence they will always convert the user input into lowercase before matching it against the alternate/admissible list of values specified at key definition time. The matching, as done by \fx{\krdsetkeys}, is catcode-agnostic.
+
+
+\docsection(sec:settingkeys){Setting keys}
+
+The command \fx{\krdsetkeys} is a more robust counterpart of the \pkg'{xkeyval}'s \fx{\setkeys}, in the sense that it preserves all outer braces in the values of keys and allows the parsing of key values with unbalanced conditionals. The new command \fx{\krdsetkeys} has the same syntax as the original \fx{\setkeys} of the \pkg'{xkeyval}, namely
+
+\start{newmacro}[\krdsetkeys]
+\krdsetkeys|*|+[|A(kprefix)]{|A(families)}[|A(na)]{|A(|verbkeyval)}
+\finish{newmacro}
+\fxim*{\krdsetkeys,\setkeys}
+
+As usual, the star (\redstar) and plus sign (\redplus) are optional suffixes. The \stform will save all undeclared keys in the list \fx{\XKV@rm}, possibly for setting later with the command \fx{\setrmkeys}, and will not report any unknown key as undeclared. The \plform will set the given keys in all the given families, instead of in just one family. The combination \redstar\redplus* will set the listed keys in all the given families and append unknown keys to the container \fx{\XKV@rm}. \ang{na} is the list of keys that shouldn't be set in the current run.
+
+The command \fx{\krdsetkeys} isn't exactly \pkg'{xkeyval}'s \fx{\setkeys}, since the former is more robust and avoids the selective sanitization of \keyval list that is done by \fx{\setkeys}. The macro \fx{\krdsetkeys} \quoted{normalizes} the \keyval or comma-separated key list. Therefore, users of the \pkg'{keyreader} should always call the command \fx{\krdsetkeys} instead of \fx{\setkeys}. Both have the same user interface. The \fx{\setkeys} command of the \pkg'{xkeyval}'s remains unchanged.
+
+The \pkg'{xkeyval}'s command \fxi{\setrmkeys}, which sets \quoted{remaining keys}, has been replaced by \fxi{\krdsetrmkeys}, while keeping \fx{\setrmkeys} unchanged. Users of the \pkg'{keyreader} should use \fx{\krdsetrmkeys} in place of \fx{\setrmkeys}.
+
+\start*+{example}[\ifkrdnovalue]
+\krdordkey[KV]{fam}{keya}[default]{%
+  \ifkrdnovalue
+    \krd@err{No user value supplied for key `keya'}
+      {Key `KV/fam/keya' requires a user value.}%
+  \else
+    \edef\userinput{\unexpanded{#1}}%
+  \fi
+}
+\krdsetkeys[KV]{fam}{keya}
+\krdsetkeys[KV]{fam}{keya=value}
+\finish{example}
+
+
+\docsection(sec:disable-keys)<disabling keys>{Disabling keys}
+
+The command \fxim{\krddisablekeys} has the same use syntax as the \fxi{\disable@keys} command of the \pkg'{xkeyval}, but will issue an error (instead of a warning) when an attempt is made to set a disabled key.
+
+
+\docsection(sec:options-processing)<options processing>{Options processing}
+
+The commands \ffxi'{\krdDeclareOption, \krdExecuteOptions, \krdProcessOptions} are replacements for \ffxi'{\DeclareOptionX, \ExecuteOptionsX, \ProcessOptionsX} of the \pkg'{xkeyval}.
+
+
+\docsection(sec:examples)<examples>{Some examples}
+
+\start*+{example}[\krddefinekeys, \krdsetkeys]
+\krddefinekeys*[KV]{fam}[pnt@]{%
+  |com(`#1' throughout here refers to the user input for the key.)
+  ord/keya/{black}/\def\xx##1{#1##1};
+  cmd/keyb/\@fisrtofone/\def\y##1{#1##1};
+  bool/keyc/true/\def\z##1{#1##1};
+  choice/keyd/center/
+    center.do=\def\vcp@align{center}\def\w##1{#1##1},
+    left.do=\def\vcp@align{flushleft},
+    right.do=\def\vcp@align{flushright},
+    justified.do=\def\vcp@align{relax}
+    /
+    \ifkrdindef\else
+      \def\xa##1{#1##1}
+    \fi;
+  ord/keye/{keye-default}/\def\y##1{#1##1}
+}
+\krdsetkeys[KV]{fam}[keyb]{keya={green},keyb=\@iden,keyc=false,keyd=left}
+|com(Setting keys with values having unbalanced conditionals:)
+\krdsetkeys[KV]{fam}{keye={\iffalse keye-value}}
+
+\krddefinekeys*[KV]{fam}[mp@]{%
+  ord/keya/default-a/\def\x##1{#1*##1};
+  bool/keyb/true/;
+  bool+/keyc/true//\@latexerr{Invalid value for keyc}\@ehd;
+  cmd/keyd/black;
+  choice+/keye/center/
+    center.do=\let\mp@alignright\hfil\let\mp@alignleft\hfil,
+    right.do=\let\mp@alignright\hfill\let\mp@alignleft\relax,
+    left.do=\let\mp@alignright\relax\let\mp@alignleft\hfill,
+    //
+    \let\mp@alignright\hfil\let\mp@alignleft\hfil
+    \@@warning{Invalid value for 'align'; 'center' assumed}
+  ;
+  ord/keyf/.na/\def\y##1{#1*##1}; |com(No default.)
+  bool+/keyg/true; |com(Will raise error when user input is invalid.)
+}
+\finish{example}
+
+The braces around \quoted{green}, the value of \fx{keya}, will be preserved throughout parsing. It should be remembered that keys are automatically set as soon as they are defined by \fx{\krddefinekeys}. The boolean \fx{\ifkrdindef} is true when \fx{\krddefinekeys} is defining keys, and false otherwise. The essence of it is that since keys are set as soon as they are defined by \fx{\krddefinekeys}, some actions should not be executed at this time, until the keys are being set by the user.
+
+Using the keys defined in the above example, let us make \qcomma and \qequal active and see how the \pkg'{keyreader} will deal with them.
+
+\start*{example}[Active comma and equals sign]
+|com(Make comma (`,') and equal `=' active to test the list normalization)
+|com(scheme of `keyreader' pacakge:)
+\begingroup
+\catcode`\,=13
+\catcode`\==13
+\gdef\keylista{{fam,famb}[keyb , keyc]{keya = {green} , keyb = \@iden ,
+  keyc = false , keyd = left, keye = somevalue}}
+\gdef\keylistb{\krdsetrmkeys|*|+[KV]{fam,famb}}
+\endgroup
+\def\reserved@a{\krdsetkeys|*|+[KV]}
+\expandafter\reserved@a\keylista
+\keylistb
+\finish{example}
+\aidx*{active comma and equals sign}
+
+The output of the following example is shown in \sref{fig:1}:
+
+\start*{example}[\label{example:1}]
+\documentclass{article}
+\usepackage{keyreader}
+\usepackage{xcolor}
+\makeatletter
+\newdimen\shadowsize
+\krddefinekeys*[KV]{ebox}[mp@]{%
+  bool/frame/true;
+  bool/shadow/true;
+  cmd/framecolor/black;
+  cmd/shadecolor/white;
+  cmd/shadowcolor/gray;
+  cmd/framesize/.4pt;
+  cmd/boxsize/.1\columnwidth;
+  cmd/shadowsize/1pt;
+  choice/align/center/
+    center.do=\let\mp@alignright\hfil\let\mp@alignleft\hfil,
+    right.do=\let\mp@alignright\hfill\let\mp@alignleft\relax,
+    left.do=\let\mp@alignright\relax\let\mp@alignleft\hfill,
+    justified.do=\let\mp@alignright\relax\let\mp@alignleft\relax
+    /
+    \def\userinput{#1};
+}
+\savevaluekeys[KV]{ebox}{frame,framecolor,framesize}
+|com(`Preset keys' have no `tail keys':)
+\krdpresetkeys[KV]{ebox}{%
+  frame,framecolor=black,framesize=0.5pt,boxsize,align
+}
+|com(`Postset keys' have no `head keys':)
+\krdpostsetkeys[KV]{ebox}{%
+  shadow=\usevalue{frame},shadowcolor=\usevalue{framecolor}!40,
+  shadowsize=\usevalue{framesize}*4
+}
+\newcommand*\ebox[2][]{%
+  \krdsetkeys[KV]{ebox}{#1}%
+  |com(What happens if we use the following, instead of the above \krdsetkeys?)
+  |com(Preset and postset keys wouldn't be set when `#1' is empty:)
+  |com(\krdifblank{#1}{}{\krdsetkeys[KV]{ebox}{#1}})
+  \begingroup
+  \ifmp@frame
+    \fboxrule=\dimexpr\mp@framesize\relax
+  \else
+    \fboxrule=0pt
+  \fi
+  \ifmp@shadow
+    \shadowsize=\dimexpr\mp@shadowsize\relax
+  \else
+    \shadowsize=0pt
+  \fi
+  \setbox0=\hbox{%
+    \fcolorbox{\mp@framecolor}{\mp@shadecolor}{%
+      \hbox to\mp@boxsize{%
+        \mp@alignright #2\mp@alignleft
+      }%
+    }%
+  }%
+  \hskip\shadowsize
+  \color{\mp@shadowcolor}%
+  \rule[-\dp0]{\wd0}{\the\dimexpr\ht0+\dp0\relax}%
+  \llap{\raisebox{\shadowsize}{\box0\hskip\shadowsize}}%
+  \endgroup
+}
+\makeatother
+
+\begin{document}
+\ebox{ebox1}
+\ebox[framecolor=gray,boxsize=2cm,align=right]{ebox2}
+\ebox[shadow=false,boxsize=1.5cm,align=left]{ebox3}
+\ebox[framesize=1pt,framecolor=green,shadowcolor=blue]{ebox4}
+\ebox[frame=false,shadow,shadowcolor=yellow,framesize=.5pt]{ebox5}
+\end{document}
+\finish{example}
+\fxim*{\krdpresetkeys,\krdpostsetkeys}
+
+\begin{figure}[h!]
+\caption{Output of \sref{example:1}\label{fig:1}}
+\centerline{%
+  \includegraphics[viewport=141 642 416 674,clip,scale=1]{keyreader-example1}%
+}
+\end{figure}
+
+
+\docsection(sec:version-hist){Version history}
+
+The following change history highlights significant changes that affect user utilities and interfaces; changes of technical nature are not documented in this section.
+
+\begin{versionhist}
+  \begin{version}{0.5b}{2012/11/06}
+  \item Choice keys can't have outer-braced default or user-supplied values. Outer-braced values may not have been given in the state pattern. Hence the outer braces are removed automatically internally before matching the value against the singleton. Also, key values are no longer converted into lowercase before matching against the state pattern.
+  \end{version}
+  \begin{version}{0.5}{2012/10/10}
+  \item The \pkg'{keyreader} can now be loaded before \fx{\documentclass}.
+  \end{version}
+  \begin{version}{0.4b}{2012/01/14}
+  \item The command \fx{\krdsetkeys} can now parse key values with unbalanced conditionals.
+  \end{version}
+  \begin{version}{0.4a}{2011/12/23}
+  \item The key list in \fx{\krddefinekeys} shouldn't have been normalized with respect to forward slash (/).
+  \end{version}
+  \begin{version}{0.4}{2011/12/20}
+  \item Several of the former functions of the package have been transferred to the independent \pkg'{ltxkeys} with even more robustness. The package now provides mainly a compact and robust interface to the features of the \pkg'{xkeyval} for users of \pkg'{xkeyval}.
+  \end{version}
+  \begin{version}{0.3}{2011/03/26}
+  \item Bug fix.
+  \end{version}
+  \begin{version}{0.2}{2011/02/25}
+  \item The interface for defining new keys now accepts conditionals in key macros/functions.
+  \item A mechanism is provided for automatic setting up and execution of key functions with default key values.
+  \end{version}
+  \begin{version}{0.1}{2010/01/10}
+  \item First public release.
+  \end{version}
+
+\end{versionhist}
+
+\newpage
+\ltsindexpreamble{Index numbers refer to page numbers.}
+\ltsindexpreambleformat{\centering}
+\ltsindexcolumns\tw@
+\printindex
+
+\end{document} 

@@ -1,0 +1,190 @@
+\documentclass[pagesize=auto]{scrartcl}
+
+% Many thanks to whoever generated this documentation file. --E.J.
+
+\usepackage{fixltx2e}
+\usepackage{etex}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcommand*{\mail}[1]{\href{mailto:#1}{\texttt{#1}}}
+\newcommand*{\pkg}[1]{\textsf{#1}}
+\newcommand*{\cs}[1]{\texttt{\textbackslash#1}}
+\makeatletter
+\newcommand*{\cmd}[1]{\cs{\expandafter\@gobble\string#1}}
+\makeatother
+\newcommand*{\meta}[1]{\textlangle\textsl{#1}\textrangle}
+\newcommand*{\marg}[1]{\texttt{\{}\meta{#1}\texttt{\}}}
+
+\addtokomafont{title}{\rmfamily}
+
+\title{The \pkg{theoremref} package}
+\author{Emil Jeřábek\thanks{\mail{jerabek@math.spam.cz} (replace \texttt{spam} with \texttt{cas})}}
+\date{2013/05/22}
+
+
+\begin{document}
+
+\maketitle
+
+
+\section{Introduction}
+
+So, you are writting up your math paper or thesis. There is the
+all-important Lemma~3.14 referenced from a dozen places throughout
+the paper, but you have just realized that its proof requires another
+lemma which should go before Lemma~3.14, hence all the references to
+Lemma~3.14 have to shift to Lemma~3.15. Now that's quite simple to do:
+you just insert the new lemma, and \LaTeX\ relabels the references for you
+behind the scenes. Good.
+
+Then you decide that Lemma~3.15 is, in fact, so important that you
+better call it a Theorem rather than just a Lemma, hence all the
+references to Lemma~3.15 should change to Theorem 3.15. Now that's
+quite simple to do: you just replace the name of the theorem
+environment of~3.15, and \LaTeX\ relabels the references for you behind
+the scenes\dots\ uhhh, except that it does not, actually. You have to go
+through the paper and manually change every occurrence of
+\verb|Lemma~\ref{main}| to \verb|Theorem~\ref{main}|. Your editor software may
+help with automatic text replacement, but that's no good by itself,
+you unfortunately still have to watch out for cases like
+\verb|Lemmas \ref{baz-quux} and~\ref{main}|. Needless to say, the whole business
+is rather error-prone, and very annoying, especially if you later
+decide that 3.15 is, after all, a Lemma, with the prospect of changing
+all those references back again.
+
+The \pkg{theoremref} package is designed to fill this gap in the \LaTeX\ %
+automatic reference system. It provides variants of the \cmd{\label} and
+\cmd{\ref} commands which automatically supply the correct theorem
+environment name into a reference, thus avoiding all the hassle
+described above.
+
+
+\section{Basic usage}
+
+\renewcommand*{\labelenumi}{(\theenumi)}
+\begin{enumerate}
+\item Put \verb|\usepackage{theoremref}| anywhere in the document preamble.
+  \pagebreak[2]
+
+\item For each theorem which you intend to use in the new system, declare
+  its label by \cmd{\thlabel}\marg{foobar}. For example,
+%
+\begin{verbatim}
+  \begin{Lem}\thlabel{exact}
+    Every projective formula is exact.
+  \end{Lem}
+\end{verbatim}
+
+\item There are three commands available for producing references to
+    your theorems: \cmd{\ref}\marg{foo} gives the number, as usual;
+    \cmd{\thref}\marg{foo} gives the theorem name followed by number; and
+    \cmd{\thnameref}\marg{foo} gives just the theorem name. Example:
+
+    \begin{tabular}{l@{ $\to$ }l@{}}
+      \verb|\ref{exact}|       & \verb|5.7.7|       \\
+      \verb|\thref{exact}|     & \verb|Lemma~5.7.7| \\
+      \verb|\thnameref{exact}| & \verb|Lemma|
+    \end{tabular}
+
+    The \cmd{\thref} command can handle an arbitrary number of arguments,
+    separated by commas:
+
+    \begin{tabular}{l@{ $\to$ }l@{}}
+      \verb|\thref{exact,zorn,main}| & \verb|Lemmas 5.7.7 and~2.1.5 and Theorem~6.6.4|
+    \end{tabular}
+\end{enumerate}
+
+
+\section{Options}
+
+\begin{itemize}
+\item \verb|\usepackage[lowercase]{theoremref}| will set your theorem
+  references in lowercase, e.\,g., ``lemma 5.7.7''. Note that there is
+  no provision for capitalization at the beginning of a sentence.
+
+\item \sloppy \verb|\usepackage[reftex]{theoremref}| provides an alternative
+  interface to the main commands: you can say \cmd{\th}\cmd{\label}\marg{foo} and
+  \cmd{\th}\cmd{\ref}\marg{foo} instead of \cmd{\thlabel}\marg{foo} and \cmd{\thref}\marg{foo}.
+  The effect is that the labelling and referencing commands are
+  correctly recognized as such by the Emacs reftex package (and,
+  presumably, other similar editing tools).
+\end{itemize}
+
+\fussy
+
+
+\section{Caveats}
+
+\begin{itemize}
+\item The \cmd{\thlabel} command reuses the slot for page number in the \texttt{.aux}
+  file. This should do no harm, as the latter is generally useless, I've
+  never seen anybody refer to a numbered theorem by its page number. But
+  to be on the safe side, here's an explicit warning: if you declare \meta{foo}
+  by \cmd{\thlabel}\marg{foo}, you cannot use \cmd{\pageref}\marg{foo} to get its page
+  number (it will actually give the theorem name). If you absolutely
+  need both, you can declare two labels for the same theorem:
+  \cmd{\label}\marg{foo-page}\cmd{\thlabel}\marg{foo-name}.
+
+\item If \cmd{\thref}\marg{bar} gives you a cryptic result like ``12 3.15''
+  instead of the theorem name, you probably forgot to use \cmd{\thlabel}
+  instead of \cmd{\label} (see the previous point for explanation). Note
+  that after you switch from one to the other, you may need to \TeX\ the
+  file twice in order for the change to propagate to the \texttt{.aux} file and
+  back.
+
+\item The new referencing commands only work for theorem environments
+  declared using the \cmd{\newtheorem} command. You \emph{cannot} use them for
+  e.\,g.\ tables, figures, equations, sections, and other environments.
+
+\item The implementation depends on some internals of the theorem
+  typesetting macros. It is compatible with the \pkg{theorem} and
+  \pkg{amsthm} packages, as well as the default theorem system in base
+  \LaTeX. It may fail for other theorem-like packages.
+
+  The package is compatible with \pkg{hyperref}, but not with other
+  packages that change the syntax of \cmd{\newlabel} commands written
+  to the \texttt{.aux} file.
+\end{itemize}
+
+\section{History}
+
+\begin{itemize}
+\item 2008-05-13: Initial public release.
+\item 2013-05-22: Added support for hyperref.
+\end{itemize}
+
+\section{License}
+
+The \pkg{theoremref} package is dually licensed under GPL or LPPL at your
+option:
+
+Copyright © 2008, 2013 Emil Jeřábek
+
+This package may be distributed and/or modified under the
+conditions of the \LaTeX\ Project Public License, either version 1.3
+of this license or (at your option) any later version.
+The latest version of this license is in
+\url{http://www.latex-project.org/lppl.txt}
+and version~1.3 or later is part of all distributions of \LaTeX\ %
+version~2003/12/01 or later.
+
+This package is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version~2 of the License, or
+(at your option) any later version.
+
+This package is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+\end{document}

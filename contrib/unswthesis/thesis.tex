@@ -1,0 +1,339 @@
+%%% [ This file is provided for the purpose of being an example of using
+%%%   the "unswthesis" class.  As such, any information relating to the
+%%%   thesis itself has been removed. ]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                       %
+%                      University of New South Wales                    %
+%               School of Computer Science and Engineering              %
+%                                 Thesis                                %
+%                                                                       %
+%                        (C) John Zaitseff, 1995.                       %
+%                                                                       %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Author:       John Zaitseff <J.Zaitseff@unsw.edu.au>
+% Date:         October, 1995. [ Stripped 28/8/96 ]
+% Format:       LaTeX-2e
+
+%     This document contains the Undergraduate Thesis for John Zaitseff,
+% completed at the University of New South Wales in Session 2, 1995.
+
+%@@@ introduces places where something needs to be done.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[final]{unswthesis}
+\usepackage{mythesis}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\frontmatter
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\mainmatter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Introduction}\label{ch:intro}
+
+One of the fastest growing areas of computing today is the area of
+portable, often hand-held, devices.  These highly-integrated computers
+are used in increasingly many areas, especially as Personal Digital
+Assistants, including hand-held data loggers, bar code scanners and meter
+readers.
+
+This thesis describes the design of one such portable system, based on
+the \Elan microprocessor.  This system features the use of the current
+state-of-the-art technology, including high-density surface-mounted
+components, low battery power consumption, and directly integrated
+support for the new \PCMCIA standard.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Acknowledgements}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Applications}\label{ch:apps}
+
+\section{Biomedical applications}
+
+Such a set-up would look something like Figure~\ref{fg:aging}.
+%
+\begin{ourfigure}
+%\includegraphics{homemon.ps}
+includegraphics...
+\caption{Remote monitoring of health status in the home}\label{fg:aging}
+\end{ourfigure}
+
+The r\^ole of the \EPC, the system this thesis describes, in such
+biomedical systems would be to actually take the place of the hand-held
+device taking data readings, or as part of the instrumentation modules
+placed around the house.  The requirements of the \EPC in such systems
+are described in the next chapter.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Alternatives}\label{ch:alt}
+
+In Chapter~\ref{ch:apps}, we saw a number of applications in which a
+portable computer may be used.
+
+...
+
+The \Elan CPU chooses the configuration mode at reset time, on the rising
+edge of \pnob{RESIN}, by sampling the state of three pins: \pnob{DTR},
+\pnob{RTS} and \pn{SOUT}.  These pins are usually used for serial port
+output, except for their special function at reset.  To select one of the
+modes, we place \res{10}{k} pull-up or pull-down resistors on these pins,
+as per Table~\ref{tb:elmode}.  In this table, a ``1'' indicates pull-up,
+``0'' indicates pull-down, and ``X'' indicates that no resistor is
+required.
+%
+\begin{ourtable}
+\begin{tabular}{|c|c|c|l|}
+\hline
+\multicolumn{3}{|c|}{Pin state at reset}  &  \\
+\cline{1-3}
+\rule[1.3ex]{0mm}{1.3ex}\pnob{DTR} & \pnob{RTS} & \pn{SOUT} &
+	\multicolumn{1}{|c|}{\raisebox{1.5ex}[0cm][0cm]{Mode Selected}} \\
+\hline
+0  &  0  &  X  &  Internal CGA \\
+1  &  0  &  0  &  Local bus, 1 \by clock \\
+1  &  0  &  1  &  Local bus, 2 \by clock \\
+X  &  1  &  X  &  Maximum ISA \\
+\hline
+\end{tabular}\par
+\begin{tabular}{c@{\,}c@{\,}l}
+0 &=& pull-down resistor (to \pn{GND}) \\
+1 &=& pull-up resistor (to \pn{VCC5}) \\
+X &=& no resistor \\
+\end{tabular}
+\caption{Selection of the \Elan operating mode}\label{tb:elmode}
+\end{ourtable}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Level 1 ISA Bus Support}\label{sc:el:isa1}
+
+Table~\ref{tb:elisa1} shows the meaning of the
+pins used in this mode.
+%
+\begin{ourtable}
+\renewcommand{\thefootnote}{\textit{\alph{footnote}}}
+\begin{tabular}{|l|c|l|}
+\hline
+Pin Name		& Type%
+%
+\footnote{I~=~Input, O~=~Output, I/O~=~Bidirectional.  These are with
+	  respect to the \Elan device itself.}
+%
+				& Function \\
+\hline
+\pn{AEN}		& O	& DMA address enable (DMA cycle)\\
+\pn{TC}			& O	& DMA terminal count\\
+\pn{SYSCLK}		& O	& System clock%
+				\footnote{ISA bus timing is \emph{not}
+				derived from this signal: it is meant to
+				be used for the keyboard controller
+				only.}\\
+\pn{PIRQ1}		& I	& Programmable interrupt request~1\\
+\pn{DRQ2}		& I	& DMA channel 2 request\\
+\pn{X1OUT} / \pn{BAUDOUT}
+			& O	& Video clock or serial port clock\\
+
+\pnob{MCS16}		& I	& Memory device is \bit{16}%
+\footnote{Note that \pnob{MCS16}, \pnob{IOCS16}, \pnob{SBHE} and
+	      \pn{IRQ14} are \emph{not} available in dual-scan LCD mode.} \\
+\pnob{IOCS16}		& I	& I/O device is \bit{16}\footnotemark[3]\\
+\pnob{SBHE}		& O	& Byte high enable\footnotemark[3]\\
+\pn{IRQ14}		& I	& Interrupt request~14\footnotemark[3]\\
+\hline
+\end{tabular}
+\renewcommand{\thefootnote}{\textrm{\arabic{footnote}}}
+\caption{ISA bus support, common subset}\label{tb:elisa1}
+\end{ourtable}
+
+Before we continue, a few points to note about the notation:
+%
+\begin{itemize}
+    \item  A pin name like \pn{PIN} indicates either an
+	   \emph{active-high} pin (i.e., where the pin is asserted when
+	   it is at a \High level, generally either \threevolt or
+	   \fivevolt), or a \emph{rising-edge} pin (i.e., where the pin
+	   is asserted on the rising edge, from \Low to \High, of a
+	   pulse).
+    \item  A name like \pnob{PIN} is the opposite: it indicates an
+	   \emph{active-low} pin, or one that is asserted on the
+	   \emph{falling-edge} (\High to \Low) of a signal.
+    \item  A name like \pnm{PIN}{3}{0} is \emph{shorthand} for pins
+	   individually named \pn{PIN0}, \pn{PIN1}, \pn{PIN2} and
+	   \pn{PIN3}.
+    \item  All pins are with reference to the microprocessor, i.e.,
+	   ``Output'' means output \emph{from} the processor to external
+	   peripherals.
+\end{itemize}
+
+The following is a description of the pins listed in
+Table~\ref{tb:elisa1}.  Much of this information is from pages 39 to~49
+of the \book{Data Book}~\cite{ci:data}, although some critical
+information is not listed in \emph{any} part of the supplied
+documentation:
+%
+\begin{pindescr}
+    \iopin {\pnm{SA}{23}{0}}%
+	   {System address bus}%
+	   {output, active high}
+
+		The system address bus outputs the physical memory or I/O
+		address.  It is used by all external devices, except
+		system DRAM\@.  In local bus mode, this represents the CPU
+		local address, except that \pn{SA0} is not used.  Note
+		that pins \pnm{SA}{23}{13} are multiplexed with the
+		memory bus; see section~\ref{sc:el:mem} for more details.
+
+    \iopin {\pnm{D}{15}{0}}%
+	   {System data bus}%
+	   {bidirectional, active high}
+
+		The system data bus inputs data during memory or I/O read
+		cycles, and outputs data during memory and I/O write
+		cycles.  In local bus mode, as well as in DRAM read/write
+		mode, this bus is used to represent the CPU data bus.
+\end{pindescr}
+
+...
+
+These modes are summarised in
+Table~\ref{tb:pmmodes}; see also pages~9--15 of the \book{Data
+Book}~\cite{ci:data}.
+%
+\begin{ourtable}
+\begin{tabular}{|p{0.15\linewidth}|p{0.6\linewidth}|}
+\hline
+Mode		&Description\\
+\hline\hline
+Full speed	&All clocks are at fastest speed and all peripherals are
+		powered up.\\\hline
+Low speed	&CPU clock is reduced to a lower speed; all other clocks
+		are at full speed.\\\hline
+Doze		&CPU, system and DMA clocks, as well as the high-speed
+		phase-locked loop, are stopped.\\\hline
+Sleep		&Additional clocks and peripherals are stopped (depending
+		on the programmed settings), as is the serial port
+		controller (UART).\\\hline
+Suspend		&A special BIOS routine is invoked to save the system
+		state, then virtually all of the system is powered down.
+		The phase-locked loops are turned off.\\\hline
+Off		&A powered-down mode in which \pn{PGP2} and \pn{PGP3} are
+		set to a predefined state.  Memory refresh is still
+		active.  No activity can cause the processor to leave
+		this state, except for a power-on reset.\\
+\hline
+\end{tabular}
+\caption{Power Management Unit operating modes}\label{tb:pmmodes}
+\end{ourtable}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Other Remarks}
+
+One of the additional features of the internal video controller is that
+it may be programmed to appear in the I/O location for a CGA controller
+(\addr{3D4}--\addr{3DA}) or in the I/O location for a Hercules Graphics
+Adapter (\addr{3B4}--\addr{3BF}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Conclusions}\label{ch:concl}
+
+In conclusion, this project has been \emph{very} challenging, but very
+interesting as well.  Although we were not able to proceed with the
+implementation, we are more than reasonably satisfied that the design is
+sound and thorough.  If the project is continued in the next year, the
+\EPC will eventually emerge as a symbol of today's modern computing.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{thebibliography}{199}
+\ssp
+
+%%%%%%%%%%%%%%%%%%%%%
+\bibitem{ci:poqetpad}
+
+``\book{Development of a Range of \PCMCIA Type III Instrumentation Modules for
+Clinical Measurement, based on the PoqetPad Plus Pen-based Computer}'',
+Branko Celler, Biomedical Systems Laboratory, University of NSW,
+Australia, 23rd June 1993.
+
+%%%%%%%%%%%%%%%%%
+\bibitem{ci:data}
+
+``\book{\Elan \AmSC Microprocessor Data Sheet}'',
+Mobile Computing Products Division of Advanced Micro Devices, Inc.
+
+%%%%%%%%%%%%%%%%
+\bibitem{ci:prm}
+
+``\book{\Elan \AmSC Microprocessor Programmers' Reference Manual}'',
+Mobile Computing Products Division of Advanced Micro Devices, Inc.
+
+%%%%%%%%%%%%%%%%%%%%
+\bibitem{ci:intlist}
+
+``\book{PC Interrupt List}''
+Ralf Brown, Release~47, August 1995.
+Available as\linebreak\texttt{ftp://ftp.cs.cmu.edu/afs/cs.cmu.edu/user/ralf/pub/inter47*.zip}
+
+
+%%%%%%%%%%%%%%%%%%%
+\bibitem{ci:pcspec}
+
+``\book{\PCMCIA Standards}'',
+``\book{PC Card Standard 2.1}'',
+``\book{Socket Services Specification 2.1}'',
+``\book{Card Services Specification 2.1}'',
+``\book{PC Card ATA Specification 1.02}'',
+``\book{AIMS Specification 1.01}'',
+``\book{Recommended Extensions 1.0}'',
+Personal Computer Memory Card International Association,
+July 1993.
+
+\end{thebibliography}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\ssp
+\chapter{\Elan Computer Schematics}\label{ch:schem}
+
+The following pages show the final \EPC schematics.  The actual
+schematics are in the following order:
+%
+\begin{enumerate}
+    \item System Block Diagram
+    \item \Elan Microprocessor
+    \item Miscellaneous
+    \item System Memory
+    \item Display Interface
+    \item \PCMCIA Buffers
+    \item \PCMCIA Connectors
+    \item Parallel Port
+    \item Serial Port
+    \item Keyboard Connector
+    \item Expansion Connector
+    \item DC/DC Power
+    \item Power Switching
+\end{enumerate}
+%
+% Leave enough space (13 pages) for the schematics.
+\clearpage
+\addtocounter{page}{13}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Component Data Sheets}\label{ch:datasheet}
+
+The following pages contain all of the data sheets for the components
+used in the \EPC design, except for the \Elan \AmSC itself (about
+300~pages, available seperately as~\cite{ci:data, ci:prm}, and simple
+components like resistors, capacitors and diodes.
+
+...
+
+\end{document}

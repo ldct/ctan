@@ -1,0 +1,406 @@
+% $Id: cwebx.sty,v 3.1 1995/11/21 00:42:49 schrod Exp $
+%----------------------------------------------------------------------
+
+%
+% LaTeX2e package cwebx
+% extra stuff for cweb bundle, to be added there sometimes
+%
+% [LaTeX2e]
+% (history at end)
+
+
+% Identification. The code below is explained in the implementation
+% documentation of the rcs package.
+
+\begingroup
+    \def\RCSPackage#1#2 $#3: #4 #5\endRCS $#6: #7 #8\endRCS{%
+        \def\date{#4}\def\id{v#7}%
+        \ProvidesPackage{#1}[\date\space\id\space #2]%
+        }
+
+  \RCSPackage{cwebx}{extra stuff for cweb bundle}
+  $Date: 1995/11/21 00:42:49 $: 9999/00/00 \endRCS
+  $Revision: 3.1 $: 0.0 \endRCS
+\endgroup
+
+
+%
+% What's this package for?
+%
+% Additional macros for cweb.cls or cwebpart.sty, to be added there
+% sometimes.
+%
+
+
+% requires that cweb base is loaded
+\ifx \cwbb@loaded\undefined
+    \PackageError{cwebx}{cweb base is not loaded}
+            {This package requires the usage of either cweb.cls or
+                cwebparts.sty.}
+\fi
+
+
+% This style is supported. Send bug reports, comments and repairs.
+%
+% The reference version may be retrieved via anonymous ftp from
+% |ftp.th-darmstadt.de| [130.83.47.112], directory |pub/tex/latex|. It's
+% placed there as a gzipped tar file. (The information on the
+% IP~number is dated 27 Sep 95. It might have changed, also
+% this is very unlikely. Use your friendly nameserver.)
+
+
+
+\catcode`\_=\CatLetter
+
+
+
+%%% ======================================================================
+
+
+%%
+%% Errors in cwebbase.doc
+%%
+
+
+% As \4 follows \B always, the \kern\CwebIndentUnit to neutralize that
+% backspace must be made after run-in section, too. Between the chunk
+% marker and the program code start is 1em then (inserted by LaTeX
+% section start).
+
+% FIXME: \4 does _not_ follow \B all the time. Check when it is
+% issued. The code below was introduced to repair a problem that gets
+% visible if one uses \cwebNoChunk with an indentation unit of 2em,
+% obviously I have to look for a better repair possibility.
+
+\CheckCommand*\B{%
+    \cwbb@program
+    \cwbb@indent 3\CwebIndentUnit  \hangindent\cwbb@indent
+    \ifvmode
+	\if@noskipsec
+	    \indent		% add an empty documentation part
+	\else
+	    \noindent \kern\CwebIndentUnit
+	\fi
+    \fi
+    \CwebNumberProgramPart
+    }
+
+\renewcommand\B{%
+    \cwbb@program
+    \cwbb@indent 3\CwebIndentUnit  \hangindent\cwbb@indent
+    \ifvmode
+	\if@noskipsec
+	    \indent		% add an empty documentation part
+	\else
+	    \noindent
+	\fi
+    \fi
+    \kern\CwebIndentUnit
+    \CwebNumberProgramPart
+    }
+
+
+%%% ------------------------------------------------------------
+
+
+%%
+%% Macros from cwebparts.doc, to be moved to cwebbase.doc.
+%%
+
+% They are partly repaired and improved, where noted with `CHANGE'.
+
+
+% \sect Now we can typeset pieces of \cweave{} output -- in principle.
+% If these pieces have sections in them, they'll write entries to the
+% |TOC| file. These entries will either mess up the structure of the
+% document's table of contents or lead to \TeX{} error messages. That's
+% because either toc entries for section types |part|, |chapter|, or
+% |section| are written (causing the conflict); or toc entries for
+% section types |chunk| and `|section|$i$' are written (being
+% undefined).
+
+% The best way seems to stop the included source to add anything to the
+% table of contents or to do any mark processing. For that, we provide a
+% macro |\CwebNoLists| that will locally redefine the \LaTeX{} cseqs
+% that cause such actions to happen. That macro will be used at the
+% start of the environment.
+
+% CHANGE: Discard try code that redefines |\markboth| and |\markright|.
+
+% \beginprog
+\def\CwebNoLists{%
+    \let\addtocontents\@gobbletwo
+    \let\mark\@gobble
+    }
+% \endprog
+
+
+% \sect Furthermore, section divisions should not start a new page.
+% %
+% \begin{fixme}
+%   Currently, sections in the included parts are typeset exactly the
+%   same way as they're typeset in the main document. That should be
+%   different -- but how do I change it in a general way?
+% \end{fixme}
+%
+% CHANGE: Moved to Cweb environment.
+
+
+% CHANGE: Improved question.
+%
+% \sect OK, what gets destroyed by the environment? We need to save
+% and restore counters that are changed globally by section commands.
+
+% \beginprog
+\ifx \chapter\undefined
+    \let\cweb@save_c@chapter\@gobble
+    \let\c@chapter\@gobble
+\else
+    \newcount\cweb@save_c@chapter
+\fi
+\newcount\cweb@save_c@part
+\newcount\cweb@save_c@section
+\newcount\cweb@save_c@chunk
+
+\def\cweb@save_for_env{%
+    %% save values changed globally by cwebbase macros
+    \cweb@save_c@chapter\c@chapter
+    \cweb@save_c@part\c@part
+    \cweb@save_c@section\c@section
+    \cweb@save_c@chunk\c@chunk
+    \let\cweb@save_thechapter\thechapter
+    \let\cweb@save_thesection\thesection
+    %% set up typesetting of CWEB source
+    \@nobreaktrue			% don't add space from first chunk
+    }
+\def\cweb@restore_env{%
+    \global\c@chapter\cweb@save_c@chapter
+    \global\c@part\cweb@save_c@part
+    \global\c@section\cweb@save_c@section
+    \global\c@chunk\cweb@save_c@chunk
+    \global\let\thechapter\cweb@save_thechapter
+    \global\let\thesection\cweb@save_thesection
+    }
+% \endprog
+
+
+% \sect For the moment, we use list spacing around a |cweb| environment.
+% \LaTeX{} supplies the |trivlist| environment for such purposes.
+
+% But the environment content itself must not be typeset in a list
+% context. Two problems exist: There must be at least one |\item|, it
+% will actually add the vertical space and must therefore not be
+% discarded. And list environments redefine |\par|, but the
+% \pkg{cwebbase} macros need a more `normal' definition.
+
+% An item label is stored by |\item| in the |\everypar| register. The
+% label is only typeset if |@inlabel| is true. The flag |@newlist| tells
+% most other \LaTeX{} macros, that there was no item yet; typically
+% they'll add an empty paragraph if necessary.  As the content will
+% start with a \LaTeX{} section division, or even with document markup,
+% we don't want that empty paragraph and should skip the empty item
+% label. (Often enough, due to the initialisation of |\everypar| in
+% |\@startsection|, it will be thrown away anyhow). So we establish its
+% postconditions, the next macro won't notice that the item hasn't been
+% set actually.
+
+% CHANGE: Added \CwebNoLists, as I consider it part of the env layout.
+
+% CHANGE: Added paragraph below.
+%
+% Furthermore, section divisions should not start a new page.
+% %
+% \begin{fixme}
+%   Currently, sections in the included parts are typeset exactly the
+%   same way as they're typeset in the main document. That should be
+%   different -- but how do I change it in a general way?
+% \end{fixme}
+
+% \begin{fixme}
+%   Experimentally, we reduce the skip in front of a chunk to 1\,pc,
+%   otherwise the distance between two chunks is far too wide compared
+%   to other vertical distances in the text around the included stuff.
+% \end{fixme}
+
+% \beginprog
+\def\CwebBeginEnvLayout{%
+    %% use spacing of list, but switch off list handling afterwards
+    \trivlist
+    \@inlabelfalse			% don't go in horizontal mode
+    \item\relax
+    \global\@newlistfalse
+    \global\@inlabelfalse\the\everypar
+    \@setpar{\@@par}%
+    %% now change cweb base layout, meant for classes
+    \CwebNoLists
+    \let\CwebEjectSection\@gobble
+    \CwebChunkPreSkip 1pc plus 6pt minus 3pt
+    }
+\let\CwebEndEnvLayout=\endtrivlist
+% \endprog
+
+
+% \sect The environment gets trivial now. We supply a hook for a whole
+% document and also environment-specific ones (as an optional
+% environment argument).
+
+% CHANGE: Renamed to `Cweb'. Lusers should actually not call that env
+% directly, it's too dangerous.
+
+% CHANGE: Added forgotten evaluation of \cweb@restore_env.
+
+% \beginprog
+\newenvironment{Cweb}[1][]%
+    {%
+	\CwebBeginEnvLayout
+        \cweb@save_for_env
+	\csname CwebEnvHook\endcsname
+	#1
+    }{%
+        \cweb@restore_env
+	\CwebEndEnvLayout
+    }
+% \endprog
+
+
+% CHANGE: Have to improve the introduction of |cwebInput|. Now it has
+% an additional optional parameter, where instance specific cseqs may
+% be passed (like the cweb env).
+
+% \sect An a convenience tag to include a complete \cweave{} file. Since
+% we want to test the typesetting of our included \cweb{} program alone,
+% we allow but ignore most kinds of document markup. Many of them have
+% two arguments, one is optional.
+
+% In the preambel, only |\documentclass| and |\usepackage| may appear.
+% Titlepage material is handled, table of contents is discarded. The
+% document environment does nothing, i.e., unlike the \cls{cweb} class,
+% material behind |\end{document}| is not ignored.
+
+% An |\end| tag is inserted by \cweave{} and must be redefined, we don't
+% end an environment there. We'll open a group and will use that tag to
+% close it again, as we know that we'll have reached the end of our
+% \cweb{} file. Of course, |\end| must not be redefined during
+% processing the actual program source -- environments are valid there.
+% The redefinition is best be triggered by material inserted from
+% \cweave{} at the very end, e.g., from |\inx|. But |\inx| may not be
+% there (when \cweave{} is called with the `|-x|' option), we'll use
+% |\enddocument| to add a |\inx| tag for safety reason. If the user
+% didn't add an |\end{document}| to his file and used `|-x|', we're
+% going to loose.
+
+% CHANGE: Added handling of empty chunk. (@noskipsec was set after the
+% environment, what messed up later invocations of program code if
+% used with \cwebCodeExample.)
+
+% \TeX{}nical note: |\document| must not have the same binding as
+% |\relax|, as this would be interpreted as a non-existing environment
+% by \LaTeX{}. (That's due to the |\csname| lossage.)
+
+% \TeX{}nical note: Evaluating |\inx| in |\enddocument| will not have
+% any effect, we're inside a group. That evaluation must be postponed
+% after the group has been closed.
+
+% \beginprog
+\providecommand\cweb@doc_markup_gobble[2][]{}
+\let\cwebInput\undefined
+\newcommand*\cwebInput[2][]{%
+    \begin{Cweb}
+        [%
+	    \begingroup
+		\let\documentclass\cweb@doc_markup_gobble
+		\let\usepackage\cweb@doc_markup_gobble
+		\let\title\@gobble
+		\let\author\@gobble
+		\let\date\@gobble
+		\let\maketitle\relax
+		\let\tableofcontents\relax
+		\let\document\empty
+		\def\inx{\let\end\endgroup}%
+		\let\fin\relax
+		\let\con\relax
+		\def\enddocument{%
+		    \if@noskipsec	% empty chunk
+		        \global\@noskipsecfalse
+			\global\everypar{}%
+		    \fi
+		    \aftergroup\inx
+		    }%
+		#1%
+	]%
+      \input{#2}%
+    \end{Cweb}%
+    }
+% \endprog
+
+
+%%% ------------------------------------------------------------
+
+
+%%
+%% New macros for cwebbase.doc.
+%%
+
+
+% For production of code examples in CWEB documents. It's expected
+% that the document consists of only \emph{one} chunk that has no
+% documentation. Just the code is of interest. Neither chunk markers,
+% nor chunk numbers, nor refinement numbers are typeset.
+%
+% But one may change that with the optional parameter.
+
+\providecommand*\cwebCodeExample[2][]{%
+    \cwebInput[%
+        \def\CwebChunkHeading##1{\kern -1em}%
+	\let\cwbb@marginal_chunkno\relax
+	\let\CwebRefNumber\@gobble
+	\CwebChunkPreSkip\z@skip
+	#1%
+	]{#2}%
+    }
+
+
+% Often one has an explanation for more than one refinement. (E.g.,
+% when there's needed a definition and a declaration.) Then the
+% documentation of the follow-up refinements shall consist solely of
+% |\cwebNoChunk|. Then no chunk marker is set, and the refinement
+% is typeset nearer to the previous refinement. Optically, we create
+% one chunk with many refinements this way.
+
+% \TeX{}nical note: No chunk marker is created by redefining macro
+% |\@svsechd| that creates header for run-in \LaTeX{} section. Every
+% header is followed by 1\,em space, we have to annulate that skip.
+% (The refinement shall start at the beginning of the line.) One must
+% not use |\hskip| to backup, an |\unskip| comes after the header and
+% would discard that skip.
+
+\providecommand\cwebNoChunk{%
+    \vskip -\lastskip  \bigskip		% discard LaTeX's inter-section skip
+    \def\@svsechd{\kern -1em}%
+    }
+
+
+
+
+\catcode`\_=\CatUsCode
+\endinput
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% $Log: cwebx.sty,v $
+% Revision 3.1  1995/11/21  00:42:49  schrod
+%     version 1.1
+%
+
+
+
+%%%------------------------------------------------------------
+
+% Local Variables:
+% mode: LaTeX
+% TeX-brace-indent-level: 4
+% indent-tabs-mode: t
+% TeX-auto-untabify: nil
+% page-delimiter: "^%%%"
+% End:

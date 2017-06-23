@@ -1,0 +1,1155 @@
+%
+% \iffalse
+%<*driver>
+\documentclass{tclldoc}
+
+\newcommand{\ParseTcl}{Parse\Tcllogo}
+\providecommand{\href}[2]{#2}
+
+\begin{document}
+\DocInput{parsetcl.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% 
+% \title{\ParseTcl\ --- a parser for \Tcllogo\ code}
+% \author{Lars Hellstr\"om}
+% 
+% \maketitle
+% 
+% 
+% \begin{abstract}
+%   \ParseTcl\ is a \Tcllogo\ package for parsing \Tcllogo\ code. 
+%   It is written completely in \Tcllogo, and make heavy use of some 
+%   new additions in \Tcllogo\,8.4.
+% \end{abstract}
+% 
+% \begin{tcl}
+%<*pkg>
+namespace eval parsetcl {}
+package require Tcl 8.4
+package provide parsetcl 0.1
+% \end{tcl}
+% \setnamespace{parsetcl}
+% 
+% \tableofcontents
+% 
+% \section{Parser results}
+% 
+% The values returned by the parser are conceptually rooted trees, but 
+% technically the return values are lists. The general format of a 
+% subtree is
+% \begin{quote}
+%   \word{type} \word{interval} \word{text} \word{subtree}\regstar
+% \end{quote}
+% where there is one \word{subtree} for each component that remains if 
+% the root of the subtree under consideration is deleted. The 
+% \word{type} specifies what kind of construction the subtree 
+% corresponds to. The \word{interval} is a list with the structure
+% \begin{quote}
+%   \word{first} \word{last}
+% \end{quote}
+% where \word{first} and \word{last} are integers; the indices into 
+% the input string of the first and last respectively character that 
+% corresponds to this part of the parser tree. The \word{text} is, 
+% depending on the \word{type}, either empty or the explicit string 
+% that corresponds to this subtree.
+% 
+% The \word{type}s are generally two-character strings, where the first 
+% letter specifies a major category and the second letter an exact type 
+% within that category, but this system is not enforced by any code.
+% \begin{description}
+%   \item[Null types]
+%     The \emph{null} types all begin with an |N|. These correspond to 
+%     information which isn't part of the script proper, but still is 
+%     useful to include in the parse result. It is generally possible 
+%     to add or remove subtrees of this type without changing the 
+%     meaning of the reconstruction of the script.
+%     \begin{enumerate}
+%       \item[\texttt{Nc}] \describestring[subtree type]{Nc}
+%         This type is for comments, and it normally appears only in 
+%         places where one would expect a command subtree. The 
+%         \word{interval} includes the |#| beginning the comment, but not 
+%         the newline ending it. The \word{text} is the text in the 
+%         comment (initial |#| not included).
+%       \item[\texttt{Ne}] \describestring[subtree type]{Ne}
+%         This type is for syntax errors; rather than stopping at every 
+%         error, the parser routines will try to recover as best they can, 
+%         and an error item will be inserted in the parser tree. This 
+%         type of item generally appears as a \word{subtree} of whatever 
+%         was being parsed when the error was detected. The \word{text} is 
+%         a human-readable error message. The \word{interval} specifies 
+%         the erroneous characters; if the error is that some character(s) 
+%         is missing then the end of the interval is the index of the 
+%         character before that which is missing, and the start of the 
+%         interval is the character after that which is missing.
+%       \item[\texttt{Np}] \describestring[subtree type]{Np}
+%         This type is merely a placeholder; both the \word{interval} and 
+%         the \word{text} are empty strings. It is used when there was 
+%         nothing to return, but call syntax requires that a subtree is 
+%         returned. If some call returns an item of this type then it 
+%         usually means that its caller also has reached the end of 
+%         whatever that was parsing.
+%     \end{enumerate}
+%     
+%   \item[Literate types]
+%     The literate, or verbatim, types all begin with an |L|. Words (of 
+%     a command) where no variable or command substitution will happen 
+%     usually belong in this category. There are three types of 
+%     literates: \describestring[subtree type]{Lb}|Lb|s are delimited by 
+%     braces and \describestring[subtree type]{Lq}|Lq|s are delimited by 
+%     quotes, whereas \describestring[subtree type]{Lr}|Lr|s have no 
+%     particular delimiters. In each case, the \word{text} is the string 
+%     that this interval of the input gets parsed into.
+%     
+%     Backslash--newline substitution is silently performed, but other 
+%     types of substitution will result in that the item is considered 
+%     to consist of one or more parts, each of which will be 
+%     represented as a separate \word{subtree}. The delimiting quotes 
+%     of an |Lq| is never included in the \word{interval} of any 
+%     \word{subtree}. An |Lb| never has any \word{subtree}s due to 
+%     substitution, since it can only be subject to backslash--newline 
+%     substitution, but it may have |Ne| subtrees.
+%     
+%   \item[Merge types]
+%     The merge types all begin with an |M|. They are similar to the 
+%     literate types, but are used for intervals of the input for which 
+%     the \emph{text} cannot be completely determined. 
+%     \describestring[subtree type]{Mq}|Mq|s are delimited by quotes, 
+%     whereas \describestring[subtree type]{Mr}|Mr|s have no particular 
+%     delimiters. The \word{text} is set to an empty string. There is 
+%     always at least one \word{subtree}.
+%     
+%   \item[Substitution types]
+%     The substitution types all begin with an |S|. As the name 
+%     indicates, they are used for intervals of the input that will be 
+%     substituted by a \Tcllogo\ parser.
+%     \begin{enumerate}
+%       \item[\texttt{Sb}] \describestring[subtree type]{Sb}
+%         This type is for backslash substitution. The \word{text} is 
+%         the character produced by this substitution. There is always 
+%         an |Lr| subtree for the text following the initial backslash.
+%       \item[\texttt{Sv}] \describestring[subtree type]{Sv}
+%         This type is for scalar variable substitution. The 
+%         \word{text} is empty, and there is one \word{subtree} for the 
+%         name of the variable being substituted. The type of this 
+%         subtree is either |Lr| or |Lb|, depending on whether the name 
+%         is surrounded by braces or not.
+%       \item[\texttt{Sa}] \describestring[subtree type]{Sa}
+%         This type is for array variable substitution. The 
+%         \word{text} is empty, and there are two \word{subtree}s: one 
+%         for the name of the array (always an |Lr|) and one for the 
+%         index into the array (either an |Lr| or an |Mr|).
+%       \item[\texttt{Sc}] \describestring[subtree type]{Sc}
+%         This type is for command substitution. The \word{text} is 
+%         empty, and there is one \word{subtree} for each command in 
+%         the script.
+%     \end{enumerate}
+%     
+%   \item[The command type]
+%     The \describestring[subtree type]{Cd}|Cd| type is for complete 
+%     commands. The \word{text} is empty, and each word in the command 
+%     has its own \word{subtree} (naturally, these are in the order of 
+%     the words in the command).
+%     
+%   \item[Root types]
+%     The root types are used for the root in a parser tree, but they 
+%     may also appear as proper subtrees if the parser is invoked 
+%     recursively. This is for example what one does with the body 
+%     argument of the |while| command: technically it is a string just 
+%     like any other string, but it makes most sense to parse that 
+%     string as a script and replace the original literate item by the 
+%     entire tree generated by parsing this string.
+%     
+%     The root types all begin with an |R|. They are
+%     \begin{enumerate}
+%       \item[\texttt{Rs}] \describestring[subtree type]{Rs}
+%         This type is for script parsing. The \word{text} is usually 
+%         empty, and each \word{subtree} is a command of the script.
+%       \item[\texttt{Rx}] \describestring[subtree type]{Rx}
+%         This type is for |expr| expression parsing.
+%     \end{enumerate}
+%   
+% \end{description}
+% 
+% \subsection{Some examples}
+% 
+% The script
+% \begin{quote}
+%   |set a "b\nc"|
+% \end{quote}
+% will be parsed as the list
+%\begin{verbatim}
+%   Rs {0 11} {} \
+%      {Cd {0 11} {}
+%         {Lr {0 2} set}
+%         {Lr {4 4} a}
+%         {Lq {6 11} b\nc
+%            {Lr {7 7} b}
+%            {Sb {8 9} \n {Lr {9 9} n}}
+%            {Lr {10 10} c}
+%         }
+%      }
+%\end{verbatim}
+% NB: This is not the canonical string representation, but one that was 
+% chosen for clarity of exposition. The |parsetcl::format_tree| 
+% procedure can be used to reformat a parser tree with indentation as 
+% shown above.
+% 
+% 
+% \section{Basic script parsing}
+% 
+% Basic script parsing makes a purely syntactic parsing of a script. It 
+% does not make any assumptions about the meaning of the commands used 
+% in the script, and hence it will not try to parse as scripts any  
+% argument of a commands (not even the byte-compiled commands).
+% 
+% The parsing relies on a set of procedures which parses the next item 
+% of a particular sort, and returns the corresponding parse subtree. 
+% These procedures can call each other recursively in complicated ways, 
+% following the actual structure of the script that is being parsed. 
+% The general syntax for calling such a procedure is
+% \begin{quote}
+%   \word{proc name} \word{string} \word{index-var-name} 
+%   \word{extra}\regstar
+% \end{quote}
+% where \word{string} is the string from which something should be 
+% parsed and \word{index-var-name} is the name of a variable in the 
+% local context of the caller which holds the index of the first 
+% character that hasn't been parsed yet (or possibly the last character 
+% that has been parsed, it may depend on what is most convenient for 
+% that particular procedure). There are two reasons for using this 
+% set-up. One is that the calling procedure usually needs to continue 
+% parsing the string after the part that it made a recursive call to 
+% have parsed, and for that purpose this variable provides a convenient 
+% method of returning the value. The other reason is one of efficiency: 
+% If the script as a whole is passed as an argument to all procedures 
+% that are involved in the parsing process, as opposed to passing only 
+% the part that hasn't been parsed yet, then the need to copy the data 
+% decreases drastically.
+% 
+% 
+% \subsection{Commands and scripts}
+% 
+% \begin{proc}{flush_whitespace}
+%   The |flush_whitespace| procedure advances the index past a 
+%   whitespace sequence. The syntax is
+%   \begin{quote}
+%     |parsetcl::flush_whitespace| \word{script} \word{index-var-name}
+%       \word{cmdsep}
+%   \end{quote}
+%   where \word{cmdsep} is |1| if command separators (newlines and 
+%   semicolons) should be flushed as well, but |0| if they should be 
+%   treated separately. The return value is the number of characters 
+%   that were flushed.
+%   \begin{tcl}
+proc parsetcl::flush_whitespace {script index_var cmdsep} {
+   upvar 1 $index_var index
+   if {[
+      if {$cmdsep} then {
+        regexp -start $index -- {\A([ \t-\r;]|\\\n)+} $script match
+      } else {
+        regexp -start $index -- {\A([ \t\v\f\r]|\\\n)+} $script match
+      }
+   ]} then {
+      incr index [string length $match]
+      return [string length $match]
+   } else {
+      return 0
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{parse_command}
+%   The |parse_command| procedure parses the next command, returning a 
+%   |Cd|, |Nc|, or |Np| item to its caller. The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_command| \word{script} \word{index-var-name}
+%     \word{nested}
+%   \end{quote}
+%   The \word{nested} argument is |1| if the context is that of command 
+%   substitution (in which case |]| acts as command terminator), and |0| 
+%   otherwise. Upon return, the index variable generally points to the 
+%   character that terminates the command.
+%   
+%   The procedure skips past any whitespace or command separators in front 
+%   of the actual command.
+%   \begin{tcl}
+proc parsetcl::parse_command {script index_var nested} {
+   upvar 1 $index_var index
+%   \end{tcl}
+%   The first step is to scan past the whitespace in front of the 
+%   command.
+%   \begin{tcl}
+   flush_whitespace $script index 1
+%   \end{tcl}
+%   Then there are two ``not a command'' cases to take care of: there 
+%   might be a comment or the command sequence might have ended. In the 
+%   former case, the extent of the comment is determined and a 
+%   corresponding |Nc| item is returned. Backslash--newline 
+%   substitution adds a bit complexity to the problem of finding the end 
+%   of the comment, since an escaped newline may be part of the comment, 
+%   although a backslash is only escaping if it isn't itself escaped.
+%   \begin{tcl}
+   switch -- "[string index $script $index]$nested" {#0} - {#1} {
+      regexp -start $index -indices -- {\A#([^\n\\]|\\.)*(\\$)?}\
+        $script interval
+      incr index
+      regsub -all -- {\\\n[ \t]*}\
+        [string range $script $index [lindex $interval 1]]\
+        { } text
+      set index [expr {[lindex $interval 1] + 1}]
+      return [list Nc $interval $text]
+   } 0 - 1 - \]1 {
+%   \end{tcl}
+%   In the latter case, an |Np| item is returned. It happens if 
+%   |$index| is past the last character in the string, but also if 
+%   |$index| is at a right bracket and the command is \word{nested}.
+%   \begin{tcl}
+      return [list Np "" ""]
+   }
+%   \end{tcl}
+%   But if we get this far, then there is a command to parse. One only 
+%   has to parse all the words.
+%   \begin{tcl}
+   set res [list Cd [list $index ""] ""]
+   set next [parse_word $script index $nested]
+   while {[lindex $next 0] ne "Np"} {
+      lappend res $next
+      set next [parse_word $script index $nested]
+   }
+   lset res 1 1 [lindex $res end 1 1]
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{basic_parse_script}
+%   The |basic_parse_script| procedure parses a script (that is to say, a 
+%   sequence of commands) and returns the corresponding |Rs| item. 
+%   The syntax is
+%   \begin{quote}
+%     |parsetcl::basic_parse_script| \word{script}
+%   \end{quote}
+%   \begin{tcl}
+proc parsetcl::basic_parse_script {script} {
+   set index 0
+   set res [list Rs [list $index ""] ""]
+   while {[lindex [set next [parse_command $script index 0]] 0] ne "Np"} {
+      lappend res $next
+   }
+   incr index -1
+   lset res 1 1 $index
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Parsing words}
+% 
+% \begin{proc}{parse_word}
+%   The |parse_word| procedure parses the next command word, returning 
+%   an |Lb|, |Lq|, |Lr|, |Mq|, |Mr|, or |Np| item to its caller. The 
+%   syntax is
+%   \begin{quote}
+%     |parsetcl::parse_word| \word{script} \word{index-var-name}
+%     \word{nested}
+%   \end{quote}
+%   The \word{nested} argument is |1| if the context is that of command 
+%   substitution (in which case |]| acts as command terminator), and |0| 
+%   otherwise. It is assumed that the index variable points to the first 
+%   character of the word when this procedure is called. Upon return, 
+%   the index variable points to the first none-whitespace character 
+%   (or command separator) after the word that was parsed.
+%   
+%   Most of the actual work is done by the helper procedures 
+%   |parse_raw_word|, |parse_quoted_word|, and |parse_braced_word|.
+%   \begin{tcl}
+proc parsetcl::parse_word {script index_var nested} {
+   upvar 1 $index_var index
+   switch -- [string index $script $index] \{ {
+      parse_braced_word $script index $nested
+   } \" {
+      parse_quoted_word $script index $nested
+   } "" - \; - \n {
+      list Np "" ""
+   } \] {
+      if {$nested} then {
+         list Np "" ""
+      } else {
+         parse_raw_word $script index $nested
+      }
+   } default {
+      parse_raw_word $script index $nested
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{parse_braced_word}
+%   The |parse_braced_word| procedure parses a brace-delimited word and  
+%   returns the corresponding |Lb| item to its caller. The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_braced_word| \word{script} \word{index-var-name}
+%     \word{nested}
+%   \end{quote}
+%   where the arguments and call conventions are as for |parse_word|. 
+%   In case the braced word is followed by some non-whitespace 
+%   characters, then this will be interpreted as though a space was 
+%   missing after the brace. A corresponding |Ne| subtree will be 
+%   attached to the |Lb| item returned, and the index variable will be 
+%   pointed to that none-whitespace character after the brace.
+%   \begin{tcl}
+proc parsetcl::parse_braced_word {script index_var nested} {
+   upvar 1 $index_var index
+   set res [list Lb [list $index ""]]
+   set depth 1
+   set text ""
+   incr index
+   while {$depth>0} {
+%   \end{tcl}
+%   Each iteration of this loop takes care of one non-trivial character 
+%   combination and whatever piece of trivial material that preceeds 
+%   it. Braces which are not escaped obviously constitute non-trivial 
+%   material (because they change the nesting depth), but escaped 
+%   newlines are also non-trivial (because they are subject to 
+%   substitution).
+%   \begin{tcl}
+      regexp -start $index -- {\A([^{}\\]|\\[^\n])*} $script match
+      append text $match
+      incr index [string length $match]
+      switch -- [string index $script $index] \{ {
+         incr depth
+         incr index
+      } \} {
+         incr depth -1
+         incr index
+      } \\ {
+         if {[regexp -start $index -- {\A\\\n[ \t]*} $script match]}\
+         then {
+            incr index [string length $match]
+            append text { }
+         } else {
+%   \end{tcl}
+%   In this (rather curious) case, the \word{script} ended with an 
+%   escaping backslash, but there is nothing to escape. This is 
+%   interpreted as just the backslash. However, there will be an error 
+%   since the braces apparently haven't been properly balanced.
+%   \begin{tcl}
+            append text \\
+            break
+         }
+      } "" {
+         break
+      }
+   }
+   if {$depth>0} then {
+      lset res 1 1 $index
+      lappend res $text [list Ne [list "" $index] {missing close-brace}]
+      lset res 3 1 0 [incr index]
+      return $res
+   }
+   lset res 1 1 [expr {$index - 1}]
+   lappend res $text
+%   \end{tcl}
+%   What remains now is to check that there aren't any stray characters 
+%   following the close-brace. If there is whitespace to flush then 
+%   everything is alright. Things are also alright if the next character 
+%   is a command terminator or we're at the end of the string.
+%   \begin{tcl}
+   if {[flush_whitespace $script index 0]} then {return $res}
+   switch -- [string index $script $index] \n - \; - {} {
+      return $res
+   } \] {
+      if {$nested} then {return $res}
+   }
+%   \end{tcl}
+%   But if that is not the case then there is an error, and an |Ne| item 
+%   should be appended to |res|. The exact appearence of this item does 
+%   however depend on how the parser attempts to recover from the error, 
+%   and that is not immediately obvious. The \Tcllogo\ parser makes no 
+%   attempt to recover---and can therefore report the error as ``extra 
+%   characters after close-brace''---but the best way to recover rather 
+%   seems to be to assume that a space is missing. That is why the 
+%   following error message is non-standard.
+%   \begin{tcl}
+   lappend res [list Ne [list $index [expr {$index - 1}]]\
+     {missing space after close-brace}]
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{parse_quoted_word}
+%   The |parse_quoted_word| procedure parses a quote-delimited word and  
+%   returns the corresponding |Lq| or |Mq| item to its caller. The 
+%   syntax is
+%   \begin{quote}
+%     |parsetcl::parse_quoted_word| \word{script} \word{index-var-name}
+%     \word{nested}
+%   \end{quote}
+%   where the arguments and call conventions are as for |parse_word|. 
+%   In case the quoted word is followed by some non-whitespace 
+%   characters, then this will be interpreted as though a space was 
+%   missing after the last quote. A corresponding |Ne| subtree will 
+%   be be put last in the |Lq| or |Mq| item returned, and the index 
+%   variable will be pointed to that none-whitespace character after 
+%   the quote.
+%   \begin{tcl}
+proc parsetcl::parse_quoted_word {script index_var nested} {
+   upvar 1 $index_var index
+   set res [list Lq [list $index ""] ""]
+   set text ""
+   incr index
+   while {1} {
+%   \end{tcl}
+%   Each iteration of this loop adds one subtree to |res| and the 
+%   corresponding literate material to |text|. If some substitution 
+%   happens which does not produce literate material then the |Lq| 
+%   in |res| is changed to an |Mq|.
+%   \begin{tcl}
+      switch -- [string index $script $index] \\ {
+         lappend res [parse_backslash $script index]
+         append text [lindex $res end 2]
+      } \$ {
+         lappend res [parse_dollar $script index]
+         lset res 0 Mq
+      } \[ {
+         lappend res [parse_bracket $script index]
+         lset res 0 Mq
+      } \" {
+         incr index
+         break
+      } "" {
+         lappend res [list Ne [list $index [expr {$index - 1}]]\
+           {missing close-quote}]
+         break
+      } default {
+         regexp -start $index -- {[^\\$\["]*} $script match
+         set t $index
+         incr index [string length $match]
+         lappend res [list Lr [list $t [expr {$index - 1}]] $match]
+         append text $match
+      }
+   }
+   lset res 1 1 [expr {$index - 1}]
+   if {[lindex $res 0] eq "Lq"} then {
+      lset res 2 $text
+%   \end{tcl}
+%   An |Lq| item that has precisely one subtree that furthermore is of 
+%   type |Lr| can do without that subtree, since all the interesting 
+%   information is in the |text|.
+%   \begin{tcl}
+      if {[llength $res] == 4 && [lindex $res 3 0] eq "Lr"} then {
+         set res [lrange $res 0 2]
+      }
+   }
+%   \end{tcl}
+%   What remains now is to check that there aren't any stray characters 
+%   following the close-quote. If there is whitespace to flush then 
+%   everything is alright. Things are also alright if the next character 
+%   is a command terminator or we're at the end of the string.
+%   \begin{tcl}
+   if {[flush_whitespace $script index 0]} then {return $res}
+   switch -- [string index $script $index] \n - \; - {} {
+      return $res
+   } \] {
+      if {$nested} then {return $res}
+   }
+%   \end{tcl}
+%   But if that is not the case then there is an error, and an |Ne| item 
+%   should be appended to |res|. As with characters after close-quotes, 
+%   it is assumed that a space is missing.
+%   \begin{tcl}
+   lappend res [list Ne [list $index [expr {$index - 1}]]\
+     {missing space after close-quote}]
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{parse_raw_word}
+%   The |parse_raw_word| procedure parses a whitespace-delimited word 
+%   of a command and returns the corresponding |Lr| or |Mr| item to its 
+%   caller. The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_raw_word| \word{script} \word{index-var-name}
+%     \word{nested}
+%   \end{quote}
+%   where the arguments and call conventions are as for |parse_word|. 
+%   \begin{tcl}
+proc parsetcl::parse_raw_word {script index_var nested} {
+   upvar 1 $index_var index
+   set res [list]
+   set type Lr
+   set interval [list $index]
+   set text ""
+   while {1} {
+%   \end{tcl}
+%   Each iteration of this loop adds one subtree to |res| and the 
+%   corresponding literate material to |text|. If some substitution 
+%   happens which does not produce literate material then |type| is set 
+%   to an |Mr|.
+%   \begin{tcl}
+      switch -- [string index $script $index] \\ {
+         if {[string index $script [expr {$index+1}]] eq "\n"} then {
+            break
+         }
+         lappend res [parse_backslash $script index]
+         append text [lindex $res end 2]
+         continue
+      } \$ {
+         lappend res [parse_dollar $script index]
+         set type Mr
+         continue
+      } \[ {
+         lappend res [parse_bracket $script index]
+         set type Mr
+         continue
+      } \t - \n - \v - \f - \r - " " - \; - "" {
+         break
+      }
+      if {$nested} then {
+         if {![
+            regexp -start $index -- {\A[^\\$\[\]\t-\r ;]+} $script match
+         ]} then {break}
+      } else {
+         regexp -start $index -- {\A[^\\$\[\t-\r ;]+} $script match
+      }
+      set t $index
+      incr index [string length $match]
+      lappend res [list Lr [list $t [expr {$index - 1}]] $match]
+      append text $match
+   }
+%   \end{tcl}
+%   In case there is only a single element in |res| then that will be 
+%   the result.
+%   \begin{tcl}
+   if {[llength $res]==1} then {
+      set res [lindex $res 0]
+   } else {
+      lappend interval [expr {$index - 1}]
+      if {$type ne "Lr"} then {set text ""}
+      set res [linsert $res 0 $type $interval $text]
+   }
+   flush_whitespace $script index 0
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Parsing substitutions}
+% 
+% \begin{proc}{parse_backslash}
+%   The |parse_backslash| procedure parses a backslash sequence and 
+%   returns the corresponding |Sb| item. The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_backslash| \word{script} \word{index-var-name}
+%   \end{quote}
+%   and it is assumed that the index character in \word{script} is the 
+%   initial backslash in the sequence. Upon return, the index character 
+%   is the first character after the backslash sequence.
+%   \begin{tcl}
+proc parsetcl::parse_backslash {script index_var} {
+   upvar 1 $index_var index
+   set start $index
+   incr index
+   set ch [string index $script $index]
+   set res [list Lr [list $index $index] $ch]
+   switch -- $ch a {
+      set res [list Sb [list $start $index] \a $res]
+   } b {
+      set res [list Sb [list $start $index] \b $res]
+   } f {
+      set res [list Sb [list $start $index] \f $res]
+   } n {
+      set res [list Sb [list $start $index] \n $res]
+   } r {
+      set res [list Sb [list $start $index] \r $res]
+   } t {
+      set res [list Sb [list $start $index] \t $res]
+   } v {
+      set res [list Sb [list $start $index] \v $res]
+   } x {
+      if {[regexp -start [expr {$index + 1}] -- {\A[0-9A-Fa-f]+}\
+        $script match]} then {
+         scan [string range $match end-1 end] %x code
+         incr index [string length $match]
+         lset res 1 1 $index
+         lset res 2 "x$match"
+         set res [list Sb [list $start $index]\
+           [format %c $code] $res]
+      } else {
+         set res [list Sb [list $start $index] x $res]
+      }
+   } u {
+      if {[regexp -start [expr {$index + 1}] -- {\A[0-9A-Fa-f]{1,4}}\
+        $script match]} then {
+         scan $match %x code
+         incr index [string length $match]
+         lset res 1 1 $index
+         lset res 2 "u$match"
+         set res [list Sb [list $start $index]\
+           [format %c $code] $res]
+      } else {
+         set res [list Sb [list $start $index] u $res]
+      }
+   } \n {
+      regexp -start [expr {$index + 1}] -- {\A[ \t]*} $script match
+      incr index [string length $match]
+      lset res 1 1 $index
+      lset res 2 "\n$match"
+      set res [list Sb [list $start $index] " " $res]
+   } "" {
+      return [list Sb [list $start $start] \\]
+   } default {
+      if {[regexp -start $index -- {\A[0-7]{1,3}} $script match]} then {
+         scan $match %o code
+         incr index [expr {[string length $match]-1}]
+         lset res 1 1 $index
+         lset res 2 $match
+         set res [list Sb [list $start $index] [format %c $code] $res]
+      } else {
+         set res [list Sb [list $start $index] $ch $res]
+      }
+      
+   }
+   incr index
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{parse_bracket}
+%   The |parse_bracket| procedure parses one pair of command 
+%   substitution brackets and returns the corresponding |Sc| item. 
+%   The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_bracket| \word{script} \word{index-var-name}
+%   \end{quote}
+%   and it is assumed that the index character in \word{script} is the 
+%   initial bracket in the sequence. Upon return, the index character 
+%   is the first character after the close-bracket.
+%   \begin{tcl}
+proc parsetcl::parse_bracket {script index_var} {
+   upvar 1 $index_var index
+   set res [list Sc [list $index ""] ""]
+   incr index
+   while {[lindex [set next [parse_command $script index 1]] 0] ne "Np"} {
+      lappend res $next
+   }
+   if {[string index $script $index] eq "\]"} then {
+      lset res 1 1 $index
+      incr index
+      return $res
+   } else {
+      lappend res [list Ne [list $index [expr {$index-1}]]\
+        {missing close-bracket}]
+      lset res 1 1 [expr {$index-1}]
+      return $res
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{variable}{varname_RE}
+%   The |varname_RE| is the regular expression used with |$| 
+%   substitution for grabbing the name of the variable.
+%   \begin{tcl}
+set parsetcl::varname_RE {\A(\w|::)+}
+%   \end{tcl}
+%   The reason for factoring this out into a variable is that 
+%   \Tcllogo\ isn't using the natural (Unicode) definition of an 
+%   alphanumeric character here, but relies on a locale-dependent 
+%   C~library function to perform this test. They generally agree on 
+%   ASCII characters, but outside that one probably cannot rely on that 
+%   the test produces sensible results. Hence if a script needs to be 
+%   parsed where some non-Unicode behaviour of this library function is 
+%   significant, then you might need to change the above regexp.
+%   
+%   There is a \Tcllogo\ bug report~\cite{Letter-bug} on the matter, 
+%   and hopefully there will be no need to ever change this regexp 
+%   once that has been resolved.
+% \end{variable}
+% 
+% \begin{proc}{parse_dollar}
+%   The |parse_dollar| procedure parses one |$|-sequence and returns 
+%   the corresponding |Sv|, |Sa|, or |Lr| item. The syntax is
+%   \begin{quote}
+%     |parsetcl::parse_dollar| \word{script} \word{index-var-name}
+%   \end{quote}
+%   and it is assumed that the index character in \word{script} is the 
+%   initial |$| in the sequence. Upon return, the index character 
+%   is the first character after the parsed sequence.
+%   \begin{tcl}
+proc parsetcl::parse_dollar {script index_var} {
+   upvar 1 $index_var index
+   set res [list "" [list $index ""] ""]
+   incr index
+%   \end{tcl}
+%   If the first character after the |$| is a left brace, then the 
+%   variable is scalar and its name is terminated by the next right 
+%   brace. Note that braces do not nest in this case.
+%   \begin{tcl}
+   if {[string index $script $index] eq "\{"} then {
+      lset res 0 Sv
+      set end [string first \} $script $index]
+      if {$end<0} then {
+         set end [expr {[string length $script] - 1}]
+         lappend res [list Lb [list $index $end]\
+           [string range $script [expr {$index + 1}] end]]\
+           [list Ne [list [expr {$end+1}] $end]\
+             {missing close-brace for variable name}]
+      } else {
+         lappend res [list Lb [list $index $end]\
+           [string range $script [expr {$index + 1}] [expr {$end-1}]]]
+      }
+      lset res 1 1 $end
+      set index [expr {$end + 1}]
+      return $res
+   }
+%   \end{tcl}
+%   Otherwise see if there is something which can be interpreted as an 
+%   alphanumeric variable name. First treat the case when there isn't; 
+%   in that case the |$| is just a literate |$| and it is returned as an 
+%   |Lr| iterm. Then treat the case that the variable is scalar.
+%   \begin{tcl}
+   variable varname_RE
+   if {![regexp -start $index -- $varname_RE $script match]} then {
+      if {[string index $script $index] eq "("} then {
+         set match ""
+      } else {
+         return [list Lr [list [lindex $res 1 0] [lindex $res 1 0]] \$]
+      }
+   }
+   set t $index
+   incr index [string length $match]
+   lappend res [list Lr [list $t [expr {$index-1}]] $match]
+   if {[string index $script $index] ne "("} then {
+      lset res 0 Sv
+      lset res 1 1 [lindex $res 3 1 1]
+      return $res
+   }
+%   \end{tcl}
+%   What remains is to treat the case of an array variable. This is 
+%   very much like |parse_quoted_word|, but it is the right parenthesis 
+%   rather than |"| that acts as terminator.
+%   \begin{tcl}
+   lset res 0 Sa
+   incr index
+   set subres [list Lr [list $index ""] ""]
+   lappend res ""
+   set text ""
+   while {1} {
+%   \end{tcl}
+%   Each iteration of this loop adds one subtree to |subres| and the 
+%   corresponding literate material to |text|. If some substitution 
+%   happens which does not produce literate material then the |Lr| 
+%   in |subres| is changed to an |Mr|.
+%   \begin{tcl}
+      switch -- [string index $script $index] \\ {
+         lappend subres [parse_backslash $script index]
+         append text [lindex $subres end 2]
+      } \$ {
+         lappend subres [parse_dollar $script index]
+         lset subres 0 Mr
+      } \[ {
+         lappend subres [parse_bracket $script index]
+         lset subres 0 Mr
+      } ) {
+         lset subres 1 1 [expr {$index - 1}]
+         break
+      } "" {
+         lappend res\
+           [list Ne [list $index [incr index -1]] {missing )}]
+         lset subres 1 1 $index
+         break
+      } default {
+         regexp -start $index -- {[^\\$\[)]*} $script match
+         set t $index
+         incr index [string length $match]
+         lappend subres [list Lr [list $t [expr {$index - 1}]] $match]
+         append text $match
+      }
+   }
+   if {[lindex $subres 0] eq "Lr"} then {lset subres 2 $text}
+   if {[llength $subres] == 4} then {set subres [lindex $subres 3]}
+   lset res 1 1 $index
+   incr index
+   lset res 4 $subres
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% 
+% \section{Some utility procdures}
+% 
+% \subsection{Viewing parser trees}
+% 
+% It is useful to have a surveyable presentation of parser trees. An 
+% easy step towards this would be to ensure that nesting depth is 
+% mirrored in the indentation.
+% 
+% \begin{proc}{format_tree}
+%   The |format_tree| procedure takes a parser tree, a base indentation 
+%   (string of whitespace), and an indentation step (string of whitespace) 
+%   as argument. It returns a string that is list-wise equivalent to 
+%   |[list]| of the original tree, but has indentation mirroring the 
+%   nesting depth.
+%   \begin{tcl}
+proc parsetcl::format_tree {tree base step} {
+   set res $base
+   append res \{ [lrange $tree 0 1] { }
+%   \end{tcl}
+%   The following is a trick to make a list element string 
+%   representation for the \word{text} that does not contain any sort 
+%   of newline: making the element unbalanced with respect to braces 
+%   forces escape-quoting also for newlines.
+%   \begin{tcl}
+   if {[regexp {[\n\r]} [lindex $tree 2]]} then {
+      append res [string range [list "[lindex $tree 2]\{"] 0 end-2]
+   } else {
+      append res [lrange $tree 2 2]
+   }
+   if {[llength $tree]<=3} then {
+      append res \}
+      return $res
+   } elseif {[llength $tree] == 4 &&\
+     [string match {S[bv]} [lindex $tree 0]]} then {
+%   \end{tcl}
+%   This is a slight optimization: |Sb| and |Sv| trees look better on 
+%   one line than on three.
+%   \begin{tcl}
+      append res " " [format_tree [lindex $tree 3] "" ""] \}
+      return $res
+   }
+   append res \n
+   foreach subtree [lrange $tree 3 end] {
+      append res [format_tree $subtree $base$step $step] \n
+   }
+   append res $base \}
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Offsetting intervals}
+% 
+% \begin{proc}{offset_intervals}
+%   This procedure modifies a \word{tree} by adding \word{offset} to 
+%   all endpoints of each interval in that tree, and returns the 
+%   modified tree. The syntax is
+%   \begin{quote}
+%     |parsetcl::offset_intervals| \word{tree} \word{offset}
+%   \end{quote}
+%   \begin{tcl}
+proc parsetcl::offset_intervals {tree offset} {
+   set res [lrange $tree 0 2]
+   foreach i {0 1} {
+      lset res 1 $i [expr {[lindex $res 1 $i] + $offset}]
+   }
+   foreach subtree [lrange $tree 3 end] {
+      lappend res [offset_intervals $subtree $offset]
+   }
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{reparse_Lb_as_script}
+%   The |reparse_Lb_as_script| procedure replaces an |Lb| node from an 
+%   existing parser tree with the |Rs| node produced by parsing the text 
+%   between the braces as a script. The syntax is
+%   \begin{quote}
+%     |parsetcl::reparse_Lb_as_script| \word{tree-var} \word{node-index} 
+%     \word{parsed string}
+%   \end{quote}
+%   where \word{tree-var} is the name in the caller's local context of 
+%   the variable in which the tree to substitute is stored and 
+%   \word{node-index} is the index list of the node to replace. The 
+%   procedure returns |2| if the node was an |Lb| node, |1| if is was 
+%   an |Lr| or |Lq| node, and |0| if the node was not of any of these 
+%   types. In the last case, the tree is not modified. In the case that 
+%   |1| is returned, the node has been substituted, but the intervals 
+%   may be slightly off since the string to parse was taken from the 
+%   \word{text} part of the substituted node. The normal case is that |2| 
+%   is returned, and in this case the intervals unambiguously refer to 
+%   positions in the \word{parsed string}.
+%   \begin{tcl}
+proc parsetcl::reparse_Lb_as_script {tree_var index parsed} {
+   upvar 1 $tree_var tree
+   set node [lindex $tree $index]
+   switch -- [lindex $node 0] Lb - Lr - Lq {
+      set base [expr {[lindex $node 1 0] + 1}]
+      if {[lindex $node 0] eq "Lb"} then {
+         set script [string range $parsed $base\
+           [expr {[lindex $node 1 1] - 1}]]
+      } else {
+         set script [lindex $node 2]
+      }
+      lset tree $index\
+        [offset_intervals [basic_parse_script $script] $base]
+      if {[lindex $node 0] eq "Lb"} then {
+         return 2
+      } else {
+         return 1
+      }
+   } default {
+      return 0
+   }
+}
+%   \end{tcl}
+% \end{proc}
+
+
+% 
+% 
+% \subsection{Traversing parser trees}
+% 
+% \begin{proc}{walk_tree}
+%   The |walk_tree| procedure has the syntax
+%   \begin{quote}
+%     |parsetcl::walk_tree| \word{tree-var} \word{index-var} 
+%     \begin{regblock}[\regplus]\word{type-pattern} 
+%     \word{body}\end{regblock}
+%   \end{quote}
+%   It walks through each node in the tree stored in the 
+%   \word{tree-var} in the order that they appear in the string, i.e., 
+%   first the root of a tree, then it walks through each subtree in 
+%   sequence. When visiting a node, the type of the node is 
+%   regexp-matched against the \word{type-pattern}s, and the first 
+%   matching \word{body} is evaluated (entirely using |switch -regexp|) 
+%   in the local context of the caller. While walking, the procedure is 
+%   updating the \word{index-var} variable so that it always contains 
+%   the index list specifying the current node in the tree.
+%   
+%   It is OK to modify the tree while walking through it, provided that 
+%   the index list of the current node remains valid throughout. It is 
+%   particular possible to change the contents of the current node (add 
+%   or remove children) without messing things up.
+%   
+%   There is no particular return value from this procedure.
+%   \begin{tcl}
+proc parsetcl::walk_tree {tree_var index_var args} {
+   upvar 1 $tree_var tree $index_var idxL
+   set idxL [list]
+   set i 0
+   while {$i>=0} {
+      if {$i==0} then {
+         uplevel 1 [list switch -regexp --\
+           [lindex [lindex $tree $idxL] 0] $args]
+         set i 3
+      } elseif {$i < [llength [lindex $tree $idxL]]} then {
+         lappend idxL $i
+         set i 0
+      } elseif {[llength $idxL]} then {
+         set i [lindex $idxL end]
+         set idxL [lrange $idxL 0 end-1]
+         incr i
+      } else {
+         set i -1
+      }
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{simple_parse_script}
+%   The |simple_parse_script| procedure is similar to 
+%   |basic_parse_script|, but it tries to recognise some common control 
+%   structures (|if|, |for|, etc.) and reparses those arguments that 
+%   (for standard command definitions) are scripts. The syntax is
+%   \begin{quote}
+%     |parsetcl::simple_parse_script| \word{script}
+%   \end{quote}
+%   and it returns the parsed script.
+%   \begin{tcl}
+proc parsetcl::simple_parse_script {script} {
+   set tree [parsetcl::basic_parse_script $script]
+   walk_tree tree indices Cd {
+      switch -- [lindex [lindex $tree $indices] 3 2] if {
+         for {set i 3} {$i < [llength [lindex $tree $indices]]}\
+           {incr i} {
+            switch -- [lindex [lindex $tree $indices] $i 2]\
+              if - elseif {
+               incr i; continue
+            } then - else {
+               incr i
+            }
+            parsetcl::reparse_Lb_as_script tree\
+              [linsert $indices end $i] $script
+         }
+      } while {
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 5]\
+           $script
+      } for {
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 4]\
+           $script
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 6]\
+           $script
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 7]\
+           $script
+      } foreach {
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end end]\
+           $script
+      } catch {
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 4]\
+           $script
+      } proc {
+         parsetcl::reparse_Lb_as_script tree [linsert $indices end 6]\
+           $script
+      }
+   }
+   return $tree
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \section{Parsing expressions}
+% 
+% This hasn't been implemented yet.
+% 
+% 
+% \section{Advanced script parsing}
+% 
+% Most of the meaning of a \Tcllogo\ script depends on its commands 
+% rather than being given by the syntax---there is e.g. nothing in the 
+% general syntax that makes the last argument of a |foreach| command 
+% more likely to contain a script than any of the other arguments---and 
+% therefore any higher level parsing of \Tcllogo\ scripts must employ a 
+% table of commands 
+% 
+% This hasn't been implemented yet.
+% 
+% 
+% \section{Script reconstruction}
+% 
+% This hasn't been implemented yet, but the parser trees contain 
+% the necessary information. Applications of script reconstruction 
+% includes writing a |proc|-like command that inlines code in the body 
+% argument before the procedure is created.
+% 
+% 
+% \begin{thebibliography}{9}
+% \bibitem{Letter-bug}
+%   Kevin B. Kenny and Jeffrey Hobbs:
+%   \textit{Dollar-substitution and non-Latin-1},
+%   \Tcllogo~project bug \#408568 (2001, still open April~2003);
+%   \href{https://sourceforge.net/tracker/^^A
+%     ?func=detail&aid=408568&group_id=10894&atid=110894}^^A
+%     {\textsc{https}:/\slash \texttt{sourceforge.net}\slash
+%      \texttt{tracker}\slash 
+%      \texttt{?func=detail\&}\penalty\exhyphenpenalty
+%      \texttt{aid=408568\&}\penalty\exhyphenpenalty
+%      \texttt{group\_id=10894\&}\penalty\exhyphenpenalty
+%      \texttt{atid=110894}.}
+%   
+% \end{thebibliography}
+% 
+\endinput

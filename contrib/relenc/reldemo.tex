@@ -1,0 +1,440 @@
+\documentclass{article}
+
+\usepackage{relenc}
+\usepackage[T1R,OT1]{fontenc}
+ % ot1enc.def is inputed since I still want OT1 to be the default 
+ % encoding in this document.
+
+
+\makeatletter
+
+% General font parameters:
+\newdimen\demofontem \newdimen\demofontex \newskip\demofontspace
+
+ % This macro sets the font parameters for the current font, using 
+ % default values if the \fontdimen values are too strange (probably 
+ % because the font is a raw font not meant for typesetting).
+\def\setfontparams{%
+%    \sbox{\letterbox}{a}%  Make sure the font really is loaded (?)
+   \ifdim 0.1pt<\fontdimen6\font  % Quad width
+      \setlength\demofontem{1em}%
+   \else
+      \demofontem=\f@size\p@
+   \fi
+   \ifdim0.1pt<\fontdimen5\font  % x-height
+      \setlength\demofontex{1ex}%
+   \else
+      \demofontex=0.4\demofontem
+   \fi
+   \ifdim0.1pt<\fontdimen2\font  % Interword space natural width
+      \setlength\demofontspace{\fontdimen2\font plus\fontdimen3\font
+         minus\fontdimen4\font
+      }%
+   \else
+      \setlength\demofontspace{0.2222\demofontem
+         plus0.1111\demofontem minus0.05555\demofontem
+      }%
+   \fi
+}
+
+% Generating the font table:
+\newcount\slotnbr \newcount\rownbr \newcount\colnbr
+\newdimen\thinlinesize \newdimen\thicklinesize \newdimen\squarewidth
+\newsavebox\letterbox
+\setlength\thinlinesize{0.24pt}
+\setlength\thicklinesize{0.75pt}
+\mathchardef\tablecolumns=16
+
+\def\linespreadstrut{\vrule height2.5\demofontex depth1.5\demofontex width0pt}
+\def\emptyrowrule{\rlap{\vrule height2.5\demofontex depth-2\demofontex 
+   width\thinlinesize}\vrule height-1\demofontex depth1.5\demofontex 
+   width\thinlinesize
+}
+\def\stdtext#1{{\normalfont#1}}
+\def\tttext#1{{\normalfont\ttfamily#1}}
+  % Used on things that should not be typeset in the demo font.
+
+\def\nextslot{%
+   \sbox{\letterbox}{\unhbox\letterbox
+      \hb@xt@\squarewidth{\hss\linespreadstrut\char\slotnbr\hss}%
+      \vrule width\thinlinesize
+   }%
+   \global\advance \slotnbr \@ne
+}
+\def\rowheading{%
+   \hb@xt@1.5\demofontem{\hss
+      \linespreadstrut
+      \stdtext{\strut\the\slotnbr}\hskip0.2\demofontem
+   }%
+}
+\def\makebodyrow{\colnbr=\z@
+   \sbox{\letterbox}{%
+      \rowheading
+      \vrule width\thicklinesize
+   }%
+   \loop
+      \nextslot
+      \advance \colnbr \@ne
+   \ifnum \tablecolumns>\colnbr \repeat
+   \box\letterbox
+}
+\def\emptybodyrow{%
+   \hbox{%
+      \sbox\letterbox{%
+         \colnbr=\z@
+         \loop
+            \hskip\squarewidth
+            \advance \colnbr \@ne
+         \ifnum \tablecolumns>\colnbr
+            \vrule width\thinlinesize height\demofontex depth\z@
+         \repeat
+      }%
+      \tabskip=\z@skip
+      \valign{\vfil##\vfil\cr
+         \rowheading\cr
+         \noalign{\vrule width\thicklinesize}%
+         \relax\offinterlineskip
+         \halign{\hfil##\hfil\cr \copy\letterbox\cr
+            \noalign{\vfill}\stdtext{\strut These slots are empty}\cr
+            \noalign{\vfill}\box\letterbox\cr
+         }\cr
+         \noalign{\vrule width\thinlinesize}%
+         \cr
+      }%
+   }%
+   \global\advance \slotnbr \tablecolumns
+}
+\def\bodyrow{%
+   \setbox\letterbox=\hbox{%
+      \colnbr=\z@
+      \penalty\@ne
+      \loop
+         \char\slotnbr
+         \advance \slotnbr \@ne %Note: Non-global advancement
+         \advance \colnbr \@ne
+      \ifnum \tablecolumns>\colnbr \repeat
+      \ifnum \@ne=\lastpenalty % Are all characters in the row missing?
+         \def\next{iffalse}% Yes
+      \else
+         \def\next{iftrue}% No
+      \fi
+      \expandafter
+   }%
+   \csname\next\endcsname % Will be either \iftrue or \iffalse.
+      \makebodyrow
+   \else
+      \emptybodyrow
+   \fi
+   \hrule height\thinlinesize
+}
+\def\toprow{%
+   \colnbr=\z@
+   \sbox{\letterbox}{%
+      \hb@xt@1.5\demofontem{\hss\linespreadstrut}%
+      \vrule width\thicklinesize
+   }%
+   \loop
+      \sbox{\letterbox}{%
+         \unhbox\letterbox
+         \hb@xt@\squarewidth{\hss\linespreadstrut
+            \stdtext{\the\colnbr}\hss
+         }%
+         \vrule width\thinlinesize
+      }%
+      \advance \colnbr \@ne
+   \ifnum \tablecolumns>\colnbr \repeat
+   \box\letterbox
+   \hrule height\thicklinesize
+}
+\def\MakeFontTable{%
+   \medskip
+   \setlength{\squarewidth}{1.6\demofontem}%
+   \hb@xt@\linewidth{\hss
+      \vbox{%
+         \tracinglostchars=\z@
+         \global\slotnbr=\z@
+         \toprow
+         \rownbr=\z@
+         \loop
+           \begingroup\bodyrow\endgroup
+           \advance \rownbr \@ne
+         \ifnum 16>\rownbr \repeat
+      }%
+      \hss
+   }
+   \par\bigskip
+}
+
+
+% Lists of symbols:
+
+% A list of symbols consists of a sequence of \do{<symbol>} units, 
+% where <symbol> can be one (or possibly several) of the following: 
+% a category 11 or 12 token, such as `a' or `!'; a \chardef control 
+% sequence such as `\&'; a LaTeX symbol command such as \textsterling. 
+% (You can actually use a lot of stupid things in a <symbol> and still 
+% have it work, but don't be surprised if it won't for something 
+% that does not fit the above description.)
+
+\newcommand\AddToList[2]{%
+   \relax % Can't hurt.
+   \ifx\relax#1
+      \def#1{\do{#2}}%
+   \else
+      \expandafter\def \expandafter#1\expandafter{#1\do{#2}}%
+   \fi
+}
+
+\def\OTOneBasicLettersListUC{%
+   \do{A}\do{B}\do{C}\do{D}\do{E}\do{F}\do{G}\do{H}\do{I}\do{J}\do{K}%
+   \do{L}\do{M}\do{N}\do{O}\do{P}\do{Q}\do{R}\do{S}\do{T}\do{U}\do{V}%
+   \do{W}\do{X}\do{Y}\do{Z}\do{\AE}\do{\OE}\do{\O}%
+}
+\let\TOneBasicLettersListUC=\OTOneBasicLettersListUC
+\AddToList\TOneBasicLettersListUC{\DH}
+\AddToList\TOneBasicLettersListUC{\DJ}
+\AddToList\TOneBasicLettersListUC{\L}
+\AddToList\TOneBasicLettersListUC{\NG}
+\AddToList\TOneBasicLettersListUC{\SS}
+\AddToList\TOneBasicLettersListUC{\TH}
+
+\def\OTOneBasicLettersListLC{%
+   \do{a}\do{b}\do{c}\do{d}\do{e}\do{f}\do{g}\do{h}\do{i}\do{j}\do{k}%
+   \do{l}\do{m}\do{n}\do{o}\do{p}\do{q}\do{r}\do{s}\do{t}\do{u}\do{v}%
+   \do{w}\do{x}\do{y}\do{z}\do{\ae}\do{\i}\do{\j}\do{\oe}\do{\o}%
+   \do{\ss}%
+}
+\let\TOneBasicLettersListLC=\OTOneBasicLettersListLC
+\AddToList\TOneBasicLettersListLC{\dh}
+\AddToList\TOneBasicLettersListLC{\dj}
+\AddToList\TOneBasicLettersListLC{\l}
+\AddToList\TOneBasicLettersListLC{\ng}
+\AddToList\TOneBasicLettersListLC{\th}
+
+\def\OTOneAccentsList{%
+   \do{\@firstofone}% This is a "no accent" accent.
+   \do{\`}\do{\'}\do{\^}\do{\~}\do{\"}\do{\H}\do{\r}%
+   \do{\v}\do{\u}\do{\=}\do{\.}\do{\b}\do{\c}\do{\d}%
+} 
+\let\TOneAccentsList=\OTOneAccentsList
+\AddToList\TOneAccentsList{\k}
+
+\newcommand\ApplyListToList[3]{%
+  % The first list here, which is given as #1, should really be a list 
+  % of one-parameter commands. The second list, which should be given 
+  % as #2, should be a normal list of symbols. Each command of the first 
+  % list is applied to the symbols in the second list. #3 is inserted 
+  % after every such application.
+   \def\do##1{{\def\do####1{##1{####1}#3}#2}}%
+   #1%
+}
+
+\newcommand\MakeTOneAccentedTable{%
+   \medskip
+   \ApplyListToList{\TOneAccentsList}{%
+      \TOneBasicLettersListLC\par\TOneBasicLettersListUC\par
+   }{\-}%
+   \bigskip
+}
+\newcommand\MakeOTOneAccentedTable{%
+   \medskip
+   \ApplyListToList{\OTOneAccentsList}{%
+      \OTOneBasicLettersListLC\par\OTOneBasicLettersListUC\par
+   }{\-}%
+   \bigskip
+}
+
+
+\let\TOneLeftGlyphsListLC=\TOneBasicLettersListLC
+\AddToList\TOneLeftGlyphsListLC{ff}
+
+\let\OTOneLeftGlyphsListLC=\OTOneBasicLettersListLC
+\AddToList\OTOneLeftGlyphsListLC{ff}
+
+\newcommand\ListTimesList[3]{%
+  % This "generates" the Cartesian product of two lists: For each \do in 
+  % the first list a copy of the second list appears, and for each \do 
+  % in the second list the current element from the first list is 
+  % inserted. As with \ApplyListToList, #3 is inserted at the end of each 
+  % \do from the second list.
+   \def\do##1{{\def\do####1{##1####1#3}#2}}%
+   #1%
+}
+
+\newcommand\MakeTOnePairsTable{%
+   \medskip
+   \ListTimesList{\TOneLeftGlyphsListLC}{\TOneBasicLettersListLC\par}{%
+      \hskip\demofontspace
+   }%
+   \smallskip
+   \ListTimesList{\TOneBasicLettersListUC}{\TOneBasicLettersListLC\par}{%
+      \hskip\demofontspace
+   }%
+   \smallskip
+   \ListTimesList{\TOneBasicLettersListUC}{\TOneBasicLettersListUC\par}{%
+      \hskip\demofontspace
+   }%
+   \bigskip
+}   
+
+\newcommand\MakeOTOnePairsTable{%
+   \medskip
+   \ListTimesList{\OTOneLeftGlyphsListLC}{\OTOneBasicLettersListLC\par}{%
+      \hskip\demofontspace
+   }%
+   \smallskip
+   \ListTimesList{\OTOneBasicLettersListUC}{\OTOneBasicLettersListLC\par}{%
+      \hskip\demofontspace
+   }%
+   \smallskip
+   \ListTimesList{\OTOneBasicLettersListUC}{\OTOneBasicLettersListUC\par}{%
+      \hskip\demofontspace
+   }%
+   \bigskip
+}   
+
+
+\def\OTOneSymbolsList{\do{\textemdash}\do{\textendash}%
+   \do{\textexclamdown}\do{\textquestiondown}\do{\textquotedblleft}%
+   \do{\textquotedblright}\do{\textquoteleft}\do{\textquoteright}%
+   \do{\textdollar}\do{\textsterling}%
+}
+\let\TOneSymbolsList=\OTOneSymbolsList
+\AddToList\TOneSymbolsList{\guillemotleft}
+\AddToList\TOneSymbolsList{\guillemotright}
+\AddToList\TOneSymbolsList{\guilsinglleft}
+\AddToList\TOneSymbolsList{\guilsinglright}
+\AddToList\TOneSymbolsList{\quotedblbase}
+\AddToList\TOneSymbolsList{\quotesinglbase}
+\AddToList\TOneSymbolsList{\textasciicircum}
+\AddToList\TOneSymbolsList{\textasciitilde}
+\AddToList\TOneSymbolsList{\textbackslash}
+\AddToList\TOneSymbolsList{\textbar}
+\AddToList\TOneSymbolsList{\textbraceleft}
+\AddToList\TOneSymbolsList{\textbraceright}
+\AddToList\TOneSymbolsList{\textcompwordmark}
+\AddToList\TOneSymbolsList{\textgreater}
+\AddToList\TOneSymbolsList{\textless}
+\AddToList\TOneSymbolsList{\textperthousand}
+\AddToList\TOneSymbolsList{\textpertenthousand}
+\AddToList\TOneSymbolsList{\textquotedbl}
+\AddToList\TOneSymbolsList{\textsection}
+\AddToList\TOneSymbolsList{\textunderscore}
+\AddToList\TOneSymbolsList{\textvisiblespace}
+
+
+\newcommand\MakeOTOneSymbolsTable{\MakeSymbolsTable\OTOneSymbolsList}
+\newcommand\MakeTOneSymbolsTable{\MakeSymbolsTable\TOneSymbolsList}
+\newcommand\MakeSymbolsTable[1]{%
+   \begingroup
+      \def\do##1{\tttext{\string##1}&##1\cr}%
+      \tabskip=\hideskip
+      \halign to\linewidth{##\hfil \tabskip=\ht\strutbox&
+         \hfil##\hfil \tabskip=\hideskip\cr
+         \stdtext{\TeX\ code}&\stdtext{Symbol}\cr
+         #1%
+      }%
+   \endgroup
+   \par\bigskip
+}
+
+
+% Combining it all
+
+\newcommand\DemoTOneLaTeXFont[4]{%
+   \vfil\penalty0\vfilneg
+   \markright{\stdtext{Demo of \LaTeX\ font \ttfamily #1/#2/#3/#4}\hss}%
+   \begingroup
+      \usefont{#1}{#2}{#3}{#4}%
+      \setfontparams
+      \noindent\stdtext{\textbf{Font table}}\par
+      \MakeFontTable
+      \noindent\stdtext{\textbf{Accents/letters table}}\par
+      \MakeTOneAccentedTable
+      \noindent\stdtext{\textbf{Pairs tables}}\par
+      \MakeTOnePairsTable
+      \noindent\stdtext{\textbf{Symbols table}}\par
+      \MakeTOneSymbolsTable
+      \ifx \TOneDemoText\@undefined \else
+         \medskip\TOneDemoText\medskip
+      \fi
+   \endgroup
+}
+\newcommand\DemoOTOneLaTeXFont[4]{
+   \vfil\penalty0\vnegfil
+   \markright{\stdtext{Demo of \LaTeX\ font \ttfamily #1/#2/#3/#4}\hss}%
+   \begingroup
+      \usefont{#1}{#2}{#3}{#4}%
+      \setfontparams
+      \noindent\stdtext{\textbf{Font table}}\par
+      \MakeFontTable
+      \noindent\stdtext{\textbf{Accents/letters table}}\par
+      \MakeOTOneAccentedTable
+      \noindent\stdtext{\textbf{Pairs tables}}\par
+      \MakeOTOnePairsTable
+      \noindent\stdtext{\textbf{Symbols table}}\par
+      \MakeOTOneSymbolsTable
+      \ifx \OTOneDemoText\@undefined \else
+         \medskip\OTOneDemoText\medskip
+      \fi
+   \endgroup
+}
+\newcommand\DemoRawTeXFont[1]{\begingroup
+   \font\demofont=#1\relax
+   \demofont
+   \setfontparams
+   \MakeFontTable
+   \endgroup
+}
+
+\makeatother
+
+\pagestyle{myheadings}
+
+\begin{document}
+\errorcontextlines=999\relax
+
+You should at least read Appendix C of the package documentation 
+before viewing this example, but if you prefer not to then I must at 
+least point out that the fonts in the \texttt{zcm} family are mainly 
+\texttt{cmr10} that has been completed with various ``faked'' 
+characters. As a result, many of the characters does not look very 
+good and some look downright ugly, but there is no particular harm in 
+that since the \texttt{zcm} fonts are not intended to be used in any 
+serious typesetting anyway.
+
+The first font in the \texttt{zcm} family---the \texttt{T1R}\slash 
+\texttt{zcm}\slash\texttt{m}\slash\texttt{n} font---has a coding scheme 
+identical to that used for fonts in the \texttt{T1} encoding. It 
+shows the default setup for the \texttt{T1R} encoding.
+
+The font table shows the contents of each slot. The accents/letters 
+table shows the result of the non-accented letters as they are and 
+their appearence after having been subjected to each accenting command 
+in turn. The pairs tables shows all the ligatures and the symbols 
+table finally shows the symbol commands and their effect.
+
+\bigskip
+\DemoTOneLaTeXFont{T1R}{zcm}{m}{n}
+
+The second font in the \texttt{zcm} family---the \texttt{T1R}\slash 
+\texttt{zcm}\slash\texttt{m}\slash\texttt{a} font---has four extra 
+ligatures: ct, fj, ffj, and st. These appear in the font table at 
+positions 128, 130, 131, and 161. Despite the fact that four of the 
+characaters that were used for making accented letters in the 
+\texttt{T1R}\slash\texttt{zcm}\slash\texttt{m}\slash\texttt{n} font are 
+missing however, the accents/letters table for the \texttt{T1R}\slash
+\texttt{zcm}\slash\texttt{m}\slash\texttt{a} font display the same accented 
+letters as the ditto table for the \texttt{T1R}\slash\texttt{zcm}\slash
+\texttt{m}\slash\texttt{n} font did. Under the \texttt{T1} encoding, 
+the result would instead have been that some of the accented letters 
+would incorrectly have been replaced by the ligatures.
+
+The pairs tables show that the four extra ligatures work as ligatures 
+and the symbols table looks exactly as for the \texttt{T1R}\slash
+\texttt{zcm}\slash\texttt{m}\slash\texttt{n} font.
+
+\bigskip
+\DemoTOneLaTeXFont{T1R}{zcm}{m}{a}
+
+\end{document}

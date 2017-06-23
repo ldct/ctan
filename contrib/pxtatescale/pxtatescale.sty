@@ -1,0 +1,43 @@
+% pxtatescale.sty
+\NeedsTeXFormat{pLaTeX2e}
+\ProvidesPackage{pxtatescale}[2017/01/21 v0.4]
+\def\pxqtg@pkgname{pxtatescale}
+\@ifpackageloaded{graphics}{}{%else
+  \PackageError\pxqtg@pkgname{Package 'graphics' not loaded}\@ehc}
+\begingroup
+% the patch is necessary only when dvipdfmx.def is used
+\def\pxqtg@tempa{dvipdfmx.def}
+\ifx\Gin@driver\pxqtg@tempa %%% if-group
+% prepare
+\def\pxqtg@patch@status{1}%
+\def\pxqtg@try@patch#1#2#3{%
+  \edef\pxqtg@tempcsname{\string#1}%
+  \def\pxqtg@temp{#2}\ifx#1\pxqtg@temp
+    \gdef#1{#3}%
+    \def\pxqtg@patch@status{0}%
+  \fi}
+% first trial (new definition)
+\pxqtg@try@patch\Gscale@start
+  {\special{pdf:btrans}%
+   \special{pdf:literal \Gscale@x\space 0 0 \Gscale@y\space 0 0 cm}}
+  {\special{pdf:btrans}%
+   \special{pdf:literal
+   \iftdir \Gscale@y\space 0 0 \Gscale@x\space
+   \else   \Gscale@x\space 0 0 \Gscale@y\space
+   \fi 0 0 cm}}
+\ifnum\pxqtg@patch@status=\z@\else
+  % second trial (old definition)
+  \pxqtg@try@patch\Gscale@start
+    {\special{pdf:btrans xscale \Gscale@x\space yscale \Gscale@y}}%
+    {\special{pdf:btrans
+      \iftdir xscale \Gscale@y\space yscale \Gscale@x
+      \else   xscale \Gscale@x\space yscale \Gscale@y
+      \fi}}
+\fi
+\ifnum\pxqtg@patch@status=\z@
+  \PackageInfo\pxqtg@pkgname{Patch applied to \pxqtg@tempcsname}%
+\else
+  \PackageWarningNoLine\pxqtg@pkgname{Patch cannot be applied to \pxqtg@tempcsname}%
+\fi
+\fi                         %%% if-group end
+\endgroup

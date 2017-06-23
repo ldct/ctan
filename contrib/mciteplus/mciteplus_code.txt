@@ -1,0 +1,218 @@
+
+Bst modification and other code listings for the mciteplus package
+Version 1.2, 2013/09/13
+
+Copyright (c) 2008-2013 Michael Shell
+Support site:
+http://www.michaelshell.org/tex/mciteplus/
+
+
+*************************************************************************
+ Legal Notice:
+ This code is offered as-is without any warranty either expressed or
+ implied; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE!  User assumes all risk.
+ In no event shall any contributor to this code be liable for any damages
+ or losses, including, but not limited to, incidental, consequential, or
+ any other damages, resulting from the use or misuse of any information
+ contained here.
+
+ All comments are the opinions of their respective authors.
+
+ This work is distributed under the LaTeX Project Public License (LPPL)
+ ( http://www.latex-project.org/ ) version 1.3, and may be freely used,
+ distributed and modified. A copy of the LPPL, version 1.3, is included
+ in the base LaTeX documentation of all distributions of LaTeX released
+ 2003/12/01 or later.
+ Retain all contribution notices and credits.
+ ** Modified files should be clearly indicated as such, including  **
+ ** renaming them and changing author support contact information. **
+**********************************************************************
+
+
+
+
+
+***** start mciteplus begin.bib ****
+
+FUNCTION {begin.bib}
+{ preamble$ empty$
+    'skip$
+    { preamble$ write$ newline$ }
+  if$
+  "\ifx\mcitethebibliography\mciteundefinedmacro"
+  write$ newline$
+  "\PackageError{unsrtM.bst}{mciteplus.sty has not been loaded}"
+  write$ newline$
+  "{This bibstyle requires the use of the mciteplus package.}\fi"
+  write$ newline$
+  "\begin{mcitethebibliography}{"  longest.label  * "}" * write$ newline$
+}
+
+***** end mciteplus begin.bib ****
+
+
+
+
+***** start mciteplus begin.bib, more advanced example ****
+
+FUNCTION {begin.bib}
+{ preamble$ empty$
+    'skip$
+    { preamble$ write$ newline$ }
+  if$
+  "\ifx\mcitethebibliography\mciteundefinedmacro"
+  write$ newline$
+  "\PackageError{unsrtM.bst}{mciteplus.sty has not been loaded}"
+  write$ newline$
+  "{This bibstyle requires the use of the mciteplus package.}\fi"
+  write$ newline$
+  "\begin{mcitethebibliography}{"  longest.label  * "}" * write$ newline$
+  "\mciteSetBstSublistMode{b}"
+  write$ newline$
+  "\mciteSetBstMaxWidthForm{subitem}{\alph{mcitesubitemcount})}"
+  write$ newline$
+  "\mciteSetBstSublistLabelBeginEnd{\mcitemaxwidthsubitemform\space}"
+  write$ newline$
+  "{\relax}{\relax}"
+  write$ newline$
+}
+
+***** end mciteplus begin.bib, more advanced example ****
+
+
+
+
+***** start mciteplus end.bib ****
+
+FUNCTION {end.bib}
+{ newline$
+  "\end{mcitethebibliography}" write$ newline$
+}
+
+***** end mciteplus end.bib ****
+
+
+
+
+
+***** start mciteplus fin.entry ****
+
+% mciteplus fin.entry
+%
+% pushes true (1), if add.period$ would add a period to the string on the stack
+% pushes false (0), otherwise
+% Uses text.length$ to avoid full string comparison and two copies of string.
+% Requires one copy of string on stack.
+INTEGERS {would.add.period.textlen}
+FUNCTION {would.add.period}
+{ duplicate$
+  add.period$
+  text.length$
+  'would.add.period.textlen :=
+  duplicate$
+  text.length$
+  would.add.period.textlen =
+    { #0 }
+    { #1 }
+  if$
+}
+
+FUNCTION {fin.entry}
+{ would.add.period
+    { "\relax" * write$ newline$
+      "\mciteBstWouldAddEndPuncttrue" write$ newline$
+      "\mciteSetBstMidEndSepPunct{\mcitedefaultmidpunct}"
+      write$ newline$
+      "{\mcitedefaultendpunct}{\mcitedefaultseppunct}\relax"
+    }
+    { "\relax" * write$ newline$
+      "\mciteBstWouldAddEndPunctfalse" write$ newline$
+      "\mciteSetBstMidEndSepPunct{\mcitedefaultmidpunct}"
+      write$ newline$
+      "{}{\mcitedefaultseppunct}\relax"
+    }
+  if$
+  write$
+  newline$
+  "\EndOfBibitem" write$
+}
+% end mciteplus fin.entry
+
+***** end mciteplus fin.entry ****
+
+
+
+
+
+***** start mciteplus mcitetail field and sort key adjust support ****
+
+% mciteplus mcitetail field and sort key adjust support
+INTEGERS {mcitetailcnt is.mcitetail}
+STRINGS  {mciteheadsortkey}
+% convert the strings "yes" or "no" to #1 or #0 respectively
+FUNCTION {mciteplus.yes.no.to.int}
+{ "l" change.case$ duplicate$
+    "yes" =
+    { pop$ #1 }
+    { duplicate$ "no" =
+        { pop$ #0 }
+        { "unknown boolean " quote$ * swap$ * quote$ *
+          " in " * cite$ * warning$
+          #0
+        }
+      if$
+    }
+  if$
+}
+FUNCTION {mciteplustail.adj.sort.key}
+{ mcitetail
+  empty$
+    { #0 'is.mcitetail := }
+    { mcitetail
+      mciteplus.yes.no.to.int
+      'is.mcitetail :=
+    }
+  if$
+  is.mcitetail
+    { #1 mcitetailcnt +
+      'mcitetailcnt :=
+      mciteheadsortkey
+      "__" *
+      "000000000"
+      mcitetailcnt
+      int.to.str$
+      *
+      #-1 #10 substring$
+      *
+      'sort.key$ :=
+    }
+    { #0 'mcitetailcnt :=
+      sort.key$ 'mciteheadsortkey :=
+    }
+  if$
+}
+% END mciteplus mcitetail field support
+
+***** end mciteplus mcitetail field and sort key adjust support ****
+
+
+
+
+
+***** REVTeX Patch code to prevent BibTeX from seeing endnotes *****
+
+
+% Patch REVTeX to prevent BibTeX from seeing endnotes as citations
+% Insert just after REVTeX is loaded
+\makeatletter
+\let\@ORGREVTEXendnotemark\@endnotemark
+\let\@ORGREVTEX@makefnmark@cite\@makefnmark@cite
+\def\@endnotemark{\bgroup\@fileswfalse\@ORGREVTEXendnotemark\egroup}
+\def\@makefnmark@cite{\bgroup\@fileswfalse\@ORGREVTEX@makefnmark@cite\egroup}
+\makeatother
+
+
+***** END REVTeX Patch Code *****
+
+EOF

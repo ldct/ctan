@@ -1,0 +1,227 @@
+% This is a stripped version of rcs.sty,
+% all comment lines and empty lines were discarded to save space. YOU
+% ARE NOT ALLOWED to use this file for your own work. You may ONLY
+% redistribute it as part of the complete distribution you received it.
+% This file was created at Thu Nov 30 15:51:58 UTC 1995.
+
+% The original file may be retrieved
+% from CTAN, directory macros/tex/latex/contrib/supported/rcs/..
+
+% ======================================================================
+
+\ifx \rcs@loaded\undefined
+    \def\rcs@loaded{$StyleRevision: 2.9 $}
+\else
+    \PackageWarningNoLine{rcs}%
+	{Some other package already uses namespace `rcs'}
+\fi
+\begingroup
+    \def\RCSPackage#1#2 $#3: #4 #5\endRCS $#6: #7 #8\endRCS{%
+	\def\date{#4}\def\id{v#7}%
+	\ProvidesPackage{#1}[\date\space\id\space #2]%
+	}
+  \RCSPackage{rcs}{typeset info from RCS fields}
+  $StyleDate: 1995/08/02 12:09:07 $: 9999/00/00 \endRCS
+  $StyleRevision: 2.9 $: 0.0 \endRCS
+\endgroup
+\ifx \CatEscape\undefined
+    \chardef\CatEscape=0
+    \chardef\CatOpen=1
+    \chardef\CatClose=2
+    \chardef\CatIgnore=9
+    \chardef\CatLetter=11
+    \chardef\CatOther=12
+    \chardef\CatActive=13
+    \chardef\CatUsCode=\catcode`\_
+\fi
+\catcode`\_=\CatLetter                  % top level macro file
+\def\RcsEmptyValue{}
+\def\rcs_split_field #1: #2 :#3\end_value{%
+    \def\RCS_keyword{#1}%
+    \def\RCS_value{#2}%
+    \ifx \RCS_value\empty
+	\let\RCS_value\RcsEmptyValue
+    \fi
+    }
+\def\RCS $#1${%
+    \rcs_split_field #1: {} :\end_value
+    \expandafter\let \csname RCS\rcs_raw_if_handle\RCS_keyword\endcsname
+		     \RCS_value
+    \csname RcsHandle\RCS_keyword\endcsname
+    }
+\def\rcs_raw_if_handle{%
+    \@ifundefined{RcsHandle\RCS_keyword}{}{Raw}%
+    }
+\def\RcsHandleDate{%
+    \ifx \today\undefined
+	\expandafter\let \csname RCS\RCS_keyword\endcsname \RCS_value
+    \else
+	\ifx \RCS_value\RcsEmptyValue
+	    \@namedef{RCS\RCS_keyword}{\today}%
+	    \let\RCSTime\empty
+	\else
+	    \expandafter\rcs_set_date \RCS_value\end_date
+	\fi
+    \fi
+    }
+\def\rcs_set_date #1/#2/#3 #4\end_date{%
+    \begingroup
+	\day #3			% <-- space!
+	\month #2		% <-- space!
+	\year #1		% <-- space!
+	\expandafter\xdef \csname RCS\RCS_keyword\endcsname {\today}%
+    \endgroup
+    \def\RCSTime{#4}%
+    }
+\newtoks\rcsLogIntro
+	\rcsLogIntro={}
+\def\rcsAuthor#1#2{\@namedef{rcs_author:#1}{#2}}
+\def\RCS_get_author#1{%
+    \@ifundefined{rcs_author:#1}{#1}{\@nameuse{rcs_author:#1}}%
+    }
+\def\RcsLogStyle{%
+    \def\RcsLogHeading{\subsubsection*}%
+    \footnotesize
+    }
+\def\rcs_log_hdr#1,v\end_value{%
+    \@rcs_empty_log@false
+    \RcsLogHeading{\RcsLogHeadingName #1}%
+    \the\rcsLogIntro
+    }
+\def\rcs_empty_log_value{%
+    \global\@rcs_empty_log@true		% that's most probably in a group!
+    \RcsUnknownFile			% text for unknown file name
+    ,v%					% assert calling env
+    }
+\newif\if@rcs_empty_log@
+\def\RcsLogHeadingName{Revision Log for \tt} % file name in monospace
+\def\RcsUnknownFile{\rm $\langle\,$Unknown file name$\,\rangle$}
+\def\RcsEmptyLog{{\itshape No log entries available.}}
+\def\RcsLogRevision#1#2#3#4{%
+    \item [Revision #1]%
+      (created at \RcsLogDate #2\endDate\space \RcsLogTime{#3} % <-- space!
+      by \RCS_get_author{#4})\\\relax
+    }
+\def\RcsLogDate #1/#2/#3\endDate{%
+    \begingroup
+	\day #3			% <-- space!
+	\month #2		% <-- space!
+	\year #1		% <-- space!
+	\today
+    \endgroup
+    }
+\def\RcsLogTime#1{\ignorespaces}
+\def\rcs_settime{%
+    \def\RcsLogTime##1{[##1]}%
+    }
+\def\rcslog{%
+    \@ifnextchar[%			% ] (Emacs)
+	\rcslog_configure
+	{\rcslog_configure[]}%
+    }
+\def\rcslog_configure[#1]{%
+    \let\Revision\rcslog_revision
+    \let\settime\rcs_settime
+    \RcsLogStyle
+    #1%
+    \afterassignment\rcslog_skipcr
+    \let\next
+    }
+\def\rcslog_skipcr{%
+    \ifx \next $%
+	\def\next{\rcslog_field $}%
+    \else\ifx \next\par
+	\let\next\rcslog_field
+    \else
+	\PackageError{rcs}{Missing RCS Log field in environment}{%
+The RCS Log field must be the very first text in the rcslog\MessageBreak
+environment. I will discard the rest of your input line and try to\MessageBreak
+recover then. If you think this won't work, exit now.\MessageBreak
+Otherwise press <Return> and cross your fingers!}
+	\let\next\rcslog_discard_line
+    \fi\fi
+    \next
+    }
+\def\rcslog_discard_line{%
+    \begingroup
+	\obeylines
+	\rcslog_gobble_line
+    }
+\begingroup
+\obeylines
+\gdef\rcslog_gobble_line #1^^M{%
+    \endgroup%
+    \afterassignment\rcslog_skipcr%
+    \let\next%
+    }
+\endgroup
+\def\rcslog_field{%
+    \begingroup
+	\obeylines
+	\rcslog_get_field
+    }
+\begingroup
+\obeylines
+\gdef\rcslog_get_field #1^^M{%
+    \endgroup%
+    \rcslog_set_field{#1}%
+    }
+\endgroup
+\def\rcslog_set_field#1{%
+    \let\RcsEmptyValue\rcs_empty_log_value
+    \RCS #1%
+    \expandafter\rcs_log_hdr \RCS_value\end_value
+    \list{}\RcsLogListStyle		% empty label, layout configurable
+    \if@rcs_empty_log@
+	\item []\RcsEmptyLog		% supply missing item
+    \fi
+    }
+\def\RcsLogListStyle{%
+    \global\@listdepth\z@
+    \labelwidth\z@		    % item label w/o fixed size
+    \itemindent -\leftmargin	    % move label before start of line
+    \advance\itemindent \labelsep   % label was moved too much
+    \def\makelabel##1{\bf ##1}%	    % how to typeset labels
+    \parsep\z@skip		    % no space between pars in items
+    \listparindent 1em		    % <-- space!  indent pars in items
+    }%
+\let\endrcslog\endtrivlist
+\def\rcslog_revision{%
+    \begingroup
+	\obeylines
+	\rcslog_get_revinfo
+    }
+\begingroup
+\obeylines
+\gdef\rcslog_get_revinfo #1 #2 #3 #4^^M{%
+    \endgroup%
+    \RcsLogRevision{#1}{#2}{#3}{#4}%
+    }
+\endgroup
+\def\RCSdate $#1${%
+    \RCS $#1$%
+    \expandafter\date \expandafter{\csname RCS\RCS_keyword\endcsname}%
+    }
+\def\RCSID{%
+    \@ifnextchar\bgroup
+	\rcsid_get_field
+	\rcs_id
+    }
+\def\rcsid_get_field#1{\rcs_id #1}
+\def\rcs_id $#1${%
+    \RCS $#1$%
+    \begingroup
+	\let\protect\noexpand
+	\xdef\@oddfoot{%
+	    \reset@font
+	    \protect\framebox[\textwidth]{\RCS_keyword: \RCS_value}%
+	    }%
+    \endgroup
+    \global\let\@evenfoot\@oddfoot
+    }
+\def\RCSdef $#1${%
+    \typeout{RCS field: $#1$}%
+    \RCS $#1$%
+    }
+\catcode`\_=\CatUsCode
+\endinput

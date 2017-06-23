@@ -1,0 +1,139 @@
+\section{The P2V pre-processor}
+\label{sec:ptov}
+
+In Section~\ref{sec:intro}, we enumerated the four primary goals of
+Prairie, viz., uniformity in operator and algorithms; uniformity in
+properties; uniformity in property-transformations; and efficient
+generation of Prairie optimizers.  The first three goals are driven by
+the need for conceptual simplicity; however, they alone do not
+necessarily generate efficient optimizers.  The P2V pre-processor
+ensures that efficient optimizers can be realized from Prairie
+specifications, by translating them to the Volcano framework and then
+generating an optimizer by compiling with the Volcano search engine.
+This Prairie optimizer-generator paradigm is shown schematically in
+Figure~\ref{fig:ptovmodel}.  The pre-processor itself is 4500 lines of
+\texttt{flex} and \texttt{bison} code.  In this section, we briefly
+describe the pre-processor steps and explain why the Prairie-to-Volcano
+transformation is non-trivial.  A more detailed description of the
+pre-processor is given in \cite{Das94}.
+
+\begin{centeredfigure}
+\myshadowbox
+{
+\scriptsize
+\begin{centeredinfullminipage}
+\begin{center}
+\psset{unit=6mm}
+\psset{nodesep=3pt}
+%\begin{pspicture}(-1.0,-0.5)(10,9.0)
+\begin{pspicture}(-1.0,-0.5)(8,9.0)
+\pspolygon[doubleline=true](1,1.5)(7,1.5)(7,7.5)(1,7.5)
+\pspolygon[fillcolor=white,fillstyle=solid](2,8)(6,8)(6,9)(2,9)
+\rput(4,8.5){\psframebox*{Prairie Rule Set}}
+\psline[border=2pt]{->}(4,8)(4,7)
+\pspolygon[doubleline=true](2,6)(6,6)(6,7)(2,7)
+\rput(4,6.5){P2V Pre-processor}
+\psline[border=2pt]{->}(4,6)(4,5)
+\pspolygon[fillcolor=gray,fillstyle=solid](2,4)(6,4)(6,5)(2,5)
+\rput(4,4.5){\psframebox*{Volcano Rule Set}}
+\psline[border=2pt]{->}(4,4)(4,3)
+\pspolygon[doubleline=true](2,2)(6,2)(6,3)(2,3)
+\rput(4,2.5){\begin{tabular}{c} Volcano \\ Optimizer-Generator \end{tabular}}
+\psline[border=2pt]{->}(4,2)(4,1)
+\pspolygon[fillcolor=gray,fillstyle=solid](2,0)(6,0)(6,1)(2,1)
+\rput(4,0.5){\psframebox*{Query Optimizer}}
+\rput[r](1,0.5){Operator Tree}
+\psline[border=2pt]{->}(1,0.5)(2,0.5)
+\psline[border=2pt]{->}(6,0.5)(7,0.5)
+\rput[l](7,0.5){Access Plan}
+\end{pspicture}
+\end{center}
+\end{centeredinfullminipage}
+}
+\caption{The Prairie optimizer-generator paradigm.  Double-boxed modules
+         represent software generators, shaded boxes represent
+         generated programs.  The outermost double-boxed portion
+         denotes the Prairie optimizer generator.}
+\label{fig:ptovmodel}
+\end{centeredfigure}
+
+The specification of an optimizer in Volcano consists of a set of
+transformation rules (called ``trans\_rules'') and implementation rules
+(called ``impl\_rules''), a set of properties, and some support
+functions.  The join associativity trans\_rule
+(cf.\ Figure~\ref{fig:associativity}) in Volcano is as follows\footnote{There
+are conditions and actions associated with Volcano rules that are not
+shown here.}:
+\begin{eqnarray*}
+\scriptscriptstyle
+& &
+{\scriptstyle
+(\text{JOIN} \ \text{?op\_arg5}
+  \ ((\text{JOIN} \ \text{?op\_arg4} \ (?1 \ ?2)) \ 
+     ?3))} \\
+& &
+\rulespace
+{\scriptstyle -\!\!>}
+{\scriptstyle
+(\text{JOIN} \ \text{?op\_arg7}
+  \ (?1 \ 
+     (\text{JOIN} \ \text{?op\_arg6} \ (?2 \ ?3))))}
+\end{eqnarray*}
+The important point to note is the use of \emph{operator arguments}
+(denoted by ``op\_arg'' in rules); these arguments contain properties
+used in the rule's actions, but unlike Prairie, they do not contain
+\emph{all} the properties of an operator tree node.  There are other
+property classes, like algorithm argument, logical property, system
+property, physical property, and cost.  Thus, while Prairie uses a
+uniform descriptor to encode properties, Volcano partitions the
+properties into different classes.  The P2V pre-processor partitions a
+Prairie descriptor into the different property classes required by
+Volcano.  This is a non-trivial task, since it requires parsing the
+Prairie rules and their actions.
+
+Impl\_rules in Volcano defer most of the actions associated with the
+rules to support functions.  Each algorithm has four support functions
+associated with it.  A Prairie specification, on the other hand,
+contains all the actions in the corresponding rule.  The P2V
+pre-processor parses a Prairie I-rule, and automatically generates all
+the Volcano support functions from the rule.  This is also a complex
+process, since it depends partly on the partitioning of properties
+mentioned in the last paragraph, and also because it requires
+relocating pieces of code from Prairie rules to Volcano support
+functions.
+
+The third salient feature of a Volcano specification is the presence of
+implicit, or hidden, algorithms, called \emph{enforcers}.  In Prairie,
+all algorithms are explicit.  Consider, for example, the Merge\_sort
+algorithm in Figure~\ref{fig:msort}.  In a Volcano specification, this
+algorithm would be classified as an enforcer, since it enforces the
+sortedness property.  The P2V pre-processor determines the Prairie
+algorithms that are functionally Volcano enforcers, and deletes the
+corresponding Prairie rules to generate the Volcano specification.
+This requires the pre-processor to migrate the (deleted) rule's actions
+to Volcano support functions.
+
+The P2V pre-processor also generates a set of compact Volcano rules by
+merging Prairie rules whenever possible.  Consider, for example, the
+following set of rules in Prairie:
+\begin{eqnarray*}
+{\scriptstyle \text{JOIN}(S_1, S_2):\mathbf{D_3}}
+  & \Longrightarrow &
+{\scriptstyle \text{JOPR}(\text{SORT}(S_1):\mathbf{D_4},
+        \text{SORT}(S_2):\mathbf{D_5}):\mathbf{D_6}} \\
+{\scriptstyle \text{SORT}(S_1):\mathbf{D_2}}
+  & \Longrightarrow &
+{\scriptstyle \text{Null}(S_1:\mathbf{D_3}):\mathbf{D_4}} \\
+{\scriptstyle \text{JOPR}(S_1, S_2):\mathbf{D_3}}
+  & \Longrightarrow &
+{\scriptstyle \text{Nested\_loops}(S_1:\mathbf{D_4}, S_2):\mathbf{D_5}}
+\end{eqnarray*}
+The first rule is a T-rule, and the next two are I-rules.  The P2V
+pre-processor combines the above set of Prairie rules into a single
+I-rule,
+\begin{eqnarray*}
+{\scriptstyle \text{JOIN}(S_1, S_2):\mathbf{D_3}}
+ & \Longrightarrow &
+{\scriptstyle \text{Nested\_loops}(S_1:\mathbf{D_4}, S_2):\mathbf{D_5}}
+\end{eqnarray*}
+and then translates it into a single Volcano impl\_rule.

@@ -1,0 +1,250 @@
+\documentclass{article}
+\usepackage[OT1]{fontenc}
+\usepackage[symbols]{synproof}
+\usepackage[height=23cm]{geometry}
+\begin{document}
+
+\reversemarginpar
+
+\title{Drawing syntactic proofs in logic with \texttt{synproof}}
+\author{Paul Isambert\\zappathustra@free.fr\\http://paulisambert.free.fr}
+\maketitle
+
+\setcounter{section}{-1}
+\section{Introduction}
+This simple package, based on \verb+PSTricks+, allows you to draw logical syntactic proofs designed after the Gamut books\footnote{L.T.F. Gamut, \emph{Logic, Language, and Meaning}, Chicago, The University of Chicago Press, 2 vol., 1991.}. A pair of commands is enough, but fine tuning can be achieved easily through optional arguments of the environment.
+
+\section{Installation}
+Declare \verb+synproof.sty+ with \verb+usepackage+ as usual. An option may be loaded, named \verb+symbols+, which defines a set of commands for logical operators without math mode:
+
+\begin{tabular}{ll}
+\verb+\Exists+&\Exists\\
+\verb+\Forall+&\Forall\\
+\verb+\Neg+&\Neg\\
+\verb+\And+&\And\\
+\verb+\Or+&\Or\\
+\verb+\Falsum+&\Falsum\\
+\verb+\Implies+&\Implies\\	
+\end{tabular}
+
+\noindent They are optional because, being very common, they might conflict with other packages or your own command redefinitions.
+
+Since this package is based on \verb+PSTricks+, you can't build your file directly to PDF. You have to build a .ps file and and then convert it to PDF, otherwise the lines will disappear.
+
+\section{Commands}
+\verb+\begin{synproof}+[$\langle Optional\ specifications\rangle$]\{$\langle Length\ of\ the\ derivation\rangle$\}
+
+\noindent\verb+\end{synproof}+
+
+\noindent This environment works as usual. The optional specifications are explained in the following section. The length of the derivation is not computed automatically, so you have to specify it. A derivation of 10 lines is roughly of length 6. Note that you can print a grid that will help you measure the right length of your derivation by typing \verb+\psgrid+ after \verb+\begin{synproof}{n}+.
+
+Each new derivation, that is, each new \verb+synproof+ environment sets the line numbers back to 1. If, for some reason, you want a derivation to start at \emph{n}, just type \verb+\LineNum{n}+. You can do that in the course of a derivation too.
+
+\vspace{10pt}
+\noindent\verb+\step+[$\langle Optional\ line\ number\rangle$]\{$\langle Expression\rangle$\}\{$\langle Rule\rangle$\}[$\langle Optional\ label\rangle$]
+
+\noindent The first mandatory argument is the expression processed at the current step, e.g. p, p\And q, (\Exists x(Fx)\Implies\Exists x(Gx))\Implies\Exists x(Fx\Implies Gx), and so on. The second mandatory argument takes the rule used to derive that expression, with reference to the previous line(s) to which that rule applies, like E\And, 13, for instance. 
+
+The line number is optional and is automatically incremented. Thus, the the first optional argument may be specified at will. If not, the line number will be handled exactly. Note that if you enter a wrong line number, the counter won't follow you and will display the right ones if you let it take over the following lines. For instance, if you type \verb+\step[12]{p}{Assumption}+ at line 11 and \verb+\step{q}{Assumption}+ at line 12, then both lines will have number 12. If you need automatic numbering starting where you want to, use \verb+\LineNum{}+ as above. 
+
+Finally, the last optional argument is a label that may be used to refer to the current line in the rest of the derivation. When specifiyng the label, write its name \emph{with no backslash} (e.g. \verb+\step{p\And q}{Assumption}[foo]+), and when you call it, use a backslash followed by the label's name like a usual command (e.g. \verb+\step{p}{E\And, \foo}+). That label gives the number of the line where it was defined. If the number has been specified with the first optional argument, then the label will return that number, even if it's not the `real' one. Note that you must create a new label every time. This is an obvious shortcoming, so when you're not completely lost in your derivation, you may write yourself the number of the line you want to refer to\footnote{Moreover, your label shouldn't conflict with an existing command. For instance, creating a label named \texttt{par} is a very bad idea, since $\backslash$\texttt{bar} already exists. Writing your labels' names in uppercase is a simple way to avoid this.}.
+
+\vspace{10pt}
+\noindent We can already draw a simple derivation. For instance:
+
+\begin{synproof}{2.5}
+\step{p\And q}{Assumption}[foo]
+\step{p}{E\And, \foo}
+\step[4]{q}{E\And, \foo}[fooo]
+\step{Same line number as above}{\fooo}
+\end{synproof}
+
+\begin{verbatim}
+\begin{synproof}{2.5}
+\step{p\And q}{Assumption}[foo]
+\step{p}{E\And, \foo}
+\step[4]{q}{E\And, \foo}[fooo]
+\step{Same line number as above}{\fooo}
+\end{synproof}
+\end{verbatim}
+
+\noindent\verb+\assumption+\nopagebreak
+
+\noindent\verb+\assumend+
+
+\noindent Those two commands delimit the beginning and the end of an assumption. \verb+\assumption+ precedes the step which is assumed, and \verb+\assumend+ precedes the conclusion. For instance, we can prove $\vdash$p\Implies(q\Implies p):
+ 
+\begin{synproof}{3}
+	\assumption
+	\step{p}{Assumption}[p]
+		\assumption
+		\step{q}{Assumption}
+		\step{p}{Rep, \p}
+	\assumend
+	\step{q\Implies p}{I\Implies}
+	\assumend
+\step{p\Implies(q\Implies p)}{I\Implies}
+\end{synproof}
+
+\begin{verbatim}
+\begin{synproof}{3}
+	\assumption
+	\step{p}{Assumption}[p]
+		\assumption
+		\step{q}{Assumption}
+		\step{p}{Rep, \p}
+	\assumend
+	\step{q\Implies p}{I\Implies}
+	\assumend
+\step{p\Implies(q\Implies p)}{I\Implies}
+\end{synproof}
+\end{verbatim}
+
+\section{Fine tuning}
+This section describes how the various dimensions of a derivation may be modified. The optional specifications of \verb+\begin{synproof}+ take the form of a list of \emph{key=value} pairs. Default value is 0 for each. Negative values are allowed, and they don't need to be integers. Here are the parameters:
+
+\vspace{10pt}
+\noindent\framebox{1} \textbf{NumToEx} sets the distance between the line number and the expression.\\
+\framebox{2} \textbf{ExToRule} sets the distance between the expression and the rule used to derive it.\\
+\framebox{3} \textbf{OutLine} sets the position of the outter (vertical) line relative to the line numbers.\\
+\framebox{4} \textbf{LineSpace} sets the distance between the (vertical) lines of embedded assumptions. You shouldn't increase \verb+LineSpace+ without decreasing \verb+OutLine+ (or increasing the latter without decreasing the former). Indeed, each embedded line has a position relative to the previous one. So everything depends upon the `depth' of the assumption.\\
+\framebox{5} \textbf{AssumeLine} sets the length of the horizontal line which ends an assumption (more exactly, it sets the position of its ending point).\\
+\textbf{HorAlign} allows you to move the entire derivation to the left or to the right.
+
+\begin{synproof}[LineSpace=4]{6}
+%\psgrid
+\psline[linewidth=.7pt]{<->}(1,-4)(2,-4)\rput(1.5,-4.3){\framebox{1}}
+\psline[linewidth=.7pt]{<->}(2,-4)(8,-4)\rput(5,-4.3){\framebox{2}}
+\psline[linewidth=.7pt]{<->}(-0.04,-2.4)(1,-2.4)\rput(.5,-2.7){\framebox{3}}
+\psline[linewidth=.7pt]{<->}(-0.04,-1.6)(.5,-1.6)\rput(.25,-1.9){\framebox{4}}
+\psline[linewidth=.7pt]{<->}(-0.04,-4.8)(10,-4.8)\rput(5,-5.1){\framebox{5}}
+	\assumption
+	\step{p}{Assumption}[passum]
+		\assumption
+		\step{\Neg p}{Assumption}[negp]
+		\step{\Falsum}{E\Neg, \passum, \negp}
+		\assumend
+	\step{\Neg\Neg p}{I\Neg}[dnegp]
+	\step{p}{\Neg\Neg, \dnegp}
+	\assumend
+\step{p\Implies p}{I\Implies}
+\end{synproof}
+
+Those specifications are local: they work in the current \verb+synproof+ environment, not beyond. If you want them to work for all subsequent environments, use \verb+\SetDim{}+ with the same \emph{key=value} pairs, outside of any \verb+synproof+ environment of course (otherwise it will have a local effect again). Note that \verb+\SetDim+ is `additive': if you write \verb+\SetDim{LineSpace=2}+ and then later \verb+\SetDim{LineSpace=1}+, all subsequent derivations will have a space of length 3 between the assumption lines. On the other hand, if you write \verb+\SetDim{LineSpace=2}+ and then \verb+\SetDim{NumToEx=2}+, \textbf{LineSpace} will keep its value 2. This works with the local specifications set with \verb+\begin{synproof}+ too. Thus, \verb+\SetDim{LineSpace=2}+ and then \verb+\begin{synproof}[LineSpace=1]{n}+ will create a derivation with 3 units between its assumption lines, although this additional unit won't affect subsequent derivations (since it has been added locally). Finally, you can reset all global specifications back to default with \verb+\ResetDim+.
+
+\section{Example}
+The next two pages show the derivation of $\vdash$(\Exists x(Fx)\Implies\Exists x(Gx))\Implies\Exists x(Fx\Implies Gx) and its code.
+
+\pagebreak
+\begin{synproof}[HorAlign=1,OutLine=2,LineSpace=.5]{17}
+	\assumption
+	\step{\Exists x(Fx)\Implies\Exists(Gx)}{Assumption}
+		
+		\assumption
+		\step{\Neg\Exists x(Fx\Implies Gx)}{Assumption}
+		
+			\assumption
+			\step{\Neg(Fa\And\Neg Ga)}{Assumption}
+						
+				\assumption
+				\step{Fa}{Assumption}
+		
+					\assumption
+					\step{\Neg Ga}{Assumption}
+					\step{Fa\And\Neg Ga}{I\And, 4, 5}
+					\step{\Falsum}{E\Neg, 3, 6}
+					\assumend
+		
+				\step{\Neg\Neg Ga}{I\Neg}
+				\step{Ga}{\Neg\Neg, 8}
+				\assumend
+		
+			\step{Fa\Implies Ga}{I\Implies}
+			\step{\Exists x(Fx\Implies Gx)}{I\Exists, 10}
+			\step{\Falsum}{E\Falsum, 3, 11}
+			\assumend
+		
+		\step{\Neg\Neg(Fa\And\Neg Ga)}{I\Neg}
+		\step{(Fa\And\Neg Ga)}{\Neg\Neg, 13}
+		\step[15]{\Neg Ga}{E\And, 14}
+		\step[16]{\Forall x(\Neg Gx)}{I\Forall, 15}
+		\step[17]{Fa}{E\And, 14}
+		\step[18]{\Exists x(Fx)}{I\Exists, 17}
+		\step[19]{\Exists x(Gx)}{E\Implies, 1, 18}
+		
+			\assumption
+			\step[20]{Ga}{Assumption}
+			\step[21]{\Neg Ga}{E\Forall, 16}
+			\step[22]{\Falsum}{E\Neg, 20, 21}
+			\assumend
+		
+		\step[23]{Ga\Implies\Falsum}{I\Implies}
+		\step[24]{\Falsum}{E\Exists, 19, 23}
+		\assumend
+	
+	\step{\Neg\Neg\Exists x(Fx\Implies Gx)}{I\Neg}
+	\step{\Exists x(Fx\Implies Gx)}{\Neg\Neg, 25}
+	\assumend
+
+\step{(\Exists x(Fx)\Implies\Exists x(Gx))\Implies\Exists x(Fx\Implies Gx)}{I\Implies}
+\end{synproof}
+
+\pagebreak
+%\small
+\begin{verbatim}
+\begin{synproof}[HorAlign=1,OutLine=2,LineSpace=.5]{17}
+  \assumption
+  \step{\Exists x(Fx)\Implies\Exists(Gx)}{Assumption}
+		
+    \assumption
+    \step{\Neg\Exists x(Fx\Implies Gx)}{Assumption}
+		
+      \assumption
+      \step{\Neg(Fa\And\Neg Ga)}{Assumption}
+						
+        \assumption
+        \step{Fa}{Assumption}
+		
+          \assumption
+          \step{\Neg Ga}{Assumption}
+          \step{Fa\And\Neg Ga}{I\And, 4, 5}
+          \step{\Falsum}{E\Neg, 3, 6}
+          \assumend
+		
+        \step{\Neg\Neg Ga}{I\Neg}
+        \step{Ga}{\Neg\Neg, 8}
+        \assumend
+		
+      \step{Fa\Implies Ga}{I\Implies}
+      \step{\Exists x(Fx\Implies Gx)}{I\Exists, 10}
+      \step{\Falsum}{E\Falsum, 3, 11}
+      \assumend
+		
+    \step{\Neg\Neg(Fa\And\Neg Ga)}{I\Neg}
+    \step{(Fa\And\Neg Ga)}{\Neg\Neg, 13}
+    \step[15]{\Neg Ga}{E\And, 14}
+    \step[16]{\Forall x(\Neg Gx)}{I\Forall, 15}
+    \step[17]{Fa}{E\And, 14}
+    \step[18]{\Exists x(Fx)}{I\Exists, 17}
+    \step[19]{\Exists x(Gx)}{E\Implies, 1, 18}
+		
+      \assumption
+      \step[20]{Ga}{Assumption}
+      \step[21]{\Neg Ga}{E\Forall, 16}
+      \step[22]{\Falsum}{E\Neg, 20, 21}
+      \assumend
+		
+    \step[23]{Ga\Implies\Falsum}{I\Implies}
+    \step[24]{\Falsum}{E\Exists, 19, 23}
+    \assumend
+	
+  \step{\Neg\Neg\Exists x(Fx\Implies Gx)}{I\Neg}
+  \step{\Exists x(Fx\Implies Gx)}{\Neg\Neg, 25}
+  \assumend
+
+\step{(\Exists x(Fx)\Implies\Exists x(Gx))\Implies\Exists x(Fx\Implies Gx)}{I\Implies}
+\end{synproof}
+\end{verbatim}
+
+\end{document}
+

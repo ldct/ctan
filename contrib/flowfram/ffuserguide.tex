@@ -1,0 +1,3601 @@
+\documentclass[a4paper,twoside]{book}
+
+\usepackage{etoolbox}
+\usepackage{etex}
+\usepackage{mathptmx}
+\usepackage{courier}
+\usepackage[scaled=0.9]{helvet}
+\usepackage{makeidx}
+\usepackage[landscape,margin=1in,top=1in,bottom=1in]{geometry}
+\usepackage{color}
+\usepackage[colorlinks,
+            plainpages=false,
+            linkcolor=black,
+            bookmarksopen,
+            pdfauthor={Nicola Talbot},
+            pdftitle={Creating Flow Frames for Posters, Brochures or Magazines using flowfram.sty},
+            pdfkeywords={LaTeX;text frames;posters;brochures;magazines;newspapers}]{hyperref}
+\usepackage[style=altlist,toc,nonumberlist]{glossaries}
+\usepackage{pgf}
+\usepackage[norotate,ttbnotitle,ttbnum]{flowfram}
+\usepackage{shapepar}
+\usepackage{html}
+
+% Define some commands for consistency and indexing
+\newcommand{\styni}[1]{\textsf{#1}}
+\newcommand{\envni}[1]{\textsf{#1}}
+\newcommand{\ctrni}[1]{\textsf{#1}}
+\newcommand{\pkgoptni}[1]{\textsf{#1}}
+
+\newcommand{\sty}[1]{\styni{#1}\index{#1@\styni{#1} package}}
+\newcommand{\env}[1]{\envni{#1}\index{#1@\envni{#1} environment}}
+\newcommand{\ctr}[1]{\ctrni{#1}\index{#1@\ctrni{#1} counter}}
+\newcommand{\cmdname}[1]{\texttt{\symbol{92}#1}\index{#1@\texttt{\symbol{92}#1}}}
+\newcommand{\meta}[1]{%
+\textnormal{\ensuremath{\langle}\emph{#1}\ensuremath{\rangle}}}
+\newcommand{\marg}[1]{\texttt{\char`\{#1\char`\}}}
+\newcommand{\oarg}[1]{\texttt{[#1]}}
+\newcommand{\appname}[1]{\texttt{#1}\index{#1@\texttt{#1}}}
+
+\newcommand{\pkgopt}[2][]{%
+  \ifstrempty{#1}%
+  {%
+    \pkgoptni{#2}\index{#2@\pkgoptni{#2} option}%
+  }%
+  {%
+    \pkgoptni{#2}=\pkgoptni{#1}\index{#2@\pkgoptni{#2}
+option!#1@\pkgoptni{#1}}%
+  }%
+}
+
+\newcommand{\pkgoptval}[2]{\pkgoptni{#2}\index{#1@\pkgoptni{#1} option!#2@\pkgoptni{#2}}}
+
+\newcommand{\key}[1]{#1\index{frame settings!#1}}
+\newcommand{\dq}[1]{``#1''}
+\newcommand*{\Index}[1]{#1\index{#1}}
+
+\newsavebox\dfnsbox
+\definecolor{defcol}{cmyk}{0,0,0.2,0}
+\newlength\dfnlen
+
+\newenvironment{definition}{%
+\par\vskip10pt\noindent
+\setlength{\dfnlen}{\linewidth}%
+\addtolength{\dfnlen}{-2\fboxsep}%
+\begin{lrbox}{\dfnsbox}%
+\begin{minipage}{\dfnlen}\ignorespaces
+}{%
+\end{minipage}%
+\end{lrbox}%
+\colorbox{defcol}{\usebox{\dfnsbox}}%
+\par
+\vskip10pt\noindent\ignorespacesafterend}
+
+\newcommand{\chapdesc}[1]{%
+ \appenddynamiccontents*{chaphead}{\par
+   \normalfont\emph{#1}}%
+}
+
+\newcommand*{\glsindex}[1]{\protect\index{#1}}
+
+\newcommand*{\htmlnav}{}
+
+\begin{htmlonly}
+\renewcommand{\LaTeX}{LaTeX}
+\renewcommand{\TeX}{TeX}
+\renewcommand{\LaTeXe}{LaTeX2e}
+\renewcommand{\latextohtml}{LaTeX2HTML}
+\renewcommand{\styni}[1]{\texttt{#1}}
+\renewcommand{\envni}[1]{\texttt{#1}}
+\renewcommand{\ctrni}[1]{\texttt{#1}}
+\renewcommand{\pkgoptni}[1]{\texttt{#1}}
+\renewcommand{\meta}[1]{\emph{#1}}
+\renewcommand{\dq}[1]{"#1"}
+
+\renewenvironment{definition}{\par}{\par}
+
+\renewcommand*{\chapdesc}[1]{\par\emph{#1}\par}
+
+\newcommand*{\glsindex}[1]{}
+
+\newcommand*{\htmlnav}{%
+\par\htmlref{Top}{top}~\textbar~\htmlref{Index}{index}}
+
+\usepackage{amsmath}
+\keywords{LaTeX; text frames; posters; brochures; magazines; newspapers}
+\end{htmlonly}
+
+% Glossary Stuff
+
+\newglossaryentry{typeblock}{name=typeblock\glsindex{typeblock},%
+description={The area of the page where the main body of the text goes.
+The width and height of this area are given by 
+\protect\cmdname{textwidth} and \protect\cmdname{textheight}}}
+
+\newglossaryentry{flow}{name=flow frame\glsindex{frame!flow},%
+description={The frames in a document such that the contents of the 
+\protect\env{document} environment flow from one frame to the next in 
+the order that they were defined. There must be at least one flow frame 
+on every page}}
+
+\newglossaryentry{static}{name=static frame\glsindex{frame!static},%
+description={Frames in which text is fixed in place.  The contents are fixed until
+explicitly changed or cleared via the \protect\key{clear} key
+in \protect\cmdname{setstaticcontents}}}
+
+\newglossaryentry{dynamic}{name=dynamic frame\glsindex{frame!dynamic},%
+description={Frames
+in which text is fixed in place, but the contents are re-typeset
+each time the frame is displayed}}
+
+\newcommand*{\staticordynamic}{\glslink{static}{static} or 
+\glslink{dynamic}{dynamic} frame}
+
+\newglossaryentry{frame}{name=frame\glsindex{frame},%
+description={A rectangular
+area of the page in which text can be placed (not to be
+confused with a frame making command). There are three types:
+flow, static and dynamic}}
+
+\newglossaryentry{fcmd}{name=frame making command\glsindex{frame
+making command},description={A
+\LaTeX\ command which places some kind of border around its
+argument. For example: \protect\cmdname{fbox}}}
+
+\newglossaryentry{pglist}{name=page list\glsindex{page list},%
+description={A list of
+pages. This can either be a single keyword: \texttt{all},
+\texttt{odd}, \texttt{even} or \texttt{none}, or it can
+be a comma-separated list of individual page numbers or
+page ranges. For example: \texttt{\textless3,5,7-11,\textgreater15}
+indicates pages 1,2,5,7,8,9,10,11 and all pages after page 15.
+These numbers refer to the decimal value of the page counter by
+default. To make them refer to the absolute physical page number use
+the package option \pkgopt[absolute]{pages}}}
+
+\newglossaryentry{pgrange}{name=page range\glsindex{page range},%
+description={Page
+ranges can be closed, e.g.\ \texttt{5-10}, or open, e.g.
+\texttt{\textless7} or \texttt{\textgreater9}}}
+
+\newglossaryentry{bbox}{name=bounding box\glsindex{bounding box},
+plural=bounding boxes\glsindex{bounding box},
+firstplural=bounding boxes\glsindex{bounding box},
+description={The bounding box of a frame is the area allocated for the 
+contents of that frame. However the text may not completely fill that 
+area, and it is possible that the text may overflow that area}}
+
+\newglossaryentry{idn}{name={identification number 
+(IDN)\glsindex{IDN}\glsindex{identification number|see{IDN}}},
+text={IDN\glsindex{IDN}},%
+first={identification number (IDN)\glsindex{IDN}},
+plural={IDNs\glsindex{IDN}},%
+firstplural={identification numbers (IDNs)\glsindex{IDN}},
+description={A unique
+number assigned to each frame, which you can use to identify
+the frame when modifying its appearance. Example: if you
+have defined 3 flow frames, 2 static frames and 1 dynamic
+frame, the flow frames will have IDNs 1, 2 and 3, the static
+frames will have IDNs 1 and 2, and the dynamic frame will
+have IDN 1}}
+
+\newglossaryentry{idl}{name={identification label 
+(IDL)\glsindex{IDL}\glsindex{identification label|see{IDL}}},
+text={IDL\glsindex{IDL}},%
+first={identification label (IDL)\glsindex{IDL}},
+plural={IDLs\glsindex{IDL}},%
+firstplural={identification labels (IDLs)\glsindex{IDL}},
+description={A unique
+label which can be assigned to a frame, enabling you to
+refer to the frame by label instead of by its 
+IDN}}
+
+\makeglossaries
+\makeindex
+
+% Page layout stuff
+
+% set up some background frames to liven up the title page
+\newlength{\leftwidth}
+\newlength{\rightwidth}
+
+\computeleftedgeodd{\leftwidth}
+\setlength{\leftwidth}{-\leftwidth}
+\addtolength{\leftwidth}{0.4\textwidth}
+\setlength{\rightwidth}{\paperwidth}
+\addtolength{\rightwidth}{-\leftwidth}
+% only defined on page 1 unfortunately the document
+% has more than one page 1, so will need to change the settings after the title page
+\vtwotone[1]{\leftwidth}{magenta}{backleft}{\rightwidth}{[cmyk]{0,0.48,0,0}}{backright}
+
+% This is for the back cover.
+\vtwotone[none]{\rightwidth}{[cmyk]{0,0.48,0,0}}{lastbackright}{\leftwidth}{magenta}{lastbackleft}
+
+\vtwotonetop[odd]{1cm}{\leftwidth}{magenta}{oddtopleft}{\rightwidth}{[cmyk]{0,0.48,0,0}}{oddtopright}
+\vtwotonetop[even]{1cm}{\rightwidth}{[cmyk]{0,0.48,0,0}}{eventopleft}{\leftwidth}{magenta}{eventopright}
+
+% Set the margin width
+\setlength{\marginparwidth}{2cm}
+
+% now set up main document frames. Each page has a dynamic
+% frame for the chapter heading, and a flow frame for the
+% text.
+\newflowframe{0.6\textwidth}{\textheight}{0pt}{0pt}[main]
+\newdynamicframe{0.38\textwidth}{\textheight}{0.62\textwidth}{0pt}[chaphead]
+
+% swap them round on even pages
+\setflowframe*{main}{evenx=0.4\textwidth}
+\setdynamicframe*{chaphead}{evenx=0pt,clear}
+
+% make a frames to illustrate shaped frames
+\newstaticframe[none]{0.38\textwidth}{0.55\textheight}{0.62\textwidth}{0.45\textheight}[shapedt]
+\setstaticframe*{shapedt}{evenx=0pt}
+
+\newstaticframe[none]{0.38\textwidth}{0.45\textheight}{0.62\textwidth}{0pt}[shapedb]
+\setstaticframe*{shapedb}{evenx=0pt}
+
+% set the margins to appear on the spine side of the page
+\setflowframe*{main}{margin=inner}
+
+% put chapter headings in dynamic frame with IDL chaphead
+\dfchaphead*{chaphead}
+
+% append chapter minitocs to same dynamic frame.
+\appenddfminitoc*{chaphead}
+
+% change the style of the chapter headings
+
+% numbered chapters:
+\renewcommand{\DFchapterstyle}[1]{%
+{\raggedright\sffamily\bfseries\Huge\color{blue}\thechapter. #1\par
+}}
+
+% unnumbered chapters:
+\renewcommand{\DFschapterstyle}[1]{{\raggedright\sffamily\bfseries\Huge\color{blue} #1\par
+}}
+
+% Make thumb tabs (specify each tab to be 0.75in high)
+
+\makethumbtabs{0.75in}
+\enableminitoc
+
+% Thumbtabs are grey by default which looks a bit boring,
+% so change the colours
+\setthumbtab{1}{backcolor=[rgb]{0.15,0.15,1}}
+\setthumbtab{2}{backcolor=[rgb]{0.2,0.2,1}}
+\setthumbtab{3}{backcolor=[rgb]{0.25,0.25,1}}
+\setthumbtab{4}{backcolor=[rgb]{0.3,0.3,1}}
+\setthumbtab{5}{backcolor=[rgb]{0.35,0.35,1}}
+\setthumbtab{6}{backcolor=[rgb]{0.4,0.4,1}}
+\setthumbtab{7}{backcolor=[rgb]{0.45,0.45,1}}
+\setthumbtab{8}{backcolor=[rgb]{0.5,0.5,1}}
+
+% change the text style on the thumbtabs
+\newcommand{\thumbtabstyle}[1]{{\hypersetup{linkcolor=white}%
+\textbf{\large\sffamily #1}}}
+\setthumbtab{all}{style=thumbtabstyle,textcolor=white}
+
+% set default page style
+
+\pagestyle{plain}
+
+% Put headers and footers in dynamic frames
+\makedfheaderfooter
+
+\newlength{\xoffset}
+\computerightedgeodd{\xoffset}
+\addtolength{\xoffset}{-2cm}
+\newlength{\yoffset}
+\computebottomedge{\yoffset}
+
+\newcommand{\footstyle}[1]{\bfseries\LARGE #1}
+
+% pages is initially set to none, as I don't want the footer to
+% appear on the title page.
+
+\setdynamicframe*{footer}{oddx=\xoffset,y=\yoffset,width=2cm,height=2cm,
+backcolor=blue,textcolor=white,style=footstyle,pages=none}
+
+% now work out the x offset for the even pages
+
+\computeleftedgeeven{\xoffset}
+\setdynamicframe*{footer}{evenx=\xoffset}
+
+% Now create some frames for the index, and modify
+% theindex environment
+
+% These are for the odd pages
+
+\twocolumninarea[none]{0.6\textwidth}{\textheight}{0pt}{0pt}
+% Give a label to the last 2 flow frames:
+\newcounter{N}
+\newcounter{I}
+\setcounter{N}{\value{maxflow}}
+\addtocounter{N}{-2}
+\whiledo{\value{N}<\value{maxflow}}{%
+\stepcounter{N}\stepcounter{I}
+\setflowframe{\value{N}}{label=oddcol\theI}}
+
+% These are for the even pages
+
+\twocolumninarea[none]{0.6\textwidth}{\textheight}{0.4\textwidth}{0pt}
+% Give a label to the last 2 flow frames:
+
+\setcounter{I}{0}
+\setcounter{N}{\value{maxflow}}
+\addtocounter{N}{-2}
+\whiledo{\value{N}<\value{maxflow}}{%
+\stepcounter{N}\stepcounter{I}
+\setflowframe{\value{N}}{label=evencol\theI}}
+
+\makeatletter
+\renewenvironment{theindex}{%
+\setflowframe*{oddcol1,oddcol2}{pages=odd}%
+\setflowframe*{evencol1,evencol2}{pages=even}%
+\setdynamicframe*{chaphead}{clear=false}%
+\clearpage
+\mbox{}\framebreak\phantomsection
+\setflowframe*{main}{pages=none}%
+\setdynamiccontents*{chaphead}{\DFschapterstyle{\indexname}%
+\idxnav}%
+\addcontentsline{toc}{chapter}{\indexname}%
+\setlength{\parindent}{0pt}%
+\setlength{\parskip}{0pt plus .3pt}%
+\let\item\@idxitem
+}{%
+\setdynamicframe*{chaphead}{clear}%
+}
+
+% Define commands to create an index navigation bar.
+\newcommand*{\idxgroupheading}[1]{%
+\textbf{\hypertarget{idx:#1}{#1}}%
+\protected@write\@auxout{}{\string\addtoidxnav{#1}}\indexspace}
+
+\newcommand*{\idxgrouplink}[1]{%
+\par\vskip5pt\textbf{\hyperlink{idx:#1}{#1}}}
+
+\newcommand{\idxnav}{}
+
+\newcommand*{\addtoidxnav}[1]{%
+\toks@\expandafter{\idxnav}%
+\xdef\idxnav{\the\toks@ \noexpand\idxgrouplink{#1}}%
+}
+\makeatother
+
+\begin{document}\label{top}
+\title{Creating Flow Frames for Posters, Brochures or 
+Magazines using flowfram.sty version 1.17}
+\author{Nicola L. C. Talbot}
+\date{2014-09-30}
+
+% swap frames around for title page
+\ffswapoddeven*{main}
+\dfswapoddeven*{chaphead}
+
+\pagenumbering{alph}
+\maketitle
+
+%suppress the background
+\setstaticframe*{backleft}{pages=none}
+\setstaticframe*{backright}{pages=none}
+
+\noindent
+Dr Nicola Talbot\\
+Dickimaw Books\\
+\url{http://www.dickimaw-books.com/}
+
+\frontmatter
+% swap frames back again
+\ffswapoddeven*{main}
+\dfswapoddeven*{chaphead}
+
+\thumbtabindex
+\tableofcontents
+
+% make the footers appear from this point on
+\setdynamicframe*{footer}{pages=all}
+
+\clearpage
+
+\mainmatter
+\chapter{Introduction}
+\enablethumbtabs
+\pagenumbering{arabic}
+\chapdesc{This chapter provides a brief overview of the package, 
+the package options and the various frame types.}
+
+This document is the user manual for the \styni{flowfram} package.
+Advanced users wanting further details of the package should read
+the documented code \texttt{flowfram.pdf}. Sample files are provided
+in the directory \meta{TEXMF}\texttt{/doc/latex/flowfram/samples/}
+where \meta{TEXMF} indicates the root \TeX\ installation directory
+for this package. (This document is located in 
+\meta{TEXMF}\texttt{/doc/latex/flowfram/}.) 
+
+The \styni{flowfram} package is a \LaTeXe\ package designed to 
+enable you to create text \glspl{frame} in a document such that 
+the contents of the \env{document} environment flow from one 
+\gls*{frame} to the next in the order that they were defined.  
+This is useful for creating posters
+or magazines or any other form of document that does not 
+conform to the standard one or two column layout. There's an
+optional helper application called
+\texttt{flowframtk}\footnote{\url{http://www.dickimaw-books.com/apps/flowframtk/}}
+if you prefer to use a graphical user interface to set up the
+document layout.
+
+\textbf{The \styni{flowfram} package tries to make \TeX\ do
+something it wasn't originally designed to do. It modifies the
+output routine and may not always perform as desired. Extra care
+must be taken if a paragraph spans frames of unequal width due to
+the asynchronous nature of \TeX's output routine.  (See
+\latexhtml{\autoref{sec:unexpectedoutput}}{\htmlref{Unexpected 
+Output}{sec:unexpectedoutput}}.})
+
+The \styni{flowfram} package provides three types of \gls*{frame}:
+\glspl{flow}, \glspl{static} and \glspl{dynamic} with dimensions and 
+positions specified by the 
+user\footnote{Can I have arbitrary shaped frames? See 
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular Frames}{sec:parshape}}}.
+The main contents of the document environment flow from
+one \gls*{flow} to the next in the order of definition,
+whereas the contents of the static and dynamic frames
+are set explicitly using commands described in 
+\latexhtml{\autoref{sec:modattr}}{\htmlref{Modifying Frame 
+Attributes}{sec:modattr}}. Note that
+unless otherwise stated, all co-ordinates are relative to the
+bottom left hand corner of the \gls{typeblock}. If you have
+a two-sided document, the absolute position of the \gls*{typeblock} 
+may vary depending on the values of \cmdname{oddsidemargin} 
+and \cmdname{evensidemargin}, and all the \glspl*{frame} will shift
+accordingly unless otherwise indicated.
+
+This package has only been tested with a limited number of
+class files and packages. Since it modifies the output routine,
+it is likely to conflict with any other package which also
+does this (such as \sty{longtable}).  
+
+You should load \styni{flowfram} \emph{after} \sty{hyperref} and any 
+colour package (e.g.\ \sty{color}).\htmlnav
+
+\section{Package Options}
+
+\begin{description}
+
+ \item[\pkgopt{pages}] Determines whether the \gls{pglist} refers to
+  the page number as given by the page counter (\pkgopt[relative]{pages})
+  or the absolute page number (\pkgopt[absolute]{pages}). The
+  default is \pkgoptval{pages}{relative} to ensure backward compatibility,
+  but if you have a document where the page counter is reset it's
+  best to use \pkgopt[absolute]{pages}.
+
+ \item[\pkgopt{draft}] Switch on draft mode (see 
+  \latexhtml{\autoref{sec:draft}}{\htmlref{Draft Option}{sec:draft}}).
+
+ \item[\pkgopt{final}] Switch off draft mode (default).
+
+ \item[\pkgopt{thumbtabs}] Controls thumbtab contents. See
+  \latexhtml{\autoref{sec:thumbtabs}}{\htmlref{Thumbtabs}{sec:thumbtabs}}
+  for details.
+
+ \item[\pkgopt{LR}] When using the column style layouts described in 
+  \latexhtml{\autoref{sec:Ncolumn}}{\htmlref{Column
+  Styles}{sec:Ncolumn}}, define the \glspl{flow} from left to right.
+  (Default.)
+
+ \item[\pkgopt{RL}] When using the column style layouts described in 
+  \latexhtml{\autoref{sec:Ncolumn}}{\htmlref{Column
+  Styles}{sec:Ncolumn}}, define the \glspl{flow} from right to left.
+
+ \item[\pkgopt{rotate}] May have the value \pkgoptval{rotate}{true}
+  (rotate text in thumbtabs) or \pkgoptval{rotate}{false}
+  (stack text in thumbtabs). (Default is \pkgoptval{rotate}{true}.)
+
+ \item[\pkgopt{color}] May have the value \pkgoptval{color}{true}
+ (allow frames to have colour settings) or \pkgoptval{color}{false}
+ (disable colour in frame settings). The default is \pkgoptval{color}{true}.
+
+ \item[\pkgopt{verbose}] May have the value \pkgoptval{verbose}{true} or 
+ \pkgoptval{verbose}{false}. (Default is \pkgoptval{verbose}{false}.) 
+  Provided to assist debugging.
+
+\end{description}
+
+\section{Floats}
+\label{sec:floats}
+
+The standard \env{figure} and \env{table} commands will 
+behave as usual in the \glspl*{flow}, but their starred versions,
+\env{figure*} and \env{table*} behave no differently
+from \env{figure} and \env{table}\footnote{This is because
+of the arbitrary layout of the flow frames.}.
+
+Floats (such as figures and tables) can only go in 
+\glspl*{flow}. However, this package provides
+the additional environments: \env{staticfigure} and 
+\env{statictable} which can be used in \glspl*{static} 
+and \glspl*{dynamic}. Unlike their \env{figure} and
+\env{table} counterparts, they are fixed in place, and
+so do not take an optional placement specifier. The 
+\cmdname{caption} and \cmdname{label} commands can 
+be used within \env{staticfigure} and \env{statictable} as
+usual, but remember that if the frame is displayed on multiple
+pages, you may end up with multiply defined labels.
+\htmlnav
+
+\section{Draft Option}
+\label{sec:draft}
+
+The \styni{flowfram} package has the package option \pkgopt{draft} 
+which will draw the \glspl{bbox} for
+each \gls{frame} that has been defined.  At the bottom right of each
+\gls*{bbox} (except for the \gls*{bbox} denoting the 
+\gls{typeblock}), a marker will be shown in the form:
+[\meta{T}:\meta{idn};\meta{idl}], where \meta{T} is a single
+letter denoting the \gls*{frame} type, \meta{idn} is the \gls{idn}\
+for the \gls*{frame} and \meta{idl} is the \gls{idl}\ for that
+\gls*{frame}. Values of \meta{T} are: \texttt{F} (\gls{flow}),
+\texttt{S} (\gls{static}) or \texttt{D} (\gls{dynamic}).
+Markers of the form: [M:\meta{idn}] indicate that the
+\gls*{bbox} is the area taken up by the margin for \gls*{flow} 
+with \gls*{idn}\ \meta{idn}. Note that even if a \gls*{frame} 
+has been rotated, the \gls*{bbox} will not be rotated.
+
+If you want to show or hide specific types of bounding
+boxes, you can use one of the following commands:
+\begin{itemize}
+\item 
+\cmdname{showtypeblocktrue} Display the \gls*{bbox} 
+for the \gls*{typeblock}.
+
+\item
+\cmdname{showtypeblockfalse} Do not display the \gls*{bbox} 
+for the \gls*{typeblock}.
+
+\item
+\cmdname{showmarginstrue} Display the \gls*{bbox} 
+for the margins.
+
+\item
+\cmdname{showmarginsfalse} Do not display the \gls*{bbox} 
+for the margins.
+
+\item
+\cmdname{showframebboxtrue} Display the \gls*{bbox} 
+for the \glspl*{frame}.
+
+\item
+\cmdname{showframebboxfalse} Do not display the \gls*{bbox} 
+for the \glspl*{frame}.
+
+\end{itemize}
+
+You can see the layout for the current page (irrespective of
+whether or not the \pkgopt{draft} option has been set) using
+the command:
+\begin{definition}
+\cmdname{flowframeshowlayout}
+\end{definition}
+
+The \styni{flowfram} package also has the options \pkgopt[false]{color} 
+and \pkgopt[false]{rotate} for previewers that can not process
+colour or rotating specials. (Otherwise you may end up with
+large black rectangles obscuring your text, instead of
+the pale background colour you were hoping for.)\htmlnav
+
+\section{Chapters}
+
+If the \cmdname{chapter} command has been defined, the \styni{flowfram}
+package will modify its definition so that it sets the page style to
+\cmdname{chapterfirstpagestyle} for the first page of each chapter. This
+command defaults to \texttt{plain}, which is the usual page style
+for the first page of a chapter. If you want to use a different
+style, you will need to redefine \cmdname{chapterfirstpagestyle} to the
+name of the relevant page style. A hook
+\begin{definition}
+\cmdname{ffprechapterhook}
+\end{definition}
+is used at the start of \cmdname{chapter} definition \emph{before
+\cmdname{clearpage} or \cmdname{cleardoublepage} is called.}
+
+Chapter titles can be placed in a \gls{dynamic} (as in \html{the PDF version of }this document). See 
+\latexhtml{\autoref{sec:dfchaphead}}{\htmlref{Putting Chapter Titles
+in a Dynamic Frame}{sec:dfchaphead}} for further details.
+\htmlnav
+
+\section{Frame Stacking Order}
+\label{sec:stacking}
+
+The material on each page is placed in the following order:
+\begin{enumerate}
+\item Each \gls{static} defined for that page in ascending
+order of \gls{idn}.
+
+\item Each \gls{flow} defined for that page in ascending
+order of \gls{idn}.
+
+\item Each \gls{dynamic} defined for that page in ascending
+order of \gls{idn}.
+
+\item \Glspl{bbox} if the \pkgopt{draft} 
+package option has been used.
+\end{enumerate}
+
+This ordering can be used to determine if you want something
+to overlay or underlay everything else on the page.
+Note that the \glspl{frame} do not interact with each other. If
+you have two or more overlapping \glspl*{frame}, the text in each 
+\gls*{frame} will not attempt to wrap around the other 
+\glspl*{frame}, but will simply overwrite 
+them.\footnote{Can I have arbitrary
+shaped frames? See 
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular
+Frames}{sec:parshape}}.}\htmlnav
+
+\section{HTML}
+
+The \styni{flowfram} package now comes with a \latextohtml\ style
+file \texttt{flowfram.perl}. However this style file is not meant
+to emulate the \styni{flowfram} package, but is provided to facilitate
+creating a plain HTML document from the \LaTeX\ source. All 
+\gls{frame}-related information is ignored. By default, the contents
+of any \staticordynamic{}s are ignored, but this can be changed using
+\begin{verbatim}
+\HTMLset{showstaticcontents}{1}
+\end{verbatim}
+to show the contents of the \glspl*{static} or
+\begin{verbatim}
+\HTMLset{showdynamiccontents}{1}
+\end{verbatim}
+to show the contents of the \glspl*{dynamic} (where \verb|\HTMLset|
+is defined in the \sty{html} package). Note that this places the
+text at the point in the document where the contents are set.
+This style file does not create HTML frames. It can therefore be
+used to create an accessible version of the PDF document
+\latexhtml{such as the HTML version of this document, 
+\texttt{ffuserguide.html}}{such as this document}.\htmlnav
+
+\chapter{Defining New Frames}
+\chapdesc{This chapter describes how to define new frames, and how to 
+identify and set frame contents. See also 
+\latexhtml{\autoref{sec:layouts}}{\htmlref{Predefined 
+Layouts}{sec:layouts}}.}\htmlnav
+
+\section{Flow Frames}
+
+The \gls{flow} is the principle type of \gls{frame}.
+The text of the \env{document} environment will flow from 
+one \gls*{frame} to the next in order of definition. Each 
+\gls*{flow} has an associated width, height, 
+position on the page and optionally a border. To define
+a new \gls*{flow} use:
+\begin{definition}
+\cmdname{newflowframe}\oarg{\meta{page list}}%%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+where \meta{width} is the width of the \gls*{frame}, \meta{height} is 
+the height of the \gls*{frame}, (\meta{x},\meta{y}) is the
+position of the bottom left hand corner of the \gls*{frame}
+relative to the bottom left hand corner of the 
+\gls{typeblock}\footnote{See \latexhtml{query~\ref{itm:absval} on 
+page~\pageref{itm:absval} if you want to convert from absolute
+page co-ordinates to co-ordinates relative to the 
+typeblock}{\htmlref{converting from absolute to relative page 
+co-ordinates}{itm:absval}}}.
+The first optional argument, \meta{page list}, indicates the 
+list of pages for which this \gls*{frame} is defined. 
+
+A \gls{pglist} can either be specified by the keywords: 
+\texttt{all}, \texttt{odd}, \texttt{even} or \texttt{none}, or 
+by a comma-separated list of either individual page numbers or 
+\glspl{pgrange}. If \meta{page list} is
+omitted, \texttt{all} is assumed.  
+A \gls*{pgrange} can be a closed
+range (e.g.\ \verb+2-8+) or an open range (e.g.\ 
+\verb+<10+ or \verb/>5/). For example: \verb'<3,5,7-11,>15'
+indicates pages 1, 2, 5, 7, 8, 9, 10, 11 and all pages 
+greater than page 15. These page numbers refer to the integer value of
+the page counter\footnote{Why can't I use the page number format?
+See query~\ref{itm:whynot}\latex{ on page~\pageref{itm:whynot}}.}\
+by default, so if you have a page~i and a page~1, they
+will both have the same layout (unless you change the
+page list setting somewhere between the two pages).
+
+As from version 1.4, if you use the package option 
+\pkgopt[absolute]{pages} then the numbers in the page list refer to
+the absolute page number. In which case page~1 refers to the first
+page of the document only, regardless of whether there is another
+page~1 or page~i later in the document.
+
+Each \gls*{frame} has its own unique \gls{idn}, 
+corresponding to the order in which it was defined. So the first 
+\gls*{flow} to be defined has \gls*{idn}~1, 
+the second has \gls*{idn}~2, and so on. This number can then
+be used to identify the \gls*{frame} when you want to modify its
+settings. Alternatively, you can assign a unique \gls{idl}\ to the 
+\gls*{frame} using the final optional argument \meta{label}.
+
+You can retrieve the \gls*{idl} for a given \gls*{flow} 
+from its \gls*{idn} using:
+\begin{definition}
+\cmdname{getflowlabel}\marg{\meta{idn}}
+\end{definition}
+Conversely, you can retrieve the \gls*{idn} for a given \gls*{flow}
+from its \gls*{idl} using:
+\begin{definition}
+\cmdname{getflowid}\marg{\meta{cmd}}\marg{\meta{idl}}
+\end{definition}
+where \meta{cmd} is a control sequence which will be used to
+store the frame's \gls*{idn}.
+For example:
+\begin{verbatim}
+The label for the first flow frame is ``\getflowlabel{1}''.
+The flow frame labelled ``main'' has IDN \getflowid{\myid}{main}\myid.
+\end{verbatim}
+\latex{produces: The label for the first flow frame is
+``\getflowlabel{1}''.
+The flow frame labelled ``main'' has IDN
+\getflowid{\myid}{main}\myid.} (See also 
+\latexhtml{\autoref{sec:counters}}{\htmlref{Counters}{sec:counters}}.)
+
+Note that \cmdname{getflowlabel} doesn't perform any check to
+determine whether the supplied \gls*{idn} is valid, but
+\cmdname{getflowid} will generate an error if the supplied
+\gls*{idl} is undefined.
+
+By default, the \gls*{flow} will not have a border, but the 
+starred form 
+\begin{definition}
+\cmdname{newflowframe*}\oarg{\meta{page list}}%%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+will place a plain border around the \gls*{flow}.
+(See \latexhtml{\autoref{sec:modattr}}{\htmlref{Modifying frame
+attributes}{sec:modattr}} if you want a different border.)
+
+Note that if the document continues beyond the last
+defined \gls*{flow} (for example, the \glspl*{flow} have only
+been defined on pages~1 to~10, but the document contains 11 
+pages) then a single \gls*{flow} will be defined, 
+emulating one column mode for all subsequent pages.
+
+In \latexhtml{this document, I have}{the PDF version of this document, 
+I} used the command
+\begin{verbatim}
+\newflowframe{0.6\textwidth}{\textheight}{0pt}{0pt}[main]
+\end{verbatim}
+to define the main \gls*{flow}\footnote{the
+position for the even pages is set using \cmdname{setflowframe} 
+defined in \latexhtml{\autoref{sec:modattr}}{\htmlref{Modifying
+Frame Attributes}{sec:modattr}}}\latex{ (i.e.\ this one)}.\htmlnav
+
+\subsection{Prematurely Ending a Flow Frame}
+\label{sec:framebreak}
+
+You can force text to move immediately to the next defined
+\gls{flow} using one of the commands: \cmdname{newpage},
+\cmdname{pagebreak} or \cmdname{framebreak}.
+The first two work in an analogous way to the way they
+work in standard two column mode. The last one, 
+\cmdname{framebreak}, is required
+when a paragraph spans two \glspl*{flow} 
+of different widths, as \TeX's output routine does not 
+adjust to the new value of \cmdname{hsize} until the last 
+paragraph of the previous \gls{frame} has ended. As a 
+result, the end of the paragraph at the beginning of the new
+\gls*{flow} retains the width of the previous \gls*{flow}.
+
+If a paragraph does span two \glspl*{flow} of unequal width without
+using \cmdname{framebreak} a warning will be issued. If a subtle
+difference in frame widths is caused by rounding errors (for
+example, if the frames were created using \texttt{flowframtk} or
+\texttt{jpgfdraw}) you can adjust
+the tolerance to suppress these warnings. The default tolerance is
+2pt. To change this, set the length register \cmdname{fftolerance}
+to the required tolerance. For example, to suppress warnings where
+the difference in width is less than 3pt, do
+\begin{verbatim}
+\setlength{\fftolerance}{3pt}
+\end{verbatim}
+
+If you want to start a new page, rather than simply move to the 
+next \gls*{frame}, use the command \cmdname{clearpage}, 
+or for two-sided documents, to start on the next odd page
+do \cmdname{cleardoublepage}.\htmlnav
+
+\section{Static Frames}
+\label{sec:static}
+
+A \gls{static} is a rectangular area in which text neither
+flows into nor flows out of.\footnote{By \dq{neither flows into nor 
+flows out of} I mean you have to explicitly set the contents of 
+this frame. Note that it may appear to contain text if another 
+frame overlaps it, but this text belongs to the other frame.}  
+The contents must be set explicitly, and once set, the contents 
+of the \gls*{static} will remain the same on each page until it is 
+explicitly changed.  Thus, a \gls*{static} can be used, for 
+example, to make a company logo appear in the same place on every 
+page.
+
+As from version 1.03 it is now possible to have
+\glspl*{static} with non-rectangular contents, see
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular 
+Frames}{sec:parshape}} for further details.
+
+A new \gls*{static} is defined using the command:
+\begin{definition}
+\cmdname{newstaticframe}\oarg{\meta{page list}}%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+where, as with \cmdname{newflowframe}, \meta{width} is the width of 
+the \gls*{frame}, \meta{height} is the height of the \gls*{frame},
+(\meta{x},\meta{y}) is the position of the bottom left hand 
+corner of the \gls*{frame} relative to the bottom left hand 
+corner of the \gls{typeblock}. The first optional argument,
+\meta{page list}, indicates the \gls{pglist} for which this
+\gls*{static} should appear, and the final optional argument,
+\meta{label} is a unique textual \gls{idl}\ which you can use to
+identify this \gls*{frame}.  If no label is specified, you
+can refer to this \gls*{frame} by its unique \gls{idn}.
+The first \gls*{static} to be defined has \gls*{idn}~1, the second
+has \gls*{idn}~2, and so on.
+
+You can retrieve the \gls*{idl} for a given \gls*{static} 
+from its \gls*{idn} using:
+\begin{definition}
+\cmdname{getstaticlabel}\marg{\meta{idn}}
+\end{definition}
+Conversely, you can retrieve the \gls*{idn} for a given \gls*{static} 
+from its \gls*{idl} using:
+\begin{definition}
+\cmdname{getstaticid}\marg{\meta{cmd}}\marg{\meta{idl}}
+\end{definition}
+where \meta{cmd} is a control sequence which will be used to
+store the frame's \gls*{idn}.
+For example:
+\begin{verbatim}
+The label for the first static frame is ``\getstaticlabel{1}''.
+The static frame labelled ``backleft'' has IDN
+\getstaticid{\myid}{backleft}\myid.
+\end{verbatim}
+\latex{produces: The label for the first static frame is
+``\getstaticlabel{1}''.
+The static frame labelled ``backleft'' has IDN
+\getstaticid{\myid}{backleft}\myid.}
+
+Note that \cmdname{getstaticlabel} doesn't perform any check to
+determine whether the supplied \gls*{idn} is valid, but
+\cmdname{getstaticid} will generate an error if the supplied
+\gls*{idl} is undefined.
+
+As with \cmdname{newflowframe}, there is a starred version 
+\begin{definition}
+\cmdname{newstaticframe*}\oarg{\meta{page list}}%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+which will place a border around that \gls*{static}.
+
+To set the contents of a particular \gls*{static}, you can
+either use the \env{staticcontents} environment:
+\begin{definition}
+\verb/\begin{staticcontents}/\marg{\meta{IDN}}\\
+\meta{contents}\\
+\verb/\end{staticcontents}/
+\end{definition}
+where \meta{IDN} is the unique \gls*{idn}\ associated with
+that \gls*{static} and \meta{contents} is the contents of the
+\gls*{static}, or you can use the 
+command:
+\begin{definition}
+\cmdname{setstaticcontents}\marg{\meta{IDN}}\marg{\meta{contents}}
+\end{definition}
+which will do the same thing.
+
+There are starred versions available for both the environment
+and the command to enable you to identify the \gls*{static} 
+by its associated \gls*{idl}\ rather than its \gls*{idn}:
+\begin{definition}
+\verb/\begin{staticcontents*}/\marg{\meta{IDL}}\\
+\meta{contents}\\
+\verb/\end{staticcontents*}/
+\end{definition}
+or the equivalent:
+\begin{definition}
+\cmdname{setstaticcontents*}\marg{\meta{IDL}}\marg{\meta{contents}}
+\end{definition}
+
+In the body of \env{staticcontents} or \env{staticcontents*},
+or in the second argument of \cmdname{setstaticcontents} 
+or \cmdname{setstaticcontents*}, you can move onto another 
+\gls*{static} using:
+\begin{definition}
+\cmdname{continueonframe}\oarg{\meta{continuation text}}\marg{\meta{id}}
+\end{definition}
+If \env{staticcontents*} or \cmdname{setstaticcontents*} are 
+being used, \meta{id} refers to the \gls*{idl} of the next 
+\gls*{static}, otherwise \meta{id} refers to the \gls*{idn} of the 
+next \gls*{static}.
+The optional argument specifies some continuation text to place
+at the end of the first \gls*{static}. For example, suppose I have
+defined two \glspl*{static} labelled \dq{frame1} and \dq{frame2}, then
+\begin{verbatim}
+\begin{staticcontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+\continueonframe[Continued on the right]{frame2}
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{staticcontents*}
+\end{verbatim}
+is equivalent to:
+\begin{verbatim}
+\begin{staticcontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+\ffcontinuedtextlayout{Continued on the right}
+\end{staticcontents*}
+\begin{staticcontents*}{frame2}\par\noindent
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{staticcontents*}
+\end{verbatim}
+where
+\begin{definition}
+\cmdname{ffcontinuedtextlayout}\marg{\meta{text}}
+\end{definition}
+governs how the continuation text should be displayed. The font used
+to display the continuation text is given by 
+\begin{definition}
+\cmdname{ffcontinuedtextfont}\marg{\meta{text}}
+\end{definition}
+
+Note that this assumes that it should appear that no paragraph
+break occurs in the transition between the two \glspl*{frame}. If you 
+want a paragraph break you need to explicitly put one before
+and after \cmdname{continueonframe}. For example:
+\begin{verbatim}
+\begin{staticcontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+
+\continueonframe[Continued on the right]{frame2}
+
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{staticcontents*}
+\end{verbatim}
+\htmlnav
+
+\subsection{Important Notes}
+
+\begin{itemize}
+\item When you set the contents of a \gls{static}, the contents are 
+immediately typeset and stored in a box until it is time to put
+the contents on the page. This means that if you use any information 
+that varies throughout the document (such as the page number) the
+value that is current when you set the \gls*{static}['s] contents
+will be the value used.
+
+\item However, if \cmdname{label} is used inside a \gls*{static},
+the label information will be written to the auxiliary file each 
+time the \gls*{static} is displayed until the contents of that
+frame have been changed. This means that you may
+end up with multiply defined labels.
+\end{itemize}
+\htmlnav
+
+\section{Dynamic Frames}
+\label{sec:dynamic}
+
+A \gls{dynamic} is similar to a \gls{static} except that its contents
+are re-typeset on each page. (A \gls*{static} stores its 
+contents in a savebox, whereas a \gls*{dynamic} stores its
+contents in a macro.\footnote{which means that you can have
+\Index{verbatim text} in the body of the \env{staticcontents} environment
+but not in the body of the \env{dynamiccontents} environment\latex{
+(see page~\pageref{pg:verb})}})
+
+As from version 1.03 it is now possible to have
+\glspl*{dynamic} with non-rectangular contents, see
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular 
+Frames}{sec:parshape}} for further details.
+
+To create a new \gls*{dynamic}, use the command:
+\begin{definition}
+\cmdname{newdynamicframe}\oarg{\meta{page list}}%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+The parameters are exactly the same as for \cmdname{newflowframe} 
+and \cmdname{newstaticframe}.
+Again, each \gls*{dynamic} has an associated unique \gls{idn},
+starting from~1 for the first \gls*{dynamic} to be defined, and
+a unique \gls{idl}\ can also be set using the final optional
+argument \meta{label}.
+
+You can retrieve the \gls*{idl} for a given \gls*{dynamic} 
+from its \gls*{idn} using:
+\begin{definition}
+\cmdname{getdynamiclabel}\marg{\meta{idn}}
+\end{definition}
+Conversely, you can retrieve the \gls*{idn} for a given \gls*{dynamic} 
+from its \gls*{idl} using:
+\begin{definition}
+\cmdname{getdynamicid}\marg{\meta{cmd}}\marg{\meta{idl}}
+\end{definition}
+where \meta{cmd} is a control sequence which will be used to
+store the frame's \gls*{idn}.
+
+For example:
+\begin{verbatim}
+The label for the first dynamic frame is ``\getdynamiclabel{1}''.
+The dynamic frame labelled ``chaphead'' has IDN
+\getdynamicid{\myid}{chaphead}\myid.
+\end{verbatim}
+\latex{produces: The label for the first dynamic frame is
+``\getdynamiclabel{1}''.
+The dynamic frame labelled ``chaphead'' has IDN
+\getdynamicid{\myid}{chaphead}\myid.}
+
+Note that \cmdname{getdynamiclabel} doesn't perform any check to
+determine whether the supplied \gls*{idn} is valid, but
+\cmdname{getdynamicid} will generate an error if the supplied
+\gls*{idl} is undefined.
+
+As with the other \gls{frame} types, there is also a starred 
+version
+\begin{definition}
+\cmdname{newdynamicframe*}\oarg{\meta{page list}}%
+\marg{\meta{width}}%
+\marg{\meta{height}}%
+\marg{\meta{x}}%
+\marg{\meta{y}}%
+\oarg{\meta{label}}
+\end{definition}
+which will place a plain border around the \gls*{dynamic}.
+For example, in \latexhtml{this document I have}{the PDF version
+of this document I } used the command
+\begin{verbatim}
+\newdynamicframe{0.38\textwidth}{\textheight}{0.62\textwidth}{0pt}[chaphead]
+\end{verbatim}
+which \latex{has }created \latexhtml{the}{a} \gls*{frame} on the 
+right on odd pages and on the left on even pages. (The
+position for the even pages is set using \cmdname{setdynamicframe} 
+defined in \latexhtml{\autoref{sec:modattr}}{\htmlref{Modifying
+Frame Attributes}{sec:modattr}}.)
+
+The contents of a \gls*{dynamic} are set using the command:
+\begin{definition}
+\cmdname{setdynamiccontents}\marg{\meta{id}}\marg{\meta{contents}}
+\end{definition}
+where \meta{id} is the unique \gls*{idn}\ associated with that
+\gls*{dynamic}, and \meta{contents} is the contents of the
+\gls*{dynamic}. Alternatively, if you have assigned an \gls*{idl}, 
+\meta{label}, to the \gls*{dynamic}, you can use the starred 
+version:
+\begin{definition}
+\cmdname{setdynamiccontents*}\marg{\meta{label}}\marg{\meta{contents}}
+\end{definition}
+As with most \LaTeX\ commands, you can't use \Index{verbatim text} in
+\meta{contents}.
+
+As from version 1.09, the contents can also be set using the 
+\env{dynamiccontents} environment:
+\begin{definition}
+\verb|\begin{dynamiccontents}|\marg{\meta{id}}\\
+\meta{contents}\\
+\verb|\end{dynamiccontents}|
+\end{definition}
+or the \env{dynamiccontents*} environment:
+\begin{definition}
+\verb|\begin{dynamiccontents*}|\marg{label}\\
+\meta{contents}\\
+\verb|\end{dynamiccontents*}|
+\end{definition}
+\label{pg:verb}Note that you can't use \Index{verbatim text} within the 
+\env{dynamiccontents} or \env{dynamiccontents*} environments.
+
+You can additionally append text to a \gls*{dynamic} using
+either:
+\begin{definition}
+\cmdname{appenddynamiccontents}\marg{\meta{id}}\marg{\meta{contents}}
+\end{definition}
+or:
+\begin{definition}
+\cmdname{appenddynamiccontents*}\marg{\meta{label}}\marg{\meta{contents}}
+\end{definition}
+
+\subsection{Putting Chapter Titles in a Dynamic Frame}
+\label{sec:dfchaphead}
+
+If \cmdname{chapter} is defined, you can make the chapter titles 
+appear in a dynamic frame using the command
+\begin{definition}
+\cmdname{dfchaphead}\marg{\meta{IDN}}
+\end{definition}
+where \meta{IDN} is the \gls{idn}\ of the dynamic frame. There is
+also a starred version of this command if you want to
+use the \gls{idl}\ instead of the \gls*{idn}. For example, in 
+\html{the PDF version of }this document, I used the command:
+\begin{verbatim}
+\dfchaphead*{chaphead}
+\end{verbatim}
+
+If you use \cmdname{dfchaphead}, you can adjust the format of the
+chapter headings by redefining
+\begin{definition}
+\cmdname{DFchapterstyle}\marg{\meta{title}}
+\end{definition}
+for the numbered chapters and 
+\begin{definition}
+\cmdname{DFschapterstyle}\marg{\meta{title}}
+\end{definition}
+for the unnumbered chapters. For example, this document redefined
+those commands as follows:
+\begin{verbatim}
+\renewcommand{\DFchapterstyle}[1]{%
+ {\raggedright\sffamily\bfseries\Huge
+  \color{blue}\thechapter. #1\par
+ }%
+}
+
+\renewcommand{\DFschapterstyle}[1]{%
+ {\raggedright\sffamily\bfseries\Huge
+  \color{blue} #1\par
+ }%
+}
+\end{verbatim}
+There is no facility for placing other sectional types in a
+\gls{dynamic}.
+\htmlnav
+
+\subsection{Putting Headers and Footers in a Dynamic Frame}
+
+The headers and footers can be turned into \glspl*{dynamic} 
+using the command
+\begin{definition}
+\cmdname{makedfheaderfooter}
+\end{definition}
+This will create two \glspl*{dynamic} with \glspl*{idl} 
+\texttt{header} and \texttt{footer}.  The page style will be used as 
+usual, but you can then move or resize the header and footer using
+\cmdname{setdynamicframe} (described \latexhtml{in 
+\autoref{sec:modattr}}{\htmlref{later}{sec:modattr}}).
+\htmlnav
+
+\subsection{Continued Text}
+
+In the body of \env{dynamiccontents} or \env{dynamiccontents*}, 
+you can move onto another \gls*{dynamic} using:
+\begin{definition}
+\cmdname{continueonframe}\oarg{\meta{continuation text}}\marg{id}
+\end{definition}
+If this command occurs within \env{dynamiccontents*}, \meta{id} 
+refers to the \gls*{idl} of the new frame, otherwise it refers
+to the \gls*{idn} of the new frame.
+The optional argument specifies some continuation text to place
+at the end of the first \gls*{dynamic}. For example, suppose I have
+defined two \glspl*{dynamic} labelled \dq{frame1} and \dq{frame2}, then
+\begin{verbatim}
+\begin{dynamiccontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+\continueonframe[Continued on the right]{frame2}
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{dynamiccontents*}
+\end{verbatim}
+is equivalent to:
+\begin{verbatim}
+\begin{dynamiccontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+\ffcontinuedtextlayout{Continued on the right}
+\end{dynamiccontents*}
+\begin{dynamiccontents*}{frame2}\par\noindent
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{dynamiccontents*}
+\end{verbatim}
+where
+\begin{definition}
+\cmdname{ffcontinuedtextlayout}\marg{\meta{text}}
+\end{definition}
+governs how the continuation text should be displayed. The font used
+to display the continuation text is given by 
+\begin{definition}
+\cmdname{ffcontinuedtextfont}\marg{\meta{text}}
+\end{definition}
+
+Note that this assumes that it should appear that no paragraph
+break occurs in the transition between the two frames. If you 
+want a paragraph break you need to explicitly put one before
+and after \cmdname{continueonframe}. For example:
+\begin{verbatim}
+\begin{dynamiccontents*}{frame1}
+Some text in the first frame. (Let's
+assume this frame is somewhere on the
+left half of the page.)
+
+\continueonframe[Continued on the right]{frame2}
+
+This is some text in the second frame. (Let's
+assume this frame is somewhere on the
+right half of the same page.)
+\end{dynamiccontents*}
+\end{verbatim}
+\htmlnav
+
+\subsection{Important Notes}
+
+\begin{itemize}
+\item Verbatim text\index{verbatim text} can't be used in a 
+\gls{dynamic}. This includes
+the body of the \env{dynamiccontents} and \env{dynamiccontents*} 
+environments.
+
+\item \cmdname{continueonframe} can't be used in the
+argument of any of the commands that set the contents of a 
+\gls*{dynamic}, such as \cmdname{setdynamiccontents}.
+
+\item \Glspl*{dynamic} are painted on the page after all the
+static and flow \glspl{frame}. If the location of a \gls*{dynamic} 
+overlaps the location of any static or flow frames, the contents
+of the \gls*{dynamic} will obscure the contents of the overlapping
+frames.
+\end{itemize}
+\htmlnav
+
+\chapter{Modifying Frame Attributes}
+\label{sec:modattr}
+\chapdesc{This chapter describes how to modify frame attributes,
+such as the size and location.}
+
+Once you have defined the \glspl{flow}, \glspl{static} and
+\glspl{dynamic}, their attributes can be changed. The three types of
+\gls{frame} mostly have the same set of attributes, but some are
+specific to a certain type.
+
+\Gls*{flow} attributes are modified using 
+either the command:
+\begin{definition}
+\cmdname{setflowframe}\marg{\meta{idn list}}\marg{\meta{key-val list}}
+\end{definition}
+or the starred version:
+\begin{definition}
+\cmdname{setflowframe*}\marg{\meta{label list}}\marg{\meta{key-val list}}
+\end{definition}
+or the attributes for all \glspl*{flow} can be set using:
+\begin{definition}
+\cmdname{setallflowframes}\marg{\meta{key-val list}}
+\end{definition}
+\Gls*{static} attributes are modified using either the command:
+\begin{definition}
+\cmdname{setstaticframe}\marg{\meta{idn list}}\marg{\meta{key-val list}}
+\end{definition}
+or the starred version:
+\begin{definition}
+\cmdname{setstaticframe*}\marg{\meta{label list}}\marg{\meta{key-val list}}
+\end{definition}
+or the attributes for all \glspl*{static} 
+can be set using:
+\begin{definition}
+\cmdname{setallstaticframes}\marg{\meta{key-val list}}
+\end{definition}
+\Gls*{dynamic} attributes are modified using either the command:
+\begin{definition}
+\cmdname{setdynamicframe}\marg{\meta{idn list}}\marg{\meta{key-val list}}
+\end{definition}
+or the starred version:
+\begin{definition}
+\cmdname{setdynamicframe*}\marg{\meta{label list}}\marg{\meta{key-val list}}
+\end{definition}
+or the attributes for all \glspl*{dynamic} can be set using:
+\begin{definition}
+\cmdname{setalldynamicframes}\marg{\meta{key-val list}}
+\end{definition}
+
+In each of the above, \meta{idn list} can either be one of the
+keywords: \texttt{all}, \texttt{odd} or \texttt{even} (indicating
+all \glspl*{frame} of that type, \glspl*{frame} of that type whose 
+\gls{idn} is odd or \glspl*{frame} of that type whose \gls*{idn} 
+is even) or it can be a comma-separated list of ID numbers, or 
+\gls*{idn} ranges.
+
+For the starred versions, \meta{label list} should be
+a comma-separated list of \glspl{idl}. Note that you can't use the 
+above keywords or have ranges in \meta{label list}.
+
+The \meta{key-val list} argument must be a comma-separated
+list of \meta{key}=\meta{value} pairs, indicating which
+attributes to modify. \textbf{Make sure you group \meta{value}
+if it contains one or more commas or equal signs.} 
+The available values are as follows:
+
+\begin{description}
+\item[\key{width}=\meta{length}]  The width of the \gls*{frame}.
+
+\item[\key{height}=\meta{length}] The height of the \gls*{frame}.
+
+\item[\key{x}=\meta{length}] The x-coordinate of the \gls*{frame} 
+for all pages on which it is defined.
+
+\item[\key{y}=\meta{length}] The y-coordinate of the \gls*{frame} 
+for all pages on which it is defined.
+
+\item[\key{evenx}=\meta{length}] The x-coordinate of the 
+\gls*{frame} for all even pages on which it is defined, but only if
+the document is a two-sided document.
+
+For example, in \latexhtml{this document, I have}{the PDF version of
+this document, I} used the commands
+\begin{verbatim}
+\setflowframe*{main}{evenx=0.4\textwidth}
+\setdynamicframe*{chaphead}{evenx=0pt}
+\end{verbatim}
+to switch the positions of the \gls*{flow} and \gls*{dynamic} 
+containing the document text and chapter headings, respectively,
+on even pages.
+
+You can swap the odd and even values using the commands:
+\begin{definition}
+\cmdname{ffswapoddeven}\marg{\meta{IDN}}
+\end{definition}
+(for \glspl*{flow})
+\begin{definition}
+\cmdname{sfswapoddeven}\marg{\meta{IDN}}
+\end{definition}
+(for \glspl*{static}) or 
+\begin{definition}
+\cmdname{dfswapoddeven}\marg{\meta{IDN}}
+\end{definition}
+(for \glspl*{dynamic}). These
+commands all have starred versions which take the frame's
+\gls*{idl}\ instead of its \gls*{idn}.
+
+\item[\key{eveny}=\meta{length}] The y-coordinate of the 
+\gls*{frame} for all even pages on which it is defined, but only if
+the document is a two-sided document.
+
+\item[\key{oddx}=\meta{length}] The x-coordinate of the 
+\gls*{frame} for all odd pages on which it is defined, if the
+document is two-sided.
+
+\item[\key{oddy}=\meta{length}] The y-coordinate of the 
+\gls*{frame} for all odd pages on which it is defined,
+if the document is two-sided.
+
+\item[\key{valign}=\meta{pos}] Change the vertical alignment
+of material inside a static or dynamic frame. The value \meta{pos} 
+may be one of: \texttt{c}, \texttt{t} or \texttt{b}.
+The default for \glspl*{static} is \texttt{c}, the default
+for \glspl*{dynamic} is \texttt{t}.
+This key is not available for \glspl*{flow}.
+
+\item[\key{label}=\meta{text}] Assign an \gls*{idl} to the \gls*{frame}.
+(If you do not specify a label when you first define a \gls*{frame} 
+it will be given a label identical to its \gls*{idn}.) This key is
+provided to allow the user to label frames that have been 
+generated by certain predefined layout commands described
+in \latexhtml{\autoref{sec:layouts}}{\htmlref{Predefined 
+Layouts}{sec:layouts}}.
+
+\item[\key{border}=\meta{style}] The style of the border around the 
+\gls*{frame}, this can take the values: \texttt{none} (no border),
+\texttt{plain} (plain border) or the name of a \LaTeX\ 
+\gls{fcmd} without the preceding backslash. (I admit
+the notation is a little confusing, a \gls*{fcmd} 
+is a command that places some kind of border around its 
+argument, such as \cmdname{fbox}, or if you are using the
+\sty{fancybox} package: \cmdname{doublebox}, \cmdname{ovalbox},
+\cmdname{Ovalbox} and \cmdname{shadowbox}.) 
+The value \texttt{fbox} is equivalent to \texttt{plain}.
+
+For example, to make the first \gls*{static} have an oval border:
+\begin{verbatim}
+\setstaticframe{1}{border=ovalbox}
+\end{verbatim}
+Or you can define your own border:
+\begin{verbatim}
+\newcommand{\greenyellowbox}[1]{\fcolorbox{green}{yellow}{#1}}
+\setstaticframe{1}{border=greenyellowbox}
+\end{verbatim}
+
+This next example uses the \sty{tikz} package to define a fancy
+frame, so you need to use:
+\begin{verbatim}
+\usepackage{tikz}
+\usetikzlibrary{snakes}
+\end{verbatim}
+The border command is defined as follows:
+\begin{verbatim}
+\newlength\fancywidth
+\newlength\fancyheight
+\newlength\fancydepth
+
+\newcommand{\fancyborder}[1]{%
+\settowidth{\fancywidth}{#1}%
+\settoheight{\fancyheight}{#1}%
+\settodepth{\fancydepth}{#1}%
+\addtolength{\fancyheight}{\fancydepth}%
+\hspace{-\flowframesep}%
+\tikz[baseline=0pt]{%
+\draw[snake=bumps,raise snake=\flowframesep,
+      line width=\flowframerule]
+  (0pt,0pt) rectangle (\fancywidth,\fancyheight);
+}}
+\end{verbatim}
+This makes a bumpy border, but it uses \cmdname{flowframesep} to 
+determine the gap between the border and the text and uses
+\cmdname{flowframerule} to set the line width. This ensures that
+the offset (see below) is correctly computed.
+
+This new border can now be applied to a frame:
+\begin{verbatim}
+\setstaticframe{1}{border=fancyborder}
+\end{verbatim}
+
+\item[\key{offset}=\meta{offset}] The border offset, if it is a 
+user-defined border.  This is the distance from the outer
+edge of the left hand border to the left edge of the
+\gls{bbox} of the text inside the border.  The \styni{flowfram} 
+package is able to compute the border for the following
+known \glspl*{fcmd}: \cmdname{fbox}, \cmdname{ovalbox},
+\cmdname{Ovalbox}, \cmdname{doublebox} and \cmdname{shadowbox}. 
+For all other borders, the offset is assumed to be
+\latexhtml{$-$\cmdname{flowframesep}$-$\cmdname{flowframerule}%
+}{\texttt{-\textbackslash flowframesep-\textbackslash flowframerule}}.
+If you define your own \gls*{fcmd}, you may need to 
+specify the offset explicitly, or the flow/static/dynamic frames 
+may end up shifted to the right or left.
+
+The above examples can compute their own offsets, however,
+if you were to do, for example:
+\begin{verbatim}
+\newcommand{\thickgreenyellowbox}[1]{%
+{\setlength{\fboxsep}{5pt}\setlength{\fboxrule}{6pt}%
+\fcolorbox{green}{yellow}{#1}}}
+\end{verbatim}
+Then you would have to specify the offset.  In this example,
+the offset is \latexhtml{$-5\mathrm{pt}-\mathrm{6pt}=-11\mathrm{pt}$%
+}{-5pt-6pt=-11pt},
+so you would need to do:
+\begin{verbatim}
+\setstaticframe{1}{border=thickgreenyellowbox,offset=-11pt}
+\end{verbatim}
+
+\item[\key{bordercolor}=\meta{colour}] The colour of the border
+if you are using a standard \gls*{fcmd}.
+The colour can either be specified as, e.g.\ \texttt{green},
+or including the colour model, e.g. \verb/[rgb]{0,1,0}/.
+For example:
+\begin{verbatim}
+\setallflowframes{border=doublebox,bordercolor=[rgb]{1,0,0.5}}
+\end{verbatim}
+
+\item[\key{textcolor}=\meta{colour}] The text colour for that 
+\gls*{frame}. Again, the colour can either be specified as, 
+e.g.\ \texttt{green}, or including the colour model, 
+e.g. \verb/[rgb]{0,1,0}/.
+
+\item[\key{backcolor}=\meta{colour}] The background colour for 
+that \gls*{frame}. Again, the colour can either be specified as, 
+e.g.\ \texttt{green}, or including the colour model, 
+e.g. \verb/[rgb]{0,1,0}/. Note that the background colour
+only extends as far as the \gls*{bbox}, not the border.
+If you want it to extend as far as the border, you
+will need to define your own border type (see above).
+
+\item[\key{pages}=\meta{page list}] The \glslink{pglist}{list of 
+pages} for which the \gls*{frame} should appear. This can either have 
+the values: \texttt{all}, \texttt{even}, \texttt{odd} or \texttt{none} 
+(the latter removes the \gls*{frame} from that point on---useful if you
+have multiple pages with the same number), or it can be a 
+comma-separated list of single pages, or 
+\glspl{pgrange}.
+For example:
+\begin{verbatim}
+\setdynamicframe{1}{pages={1,5,8-10}}
+\end{verbatim}
+Recall that the numbers in the list either refer to the integer
+value of the page counter
+(when used with the package option \pkgopt[relative]{pages})
+or the absolute page number (when used with the package option
+\pkgopt[absolute]{pages}).
+
+As from version 1.14, there is also a quick way of setting the page
+list that doesn't have the overhead of parsing the
+\meta{key}=\meta{value} format of commands such as
+\cmdname{setflowframe}:
+\begin{definition}
+\cmdname{flowsetpagelist}\marg{\meta{idn}}\marg{\meta{page
+list}}\newline
+\cmdname{dynamicsetpagelist}\marg{\meta{idn}}\marg{\meta{page
+list}}\newline
+\cmdname{staticsetpagelist}\marg{\meta{idn}}\marg{\meta{page list}}
+\end{definition}
+\textbf{Note that these commands don't have starred variants. The
+first argument must be a single \gls{idn}.}
+
+See also \latexhtml{\autoref{sec:switch}}{\htmlref{Switching Frames
+On and Off On-The-Fly}{sec:switch}}.
+
+\item[\key{excludepages}=\meta{list}] (New to version~1.14.) 
+A comma-separated list of page
+numbers where the frame should not appear. Note that this overrides
+any page given by the \key{pages} key. For this key, \meta{list} may
+only contain comma-separated numbers. Ranges are not permitted. For
+example:
+\begin{verbatim}
+\setdynamicframe{1}{excludepages={7}}
+\setdynamicframe{1}{pages={1-10}}
+\end{verbatim}
+This will make the dynamic frame appear on pages~1 to~6 and~8 to~10.
+
+Again, there is also a quick way of setting the exclusion
+list that doesn't have the overhead of parsing the
+\meta{key}=\meta{value} format of commands such as
+\cmdname{setflowframe}:
+\begin{definition}
+\cmdname{flowsetexclusion}\marg{\meta{idn}}\marg{\meta{list}}\newline
+\cmdname{dynamicsetexclusion}\marg{\meta{idn}}\marg{\meta{list}}\newline
+\cmdname{staticsetexclusion}\marg{\meta{idn}}\marg{\meta{list}}
+\end{definition}
+or you can add to an exclusion list using:
+\begin{definition}
+\cmdname{flowaddexclusion}\marg{\meta{idn}}\marg{\meta{list}}\newline
+\cmdname{dynamicaddexclusion}\marg{\meta{idn}}\marg{\meta{list}}\newline
+\cmdname{staticaddexclusion}\marg{\meta{idn}}\marg{\meta{list}}
+\end{definition}
+\textbf{Note that these commands don't have starred variants. The
+first argument must be a single \gls{idn}.}
+
+See also \latexhtml{\autoref{sec:switch}}{\htmlref{Switching Frames
+On and Off On-The-Fly}{sec:switch}}.
+
+\item[\key{hide}=\meta{boolean}] If this value is set, the static or
+dynamic frame will be hidden regardless of the \key{pages} or
+\key{excludedpages} settings.
+(New to version 1.16.)
+
+\item[\key{hidethis}=\meta{boolean}] Similar to \key{hide}, but is
+always reset back to false by the output routine, so it only affects
+the current page.
+(New to version 1.16.)
+
+\item[\key{margin}=\meta{side}] The side of
+the \gls*{flow} that its corresponding margin should go on. This
+can take the values \texttt{left}, \texttt{right}, 
+\texttt{inner} or \texttt{outer}. This setting is only available
+for \glspl*{flow}.
+
+\item[\key{clear}=\meta{boolean}] 
+If this value is set, the static or dynamic frame will be 
+cleared at the start of the
+next page, otherwise it will only be cleared on the next
+occurrence of \cmdname{setstaticcontents} or the 
+\env{staticcontents} environment, or the 
+\cmdname{setdynamiccontents}, depending on the frame type.
+This value is not set by default. This setting is not 
+available for \glspl*{flow}.
+
+For example, \latexhtml{to prevent the chapter heading reappearing on
+every page, I have used}{in the PDF version of this document, I
+prevented the chapter heading reappearing on every page using} 
+the command:
+\begin{verbatim}
+\setdynamicframe*{chaphead}{clear}
+\end{verbatim}
+
+If you want to put \cmdname{label} in a static or dynamic frame, you
+should use the \key{clear} key to prevent the label from being 
+multiply defined.
+
+\item[\key{style}=\meta{cmd}] This should be
+the name of a command \emph{without} the preceding backslash, 
+to be applied to the contents of the specified \gls*{dynamic}. 
+The command may either be a declaration, for example:
+\begin{verbatim}
+\setalldynamicframes{style=large}
+\end{verbatim}
+which will set the contents of all the \glspl*{dynamic} in a
+large font, or it can be a command that takes a single argument,
+for example:
+\begin{verbatim}
+\setalldynamicframes{style=textbf}
+\end{verbatim}
+which will make the text for all the \glspl*{dynamic} come out in 
+bold.  To unset a style, do \verb/style=none/.
+This setting is only available for \glspl*{dynamic}.
+
+\item[\key{angle}=\meta{n}]  Rotate the contents of the
+\gls*{frame} by \meta{n} degrees (new to 
+version 1.02). Note that the \glspl{bbox} will not 
+appear rotated.
+
+\item[\key{shape}=\meta{shape command}] Define a shape for
+the contents of a \gls*{static} or \gls*{dynamic} (new
+to version 1.03). If \meta{shape command} is \cmdname{relax}, no
+paragraph shape will be applied. See 
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular 
+Frames}{sec:parshape}} for further details.
+
+\end{description}
+\htmlnav
+
+\section{Non-Rectangular Frames}
+\label{sec:parshape}
+
+As from version 1.03, it is now possible to specify 
+non-rectangular \staticordynamic{}s (but not \glspl{flow}).  Note 
+that the
+\gls{bbox} will still appear as a rectangle despite the
+\gls{frame}['s] shape setting. You may use either \TeX's 
+\cmdname{parshape} command, or the
+\cmdname{shapepar}\slash\cmdname{Shapepar}
+commands defined in Donald~Arseneau's \sty{shapepar} 
+package (if using \cmdname{shapepar} or \cmdname{Shapepar}, remember to include
+the \sty{shapepar} package.)
+
+The \cmdname{shapepar} or \cmdname{Shapepar} commands provide
+greater flexibility in the type of shape that can be used. However,
+be aware of the advice given in the \sty{shapepar} documentation.
+\begin{description}
+\item[\cmdname{parshape}]
+With \cmdname{parshape} you can not have cut-outs in the middle, 
+top or bottom of a frame, however it is possible to have cut-outs 
+in the left or right side of the \gls*{frame}. When used with the 
+\key{shape} key for static or dynamic frames, the effects of 
+\cmdname{par} and the sectioning commands are modified to allow 
+the paragraph shape to extend beyond a single paragraph, and
+to allow sectioning commands (but not \cmdname{chapter} 
+or \cmdname{part}).
+
+\item[\cmdname{shapepar}/\cmdname{Shapepar}] With \cmdname{shapepar}
+or \cmdname{Shapepar} you may
+have cut-outs, but you may not have any sectioning commands, 
+paragraph breaks, vertical spacing or mathematics. You can
+simulate a paragraph break using \cmdname{simpar}, but this
+is not recommended. The size of the shape depends on the
+amount of text, so the shape will expand or contract as you
+add or delete text. In general, \cmdname{Shapepar} is better suited
+for use as a frame shape than \cmdname{shapepar}. See the 
+\sty{shapepar} documentation for more details of these commands.
+\end{description}
+
+To restore a \gls*{frame} to its default rectangular setting use 
+\key{shape}=\cmdname{relax}.
+
+For those unfamiliar with \TeX's \cmdname{parshape} command,
+the syntax is as follows:\\[10pt]
+\cmdname{parshape}=\latexhtml{$n$ $i_1$ $l_1$ $i_2$ $l_2$ \ldots\ $i_n$ $l_n$}{\meta{n} \meta{i\textsubscript{1}} \meta{l\textsubscript{1}} 
+\meta{i\textsubscript{2}} \meta{l\textsubscript{2}} \ldots\ 
+\meta{i\textsubscript{n}} \meta{l\textsubscript{n}}}\\[10pt]
+where \latexhtml{$n$}{\meta{n}} is the number of (\latexhtml{$i_j$ 
+$l_j$}{\meta{i\textsubscript{j}} \meta{l\textsubscript{j}}}) pairs and
+\latexhtml{$i_j$}{\meta{i\textsubscript{j}}} specifies the left 
+indentation for the \latexhtml{$j$th}{jth} line and 
+\latexhtml{$l_j$}{\meta{l\textsubscript{j}}} specifies the length of 
+the \latexhtml{$j$th}{jth} line.
+
+\latexhtml{The \gls*{static} on the top 
+\ifthenelse{\isodd{page}}{right}{left} 
+was assigned a zigzag shape using:}{For example, to create a 
+zigzag shaped static frame (whose \gls*{idn} is \texttt{shapedt}):}
+\setstaticframe*{shapedb,shapedt}{pages=all}
+\begin{verbatim}
+\setstaticframe*{shapedt}{shape={\parshape=20 
+0.6\linewidth 0.4\linewidth 0.5\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth 0.3\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth 0.1\linewidth 0.4\linewidth
+0pt 0.4\linewidth 0.1\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth 0.3\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth 0.5\linewidth 0.4\linewidth
+0.6\linewidth 0.4\linewidth 0.5\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth 0.3\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth 0.1\linewidth 0.4\linewidth
+0pt 0.4\linewidth 0.1\linewidth 0.4\linewidth
+}}
+\end{verbatim}
+\setstaticframe*{shapedt}{shape={\parshape=20 
+0.6\linewidth 0.4\linewidth
+0.5\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth
+0.3\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth
+0.1\linewidth 0.4\linewidth
+0pt 0.4\linewidth
+0.1\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth
+0.3\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth
+0.5\linewidth 0.4\linewidth
+0.6\linewidth 0.4\linewidth
+0.5\linewidth 0.4\linewidth
+0.4\linewidth 0.4\linewidth
+0.3\linewidth 0.4\linewidth
+0.2\linewidth 0.4\linewidth
+0.1\linewidth 0.4\linewidth
+0pt 0.4\linewidth
+0.1\linewidth 0.4\linewidth
+}}
+
+\begin{staticcontents*}{shapedt}
+This is an example of a static frame with a non-rectangular
+shape. This zigzag shape was specified using the \key{shape} 
+key setting in \cmdname{setstaticframe}. The \cmdname{parshape} 
+command was used to set the shape.
+
+Using the \key{shape} key rather than explicitly using
+\cmdname{parshape} within the \env{staticcontents} environment
+means that I can have paragraph breaks, sectioning commands,
+and even some mathematics
+\begin{equation}
+E=mc^2
+\end{equation}
+whilst retaining the shape.
+\end{staticcontents*}
+
+The syntax for \cmdname{shapepar} and \cmdname{Shapepar} is more complicated, see
+the \sty{shapepar} documentation for more details. In general:\\[10pt]
+\cmdname{shapepar}\{\meta{shape specs}\}\\[10pt]
+The \sty{shapepar} package has four predefined shapes:
+\cmdname{squareshape}, \cmdname{diamondshape}, 
+\cmdname{heartshape} and \cmdname{nutshape}. 
+
+\latexhtml{The \gls{static} on the bottom 
+\ifthenelse{\isodd{page}}{right} {left}
+was assigned a heart shape using the command:}{For example, to assign
+a heart shape to the static frame whose \gls*{idl} is \texttt{shapedb}:}
+\begin{verbatim}
+\setstaticframe*{shapedb}{shape={\shapepar\heartshape}}
+\end{verbatim}
+To reset the frame back to its original rectangular shape
+do:
+\begin{verbatim}
+\setstaticframe*{shapedb}{shape=\relax}
+\end{verbatim}
+
+\afterpage{\setstaticframe*{shapedt,shapedb}{pages=none}}
+\setstaticframe*{shapedb}{shape={\shapepar\heartshape}}
+\begin{staticcontents*}{shapedb}
+This example has a more complicated shape that can not 
+be generated using \TeX's \cmdname{parshape} command, so
+\cmdname{shapepar} was used instead. Note that this document
+must include the \sty{shapepar} package in this instance,
+whereas no extra packages are required to use \cmdname{parshape}.
+No mathematics or sectioning commands are allowed here.
+The shape will expand as more text is added to it.
+\end{staticcontents*}
+
+The \styni{flowfram} package currently does not support any other
+paragraph shape making commands. Any other commands would
+have to be used explicitly within the contents of the frame.\htmlnav
+
+\section{Switching Frames On and Off On-The-Fly}
+\label{sec:switch}
+
+Modifying the \gls{pglist} (or the page exclusion list) within the
+\env{document} environment is a risky business. This list must
+be up-to-date before the output routine looks for the next frame.
+To make this a little easier, as from version~1.14 there are
+commands that help you do this. \textbf{If you want to use these
+commands, it's best to use the package option \pkgopt[absolute]{pages}.}
+
+The commands described in this section update the \glspl{pglist}
+(and possibly the exclusion list) \emph{when the output routine is
+next used}. They are designed to switch frames on or off either on
+the next page or on the next odd page. You therefore need to take
+care where you place these commands. For example, if you have a
+two-sided document and you do:
+\begin{verbatim}
+\dynamicswitchonnextodd{1}
+\mainmatter
+\chapter{Introduction}
+\end{verbatim}
+This will set the dynamic frame whose \gls{idn} is~1 to be visible for
+the first page of chapter~1. However, if you do
+\begin{verbatim}
+\mainmatter
+\dynamicswitchonnextodd{1}
+\chapter{Introduction}
+\end{verbatim}
+This will have a different effect as \cmdname{mainmatter} issues a
+\cmdname{cleardoublepage} so the command to switch on the dynamic
+frame is on the same page as the start of chapter~1. This means that
+the dynamic frame won't appear until the following odd page
+(page~3).
+
+These commands all have the same syntax with one argument that may
+be a comma-separated list. The starred version uses
+\glspl{idl} and the unstarred version uses \glspl{idn}.
+
+\begin{definition}
+\cmdname{flowswitchonnext}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchonnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{flow} from the following page onwards.
+\begin{definition}
+\cmdname{flowswitchoffnext}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchoffnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{flow} from the following page onwards.
+\begin{definition}
+\cmdname{flowswitchonnextodd}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchonnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{flow} from the next odd page onwards.
+\begin{definition}
+\cmdname{flowswitchoffnextodd}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchoffnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{flow} from the next odd page onwards.
+
+\begin{definition}
+\cmdname{flowswitchonnextonly}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchonnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{flow} just for the following page.
+\begin{definition}
+\cmdname{flowswitchoffnextonly}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchoffnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{flow} just for the following page.
+\begin{definition}
+\cmdname{flowswitchonnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchonnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{flow} just for the next odd page.
+\begin{definition}
+\cmdname{flowswitchoffnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{flowswitchoffnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{flow} just for the next odd page.
+
+\begin{definition}
+\cmdname{dynamicswitchonnext}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchonnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{dynamic} from the following page onwards.
+\begin{definition}
+\cmdname{dynamicswitchoffnext}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchoffnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{dynamic} from the following page onwards.
+\begin{definition}
+\cmdname{dynamicswitchonnextodd}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchonnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{dynamic} from the next odd page onwards.
+\begin{definition}
+\cmdname{dynamicswitchoffnextodd}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchoffnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{dynamic} from the next odd page onwards.
+
+\begin{definition}
+\cmdname{dynamicswitchonnextonly}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchonnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{dynamic} just for the following page.
+\begin{definition}
+\cmdname{dynamicswitchoffnextonly}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchoffnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{dynamic} just for the following page.
+\begin{definition}
+\cmdname{dynamicswitchonnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchonnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{dynamic} just for the next odd page.
+\begin{definition}
+\cmdname{dynamicswitchoffnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{dynamicswitchoffnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{dynamic} just for the next odd page.
+
+\begin{definition}
+\cmdname{staticswitchonnext}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchonnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{static} from the following page onwards.
+\begin{definition}
+\cmdname{staticswitchoffnext}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchoffnext*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{static} from the following page onwards.
+\begin{definition}
+\cmdname{staticswitchonnextodd}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchonnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{static} from the next odd page onwards.
+\begin{definition}
+\cmdname{staticswitchoffnextodd}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchoffnextodd*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{static} from the next odd page onwards.
+
+\begin{definition}
+\cmdname{staticswitchonnextonly}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchonnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{static} just for the following page.
+\begin{definition}
+\cmdname{staticswitchoffnextonly}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchoffnextonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{static} just for the following page.
+\begin{definition}
+\cmdname{staticswitchonnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchonnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch on the listed \glspl{static} just for the next odd page.
+\begin{definition}
+\cmdname{staticswitchoffnextoddonly}\marg{\meta{IDN list}}\\
+\cmdname{staticswitchoffnextoddonly*}\marg{\meta{IDL list}}
+\end{definition}%
+Switch off the listed \glspl{static} just for the next odd page.
+
+The \styni{flowfram} package comes with a sample file
+\texttt{sample-pages.tex} that uses some of these commands.
+
+\chapter{Locations and Dimensions}
+\chapdesc{This chapter describes some of the commands provided to
+determine the locations and dimensions of frames.}
+
+This chapter describes some of the commands available that can
+be used to determine the locations and dimensions of \glspl{frame}.
+See the accompanying document \texttt{flowfram.pdf} for more details of 
+these commands or for other commands not listed here.\htmlnav
+
+\section{Determining the Location of the Typeblock}
+\label{sec:typeblockloc}
+
+As mentioned earlier, when you create new \glspl{frame},
+you must specify their location relative to the \gls{typeblock}, but
+what if you want to position a \gls*{frame} a set distance from the
+edge of the paper? The \styni{flowfram} package provides the following
+commands that compute the distance from the \gls*{typeblock} to the
+paper boundary:
+
+\begin{definition}
+\cmdname{computeleftedgeodd}\marg{\meta{length}}
+\end{definition}
+This computes the position of the left edge of the (odd) page, relative 
+to the left side of the \gls*{typeblock}, and stores the result in 
+\meta{length}.
+
+\begin{definition}
+\cmdname{computeleftedgeeven}\marg{\meta{length}}
+\end{definition}
+As above, but for even pages.
+
+\begin{definition}
+\cmdname{computetopedge}\marg{\meta{length}}
+\end{definition}
+This computes the top edge of the page, relative to the bottom of the
+\gls*{typeblock}, and stores the result in \meta{length}.
+
+\begin{definition}
+\cmdname{computebottomedge}\marg{\meta{length}}
+\end{definition}
+This computes the bottom edge of the page, relative to the bottom of the
+\gls*{typeblock}, and stores the result in \meta{length}.
+
+\begin{definition}
+\cmdname{computerightedgeodd}\marg{\meta{length}}
+\end{definition}
+This computes the position of the right edge of the (odd) page, 
+relative to the left side of the \gls*{typeblock}, and store the result 
+in \meta{length}.
+
+\begin{definition}
+\cmdname{computerightedgeeven}\marg{\meta{length}}
+\end{definition}
+As above, but for even pages.
+
+Note that in all cases \meta{length} must be a \LaTeX\ length
+command.
+
+For example, if you want to create a frame whose bottom
+left corner is one inch from the left edge of the page
+and half an inch from the bottom edge of the page (this
+assumes odd and even pages have the same margins):
+\begin{verbatim}
+% define two new lengths to represent the x and y coords
+\newlength{\myX}
+\newlength{\myY}
+% compute the distance from the typeblock to the paper edge
+\computeleftedgeodd{\myX}
+\computebottomedge{\myY}
+% Add the absolute co-ordinates to get co-ordinates
+% relative to the typeblock
+\addtolength{\myX}{1in}
+\addtolength{\myY}{0.5in}
+\end{verbatim}
+\htmlnav
+
+\section{Determining the Dimensions and Locations of Frames}
+
+It is possible to determine the dimensions and locations
+of a \gls{frame} using one of the following commands:
+
+\begin{itemize}
+\item \cmdname{getstaticbounds}\marg{\meta{IDN}}
+\item \cmdname{getstaticbounds*}\marg{\meta{IDL}}
+\item \cmdname{getflowbounds}\marg{\meta{IDN}}
+\item \cmdname{getflowbounds*}\marg{\meta{IDL}}
+\item \cmdname{getdynamicbounds}\marg{\meta{IDN}}
+\item \cmdname{getdynamicbounds*}\marg{\meta{IDL}}
+\end{itemize}
+
+For each command, the starred version takes an \gls{idl}\ as the
+argument, and the unstarred version takes an \gls{idn}\ as the
+argument.  Each command stores the relevant information in the
+lengths \cmdname{ffareawidth}, \cmdname{ffareaheight},
+\cmdname{ffareax} and \cmdname{ffareay}.
+
+For other related commands, see the section \dq{Determining Dimensions
+and Locations} in the accompanying document 
+\texttt{flowfram.pdf}.\htmlnav
+
+\section{Relative Locations}
+
+To print the relative location of one \gls{frame} from another do:
+\begin{definition}
+\cmdname{relativeframelocation}\marg{\meta{type1}}\marg{\meta{idn1}}\marg{\meta{type2}}\marg{\meta{idn2}}
+\end{definition}
+where \meta{type1} and \meta{idn1} indicate the type and \gls{idn} of
+the first frame, and \meta{type2} and \meta{idn2} indicate the type
+and \gls{idn} of the second frame. There is also a starred version:
+\begin{definition}
+\cmdname{relativeframelocation*}\marg{\meta{type1}}\marg{\meta{idl1}}\marg{\meta{type2}}\marg{\meta{idll}}
+\end{definition}
+where \meta{idl1} and \meta{idl2} indicate the \gls{idl} of the
+first and second frames, respectively. Both the above commands will
+print one of the following:
+
+\begin{itemize}
+\item \cmdname{FFaboveleft} if the first frame is above left of the
+second frame.
+
+\item \cmdname{FFaboveright} if the first frame is above right of the
+second frame.
+
+\item \cmdname{FFabove} if the first frame is above the second frame.
+
+\item \cmdname{FFbelowleft} if the first frame is below left of the
+second frame.
+
+\item \cmdname{FFbelowright} if the first frame is below right of the
+second frame.
+
+\item \cmdname{FFbelow} if the first frame is below the second frame.
+
+\item \cmdname{FFleft} if the first frame is to the left of the 
+second frame.
+
+\item \cmdname{FFright} if the first frame is to the right of the
+second frame.
+
+\item \cmdname{FFoverlap} if both frames overlap.
+\end{itemize}
+
+A frame is considered to be above another frame if the bottom edge
+of the first frame is higher than the top edge of the second frame. 
+
+A frame is considered to be below another frame if the top edge
+of the first frame is lower than the bottom edge of the second frame.
+
+A frame is considered to be to the left of another frame if the right 
+edge of the first frame is to the left of the left edge of the second
+frame.
+
+A frame is considered to be to the right of another frame if the left
+edge of the first frame is to the right of the right edge of the
+second frame.
+
+Note that the relative locations are taken for the current page,
+regardless of whether either of the two frames are displayed on that
+page. If the current page is odd, then the frame settings for odd pages
+will be compared, otherwise the frame settings for even pages will
+be compared. However remember that the first paragraph of each page
+retains the settings in place at the start of the paragraph, so if the
+frames have different locations for odd and even pages, then
+\cmdname{relativeframelocation} may use the wrong page settings if it
+is used at the start of the page.
+
+For example, \html{the PDF version of }this document defined a 
+\gls{flow} labelled \texttt{main} \latex{(this one)} and a 
+\gls{dynamic} labelled \texttt{chaphead} which is
+used to display the chapter headings. The following code
+\begin{verbatim}
+The dynamic frame is 
+\relativeframelocation*{dynamic}{chaphead}{flow}{main}
+of the flow frame.
+\end{verbatim}
+produces:
+The dynamic frame is 
+\latexhtml{\relativeframelocation*{dynamic}{chaphead}{flow}{main}}{on
+the left} of the flow frame.
+
+There are some short cut commands for \glspl*{frame} of the
+same type:
+\begin{definition}
+\cmdname{reldynamicloc}\marg{\meta{idn1}}\marg{\meta{idn2}}
+\end{definition}
+This is equivalent to:\\[10pt]
+\cmdname{relativeframelocation}\marg{dynamic}\marg{\meta{idn1}}\marg{dynamic}\marg{\meta{idn2}}
+\begin{definition}
+\cmdname{relstaticloc}\marg{\meta{idn1}}\marg{\meta{idn2}}
+\end{definition}
+This is equivalent to:\\[10pt]
+\cmdname{relativeframelocation}\marg{static}\marg{\meta{idn1}}\marg{static}\marg{\meta{idn2}}
+\begin{definition}
+\cmdname{relflowloc}\marg{\meta{idn1}}\marg{\meta{idn2}}
+\end{definition}
+This is equivalent to:\\[10pt]
+\cmdname{relativeframelocation}\marg{flow}\marg{\meta{idn1}}\marg{flow}\marg{\meta{idn2}}
+\\[10pt]
+Each of the above commands also has a starred version that uses the
+\gls{idl} instead of the \gls{idn}.
+
+These commands may be used in the optional argument of 
+\cmdname{continueonframe} for frames that are on the same page.
+For example:
+\begin{verbatim}
+\begin{dynamiccontents}{1}
+Some text in the first dynamic frame that goes on for 
+quite a bit longer than this example.
+\continueonframe[continued \reldynamicloc{2}{1}]{2}
+This text is in the second dynamic frame which is 
+somewhere on the same page.
+\end{dynamiccontents}
+\end{verbatim}
+
+For additional commands that determine the relative location of one
+frame from another, see the section \dq{Determining the relative 
+location of one frame from another} in the accompanying document 
+\texttt{flowfram.pdf}.\htmlnav
+
+\chapter{Predefined Layouts}
+\label{sec:layouts}
+\chapdesc{This chapter describes commands that create frames 
+arranged in a predefined layout.}
+
+The \styni{flowfram} package has a number of commands which 
+create \glspl{frame} in a predefined layout. These commands
+may only be used in the preamble.\htmlnav
+
+\section{Column Styles}
+\label{sec:Ncolumn}
+
+The standard \LaTeX\ commands \cmdname{onecolumn} and
+\cmdname{twocolumn} are redefined to create one or two
+\glspl{flow} that fill the entire \gls{typeblock} separated
+from each other (in the case of \cmdname{twocolumn}) by a
+gap of width \cmdname{columnsep}. The height of these
+\glspl*{flow} may not be exactly as high as the \gls*{typeblock},
+as their height is adjusted to make them an integer
+multiple of \cmdname{baselineskip}. You can switch off this
+automatic adjustment using the command:
+\begin{definition}
+\cmdname{ffvadjustfalse}
+\end{definition}
+
+The \cmdname{onecolumn} and \cmdname{twocolumn} commands
+also take an optional argument which is the \gls{pglist} 
+for which those \glspl*{flow} are defined. In addition
+to \cmdname{onecolumn} and \cmdname{twocolumn}, the 
+following commands are also defined:
+
+\begin{definition}
+\cmdname{Ncolumn}\oarg{\meta{pages}}\marg{\meta{n}}
+\end{definition}
+This creates \meta{n} column \glspl*{flow} each separated by a 
+distance of \cmdname{columnsep}.
+
+\begin{definition}
+\cmdname{onecolumninarea}\oarg{\meta{pages}}%
+\marg{\meta{width}}\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates a single \gls*{flow} to fill the given area,
+adjusting the height so that it is an integer multiple of
+\cmdname{baselineskip}.
+
+\begin{definition}
+\cmdname{twocolumninarea}\oarg{\meta{pages}}%
+\marg{\meta{width}}\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates two column \glspl*{flow} separated by a distance
+of \cmdname{columnsep} filling the entire area specified, again
+adjusting the height so that it is an integer multiple of
+\cmdname{baselineskip}. The columns are separated by a gap of
+\cmdname{columnsep}.
+
+\begin{definition}
+\cmdname{Ncolumninarea}\oarg{\meta{pages}}\marg{\meta{n}}%
+\marg{\meta{width}}\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is a more general form of \cmdname{twocolumninarea} making 
+\meta{n} \glspl*{flow} instead of two.\htmlnav
+
+\section{Column Styles with an Additional Frame}
+
+As well as the column-style \glspl{flow} defined 
+above, it is also possible to define
+\meta{n} columns with an additional \gls{frame} spanning either 
+above or below them. There will be a vertical gap of 
+approximately\footnote{It may not be exact, as the \glspl*{flow} 
+are adjusted so that their height is an integer multiple
+of \cmdname{baselineskip}, which may increase the gap.} 
+\cmdname{vcolumnsep} between the columns
+and the extra frame. In each of the following definitions,
+the argument \meta{pages} is the \gls{pglist} for which
+the \glspl*{frame} are defined, \meta{n} is the number of
+columns required, \meta{type} is the type of frame to go
+above or below the columns (this may be one of: \texttt{flow},
+\texttt{static} or \texttt{dynamic}). The area in which the
+new frames should fill is defined by \meta{width}, \meta{height} 
+(the width and height of the area) and \meta{x}, \meta{y} 
+(the position of the bottom left hand corner of the area
+relative to the bottom left hand corner of the \gls{typeblock}.)
+
+The height of the additional frame at the top or bottom of
+the columns is given by \meta{H}.
+
+\begin{definition}
+\cmdname{onecolumntopinarea}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates one \gls*{flow} with a \meta{type} frame above it, filling
+the area specified.
+
+\begin{definition}
+\cmdname{twocolumntopinarea}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates two column-style \glspl*{flow} with a \meta{type} frame 
+above them, filling the area specified.
+
+\begin{definition}
+\cmdname{Ncolumntopinarea}\oarg{\meta{pages}}\marg{\meta{type}}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates \meta{n} column-style \glspl*{flow} with a \meta{type}  
+frame above them, filling the area specified.
+
+\begin{definition}
+\cmdname{onecolumnbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates one \gls*{flow} with a \meta{type} frame underneath it, 
+filling the area specified.
+
+\begin{definition}
+\cmdname{twocolumnbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This creates two column-style \glspl*{flow} with a \meta{type} frame 
+below them, filling the area specified.
+
+\begin{definition}
+\cmdname{Ncolumnbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{n}}\marg{\meta{H}}%
+\marg{\meta{width}}\marg{\meta{height}}\marg{\meta{x}}%
+\marg{\meta{y}}
+\end{definition}
+This creates \meta{n} column-style \glspl*{flow} with a \meta{type} 
+frame below them, filling the area specified.
+
+The following commands are special cases of the above:
+
+\begin{definition}
+\cmdname{onecolumnStopinarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{onecolumntopinarea}\oarg{\meta{pages}}%
+\marg{static}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{onecolumnDtopinarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{onecolumntopinarea}\oarg{\meta{pages}}%
+\marg{dynamic}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{onecolumntop}\oarg{\meta{pages}}\marg{\meta{type}}%
+\marg{\meta{H}}
+\end{definition}
+As \cmdname{onecolumntopinarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{onecolumnStop}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to: 
+\cmdname{onecolumntop}\oarg{\meta{pages}}\marg{static}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{onecolumnDtop}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to: 
+\cmdname{onecolumntop}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{twocolumnStopinarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{twocolumntopinarea}\oarg{\meta{pages}}%
+\marg{static}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{twocolumnDtopinarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{twocolumntopinarea}\oarg{\meta{pages}}%
+\marg{dynamic}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{twocolumntop}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}
+\end{definition}
+As \cmdname{twocolumntopinarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{twocolumnStop}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{twocolumntop}\oarg{\meta{pages}}\marg{static}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{twocolumnDtop}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{twocolumntop}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{NcolumnStopinarea}\oarg{\meta{pages}}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{Ncolumntopinarea}\oarg{\meta{pages}}\marg{static}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{NcolumnDtopinarea}\oarg{\meta{pages}}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{Ncolumntopinarea}\oarg{\meta{pages}}\marg{dynamic}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{Ncolumntop}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+As \cmdname{Ncolumntopinarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{NcolumnStop}\oarg{\meta{pages}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{Ncolumntop}\oarg{\meta{pages}}\marg{static}\marg{\meta{n}}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{NcolumnDtop}\oarg{\meta{pages}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{Ncolumntop}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{n}}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{onecolumnSbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{onecolumnbottominarea}\oarg{\meta{pages}}%
+\marg{static}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{onecolumnDbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{onecolumnbottominarea}\oarg{\meta{pages}}%
+\marg{dynamic}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{onecolumnbottom}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}
+\end{definition}
+As \cmdname{onecolumnbottominarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{onecolumnSbottom}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{onecolumnbottom}\oarg{\meta{pages}}\marg{static}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{onecolumnDbottom}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{onecolumnbottom}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{twocolumnSbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{twocolumnbottominarea}\oarg{\meta{pages}}%
+\marg{static}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{twocolumnDbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{twocolumnbottominarea}\oarg{\meta{pages}}%
+\marg{dynamic}\marg{\meta{H}}\marg{\meta{width}}%
+\marg{\meta{height}}\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{twocolumnbottom}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{H}}
+\end{definition}
+As \cmdname{twocolumnbottominarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{twocolumnSbottom}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{twocolumnbottom}\oarg{\meta{pages}}\marg{static}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{twocolumnDbottom}\oarg{\meta{pages}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{twocolumnbottom}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{NcolumnSbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{Ncolumnbottominarea}\oarg{\meta{pages}}\marg{static}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{NcolumnDbottominarea}\oarg{\meta{pages}}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+\end{definition}
+This is equivalent to:\newline
+\cmdname{Ncolumnbottominarea}\oarg{\meta{pages}}\marg{dynamic}%
+\marg{\meta{n}}\marg{\meta{H}}\marg{\meta{width}}\marg{\meta{height}}%
+\marg{\meta{x}}\marg{\meta{y}}
+
+\begin{definition}
+\cmdname{Ncolumnbottom}\oarg{\meta{pages}}%
+\marg{\meta{type}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+As \cmdname{Ncolumnbottominarea} where the area is the entire
+\gls*{typeblock}.
+
+\begin{definition}
+\cmdname{NcolumnSbottom}\oarg{\meta{pages}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{Ncolumnbottom}\oarg{\meta{pages}}\marg{static}\marg{\meta{n}}\marg{\meta{H}}
+
+\begin{definition}
+\cmdname{NcolumnDbottom}\oarg{\meta{pages}}\marg{\meta{n}}\marg{\meta{H}}
+\end{definition}
+This is equivalent to:
+\cmdname{Ncolumnbottom}\oarg{\meta{pages}}\marg{dynamic}\marg{\meta{n}}\marg{\meta{H}}
+\htmlnav
+
+\section{Right to Left Columns}
+\label{sec:RL}
+
+The default behaviour for the commands defined above is
+to create the \glspl{flow} from left to right. However if you are
+typesetting from right to left, you will probably prefer to 
+define the \glspl{flow} in the reverse order. This can be done
+via the package option \pkgopt{RL}. Alternatively you can use the
+command:
+\begin{definition}
+\cmdname{lefttorightcolumnsfalse}
+\end{definition}
+before using commands such as \cmdname{twocolumn} or 
+\cmdname{Ncolumn}. Two switch back to left-to-right columns use:
+\begin{definition}
+\cmdname{lefttorightcolumnstrue}
+\end{definition}
+
+\section{Backdrop Effects}
+
+\Glspl{static} can be used to produce a 
+backdrop. There are a number of commands which create
+\glspl*{static} that can be used as a backdrop. In the
+following definitions, \meta{pages} is the \gls{pglist} for
+which those \glspl*{static} are defined (\texttt{all} is the default). 
+For the vertical strips:
+\meta{xoffset} is the amount by which the frames should be
+shifted horizontally (0pt by default), \meta{W1} is the width of the first frame,
+with colour specified by \meta{C1} and \gls{idl}\ \meta{L1},
+and so on up to \meta{Wn} the width of the \meta{n}th frame
+with colour specified by \meta{Cn} and \gls*{idl}\ \meta{Ln}.
+For the vertical strips:
+\meta{yoffset} is the amount by which the frames should be
+shifted vertically (0pt by default), \meta{H1} is the height of the first frame,
+with colour specified by \meta{C1} and \gls*{idl}\ \meta{L1},
+and so on up to \meta{Hn} the height of the \meta{n}th frame
+with colour specified by \meta{Cn} and \gls*{idl}\ \meta{Ln}.
+
+\textbf{NOTE:} unlike the earlier commands, these commands
+are all relative to the actual page, not the \gls{typeblock}.
+So an \latexhtml{$x$}{x} offset of 0pt indicates the first vertical 
+frame is flush with the left hand edge of the page, and a 
+\latexhtml{$y$}{y} offset of 0pt indicates the first horizontal frame 
+is flush with the bottom edge of the page. This is because backdrops 
+tend to span the entire page, not just the \gls*{typeblock}.
+
+The colour specification must be completely enclosed in braces,
+for example \verb"{[rgb]{1,0,1}}" not \verb"[rgb]{1,0,1}".\htmlnav
+
+\subsection{Vertical stripe effects}
+
+\begin{definition}
+\cmdname{vtwotone}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{W1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{W2}}\marg{\meta{C2}}\marg{\meta{L2}}
+\end{definition}
+Defines two \glspl{static} to create a two tone vertical strip effect. 
+(This command was
+used to create the coloured background on the title page
+of \html{the PDF version of }this document.)
+
+\begin{definition}
+\cmdname{vNtone}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{n}}\marg{\meta{W1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\ldots\marg{\meta{Wn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is similar to \cmdname{vtwotone} but with \meta{n} \glspl*{static} 
+instead of two.
+
+\begin{definition}
+\cmdname{vtwotonebottom}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{H}}\marg{\meta{W1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{W2}}\marg{\meta{C2}}\marg{\meta{L2}}
+\end{definition}
+This is similar to \cmdname{vtwotone} but the \glspl*{static} are only
+\meta{H} high, instead of the entire height of the page.
+The frames are aligned along the bottom edge of the page.
+
+\begin{definition}
+\cmdname{vtwotonetop}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{H}}\marg{\meta{W1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{W2}}\marg{\meta{C2}}\newline\marg{\meta{L2}}
+\end{definition}
+This is similar to \cmdname{vtwotone} but the \glspl*{static} are only
+\meta{H} high, instead of the entire height of the page.
+The frames are aligned along the top edge of the page.
+(This command was used to create the border effect along
+the top of every page in \html{the PDF version of }this document. 
+Two \cmdname{vtwotonetop}
+commands were used, one for the even pages, and the other
+for the odd pages.)
+
+\begin{definition}
+\cmdname{vNtonebottom}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{H}}\marg{\meta{n}}\marg{\meta{W1}}\marg{\meta{C1}}%
+\marg{\meta{L1}}%
+\ldots
+\marg{\meta{Wn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is a general version of \cmdname{vtwotonebottom} for
+\meta{n} frames instead of two.
+
+\begin{definition}
+\cmdname{vNtonetop}\oarg{\meta{pages}}\oarg{\meta{xoffset}}%
+\marg{\meta{H}}\marg{\meta{n}}\marg{\meta{W1}}\marg{\meta{C1}}%
+\marg{\meta{L1}}%
+\ldots
+\marg{\meta{Wn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is a general version of \cmdname{vtwotonetop} for
+\meta{n} frames instead of two.\htmlnav
+
+\subsection{Horizontal stripe effect}
+
+\begin{definition}
+\cmdname{htwotone}\oarg{\meta{pages}}\oarg{\meta{yoffset}}%
+\marg{\meta{H1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{H2}}\marg{\meta{C2}}\marg{\meta{L2}}
+\end{definition}
+This defines two \glspl{static} to create a two tone horizontal strip 
+effect.
+
+\begin{definition}
+\cmdname{hNtone}\oarg{\meta{pages}}\oarg{\meta{yoffset}}%
+\marg{\meta{n}}\marg{\meta{H1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\ldots
+\marg{\meta{Hn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is similar to \cmdname{htwotone} but with \meta{n} \glspl*{static} 
+instead of two.
+
+\begin{definition}
+\cmdname{htwotoneleft}\oarg{\meta{pages}}\oarg{\meta{yoffset}}%
+\marg{\meta{W}}\marg{\meta{H1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{H2}}\marg{\meta{C2}}\marg{\meta{L2}}
+\end{definition}
+This is similar to \cmdname{htwotone} but the \glspl*{static} are only
+\meta{W} wide, instead of the entire width of the page.
+The frames are aligned along the left edge of the page.
+
+\begin{definition}
+\cmdname{htwotoneright}\oarg{\meta{pages}}%
+\oarg{\meta{yoffset}}\marg{\meta{W}}\marg{\meta{H1}}%
+\marg{\meta{C1}}\marg{\meta{L1}}%
+\marg{\meta{H2}}\marg{\meta{C2}}\marg{\meta{L2}}
+\end{definition}
+This is similar to \cmdname{htwotone} but the \glspl*{static} are only
+\meta{W} wide, instead of the entire width of the page.
+The frames are aligned along the right edge of the page.
+
+\begin{definition}
+\cmdname{hNtoneleft}\oarg{\meta{pages}}%
+\oarg{\meta{yoffset}}\marg{\meta{W}}\marg{\meta{n}}%
+\marg{\meta{H1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\ldots
+\marg{\meta{Hn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is a general version of \cmdname{htwotoneleft} for
+\meta{n} frames instead of two.
+
+\begin{definition}
+\cmdname{hNtoneright}\oarg{\meta{pages}}%
+\oarg{\meta{yoffset}}\marg{\meta{W}}\marg{\meta{n}}%
+\marg{\meta{H1}}\marg{\meta{C1}}\marg{\meta{L1}}%
+\ldots
+\marg{\meta{Hn}}\marg{\meta{Cn}}\marg{\meta{Ln}}
+\end{definition}
+This is a general version of \cmdname{htwotoneright} for
+\meta{n} frames instead of two.\htmlnav
+
+\subsection{Background Frame}
+
+To make a single \gls{static} covering the entire page, use:
+\begin{definition}
+\cmdname{makebackgroundframe}\oarg{\meta{pages}}\oarg{\meta{IDL}}
+\end{definition}
+Note that this \gls*{frame} should be created before any other
+\gls*{static} as it will obscure all other \glspl*{static} created 
+before it if it is given a background colour.\htmlnav
+
+\subsection{Vertical and Horizontal Rules}
+\label{sec:insertrule}
+
+You can create vertical or horizontal rules between two
+\glspl{frame} using the commands:
+
+\begin{definition}
+\cmdname{insertvrule}\oarg{\meta{y top}}%
+\oarg{\meta{y bottom}}\marg{\meta{T1}}\marg{\meta{IDN1}}%
+\marg{\meta{T2}}\marg{\meta{IDN2}}
+\end{definition}
+This creates a new \gls{static} which fits between \meta{T1} 
+\gls*{frame} with \gls{idn}\ \meta{IDN1} and \meta{T2} \gls*{frame} 
+with \gls*{idn}\ \meta{IDN2}, and places a vertical rule in it
+extending from the highest point of the highest frame to
+the lowest point of the lowest frame. The first optional
+argument \meta{y top} (default 0pt) extends the rule by that 
+much above the highest point, and the second optional argument
+\meta{y bottom} (default 0pt) extends the rule by that much 
+below the lowest point. If either of the optional arguments
+are negative, the rule will be shortened instead of extended.
+The width of the rule is given by
+\begin{definition}
+\cmdname{ffcolumnseprule}
+\end{definition}
+\textbf{Note} that this has changed as from version 1.09: versions
+prior to 1.09 used \cmdname{columnseprule}.
+
+The vertical rule drawn by \cmdname{insertvrule} is created using 
+the command:
+\begin{definition}
+\cmdname{ffvrule}\marg{offset}\marg{width}\marg{height}
+\end{definition}
+This can be redefined if a more ornate rule is required
+(see below).
+
+\begin{definition}
+\cmdname{inserthrule}\oarg{\meta{x left}}%
+\oarg{\meta{x right}}\marg{\meta{T1}}\marg{\meta{IDN1}}%
+\marg{\meta{T2}}\marg{\meta{IDN2}}
+\end{definition}
+This creates a new \gls{static} which fits between \meta{T1} 
+\gls*{frame} with \gls{idn}\ \meta{IDN1} and \meta{T2} \gls*{frame} 
+with \gls*{idn}\ \meta{IDN2}, and places a horizontal rule in it
+extending from the leftmost point of the left frame to
+the rightmost point of the right frame. The first optional
+argument \meta{x left} (default 0pt) extends the rule by that 
+much before the leftmost point, and the second optional argument
+\meta{x right} (default 0pt) extends the rule by that much 
+beyond the rightmost point. If either of the optional arguments
+are negative, the rule will be shortened instead of extended.
+The height of the rule is given by
+\begin{definition}
+\cmdname{ffcolumnseprule}
+\end{definition}
+
+The horizontal rule drawn by \cmdname{inserthrule} is created using 
+the command:
+\begin{definition}
+\cmdname{ffhrule}\marg{offset}\marg{width}\marg{height}
+\end{definition}
+This can be redefined if a more ornate rule is required (see below).
+
+The default value for \cmdname{ffcolumnseprule} is 2pt.  Both
+\cmdname{insertvrule} and \cmdname{inserthrule} have starred versions
+which allow you to identify the \gls*{frame} by \gls{idl}\ instead of
+\gls*{idn}.  The \gls*{frame} types, \meta{T1} and \meta{T2} can be one
+of the following keywords: \texttt{flow}, \texttt{static} or
+\texttt{dynamic}.
+
+The command
+\begin{definition}
+\cmdname{ffruledeclarations}
+\end{definition}
+can be redefined to set declarations that affect how the rule is drawn. 
+The most likely use of this command is to set the rule colour. 
+For example:
+\begin{verbatim}
+\twocolumnStop{2in}
+
+\renewcommand{\ffruledeclarations}{\color{red}}
+\insertvrule{flow}{1}{flow}{2}
+
+\renewcommand{\ffruledeclarations}{\color{blue}}
+\inserthrule{static}{1}{flow}{1}
+\end{verbatim}
+This will create a layout with two columns (\glspl{flow}~1 and~2) 
+with a \gls{static} above. A red vertical rule is placed in a 
+\gls*{static} between \glspl*{flow}~1 and~2, and a blue horizontal
+rule is placed between the \gls*{static} and the first 
+\gls*{flow}. (However the horizontal rule will span both 
+\glspl*{flow} since that is the width of the \gls*{static}.)
+
+In the following example, the rules have been redefined
+to use a zigzag pattern (which is obtained using the \sty{tikz} 
+package):
+\begin{verbatim}
+\usepackage{flowfram}
+\usepackage{tikz}
+\usetikzlibrary{snakes}
+
+\twocolumnStop
+
+\renewcommand{\ffvrule}[3]{%
+\hfill
+\tikz{\draw[snake=zigzag,line width=#2,yshift=-#1] (0,0) -- (0pt,#3);}%
+\hfill\mbox{}}
+
+\insertvrule{flow}{1}{flow}{2}
+
+\renewcommand{\ffhrule}[3]{%
+\tikz{\draw[snake=zigzag,line width=#3,xshift=-#1] (0,0) -- (#2,0pt);}}
+
+\inserthrule{static}{1}{flow}{1}
+\end{verbatim}
+\htmlnav
+
+\chapter{Thumbtabs and Minitocs}
+\chapdesc{This chapter describes how to create thumbtabs and minitocs,
+such as those used in \html{the PDF version of }this document.}
+
+\section{Thumbtabs}
+\label{sec:thumbtabs}
+
+On the right hand side of \latexhtml{this page}{the odd pages 
+and on the left hand side of the even pages in the
+PDF version of this document}, there is a blue rectangle
+with the chapter number in it. This is a thumbtab, and it gives
+you a rough idea whereabouts in the document you are when you
+quickly flick through the pages. Each thumbtab is in fact
+a dynamic frame, and you can control whether to make the
+number and/or title appear in the thumbtab by using
+the package option \pkgopt{thumbtabs}. This is a key=value option,
+where the value may be one of \pkgoptval{thumbtabs}{title} 
+(show the title but not the number---default), 
+\pkgoptval{thumbtabs}{number} (show the number but not the title), 
+\pkgoptval{thumbtabs}{both} (show the number and the title) 
+and \pkgoptval{thumbtabs}{none} (don't show the number or title).
+
+If you want thumbtabs in your document, you need to use
+the command
+\begin{definition}
+\cmdname{makethumbtabs}\oarg{\meta{y offset}}\marg{\meta{height}}%
+\oarg{\meta{section type}}
+\end{definition} 
+in the document
+preamble. By default, the topmost thumbtab is level with the
+top of the \gls{typeblock}, but can be shifted vertically
+using the first optional argument \meta{y offset}. Each
+thumbtab will be \meta{height} high, and will correspond to the
+sectioning type \meta{section type}. If \meta{section type} 
+is omitted, chapters will be used if the \cmdname{chapter} 
+command is defined, otherwise sections will be used.
+The width of the thumbtabs is given by the length 
+\begin{definition}
+\cmdname{thumbtabwidth}
+\end{definition}
+which is 1cm by default.
+The command
+\begin{definition}
+\cmdname{thumbtabindex}
+\end{definition}
+will display the thumbtab index (all thumbtabs) on the current page. 
+You then need to use
+\begin{definition}
+\cmdname{enablethumbtabs}
+\end{definition}
+to start the individual thumbtabs and
+\begin{definition}
+\cmdname{disablethumbtabs}
+\end{definition}
+to make them go away.
+You can align the table of contents with the thumbtabs\footnote{but
+only do this if there is enough room on the page!} using
+the command
+\begin{definition}
+\cmdname{tocandthumbtabindex}
+\end{definition}
+instead of
+the commands \cmdname{tableofcontents} and 
+\cmdname{thumbtabindex}. If you are using the \sty{hyperref} 
+package, the text on the thumbtab index will be a hyperlink
+to the corresponding part of the document. Note that when using
+\cmdname{tocandthumbtabindex} you may
+need to shift the thumbtabs vertically up or down to make
+sure that they align correctly with the table of contents.
+
+The format of the text on the thumbtabs is given by the command
+\begin{definition}
+\cmdname{thumbtabindexformat}
+\end{definition}
+for the thumbtab index entries, and
+\begin{definition}
+\cmdname{thumbtabformat}
+\end{definition}
+for the individual thumbtabs. By
+default the text on the thumbtabs will be rotated, but as
+rotating is not implemented by some previewers, the package option
+\pkgopt{norotate} is provided, which will stack the letters 
+vertically. This does not look as good as the rotated text.
+Note also that some previewers do not put the hyperlink in the
+correct place when the link has been rotated, so this may
+also cause a problem.
+
+The thumbtab attributes can be changed using 
+\begin{definition}
+\cmdname{setthumbtab}\marg{\meta{n}}\marg{\meta{key value list}}
+\end{definition}
+where \meta{n} is the thumbtab number starting
+from 1 (for the top thumbtab) to the value given by the counter
+\ctr{maxthumbtabs}
+(for the bottom thumbtab). Note that these numbers are not
+related to the associated \gls*{frame} \gls{idn}. You may also use
+the keyword \texttt{all} instead of \meta{n} to indicate that the
+new attributes should apply to all thumbtabs.
+
+To just change the settings for the thumbtab index, use
+\begin{definition}
+\cmdname{setthumbtabindex}\marg{\meta{n}}\marg{\meta{key value list}}
+\end{definition}
+The \meta{key value list} for both these commands is the same as that
+for \cmdname{setdynamicframe}. Again \meta{n} may either be the
+thumbtab index or the keyword \texttt{all}.
+
+By default, the thumbtabs have a grey background. In \html{the PDF
+version of }this document, I \latex{have }used:
+\begin{verbatim}
+\setthumbtab{1}{backcolor=[rgb]{0.15,0.15,1}}
+\setthumbtab{2}{backcolor=[rgb]{0.2,0.2,1}}
+\setthumbtab{3}{backcolor=[rgb]{0.25,0.25,1}}
+\setthumbtab{4}{backcolor=[rgb]{0.3,0.3,1}}
+\setthumbtab{5}{backcolor=[rgb]{0.35,0.35,1}}
+\setthumbtab{6}{backcolor=[rgb]{0.4,0.4,1}}
+\setthumbtab{7}{backcolor=[rgb]{0.45,0.45,1}}
+\setthumbtab{8}{backcolor=[rgb]{0.5,0.5,1}}
+\end{verbatim}
+to change the thumbtab background colour to shades of blue.
+
+I \latex{have }also changed the style of the thumbtab text using:
+\begin{verbatim}
+\newcommand{\thumbtabstyle}[1]{{\hypersetup{linkcolor=white}%
+\textbf{\large\sffamily #1}}}
+\setthumbtab{all}{style=thumbtabstyle,textcolor=white}
+\end{verbatim}
+Note that the style uses \cmdname{hypersetup}\footnote{defined by the
+\sty{hyperref} package} to change the colour of the hyperlink text,
+since the hyperlink overrides the text colour.\htmlnav
+
+\section{Minitocs}
+
+In \html{the PDF version of }this document, after each chapter heading, 
+there is a mini table of contents for that chapter. To enable minitocs,
+use the command 
+\begin{definition}
+\cmdname{enableminitoc}\oarg{\meta{section type}}
+\end{definition}
+The default \meta{section type} is the same as that used by 
+the thumbtabs.
+
+If you want the minitocs to appear in a \gls{dynamic}, you
+can use
+\begin{definition}
+\cmdname{appenddfminitoc}\marg{\meta{IDN}}
+\end{definition}
+where \meta{IDN} is the \gls{idn}\ of the appropriate \gls*{dynamic}.
+There is also a starred version available if you want to 
+use the \gls{idl}\ instead of the \gls*{idn}.
+
+For example, in \html{the PDF version of }this document I 
+\latex{have }used the command:
+\begin{verbatim}
+\appenddfminitoc*{chaphead}
+\end{verbatim}
+in the preamble, which \latex{has }appended the minitocs to the
+\gls*{dynamic} with \gls*{idl}\ \texttt{chaphead}.
+
+The style of the minitoc text is given by the command
+\begin{definition}
+\cmdname{minitocstyle}\marg{\meta{contents}}
+\end{definition}
+where the argument is the contents
+of the minitoc. This command may be redefined if you want
+to change the minitoc style. The gap before the minitoc
+is given by the length
+\begin{definition}
+\cmdname{beforeminitocskip}
+\end{definition}
+and the gap after the minitoc is given by the length 
+\begin{definition}
+\cmdname{afterminitocskip}
+\end{definition}
+These lengths may be changed using \cmdname{setlength}.\htmlnav
+
+\chapter{Global Settings}
+\chapdesc{This section describes style macros, lengths and counters used
+by the \styni{flowfram} package.}
+
+\section{Macros}
+The following macros can be changed using \cmdname{renewcommand}:
+
+\begin{itemize}
+\item \cmdname{setffdraftcolor} 
+
+This sets the colour of the \gls{bbox}
+when it is displayed in draft mode.  The default value is:
+\verb/\color[gray]{0.8}/. For example, if you want a darker grey,
+do:
+\begin{verbatim}
+\renewcommand{\setffdraftcolor}{\color[gray]{0.3}}
+\end{verbatim}
+
+\item \cmdname{setffdrafttypeblockcolor}
+
+This sets the colour of
+the \gls{bbox} of the \gls{typeblock} when it is displayed
+in draft mode.  The default value is: \verb/\color[gray]{0.9}/.
+For example, if you want a medium grey, do:
+\begin{verbatim}
+\renewcommand{\setffdrafttypeblockcolor}{\color[gray]{0.5}}
+\end{verbatim}
+
+\item \cmdname{fflabelfont}
+
+This sets the font size for the \gls{bbox} markers in 
+draft mode. The default value is: \verb/\small\sffamily/.
+For example, if you want a larger font, do:
+\begin{verbatim}
+\renewcommand{\fflabelfont}{\large\sffamily}
+\end{verbatim}
+
+\item \cmdname{ffruledeclarations}
+
+This sets the declarations that affect the rules created using
+\cmdname{insertvrule} and \cmdname{inserthrule}. The default
+definition does nothing.
+See \latexhtml{\autoref{sec:insertrule}}{\htmlref{Vertical and
+Horizontal Rules}{sec:insertrule}} for further details.
+
+\item \cmdname{ffcontinuedtextfont}\marg{\meta{text}}
+
+This sets \meta{text} in the continuation font. The default definition
+does \verb|\emph{\small |\meta{text}\verb|}|. See
+\latexhtml{\autoref{sec:static}}{\htmlref{Static Frames}{sec:static}} 
+and \latexhtml{\autoref{sec:dynamic}}{\htmlref{Dynamic 
+Frames}{sec:dynamic}} for further details.
+
+\end{itemize}
+\htmlnav
+
+\section{Lengths}
+The following are lengths, which can be changed using
+\cmdname{setlength}:
+
+\begin{itemize}
+\item \cmdname{fflabelsep}
+
+This is the distance from the right hand side of the
+\gls{bbox} at which to place the \gls{bbox} marker. The
+default value is: \texttt{1pt}
+
+\item \cmdname{flowframesep}
+
+This is the gap between the text of the \gls{frame} and
+its border, for the standard border types. 
+
+\item \cmdname{flowframerule}
+
+This is the width of the \gls{frame}['s] border, if using
+a border given by a \gls{fcmd} that uses \cmdname{fboxsep}
+to set its border width (e.g.\ \cmdname{fbox}).
+
+\item \cmdname{sdfparindent}
+
+This is the paragraph indentation within \staticordynamic{}s.
+The default value is 0pt.
+
+\item \cmdname{vcolumnsep}
+
+This is the approximate vertical distance between the top frame 
+and the column frames when using \cmdname{Ncolumntop} etc.
+(The height of the \gls{flow} may be adjusted to make it
+an integer multiple of \cmdname{baselineskip}.)
+
+\item \cmdname{columnsep}
+
+This is the horizontal distance between the column frames
+when using \cmdname{Ncolumn} or \cmdname{Ncolumntop} etc
+
+\item \cmdname{ffcolumnseprule}
+
+This is the width of vertical rules created using 
+\cmdname{insertvrule} or the height of horizontal rules created
+using \cmdname{inserthrule}.
+
+\item \cmdname{beforeminitocskip}
+
+This is the vertical distance before the minitoc.
+
+\item \cmdname{afterminitocskip}
+
+This is the vertical distance after the minitoc.
+
+\item \cmdname{fftolerance}
+
+The output routine will issue a warning when a paragraph spans two
+\glspl{flow} of unequal width, unless the difference in width is
+less than the value of \cmdname{fftolerance}.
+\end{itemize}
+\htmlnav
+
+\section{Counters}
+\label{sec:counters}
+The following are counters that can be accessed via 
+\cmdname{value}\marg{\meta{counter name}} or via
+\verb|\the|\meta{counter name}. However the value of these counters 
+\emph{should not be modified}.
+
+\begin{description}
+\item[\ctr{maxflow}] The total number of \glspl{flow} that have
+been defined so far.
+
+\item[\ctr{thisframe}] Stores the \gls{idn} of the current
+\gls*{flow}. You can label and reference the \gls{idn} using
+\begin{definition}
+\cmdname{labelflowid}\marg{\meta{label}}
+\end{definition}
+This is analogous to the standard \cmdname{label} command, but will
+always refer to the \gls*{idn} of the current \gls*{flow}. It can
+then be referenced using \cmdname{ref}\marg{\meta{label}}. Note that
+this will always refer to the current \gls*{flow} even when used
+in the contents of a \staticordynamic.
+
+Don't use more than one instance of \cmdname{labelflowid} in a given
+\gls*{flow} for a given page or you will get a \dq{multiply defined 
+references} warning.
+
+\item[\ctr{displayedframe}] Stores the index of the currently 
+displayed \gls{flow}. This will be the same as the \gls{idn} if all
+\glspl*{flow} are displayed on the current page, but if some are
+hidden, the values may be different. You can label this counter 
+using
+\begin{definition}
+\cmdname{labelflow}\marg{\meta{label}}
+\end{definition}
+and reference it elsewhere in the document using 
+\cmdname{ref}\marg{\meta{label}}. For example, if you are using
+a column layout, you might want to do something like:
+\begin{verbatim}
+This text is about hippos\labelflow{hippos}.
+
+% Somewhere else in the document
+See column~\ref{hippos} on page~\pageref{hippos}
+for information on hippos.
+\end{verbatim}
+Don't use more than one instance of \cmdname{labelflow} in a given
+\gls*{flow} for a given page or you will get a \dq{multiply defined 
+references} warning.  Note that
+\cmdname{labelflow} will always refer to the current \gls*{flow} 
+even when used in the contents of a static or dynamic \gls{frame}.
+
+\item[\ctr{maxstatic}] The total number of \glspl{static} that have
+been defined so far.
+
+\item[\ctr{maxdynamic}] The total number of \glspl{dynamic} that
+have been defined so far.
+
+\item[\ctr{maxthumbtabs}] The total number of thumbtabs.
+
+\item[\ctr{absolutepage}] The absolute page number.
+\end{description}
+\htmlnav
+
+\chapter{Troubleshooting}
+\chapdesc{This chapter should be consulted if you experience any
+problems using the \styni{flowfram} package.}
+
+For an up-to-date list of frequently asked questions, see
+\latexhtml{%
+\url{http://www.dickimaw-books.com/faqs/flowframfaq.html}}{the
+\htmladdnormallink{flowfram
+FAQ}{http://www.dickimaw-books.com/faqs/flowframfaq.html}}. If you
+have a query that is not addressed here, please try there first. If
+that doesn't answer your query, try posting a message to
+\TeX\ on StackExchange (\url{http://tex.stackexchange.com/}),
+the \LaTeX\ Community Forum (\url{http://latex-community.org/forum/})
+or the \texttt{comp.text.tex} newsgroup. I generally answer questions in
+those places much quicker than queries that are emailed to me, which
+tend to get lost in my inbox.
+
+Bugs can be reported using the \latexhtml{form at
+\url{http://www.dickimaw-books.com/bug-report.html}}{\htmladdnormallink{bug
+report form}{http://www.dickimaw-books.com/bug-report.html}}
+\htmlnav
+
+\section{General Queries}
+
+\begin{enumerate}
+\item If all my \glspl{flow} are only defined on, say, 
+pages 1-10, what happens if I then add some extra text so that
+the document exceeds 10 pages?
+
+The output routine will create a new \gls{flow} the size 
+of the \gls{typeblock} and use that.
+
+\item Can I use the formatted page number in \glspl{pglist}?
+
+No.
+
+\item\label{itm:whynot} Why not?
+
+When the output routine finishes with one \gls{flow} it looks for the
+next \gls{flow} defined on that page. If there are none left, it then
+searches through the \gls{pglist} of all the defined \glspl{flow} to
+see if the next page lies in that range. If there are none defined on
+that page, it ships out that page, and tries the next page.  This gives
+rise to two problems:
+
+\begin{enumerate}
+\item \LaTeX\ is not clairvoyant. If it is currently
+on page 14, and on the next page the page numbering changes
+to A, it has no way of knowing this until it has reached
+that point, which it hasn't yet. So it is looking for a 
+\gls{flow} defined on page~15, not on page~A.
+
+\item How does \LaTeX\ tell if page C lies between 
+pages A and D\@? It would require an algorithm that can convert
+from a formatted number back to an integer. Given that there
+are many different ways of formatting the value of a counter
+(besides the standard Roman and alphabetical formats) it
+would be impossible to write an algorithm to do this
+for some arbitrary format.
+\end{enumerate}
+
+\item Can I have an arbitrarily shaped \gls{frame}?
+\label{itm:parshape}
+
+You can assign certain irregular shapes to \staticordynamic{}s, 
+using the \key{shape} key (see 
+\latexhtml{\autoref{sec:parshape}}{\htmlref{Non-Rectangular 
+Frames}{sec:parshape}}).
+Note that the \gls{bbox} will still appear as a rectangle with
+the dimensions of the given \gls{frame} which may not correspond
+to the assigned shape.
+This function is not available for \glspl{flow}.
+
+\item Why has the text from my \gls{flow} appeared in a
+\gls{static} or \gls{dynamic}?
+
+Assuming you haven't inadvertently set that text as the contents
+of the \staticordynamic, the frames are most likely 
+overlapping (see \latexhtml{\autoref{sec:stacking}}{\htmlref{Frame
+Stacking Order}{sec:stacking}}).
+In an attempt to clarify what's going on, suppose you have 
+defined a \gls{static}, a \gls{dynamic} and two \glspl{flow}. The 
+following is an approximate\footnote{The pedantic may point out 
+that \TeX\ may make several attempts to fill in the flow frames 
+depending on penalties and so on.} analogy: \TeX\ has a sheet of 
+paper on the table, and has pencilled\footnote{actually it hasn't
+drawn anything really, but it has in its mind's eye.} in a 
+rectangle denoting the \gls{typeblock}.  The paper is put to one 
+side for now.  \TeX\ also has four rectangular sheets
+of transparent paper. The first (which I shall call sheet~1)
+represents the \gls{static}, the next two (which I shall call
+sheets~2 and~3) represent the \glspl{flow}, and the last one
+(which I shall call sheet~4) represents the \gls{dynamic}.
+\TeX\ starts work on filling sheet~2 with the document text.
+Once it has put as much text on that sheet as it considers 
+possible (according to its views on aesthetics), it puts sheet~2
+into the \dq{in tray}, and then continues on sheet~3. While it's
+filling in sheets~2 and~3, if it encounters a command or 
+environment that tells it what to put in the \gls{static}, 
+it fills in sheet~1 and then puts sheet~1 into the \dq{in tray} and
+resumes where it left off on sheet~2 or~3. Similarly, if
+it encounters a command that tells it what to put in the
+\gls{dynamic}, it stops what it's doing, fills in sheet~4, then
+puts sheet~4 into the \dq{in tray}, and resumes where it left off.
+Only when it has finished sheet~3 (the last \gls{flow} defined
+on that page), will it gather together all
+the transparent sheets, and fix them onto the page starting
+with sheet~1 through to sheet~4, measuring the bottom left hand 
+corner of each transparent sheet relative to the bottom left hand 
+corner of the \gls{typeblock}.  \TeX\ will then put that page 
+aside, and start work on the next page. If two or more of the
+transparent sheets overlap, you will see through the top one into
+the one below (unless of course the top one has been painted
+over, either by setting a background colour, or by adding an
+image that has a non-transparent background.)
+
+Note that it's also possible that the overlap is caused by an 
+overfull hbox that's causing the text to poke out the side of the 
+\gls{flow} into a neighbouring \gls{frame}. Check the log file for
+warnings or use the \pkgoptni{draft} option to the document class
+which will place a filled rectangle on the end of overfull lines.
+
+\item Why do I get lots of overfull hbox messages?
+
+Probably because you have narrow \glspl{frame}. It's better to use
+ragged right formatting when the frames are narrow.
+
+\item Why do I keep getting multiply-defined warnings?
+
+Probably because you have used \cmdname{label} in a \staticordynamic\
+that is displayed on more than one page. Try using the \key{clear} 
+key to ensure that the frame is always cleared at the end of each
+page.
+
+\item What happens if I use a command or environment
+that switches to two-column mode (e.g. \env{theindex})?
+                                                          
+As from version 1.01, any \cmdname{onecolumn} or 
+\cmdname{twocolumn} commands that occur outside of the
+preamble will print the contents of the optional argument,
+and issue a warning. It is recommended that you set up
+your own frames for use in the index. See the source code of this
+document, \texttt{ffuserguide.tex}, for an example.
+
+\item How do I change the vertical alignment
+of material inside a \staticordynamic?
+
+Use the \key{valign} key in  \cmdname{setstaticframe} or 
+\cmdname{setdynamicframe} (new to version 1.03).
+
+\item\label{itm:absval} How do I compute the distance from the edge
+of the page instead of the \gls{typeblock}?
+
+See \latexhtml{\autoref{sec:typeblockloc}}{\htmlref{Determining the 
+Location of the Typeblock}{sec:typeblockloc}}.
+
+\item Is there a GUI I can use to make it easier to create the
+\glspl{frame}?
+
+Yes, \texttt{flowframtk} which can be downloaded from:
+\url{http://www.dickimaw-books.com/apps/flowframtk/}
+\end{enumerate}
+\htmlnav
+
+\section{Unexpected Output}
+\label{sec:unexpectedoutput}
+
+\begin{enumerate}
+\item The lines at the beginning of my \glspl{flow} are the
+wrong width.
+
+This is a problem that will occur if you have \glspl{flow} 
+with different widths, as the change in \cmdname{hsize} 
+does not come into effect until a paragraph break. So if
+you have a paragraph that spans two \glspl{flow}, the end
+of the paragraph at the beginning of the second \gls{flow} 
+will retain the width it had at the start of the 
+paragraph at the bottom of the previous \gls{flow}. You can
+fix the problem by inserting \cmdname{framebreak} at the
+point where the \gls{frame} break occurs 
+(see \latexhtml{\autoref{sec:framebreak}}{\htmlref{Prematurely Ending a 
+Flow Frame}{sec:framebreak}}).
+
+\item My \glspl{frame} shift to the right when I add a border.
+
+This may occur if you use a border that is not recognised
+by the \styni{flowfram} package. You will need to set the
+offset using the \texttt{offset} key (see 
+\latexhtml{\autoref{sec:modattr}}{\htmlref{Modifying Frame 
+Attributes}{sec:modattr}}).
+
+\item I have a vertical white strip along the right hand side
+of every page.
+
+This can happen if you have, say, an A4 document, and 
+\appname{ghostscript} has letter as the default paper size. You can 
+change the default paper size by editing the file \verb|gs_init.ps|. 
+Change:
+\begin{verbatim}
+% Optionally choose a default paper size other than U.S. letter.
+% (a4)
+\end{verbatim}
+to:
+\begin{verbatim}
+% Optionally choose a default paper size other than U.S. letter.
+(a4)
+\end{verbatim}
+
+\item I don't have any output.
+
+All your \glspl{flow} are empty. \TeX\ doesn't put the
+frames onto the page until it has finished putting text
+into the \glspl*{flow}. So if there is no text to go in the
+\glspl*{flow} it won't output the page. If you only want the
+\glspl{static} or \glspl{dynamic} filled in, and nothing 
+outside of them, just do \verb|\mbox{}\clearpage|. 
+This will put
+an invisible something with zero area into your
+\gls*{flow}, but it's enough to convince \TeX\ that the
+document contains some text.
+
+\item The last page hasn't appeared.
+
+See the previous answer.
+
+\item There is no paragraph indentation inside my 
+\staticordynamic{}s.
+
+The paragraph indentation in \staticordynamic{}s is governed
+by the length \cmdname{sdfparindent} which is set to 0pt by
+default. To make the indentation the same as that used by 
+\glspl{flow} place the following in the preamble:
+\begin{verbatim}
+\setlength{\sdfparindent}{\parindent}
+\end{verbatim}
+
+\item My section numbering is in the wrong order.
+
+Remember that the contents of the \glspl{dynamic} are not set
+until the page is shipped out, and the contents will be set
+in the order of \gls{idn}, so if you have any sectioning commands
+occuring within \glspl*{dynamic}, they may not be set in the same
+order as they are in your input file.
+
+\item The contents of my \staticordynamic\ have shifted
+to the left when I used \cmdname{parshape}.
+
+This will happen if your \cmdname{parshape} specification
+exceeds the linewidth. For example:
+\begin{verbatim}
+\parshape=1 0.4\linewidth 0.7\linewidth
+\end{verbatim}
+This specifies a line with overall length 
+\verb"1.1\linewidth" which is too long.
+
+\end{enumerate}
+\htmlnav
+
+\section{Error Messages}
+
+\begin{enumerate}
+\item \verb/Illegal unit of measure (pt inserted)/
+
+All lengths must have units. Remember to include the
+units when defining new \glspl{frame}. The following
+keys require lengths: \texttt{width}, \texttt{height},
+\texttt{x}, \texttt{y} and \texttt{offset}\footnote{%
+\texttt{offset} can also have the value \texttt{compute}}.
+
+\item \verb/Missing number, treated as zero/
+
+\LaTeX\ is expecting a number. There are a number of 
+possible causes:
+
+\begin{enumerate}
+\item You have used an \gls{idl}\ instead of an \gls{idn}. If you
+want to refer to a frame by its label, you need to remember
+to use the starred versions of the 
+\verb/\set/\meta{type}\verb/frame/ commands, or when setting
+the contents of \glspl{static} or \glspl{dynamic}.
+
+\item When specifying page lists, you have mixed keywords
+with page ranges. For example: \texttt{1,even} is invalid.
+\end{enumerate}
+
+\item \verb/Flow frame IDL '/\meta{label}\verb+' already defined+
+
+All \glspl{idl} within each \gls{frame} type must be
+unique. There are similar error messages for duplicate 
+\glspl*{idl} for \glspl{static} and \glspl{dynamic}.
+
+\item \verb/Can't find flow frame id/
+
+You have specified a non-existent \gls*{flow} \gls{idl}. There are
+similar error messages for \glspl{static} and \glspl{dynamic}.
+Check to make sure you have spelt the label correctly, and
+check you are using the correct \gls{frame} type command.
+(For example, if a \gls*{static} has the \gls*{idl}\ \texttt{mylabel},
+and you attempt to do 
+\cmdname{setflowframe*}\marg{mylabel}\marg{\meta{options}}, 
+then you will get this error, because \texttt{mylabel} refers
+to a \gls*{static} not a \gls{flow}.)
+
+\item \verb/Key 'clear' is boolean/
+
+The \texttt{clear} key can only have the values \texttt{true} 
+or \texttt{false}.
+
+\item \verb/Key 'clear' not available/
+
+The \texttt{clear} key is only available for \staticordynamic{}s.
+
+\item \verb/Key 'style' not available/
+
+The \texttt{style} key is only available for \glspl{dynamic}.
+
+\item \verb/Key 'margin' not available/
+
+The \texttt{margin} key is only available for \glspl{flow}.
+
+\item \verb/Key 'shape' not available/
+
+The \texttt{shape} key is only available for \staticordynamic{}s.
+
+\item \verb/Dynamic frame style '/\meta{style}\verb+' not defined+
+
+The specified style \meta{style} must be the name of a command
+without the preceding backslash.  It is possible that you have
+mis-spelt the name, or you have forgotten to define the command.
+
+\item \verb/Argument of \fbox has an extra }/
+
+This error will occur if you do, say, \verb/border=\fbox/
+instead of \verb/border=fbox/. Remember not to include
+the initial backslash.
+
+\item \verb/Not in outer par mode/
+
+You can not have floats (such as figures, tables or marginal
+notes) in \staticordynamic{}s. If you want
+a figure or table within a \staticordynamic\ 
+use \env{staticfigure} or \env{statictable}.
+
+\item \verb/Somethings wrong---maybe missing \item/
+
+Assuming that all your list type of environments start
+with \cmdname{item}, this may be caused by something going
+wrong with the toc (table of contents), ttb (thumbtab)
+or aux (auxiliary) files in the previous run. Try deleting
+them, and try again.
+
+\item \verb/No room for a new \skip/
+
+You have exceeded \TeX's 256 register limit. Use the \sty{etex} 
+package.
+
+\item \verb|\verb illegal in command argument|
+
+As a general rule, you can't use \Index{verbatim text} in a command 
+argument. 
+This rule applies to all the commands defined by the \styni{flowfram} 
+package.  See also below.
+
+\item I get \verb|\verb illegal in command argument| when using
+\Index{verbatim text} inside the \env{dynamiccontents} environment.
+
+You can not use \Index{verbatim text} inside either the starred or
+unstarred version of the \env{dynamiccontents} environment.
+(See \latexhtml{page~\pageref{pg:verb}}{\htmlref{earlier}{pg:verb}}.)
+\htmlnav
+
+\end{enumerate}
+\disablethumbtabs
+
+\printglossary
+\htmlnav
+
+\html{\label{index}}
+\printindex
+
+\htmlnav
+
+\ifthenelse{\isodd{page}}{}{\clearpage\mbox{}}
+% have a backcover:
+\setdynamicframe*{footer}{pages=none}
+\setstaticframe*{lastbackleft,lastbackright}{pages=even}
+\clearpage\mbox{}
+\end{document}

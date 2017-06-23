@@ -1,0 +1,176 @@
+\ProvidesPackage{overlays}[2017/03/08 v2.7 Incremental slides]
+
+% Copyright (C) 2017 Andreas Nolda
+
+% Author: Andreas Nolda <andreas@nolda.org>
+% Version: 2.7
+
+% This work may be distributed and/or modified under the conditions of the LaTeX
+% Project Public License, either version 1.3 of this license or (at your option)
+% any later version. The latest version of this license is in
+% http://www.latex-project.org/lppl.txt and version 1.3 or later is part of all
+% distributions of LaTeX version 2005/12/01 or later.
+
+% The following code is inspired by Matthias Meister's "present" package. It
+% uses an algorithm by Martin Scharrer for testing numbers in numerical ranges
+% (http://tex.stackexchange.com/q/19000). The code for saving counters between
+% overlays as well as for overlays with verbatim content is taken from the
+% "texpower" package, which in turn is based on Till Tantau's "beamer" package.
+
+\RequirePackage{xcolor}
+\RequirePackage{environ}
+\RequirePackage{pgffor}
+
+\def\s@vedcounters{}
+\def\s@vedseries{}
+
+\def\s@vecounters
+  {\begingroup
+     \def\@elt##1{\global\csname c@##1\endcsname\the\csname c@##1\endcsname}%
+     \xdef\restores@vedcounters{\s@vedcounters}%
+   \endgroup}
+
+\def\s@veseries
+  {\begingroup
+     \def\@elt##1{\def\expandafter\noexpand\csname enit@resume@series@##1\endcsname%
+                  {\csname c@##1i\endcsname\csname the##1i\endcsname}}%
+     \xdef\restores@vedseries{\s@vedseries}%
+   \endgroup}
+
+\newcommand{\savecounterbetweenoverlays}[1]%
+  {\expandafter\def\expandafter\s@vedcounters\expandafter{\s@vedcounters\@elt{#1}}}
+
+\let\savebetweenoverlays\savecounterbetweenoverlays % for backward compatibility
+
+\newcommand{\saveseriesbetweenoverlays}[1]%
+  {\expandafter\def\expandafter\s@vedseries\expandafter{\s@vedseries\@elt{#1}}}
+
+\savebetweenoverlays{page}
+\savebetweenoverlays{equation}
+
+\newcount\curoverl@y
+\newcount\maxoverl@y
+
+\NewEnviron{overlays}[1]%
+  {\s@vecounters
+   \s@veseries
+   \maxoverl@y=#1%
+   \curoverl@y=0%
+   \loop
+     \advance\curoverl@y by 1%
+     \begingroup
+     \BODY
+     \endgroup
+     \ifnum\curoverl@y<\maxoverl@y%
+       \clearpage
+       \restores@vedcounters
+       \restores@vedseries
+   \repeat}
+
+\newwrite\verb@timfileout
+
+\def\verb@timreadslide
+  {\begingroup%
+   \let\do\@makeother\dospecials%
+   \count@=127%
+   \@whilenum\count@<255 \do
+     {\advance\count@ by 1%
+      \catcode\count@=11}
+   \@makeother\^^L
+   \endlinechar`\^^M \catcode`\^^M=12 \processslidefirstline}
+
+\newenvironment{fragileoverlays}[1]
+  {\maxoverl@y=#1%
+   \def\verb@timfilen@me{\jobname.vrb}%
+   \immediate\openout\verb@timfileout=\verb@timfilen@me%
+   \verb@timreadslide}
+  {\immediate\closeout\verb@timfileout%
+   \begin{overlays}{\maxoverl@y}
+   \def\verbatim@nolig@list{\do\`\do\<\do\>\do\'} % don't make "," and "-" active
+   \input{\verb@timfilen@me}%
+   \end{overlays}}
+
+\def\endfr@gileoverl@ys{\endgroup\end{fragileoverlays}}
+
+{\catcode`\^^M=12\endlinechar=-1%
+ \long\gdef\processslidefirstline#1^^M%
+   {\def\overl@ystest{#1}%
+    \ifx\overl@ystest\stopslidefirst%
+      \let\next=\endfr@gileoverl@ys%
+    \else
+      \ifx\overl@ystest\@empty%
+      \else%
+        \@temptokena={#1}%
+        \immediate\write\verb@timfileout{\the\@temptokena}%
+      \fi%
+      \let\next=\processslideline%
+    \fi%
+    \next}
+ \long\gdef\processslideline#1^^M%
+   {\def\overl@ystest{#1}%
+    \ifx\overl@ystest\stopslide%
+      \let\next=\endfr@gileoverl@ys%
+    \else
+      \immediate\write\verb@timfileout{#1}%
+    \fi%
+    \next}}
+
+{\escapechar=-1\relax%
+ \xdef\stopslide{\string\\end\string\{fragileoverlays\string\}}
+ \xdef\stopslidefirst{\noexpand\end\string\{fragileoverlays\string\}}}
+
+\newcount\overl@yspeca
+\newcount\overl@yspecb
+
+\def\@getoverl@yspecb-#1\relax%
+  {\ifx\relax#1\relax
+     \overl@yspecb=\maxoverl@y
+   \else
+     \overl@yspecb=#1\relax
+   \fi}
+
+\def\getoverl@yspecb%
+  {\@ifnextchar\relax
+     {\overl@yspecb=\overl@yspeca}%
+     {\@getoverl@yspecb}}
+
+\def\ifinoverl@yspec#1#2%
+  {\global\let\inoverl@yspec\@secondoftwo
+   \foreach \i in {#2}
+     {\afterassignment\getoverl@yspecb
+      \overl@yspeca=0\i\relax
+      \pgfmathtruncatemacro\result{(#1>=\overl@yspeca) && (#1<=\overl@yspecb)}%
+      \ifnum\result=1\relax
+        \breakforeach
+        \global\let\inoverl@yspec\@firstoftwo
+      \fi}%
+   \inoverl@yspec}
+
+\long\def\overl@y#1#2#3{\ifinoverl@yspec{\curoverl@y}{#1}{#2}{#3}}
+
+\newcommand{\only}[2]{\overl@y{#1}{#2}{\setbox1=\vbox{#2}}} % ensure side-effects of content (such as incremented counters)
+
+\definecolor{background}{rgb}{1,1,1}
+\@ifpackageloaded{pstricks}%
+  {\def\pssetb@ckgroundcolor{\psset{linecolor=background}}}%
+  {\def\pssetb@ckgroundcolor{\relax}}
+
+\newcommand{\visible}[2]{\overl@y{#1}{#2}{{\color{background}%
+                                           \blendcolors{!0!background}%
+                                           \pssetb@ckgroundcolor
+                                           {#2}%
+                                           \ifvmode
+                                             \unskip % undo spurious space introduced by \color
+                                           \fi}}}
+
+\definecolor{alert}{rgb}{1,0,0}
+\@ifpackageloaded{pstricks}%
+  {\def\psset@lertcolor{\psset{linecolor=alert}}}%
+  {\def\psset@lertcolor{\relax}}
+
+\newcommand{\alert}[2]{\overl@y{#1}{{\color{alert}%
+                                     \psset@lertcolor
+                                     {#2}%
+                                     \ifvmode
+                                       \unskip % undo spurious space introduced by \color
+                                     \fi}}{#2}}

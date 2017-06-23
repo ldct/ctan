@@ -1,0 +1,38 @@
+%                                                             readme.txt
+% LaTeX class for Structural Optimization
+% read-me file
+%                                                 (c) Springer-Verlag HD
+%-----------------------------------------------------------------------
+%
+
+This directory contains the LaTeX2e support for Structural Optimization
+
+For a quick entry to the Structural Optimization-formatting and if you
+are already familiar with the SVJour class you need only the three files:
+svjour.cls, svstropt.clo, and template.tex - natbib.sty should be
+available in TeXs search path.
+
+The following files are part of the macro package
+
+  readme.txt    This file
+  svjour.cls    The document class file for Springer journals
+  usrguide.*    User's Guide (dvi, pdf)
+  svstropt.clo  The class option file for Structural Optimization
+  natbib.dtx    The natbib package of Patrick W. Daly.
+                Typeset this file for complete documentation of natbib.
+  natbib.ins    Run the file natbib.ins with LaTeX to produce natbib.sty
+  stroptgd.*    User's Guide (tex, dvi, ps [to be found in psoutput.zip])
+  template.tex  A fill-in-form for a standard article with usage comments
+  psoutput.zip  PS files of the above mentioned DVIs,
+                compressed due to their size. The file example.ps
+                contains a ready to print version that can be produced
+                at the publisher only, when page numbers are fixed
+
+
+  subdirectory: example   (contains all data of a sample article)
+
+  example.*     Example of an article (tex, dvi, ps [in psoutput.zip],
+                and pdf). example.pdf contains a ready to print version
+                that can be produced at the publisher only, when page
+                numbers are fixed. Like example.ps it also uses the
+                final fonts namely PostScript Times.

@@ -1,0 +1,1345 @@
+% biblatex-jura.cbx, BeH 2008
+  
+\ProvidesFile{biblatex-jura.cbx}[2008/12/08 v0.1.1 biblatex citation style]
+
+\newrobustcmd*{\printfirstpage}{%
+  \@ifstar
+    {\cbx@pfpage\cbx@pfpage@i}
+    {\cbx@pfpage\cbx@pfpage@ii}}
+\def\cbx@pfpage#1{%
+  \iffieldundef{pages}
+    {}
+    {\expandafter#1\bib@field@pages\bibrangedash\@nil}}
+\def\cbx@pfpage@i#1\bibrangedash#2\@nil{#1}
+\def\cbx@pfpage@ii#1\bibrangedash#2\@nil{%
+  \mkpageprefix[bookpagination]{#1}}
+
+% Angabe der ersten Seite
+% Es gibt zwei Varianten. \printfirstpage reicht die Seite automatisch
+% an \mkpageprefix weiter, \printfirstpage* liefert die nackte Zahl.
+
+\DeclareFieldFormat[article]{postnote}{\printfirstpage* \mkbibparens{#1}} % gibt Anfangsseite des Artikels mit aus, also S. X (X)
+\DeclareFieldFormat[inproceedings]{postnote}{\printfirstpage* \mkbibparens{#1}}
+\DeclareFieldFormat[incollection]{postnote}{\printfirstpage* \mkbibparens{#1}}
+
+
+\DeclareFieldFormat[customa]{prenote}{\emph{#1} in:} % damit ist es möglich, juristische Kommentare zu zitieren mit \cite[bearbeiter][Art. X Rn. 5]{kommentar}. "kommentar" 
+
+\DeclareNameFormat{citeeditor}{%
+  \ifcase\value{uniquename}%
+    \usebibmacro{name:last}{#1}{#3}{#5}{#7}%
+  \or
+    \ifuseprefix
+      {\usebibmacro{name:first-last}{#1}{#4}{#5}{#8}}
+      {\usebibmacro{name:first-last}{#1}{#4}{#6}{#8}}%
+  \or
+    \usebibmacro{name:first-last}{#1}{#3}{#5}{#7}%
+  \fi
+  \usebibmacro{name:andothers}}
+
+\DeclareNameFormat{citebyeditor}{%
+  \ifcase\value{uniquename}%
+    \usebibmacro{name:last}{#1}{#3}{#5}{#7}%
+  \or
+    \ifuseprefix
+      {\usebibmacro{name:first-last}{#1}{#4}{#5}{#8}}
+      {\usebibmacro{name:first-last}{#1}{#4}{#6}{#8}}%
+  \or
+    \usebibmacro{name:first-last}{#1}{#3}{#5}{#7}%
+  \fi
+  \usebibmacro{name:andothers}}
+
+\newboolean{shorthandibid}
+\DeclareBibliographyOption{shorthandibid}[true]{\setboolean{shorthandibid}{#1}}
+\newboolean{cbx@idem}
+\DeclareBibliographyOption{idem}[true]{\setboolean{cbx@idem}{#1}}
+\newboolean{cbx@option@herename}
+\DeclareBibliographyOption{herename}[true]{\setboolean{cbx@option@herename}{#1}}
+\newboolean{cbx@citedas}
+\DeclareBibliographyOption{citedas}[true]{\setboolean{cbx@citedas}{#1}}
+\newboolean{cbx@shorthandbefore}% gibt an, ob das Zitat vorher ein shorthand war (damit nicht 'ders.' etc. erscheint)
+\newboolean{cbx@xref}
+\newboolean{cbx@xrefnoidem}
+\newboolean{cbx@xrefebt}% für 'edbeforetitle' in xref-fullcite
+
+\DeclareEntryOption{citedas}[true]{\setboolean{cbx@citedas}{#1}}
+
+\ExecuteBibliographyOptions{
+bibtex8=true,%wird normalerweise global in der cfg aktiviert, dann hier herausnehmen
+sorting=nty,%Sortierung in LitVerz
+%sortcites=true,false%Sortierung von Zitaten gem. LitVerz-Regel, wenn mehrere in einem Zitatbefehl angegeben
+maxnames=3,%Abküzung wenn mehr als 3 Autoren etc.
+minnames=1,%Abkürzung zu 1 Namen, wenn maxnames erreicht
+maxitems=2,%wie oben, nur für andere Felder, wie locations
+minitems=1,%s.o.
+%useprefix=true,%von etc. in Zitaten, ja oder nein, beeinflusst auch LitVerz-Sortierung
+abbreviate=true,%hrsg. statt herausgegeben etc.
+%pagetracker=spread,%ob 2-seitig oder einseitig (page) oder gar nicht (none) getestet wird, ob auf selber Seite zitiert
+%urldate=short oder long
+%babel=none,hyphen,other,other* für fremdsprachige Lit., siehe Doku seite 31
+%block=nbpar,%betrifft zusätzlichen Platz zwischen blocks, kann sein: none, space, par, nbpar, ragged
+indexing=cite,%aktiviert indexing in Zitaten, anders: true (auch in LitVerz), false (default), bib (nur LitVerz)
+%shorthandibid=true,
+idem=true,
+edbyidem=true,
+herename=true,
+citedas=true,
+pagetracker=true,
+citetracker=true,
+%ibidtracker=false,
+%opcittracker=false,
+%loccittracker=false,
+autocite=footnote,
+edbeforetitle=true,
+namefont=italic,
+firstnamefont=italic
+}
+
+% Ausschalten von annotation und library für Zitate im Text
+\AtEveryCite{%
+  \setboolean{bbx@annotation}{false}%
+  \setboolean{bbx@library}{false}%
+}
+
+
+
+%% Komma nach Autoren/Editoren
+\newcommand*{\citenamepunct}{\addcomma\space}
+ 
+
+%% Slashes zwischen Autoren/Editoren
+\newcommand*{\citerevsdnamedelim}{\slash}
+\newcommand*{\citemultinamedelim}{\slash}
+\newcommand*{\citefinalnamedelim}{\slash}
+\newcommand*{\citeandothersdelim}{\addspace}
+
+\AtEveryCite{%
+\let\revsdnamedelim\citerevsdnamedelim
+\let\multinamedelim\citemultinamedelim
+\let\finalnamedelim\citefinalnamedelim
+\let\andothersdelim\citeandothersdelim
+}
+
+%% Titelformate in Zitaten
+\DeclareFieldFormat{citetitle}{#1\isdot}
+\DeclareFieldFormat[article]{citetitle}{#1}
+\DeclareFieldFormat[inbook]{citetitle}{#1}
+\DeclareFieldFormat[incollection]{citetitle}{#1}
+\DeclareFieldFormat[inproceedings]{citetitle}{#1}
+\DeclareFieldFormat[patent]{citetitle}{#1}
+\DeclareFieldFormat[thesis]{citetitle}{#1}
+\DeclareFieldFormat[unpublished]{citetitle}{#1}
+\DeclareFieldFormat{labelyear}{#1}% e.g., the 'a' in '1995a'
+
+\newif\ifcbx@herename
+\NewBibliographyString{herename}
+\DefineBibliographyStrings{german}{%
+  herename	= {hier},
+  seenote   = {wie\space Anm\adddot},
+}
+\DefineBibliographyStrings{english}{%
+  herename	= {here},
+}
+
+\newbibmacro*{cite:idem}{%
+  \ifbool{cbx@idem}
+    {\ifbool{cbx@shorthandbefore}
+      {\usebibmacro{author/editor}}%
+      {\bibstring[\mkidem]{idem\thefield{gender}}}}
+    {\printnames{labelname}}%
+  \citenamepunct}
+
+\renewbibmacro*{postnote}{%
+  \iffieldundef{postnote}
+% Angabe von  X ff., wenn keine bestimmte Seitenzahl angegeben bei @article
+% @inproceedings, @incollection und @inbook
+    {\ifthenelse{\iffieldequalstr{entrytype}{article}
+		\OR\iffieldequalstr{entrytype}{inproceedings}
+	        \OR\iffieldequalstr{entrytype}{incollection}
+	        \OR\iffieldequalstr{entrytype}{inbook}
+		\AND\NOT\iffieldundef{pages}}
+		{\postnotedelim\printtext{\printfirstpage*\psqq}}
+		{}
+    }
+    {\ifcbx@herename
+     \addspace
+     \else
+      \postnotedelim
+     \fi
+     \printfield{postnote}}}
+
+% benutze shortjournal in Zitaten
+\newbibmacro*{journaltitle}{
+ \iffieldundef{shortjournal}%
+    {\printfield{journaltitle}}%
+    {\printfield{shortjournal}}%
+  }
+
+% \mancite anpassen wegen idem-Funktionalit?t
+\renewrobustcmd*{\mancite}{%
+  \csuse{blx@hook@mancite}%
+  \blx@ibidreset
+  \blx@opcitreset
+  \blx@loccitreset
+  \AtNextCite{% nur lokal f?r das folgende Zitat
+    \setboolean{cbx@idem}{false}}}
+
+% \citereset anpassen wegen idem-Funktionalit?t
+\renewrobustcmd*{\citereset}{%
+  \csuse{blx@hook@cbxinit}%
+  \@ifstar
+    {}
+    {\global\cslet{blx@see@\the\c@refsection}\@empty
+     \global\cslet{blx@fns@\the\c@refsection}\@empty
+     \blx@ibidreset@force
+     \blx@opcitreset@force
+     \blx@loccitreset@force
+     \AtNextCite{% nur lokal f?r das folgende Zitat
+       \setboolean{cbx@idem}{false}}}}
+
+%% xref
+\DeclareCiteCommand{\bbx@xref}
+	{}%
+	{\usebibmacro{cite:xref}}%
+	{}%
+	{}%
+
+
+\newboolean{cbx@firstfull}
+\DeclareBibliographyOption{firstfull}[true]{\setboolean{cbx@firstfull}{#1}}
+
+\newbibmacro*{cite:reset}{%
+  \global\undef\cbx@lasthash}
+
+\newbibmacro*{cite:savename}{%
+  \savefield{namehash}{\cbx@lasthash}} 
+
+\newbibmacro*{cite}{%
+  \global\cbx@herenamefalse%
+  \global\boolfalse{cbx@loccit}%
+  \global\let\cbx@tempa\empty
+  \ifbool{cbx@firstfull}
+    {\ifciteseen
+      {\usebibmacro{cite:normal}}
+      {\usebibmacro{cite:firstfull}}}
+    {\usebibmacro{cite:normal}}}
+  
+\newbibmacro*{cite:normal}{%
+    \ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+       {\usebibmacro{cite:ibid}}
+       {\ifthenelse{\iffieldequals{namehash}{\cbx@lasthash}\AND\NOT\iffirstonpage}%
+         {\usebibmacro{cite:idem}%
+          \usebibmacro{cite:title}%
+          \usebibmacro{cite:savename}}
+         {\ifnameundef{labelname}
+           {}
+           {\printnames{labelname}%
+            \gdef\cbx@tempa{\citenamepunct}}%
+          \usebibmacro{cite:title}%
+          \usebibmacro{cite:savename}}}%
+}
+
+\newbibmacro*{cite:firstfull}{%
+  \ifthenelse{\iffieldequals{namehash}{\cbx@lasthash}\AND\NOT\iffirstonpage}%
+    {\usebibmacro{cite:idem}%
+     \printtext[bibhyperref]{\usebibmacro{cite:idemfull}}}
+    {\printtext[bibhyperref]{\usebibmacro{cite:full}}}%
+   \usebibmacro{cite:savename}}
+
+\newbibmacro*{cite:full}{%
+    \usedriver
+      {\DeclareNameAlias{sortname}{default}}
+      {\thefield{entrytype}}%
+    \iffieldundef{shorthand}
+      {}
+      {\ifbool{cbx@citedas}
+        {\addspace\usebibmacro{shorthandintro}}
+        {}}%
+    \iffieldundef{postnote}
+   		{}%
+   		{\iffieldundef{pages}
+   			{}%
+   			{\ifbool{cbx@option@herename}
+   			  {\global\cbx@herenametrue%
+   			   \addcomma\space\bibstring{herename}}
+   			  {}}}}
+
+\newbibmacro*{cite:idemfull}{%
+    \usedriver
+      {\DeclareNameAlias{sortname}{default}}
+      {idem\thefield{entrytype}}%
+    \iffieldundef{shorthand}
+      {}
+      {\ifbool{cbx@citedas}
+        {\addspace\usebibmacro{shorthandintro}}
+        {}}%
+	  \iffieldundef{postnote}
+  	 	{}%
+   		{\iffieldundef{pages}
+   			{}%
+   			{\ifbool{cbx@option@herename}
+   			  {\global\cbx@herenametrue%
+   			   \addcomma\space\bibstring{herename}}
+   			  {}}}}
+
+\newbibmacro*{textcite}{%
+  \global\boolfalse{cbx@loccit}%
+  \ifnameundef{labelname}
+    {\gdef\cbx@tempa{%
+       \global\booltrue{cbx@parens}%
+       \addspace\bibleftparen}%
+    \BibliographyWarning{No author or editor given for \textcite}%
+    \textbf{\thefield{entrykey}}}
+    {\printnames{labelname}%
+     \gdef\cbx@tempa{%
+       \global\booltrue{cbx@parens}%
+       \addspace\bibleftparen}%
+     \usebibmacro{cite:savename}}%
+  \iffieldundef{shorthand}
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+       {\usebibmacro{cite:ibid}}
+       {\usebibmacro{cite:title}}}%
+    {\usebibmacro{cite:shorthand}}}
+
+%% xref
+\newbibmacro*{cite:xref}{%
+  \global\cbx@xreffalse%  
+  \ifbool{cbx@firstfull}
+    {\ifciteseen
+      {\iffieldundef{shorthand}
+        {\ifnameundef{labelname}
+          {}%
+          {\ifbool{cbx@xrefnoidem}
+             {\printnames{labelname}%
+              \gdef\cbx@tempa{\citenamepunct}}%
+             {\midsentence%
+              \usebibmacro{cite:idem}}}%
+         \usebibmacro{cite:title}}%
+        {\usebibmacro{cite:shorthand}}}%
+      {\addspace%
+       \ifbool{cbx@xrefnoidem}
+         {\usebibmacro{cite:fullxref}}%
+         {\ifbool{bbx@edbyidem}
+           {\usebibmacro{cite:fullxrefidem}}%
+           {\usebibmacro{cite:fullxref}}}}}%
+    {\iffieldundef{shorthand}
+      {\ifnameundef{labelname}
+        {}%
+        {\ifbool{cbx@xrefnoidem}
+		      {\printnames{labelname}%
+		       \gdef\cbx@tempa{\citenamepunct}}%
+		      {\ifbool{bbx@edbyidem}
+  		      {\midsentence%
+	  	       \usebibmacro{cite:idem}}%
+	  	      {\printnames{labelname}%
+  		       \gdef\cbx@tempa{\citenamepunct}}}}%
+       \usebibmacro{cite:title}}%
+      {\usebibmacro{cite:shorthand}}}}
+
+\AtBeginBibliography{%
+  \renewbibmacro*{cite:xref}{%
+    \global\cbx@xreffalse%  
+    \iffieldundef{shorthand}%
+      {\ifnameundef{labelname}%
+        {}%
+        {\ifbool{bbx@xrefnoidem}%
+		      {\printnames{labelname}%
+		       \printtext{\labelnamepunct}}%
+		      {\ifbool{bbx@edbyidem}
+		        {\midsentence%
+		         \usebibmacro{cite:idem}}%
+		        {\printnames{labelname}%
+  		       \printtext{\labelnamepunct}}}}%
+       \iffieldundef{shorttitle}%
+         {\printfield{title}}%
+         {\printfield{shorttitle}}}%
+      {\printtext[bibhyperref]{\printfield{shorthand}}}}}      
+      
+\newbibmacro*{cite:fullxref}{%
+  \global\cbx@xreftrue%
+	  \usedriver
+	    {\DeclareNameAlias{sortname}{default}}
+	    {xref\thefield{entrytype}}%
+  \iffieldundef{shorthand}
+    {}
+    {\ifbool{cbx@citedas}
+      {\addspace\usebibmacro{shorthandintro}}
+      {}}}%
+
+\newbibmacro*{cite:fullxrefidem}{%
+  \global\cbx@xreftrue%
+  \ifbool{cbx@xrefebt}
+	  {\unspace\midsentence\bibstring[\mkidem]{idem\thefield{gender}}%
+     \citenamepunct%
+     \usedriver
+      {\DeclareNameAlias{sortname}{default}%
+       \clearfield{editor}}
+      {xrefidem\thefield{entrytype}}}%
+	  {\usedriver
+      {\DeclareNameAlias{sortname}{default}}
+      {idem\thefield{entrytype}}}%
+  \iffieldundef{shorthand}
+    {}
+    {\ifbool{cbx@citedas}
+      {\addspace\usebibmacro{shorthandintro}}
+      {}}}%
+
+\DeclareCiteCommand{\textcite}
+  {\boolfalse{cbx@parens}%
+   \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{textcite}}
+  {\ifbool{cbx@parens}
+     {\bibrightparen\boolfalse{cbx@parens}}
+     {}%
+   \multicitedelim}
+  {\iffieldundef{postnote}
+     {\ifbool{cbx@parens}
+        {\bibrightparen}
+        {}}%
+     {\ifbool{cbx@parens}
+        {\postnotedelim}
+        {\addspace\bibleftparen}%
+      \printfield{postnote}\bibrightparen}}
+
+\DeclareCiteCommand{\fullcite}
+  {\usebibmacro{prenote}}
+  {\usedriver
+     {\DeclareNameAlias{sortname}{default}}
+     {\thefield{entrytype}}}
+  {\multicitedelim}
+  {\iffieldundef{postnote}
+   {}
+   {\ifthenelse{\boolean{cbx@option@herename}\AND\NOT\iffieldundef{pages}}
+   	 {\global\cbx@herenametrue%
+      \addcomma\space\bibstring{herename}}
+   	 {\global\cbx@herenamefalse}%
+    \usebibmacro{postnote}}}
+
+\DeclareCiteCommand{\footfullcite}[\mkbibfootnote]
+  {\bibsentence
+   \usebibmacro{prenote}}
+  {\usedriver
+     {\DeclareNameAlias{sortname}{default}}
+     {\thefield{entrytype}}}
+  {\multicitedelim}
+  {\iffieldundef{postnote}
+   {}
+   {\ifthenelse{\boolean{cbx@option@herename}\AND\NOT\iffieldundef{pages}}
+   	 {\global\cbx@herenametrue%
+      \addcomma\space\bibstring{herename}}
+   	 {\global\cbx@herenamefalse}%
+    \usebibmacro{postnote}}}
+
+%%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%%
+%%%%% Unver?ndert ?bernommen aus authortitle-ibid.cbx %%%%%
+%%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%% %%%%%
+
+\providecommand*{\mkibid}[1]{#1}
+\newbool{cbx@parens}
+\newbool{cbx@loccit}
+
+\DeclareBibliographyOption{ibidpage}[true]{%
+  \ifstrequal{#1}{true}
+    {\ExecuteBibliographyOptions{loccittracker=constrict}}
+    {\ExecuteBibliographyOptions{loccittracker=false}}}
+
+\newbibmacro*{citetitle}{%
+  \global\boolfalse{cbx@loccit}%
+  \global\let\cbx@tempa\empty
+  \iffieldundef{shorthand}
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+       {\usebibmacro{cite:ibid}}
+       {\usebibmacro{cite:title}}}%
+    {\usebibmacro{cite:shorthand}}}
+
+\newbibmacro*{cite:title}{%
+  \cbx@tempa
+  \usedriver
+      {}
+      {cite:\thefield{entrytype}:\thefield{entrysubtype}}%
+   }
+
+\newbibmacro*{cite:shorthand}{%
+  \cbx@tempa
+  \printtext[bibhyperref]{\printfield{shorthand}}%
+  \global\cbx@shorthandbeforetrue}
+
+\newbibmacro*{cite:ibid}{%
+  \cbx@tempa
+  \printtext[bibhyperref]{\bibstring[\mkibid]{ibidem}}%
+  \ifloccit
+    {\global\booltrue{cbx@loccit}}
+    {}}
+
+\newbibmacro*{cite:postnote}{%
+  \ifbool{cbx@loccit}
+    {}%
+    {\usebibmacro{postnote}}}
+
+\DeclareCiteCommand{\cite}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand*{\cite}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{citetitle}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+\DeclareCiteCommand{\parencite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand*{\parencite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{citetitle}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\footcite}[\mkbibfootnote]
+  {\bibsentence
+   \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+
+\newbibmacro*{cite:editorincoll}{%
+  \ifnameundef{editor}
+    {}%
+    {\ifnamesequal{author}{editor}
+       {\ifbool{bbx@edbyidem}
+         {\bibstring[\mkidem]{idem\thefield{gender}}%
+          \addspace}%
+         {\printnames[citeeditor]{editor}%
+          \ifdefstring{\bbx@option@editorstring}{brackets}%
+            {\addspace}%
+            {\ifdefstring{\bbx@option@editorstring}{parens}%
+              {}%
+              {\addcomma\space}}%
+          \savefield{namehash}{\bbx@lasthash}}}%
+       {\printnames[citeeditor]{editor}%
+        \ifdefstring{\bbx@option@editorstring}{brackets}%
+          {\addspace}%
+          {\ifdefstring{\bbx@option@editorstring}{parens}%
+            {}%
+            {\addcomma\space}}%
+        \savefield{namehash}{\bbx@lasthash}}%
+     \usebibmacro{editorstrg}%
+     \clearname{editor}}}
+
+\newbibmacro*{cite:byeditor+others}{%
+  \ifnameundef{editor}
+    {}
+    {\def\@tempa{byeditor}%
+     \@tempswafalse
+     \ifnamesequal{editor}{translator}
+       {\edef\@tempa{\@tempa tr}%
+        \@tempswatrue
+        \clearname{translator}}
+       {}%
+     \ifnamesequal{editor}{commentator}
+       {\edef\@tempa{\@tempa co}%
+        \@tempswatrue
+        \clearname{commentator}}
+       {\ifnamesequal{editor}{annotator}
+          {\edef\@tempa{\@tempa an}%
+           \@tempswatrue
+           \clearname{annotator}}
+          {}}%
+     \ifnamesequal{editor}{introduction}
+       {\edef\@tempa{\@tempa in}%
+        \@tempswatrue
+	\clearname{introduction}}
+       {\ifnamesequal{editor}{foreword}
+          {\edef\@tempa{\@tempa fo}%
+           \@tempswatrue
+	   \clearname{foreword}}
+          {\ifnamesequal{editor}{afterword}
+             {\edef\@tempa{\@tempa af}%
+              \@tempswatrue
+	      \clearname{afterword}}
+             {}}}%
+     \if@tempswa
+       \bibstring{\@tempa}\space
+       \printnames[citebyeditor]{editor}%
+     \else
+	     \ifnamesequal{editor}{author}
+	       {\ifbool{bbx@edbyidem}
+	          {\bibstring{byeditor}\addspace\bibstring[\mkidem]{idemdat\thefield{gender}}}
+	          {\usebibmacro{byeditor}}}%
+	       {\usebibmacro{byeditor}}%
+     \fi
+     \clearname{editor}%
+     \newunit}%
+  \usebibmacro{bytranslator+others}}
+
+
+
+
+
+
+
+
+
+
+\DeclareBibliographyDriver{cite:article:}{% default
+  \printfield{labeltitle}
+  \newunit
+  \usebibmacro{journaltitle}
+  \newunit
+  \printfield{year}
+% \usebibmacro{bibindex}%
+%   \usebibmacro{author/editor}%
+%   \setunit{\labelnamepunct}\newblock
+%   \usebibmacro{title}%
+% % \newunit
+% %  \usebibmacro{byauthor}%
+% %  \newunit
+% %  \printlist{language}%
+% %  \newunit\newblock
+% %  \usebibmacro{cite:byeditor+others}%
+%   \newunit\newblock
+% %  \usebibmacro{in:}%
+%   \usebibmacro{journal+issuetitle}%
+% %   \newunit\newblock
+%    \printfield{note}%
+%   \newunit\newblock
+%   \printfield{pages}
+%   \newunit\newblock
+% %  \printfield{issn}%
+% %  \newunit\newblock
+% %  \printfield{doi}%
+% %  \newunit\newblock
+%   \usebibmacro{url+urldate}%
+%   \newunit
+%   \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+% }
+}
+%\DeclareFieldAlias{american}{periodic} % weil in Nomos kein Unterschied zwischen american und periodic
+
+
+\DeclareBibliographyDriver{cite:article:periodic}{%
+%  \usebibmacro{bibindex}%
+%  \usebibmacro{author/editor}%
+%  \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}
+%
+%  \newunit
+%  \usebibmacro{byauthor}%
+%  \newunit
+%  \printlist{language}%
+%  \newunit\newblock
+%  \usebibmacro{cite:byeditor+others}%
+%  \newunit\newblock
+%  \usebibmacro{in:}%
+%  \usebibmacro{journal+issuetitle}%
+  \newunit
+  \usebibmacro{journaltitle}
+  \addspace
+  \printfield{volume}
+  \addspace
+  \mkbibparens{\printfield{year}}
+  \newunit
+%   \printfield{note}%
+%   \newunit
+%  \printfield{issn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+%   \usebibmacro{url+urldate}%
+%   \newunit\newblock
+  \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+ 
+ \DeclareBibliographyDriver{cite:article:american}{%
+%  \usebibmacro{bibindex}%
+%  \usebibmacro{author/editor}%
+%  \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}
+%
+%  \newunit
+%  \usebibmacro{byauthor}%
+%  \newunit
+%  \printlist{language}%
+%  \newunit\newblock
+%  \usebibmacro{cite:byeditor+others}%
+%  \newunit\newblock
+%  \usebibmacro{in:}%
+%  \usebibmacro{journal+issuetitle}%
+  \newunit
+  \usebibmacro{journaltitle}
+  \addspace
+  \printfield{volume}
+  \addspace
+  \mkbibparens{\printfield{year}}
+  \newunit
+%   \printfield{note}%
+%   \newunit
+%  \printfield{issn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+%   \usebibmacro{url+urldate}%
+%   \newunit\newblock
+  \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:article:newspaper}{%
+%  \usebibmacro{bibindex}%
+%  \usebibmacro{author/editor}%
+%  \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}
+%
+%  \newunit
+%  \usebibmacro{byauthor}%
+%  \newunit
+%  \printlist{language}%
+%  \newunit\newblock
+%  \usebibmacro{cite:byeditor+others}%
+%  \newunit\newblock
+%  \usebibmacro{in:}%
+%  \usebibmacro{journal+issuetitle}%
+  \newunit
+  \usebibmacro{journaltitle}
+  \newunit\newblock
+%  \printfield{volume}
+%  \addspace
+  \usebibmacro{date}
+%   \printfield{note}%
+%   \newunit
+%  \printfield{issn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+   \newunit\newblock
+   \usebibmacro{url+urldate}%
+%   \newunit\newblock
+    \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+
+\DeclareBibliographyDriver{cite:book:}{%
+%  \usebibmacro{bibindex}%
+%  \usebibmacro{author/editor}%
+%  \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}%
+  \newunit
+%   \usebibmacro{byauthor}%
+%   \newunit
+%   \printlist{language}%
+ % \newunit\newblock
+ % \usebibmacro{cite:byeditor+others}%
+ % \newunit\newblock
+ % \printfield{edition}%
+%  \newunit
+  \printfield{volume}%
+  \printfield{part}%
+%  \setunit{\addspace}%
+%  \usebibmacro{series+number}%
+  \newunit
+%   \printfield{note}%
+%   \newunit\newblock
+ % \printfield{year}%
+ % \newunit\newblock
+ % \usebibmacro{chapter+pages}%
+ % \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{isbn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+ % \usebibmacro{url+urldate}%
+ % \newunit\newblock
+ % \printfield{addendum}%
+ % \newunit\newblock
+ % \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:booklet:}{%
+%  \usebibmacro{bibindex}%
+ % \usebibmacro{author/editor}%
+ % \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+\newunit
+ % \printlist{language}%
+ % \newunit\newblock
+ % \usebibmacro{byeditor}%
+ % \newunit\newblock
+  \printfield{howpublished}%
+  \newunit\newblock
+  \printfield{type}%
+  \newunit\newblock
+  \printfield{note}%
+  \newunit\newblock
+  \printfield{year}%
+  \newunit\newblock
+%  \usebibmacro{chapter+pages}%
+%  \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+  \usebibmacro{url+urldate}%
+  \newunit\newblock
+  \printfield{addendum}%
+%  \newunit\newblock
+% \usebibmacro{pageref}%
+}
+    
+\DeclareBibliographyDriver{cite:collection:}{%
+ % \usebibmacro{bibindex}%
+ % \usebibmacro{editor}%
+ % \setunit{\labelnamepunct}\newblock
+ % \usebibmacro{maintitle+title}%
+ % \newunit
+ % \printlist{language}%
+ \printfield{labeltitle}%
+ \newunit\newblock
+ % \usebibmacro{cite:byeditor+others}%
+ % \newunit\newblock
+%  \printfield{edition}%
+%  \newunit
+%  \usebibmacro{volumes+volume+part}%
+%  \setunit{\addspace}%
+%  \newunit\newblock
+ % \usebibmacro{series+number}%
+ % \newunit\newblock
+ % \printfield{note}%
+ % \newunit\newblock
+ % \printfield{year}%
+ % \newunit\newblock
+ % \usebibmacro{chapter+pages}%
+ % \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{isbn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+  \usebibmacro{url+urldate}%
+  \newunit\newblock
+  \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:customa:}{%
+%  \usebibmacro{bibindex}%
+%  \usebibmacro{author/editor}%
+%  \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}%
+  \newunit
+%   \usebibmacro{byauthor}%
+%   \newunit
+%   \printlist{language}%
+ % \newunit\newblock
+ % \usebibmacro{cite:byeditor+others}%
+ % \newunit\newblock
+ \printfield{edition}%
+ \addspace
+\printfield{year}% 
+  \newunit\newblock
+ \printfield{volume}%
+  \printfield{part}%
+%  \setunit{\addspace}%
+%  \usebibmacro{series+number}%
+  \newunit
+%   \printfield{note}%
+%   \newunit\newblock
+ % \newunit\newblock
+ % \usebibmacro{chapter+pages}%
+ % \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{isbn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+ % \usebibmacro{url+urldate}%
+ % \newunit\newblock
+ % \printfield{addendum}%
+ % \newunit\newblock
+ % \usebibmacro{pageref}%
+}
+
+
+\DeclareBibliographyDriver{cite:inbook:}{%
+ % \usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+  \newunit\newblock
+  \usebibmacro{in:}%
+%  \ifnamexref{labelname}%
+%	  {\global\bbx@xrefnoidemfalse}%
+%	  {\global\bbx@xrefnoidemtrue%
+%	   \global\cbx@xrefnoidemtrue}%
+%	\iffieldundef{xref}%
+    {% Code, wenn kein xref vorhanden
+		  \usebibmacro{bybookauthor}%
+		  \newunit\newblock
+		  \printfield{booktitle}%
+		  \newunit
+%		  \printlist{language}%
+%		  \newunit\newblock
+		  \usebibmacro{cite:byeditor+others}%
+% 		  \newunit\newblock
+% 		  \printfield{edition}%
+		%  \newunit
+		  %\usebibmacro{volumes+volume+part}%
+		    \printfield{volume}
+		    \printfield{part}
+		  %\setunit{\addspace}%
+		 \newunit\newblock
+% 		  \usebibmacro{series+number}%
+% 		  \newunit\newblock
+		  \printfield{note}%
+		  \newunit\newblock
+% 		  \printfield{year}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{chapter+pages}%
+% 		  \newunit\newblock
+		%  \printfield{isbn}%
+		%  \newunit\newblock
+		%  \printfield{doi}%
+		%  \newunit\newblock
+% 		  \usebibmacro{url+urldate}%
+% 		  \newunit\newblock
+		  \printfield{addendum}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{pageref}}%
+}
+	% {\bbx@xref{\thefield{xref}}% xref
+	 % \ifbool{cbx@xref}
+	  %  {}%
+	   % {\iffieldundef{pages}
+	   %   {}%
+	   %   {\addcomma%
+	    %   \printfield{pages}}}}%
+}
+
+\DeclareBibliographyDriver{cite:incollection:}{%
+%  \usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+  \newunit\newblock
+  \usebibmacro{in:}%
+%   \ifnamexref{labelname}%
+% 	  {\global\bbx@xrefnoidemfalse}%
+% 	  {\global\bbx@xrefnoidemtrue%
+% 	   \global\cbx@xrefnoidemtrue}%
+% 	\iffieldundef{xref}%
+	  {% Code, wenn kein xref vorhanden
+      \ifbool{bbx@edbeforetitle}%
+		    {\usebibmacro{cite:editorincoll}%
+		     \setunit{\labelnamepunct}\newblock}%
+		    {}%
+		  \printfield{booktitle}%
+		  \newunit
+% 		  \printlist{language}%
+% 		  \newunit\newblock
+		  \ifbool{bbx@edbeforetitle}%
+		    {}%
+		    {\usebibmacro{cite:byeditor+others}%
+		     \newunit\newblock}%
+		%  \usebibmacro{cite:byeditor+others}%
+		%  \newunit\newblock
+% 		  \printfield{edition}%
+		%  \newunit
+      \printfield{volume}
+      \printfield{part}%
+% 		  \setunit{\addspace}%
+		 \newunit\newblock
+% 		  \usebibmacro{series+number}%
+% 		  \newunit\newblock
+		  \printfield{note}%
+		  \newunit\newblock
+% 		  \printfield{year}%
+% 		  \newunit\newblock
+%  		  \usebibmacro{chapter+pages}%
+% 		  \newunit\newblock
+%  		  \usebibmacro{url+urldate}%
+% 		  \newunit\newblock
+		  \printfield{addendum}%
+		  \newunit\newblock
+% 		  \usebibmacro{pageref}
+}%
+% 	  {\ifbool{bbx@edbeforetitle}
+% 	     {\global\cbx@xrefebttrue}%
+% 	     {\global\cbx@xrefebtfalse}%
+% 	   \bbx@xref{\thefield{xref}}% xref
+% 	   \ifbool{cbx@xref}%
+% 	     {}%
+% 	     {\iffieldundef{pages}%
+% 	       {}%
+% 	       {\addcomma%
+% 	        \printfield{pages}}}}%
+}
+
+\DeclareBibliographyDriver{cite:inproceedings:}{%
+%  \usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+ \newunit\newblock
+ \usebibmacro{in:}%
+%   \ifnamexref{labelname}%
+% 	  {\global\bbx@xrefnoidemfalse}%
+% 	  {\global\bbx@xrefnoidemtrue%
+% 	   \global\cbx@xrefnoidemtrue}%
+% 	\iffieldundef{xref}%
+	  {% Code, wenn kein xref vorhanden
+		  \ifbool{bbx@edbeforetitle}%
+		    {\usebibmacro{cite:editorincoll}%
+		     \setunit{\labelnamepunct}\newblock}%
+		    {}%
+		  \printfield{booktitle}%
+%		  \newunit
+% 		  \printfield{venue}%
+% 		  \newunit
+% 		  \printlist{language}%
+		  \newunit
+		  \ifbool{bbx@edbeforetitle}%
+		    {}%
+		    {\usebibmacro{cite:byeditor+others}%
+		     }%
+		%  \usebibmacro{cite:byeditor+others}%
+%		  \newunit\newblock
+%      \printfield{volumes}
+%      \printfield{part}%
+%  		\newunit\newblock
+% 		  \usebibmacro{series+number}%
+% 		  \newunit\newblock
+%		  \printfield{note}%
+%		  \newunit\newblock
+% 		  \printlist{organization}%
+% 		  \newunit
+% 		  \printfield{year}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{chapter+pages}%
+% 		  \newunit\newblock
+		%  \printfield{isbn}%
+		%  \newunit\newblock
+		%  \printfield{doi}%
+		%  \newunit\newblock
+% 		  \usebibmacro{url+urldate}%
+% 		  \newunit\newblock
+%		  \printfield{addendum}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{pageref}
+}%
+% 	  {\bbx@xref{\thefield{xref}}% xref
+% 	   \ifbool{cbx@xref}
+% 	     {}%
+% 	     {\iffieldundef{pages}
+% 	       {}%
+% 	       {\addcomma%
+% 	        \printfield{pages}}}}%
+}
+
+\DeclareBibliographyDriver{cite:inproceedings:festschrift}{%
+%  \usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+\printfield{labeltitle}%
+\newunit\newblock
+\usebibmacro{in:}%
+\printfield{userc}
+\newunit
+\printfield{year}
+%   \ifnamexref{labelname}%
+% 	  {\global\bbx@xrefnoidemfalse}%
+% 	  {\global\bbx@xrefnoidemtrue%
+% 	   \global\cbx@xrefnoidemtrue}%
+% 	\iffieldundef{xref}%
+% 	  {% Code, wenn kein xref vorhanden
+% 		  \ifbool{bbx@edbeforetitle}%
+% 		    {\usebibmacro{cite:editorincoll}%
+% 		     \setunit{\labelnamepunct}\newblock}%
+% 		    {}%
+% 		  \printfield{booktitle}%
+% 		  \newunit
+% % 		  \printfield{venue}%
+% % 		  \newunit
+% % 		  \printlist{language}%
+% 		  \newunit\newblock
+% 		  \ifbool{bbx@edbeforetitle}%
+% 		    {}%
+% 		    {\usebibmacro{cite:byeditor+others}%
+% 		     \newunit\newblock}%
+% 		%  \usebibmacro{cite:byeditor+others}%
+% 		  \newunit\newblock
+%       \printfield{volumes}
+%       \printfield{part}%
+%		  \newunit\newblock
+% 		  \usebibmacro{series+number}%
+% 		  \newunit\newblock
+% 		  \printfield{note}%
+% 		  \newunit\newblock
+% 		  \printlist{organization}%
+% 		  \newunit
+% 		  \printfield{year}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{chapter+pages}%
+% 		  \newunit\newblock
+		%  \printfield{isbn}%
+		%  \newunit\newblock
+		%  \printfield{doi}%
+		%  \newunit\newblock
+% 		  \usebibmacro{url+urldate}%
+% 		  \newunit\newblock
+% 		  \printfield{addendum}%
+% 		  \newunit\newblock
+% 		  \usebibmacro{pageref}
+%
+% 	  {\bbx@xref{\thefield{xref}}% xref
+% 	   \ifbool{cbx@xref}
+% 	     {}%
+% 	     {\iffieldundef{pages}
+% 	       {}%
+% 	       {\addcomma%
+% 	        \printfield{pages}}}}%
+}
+
+
+\DeclareBibliographyDriver{cite:manual:}{%
+ % \usebibmacro{bibindex}%
+%   \usebibmacro{author/editor}%
+%   \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}%
+  \newunit
+%   \printlist{language}%
+%   \newunit\newblock
+  \usebibmacro{byeditor}%
+  \newunit\newblock
+%   \printfield{edition}%
+%  \newunit\newblock
+%   \usebibmacro{series+number}%
+%   \newunit\newblock
+  \printfield{type}%
+  \newunit
+  \printfield{version}%
+  \newunit
+  \printfield{note}%
+  \newunit\newblock
+   \printlist{organization}%
+  \newunit
+   \printfield{year}%
+   \newunit\newblock
+%   \usebibmacro{chapter+pages}%
+%   \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{isbn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+  \usebibmacro{url+urldate}%
+  \newunit\newblock
+  \printfield{addendum}%
+  \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:misc:}{%
+  %\usebibmacro{bibindex}%
+%   \usebibmacro{author/editor}%
+%   \setunit{\labelnamepunct}\newblock
+  \printfield{labeltitle}%
+  \newunit
+ % \printlist{language}%
+  %\newunit\newblock
+  \usebibmacro{byeditor}%
+  \newunit\newblock
+  \printfield{howpublished}%
+  \newunit\newblock
+  \printfield{type}%
+  \newunit
+  \printfield{version}%
+  \newunit
+  \printfield{note}%
+  \newunit\newblock
+  \printlist{organization}%
+  \newunit\newblock
+%   \printlist{location}%
+%   \newunit\newblock
+%   \usebibmacro{date}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%   \newunit\newblock
+  \usebibmacro{url+urldate}%
+  \newunit\newblock
+  \printfield{addendum}%
+  \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:periodical:}{%
+%   \usebibmacro{bibindex}%
+%   \usebibmacro{editor}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+  \newunit
+ % \printlist{language}%
+ % \newunit\newblock
+  \usebibmacro{byeditor}%
+  \newunit\newblock
+  \printfield{note}%
+  \newunit\newblock
+%  \printfield{issn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+  \usebibmacro{url+urldate}%
+  \newunit\newblock
+  \printfield{addendum}%
+  \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:proceedings:}{%
+  %\usebibmacro{bibindex}%
+%   \usebibmacro{editor}%
+%   \setunit{\labelnamepunct}\newblock
+   \printfield{labeltitle}%
+  \newunit
+%   \printfield{venue}%
+%   \newunit
+%   \printlist{language}%
+%   \newunit\newblock
+%  \usebibmacro{cite:byeditor+others}%
+  \newunit\newblock
+  \printfield{volumes}
+  \printfield{part}%
+%   \setunit{\addspace}%
+ \newunit\newblock
+%   \usebibmacro{series+number}%
+%   \newunit\newblock
+  \printfield{note}%
+  \newunit\newblock
+%   \printlist{organization}%
+%   \newunit
+%   \printfield{year}%
+%    \newunit\newblock
+%   \usebibmacro{chapter+pages}%
+%   \newunit
+ % \printfield{pagetotal}
+ % \newunit\newblock
+%  \printfield{isbn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+%  \usebibmacro{url+urldate}%
+%  \newunit\newblock
+%   \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:report:}{%
+ % \usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+  \newunit
+ % \printlist{language}%
+ % \newunit\newblock
+%  \printfield{type}%
+  \setunit*{\addspace}%
+  \printfield{number}%
+  \newunit\newblock
+  \printfield{version}%
+  \newunit
+  \printfield{note}%
+  \newunit\newblock
+%   \usebibmacro{institutionlocation+year}%
+%   \newunit\newblock
+%   \usebibmacro{chapter+pages}%
+%   \newunit
+%   \printfield{pagetotal}
+%   \newunit\newblock
+%  \printfield{isrn}%
+%  \newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+%   \usebibmacro{url+urldate}%
+%   \newunit\newblock
+  \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+
+\DeclareBibliographyDriver{cite:thesis:}{%
+  %\usebibmacro{bibindex}%
+%   \usebibmacro{author}%
+%   \setunit{\labelnamepunct}\newblock
+ \printfield{labeltitle}%
+  \newunit
+  %\printlist{language}%
+  %\newunit\newblock
+%   \printfield{note}%
+%   \newunit\newblock
+%   \printfield{type}%
+%   \newunit
+%   \usebibmacro{institutionlocation+year}%
+%   \newunit\newblock
+  %\usebibmacro{chapter+pages}%
+  %\newunit
+  %\printfield{pagetotal}
+  %\newunit\newblock
+%  \printfield{doi}%
+%  \newunit\newblock
+%   \usebibmacro{url+urldate}%
+%   \newunit\newblock
+%   \printfield{addendum}%
+%   \newunit\newblock
+%   \usebibmacro{pageref}%
+}
+% 
+% 
+% 
+% \providecommand*{\mkibid}[1]{#1}
+% \newbool{cbx@parens}
+% \newbool{cbx@loccit}
+% 
+% 
+% %\newbibmacro*{cite:shorthand}{%
+% %  \cbx@tempa
+% %  \printtext[bibhyperref]{\printfield{shorthand}}%
+% %  \global\cbx@shorthandbeforetrue}
+% 
+% \newbibmacro*{cite:ibid}{%
+%   \cbx@tempa
+%   \printtext[bibhyperref]{\bibstring[\mkibid]{ibidem}}%
+%   \ifloccit
+%     {\global\booltrue{cbx@loccit}}
+%     {}}
+% 
+% \newbibmacro*{cite:postnote}{%
+%   \ifbool{cbx@loccit}
+%     {}%
+%     {\usebibmacro{postnote}}}
+% 
+
+
+\endinput

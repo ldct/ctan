@@ -1,0 +1,848 @@
+% \iffalse meta-comment
+%
+% Copyright (C) 2015-2017 by Richard Gay <richard.gay@t-online.de>
+% -------------------------------------------------------
+% 
+% This file may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.2
+% of this license or (at your option) any later version.
+% The latest version of this license is in:
+%
+%    http://www.latex-project.org/lppl.txt
+%
+% and version 1.2 or later is part of all distributions of LaTeX 
+% version 1999/12/01 or later.
+%
+% \fi
+%
+% \iffalse
+%<*driver>
+\ProvidesFile{gtrlib.largetrees.dtx}
+%</driver>
+%<package>\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+%<package>\ProvidesPackage{gtrlib.largetrees}
+%<*package>
+    [2017/02/19 v1.2 Package providing extended options for the genealogytree package]
+%</package>
+%
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[columns=2]{idxlayout}
+\usepackage{enumitem}
+\usepackage[style=alphabetic,backend=biber]{biblatex}
+\usepackage{filecontents}
+\begin{filecontents}{\jobname.bib}
+@online{GenealogyTreeDoc,
+	author = {Thomas F. Sturm},
+	date   = {2016-07-29},
+	title  = {genealogytree -- Manual for version 1.01},
+	url    = {http://mirrors.ctan.org/macros/latex/contrib/genealogytree/genealogytree.pdf},
+	urldate= {2016-12-23},
+}
+\end{filecontents}
+\addbibresource{\jobname.bib}
+\begin{filecontents}{example.gauss.graph}
+parent {
+  g[id=GauxCarl1777]{
+    male,
+    name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+    birth={1777-04-30}{Braunschweig (Niedersachsen)},
+    death={1855-02-23}{G\"ottingen (Niedersachsen)},
+    comment={Mathematiker, Astronom, Geod\"at und Physiker},
+    image={Carl_Friedrich_Gauss.jpg},
+  }
+  parent[id=GoosEgge1735]{
+    g[id=GauxGebh1743]{
+      male,
+      name={\pref{Gebhard} Dietrich \surn{Gau\ss{}}},
+      birth={1743-02-13}{Braunschweig (Niedersachsen)},
+      death={1808-04-14}{Braunschweig (Niedersachsen)},
+      %comment={G\"artner, Wasserkunstmeister, Rechnungsf\"uhrer},
+    }
+    parent[id=GoosLbtk1705]{
+      g[id=GoosJyrg1715]{
+        male,
+        name={\pref{J\"urgen} \surn{Gooss}},
+        birth={1715}{V\"olkenrode (Niedersachen)},
+        death={1774-07-05}{Braunschweig (Niedersachsen)},
+        comment={Lehmmaurer},
+      }
+      p[id=GoosHinr1655]{
+        male,
+        name={\pref{Hinrich} \surn{Gooss}},
+        birth={(caAD)1655}{},
+        death={1726-10-25}{V\"olkenrode (Niedersachen)},
+      }
+      p[id=LxtkKath1674]{
+        female,
+        name={\pref{Katharina} \surn{L\"utken}},
+        birth={1674-08-19}{V\"olkenrode (Niedersachen)},
+        marriage={1705-11-24}{V\"olkenrode (Niedersachen)},
+        death={1749-04-15}{V\"olkenrode (Niedersachen)},
+      }
+    }
+    p[id=EggeKath1710]{
+      female,
+      name={\pref{Katharina} Magdalena \surn{Eggenlings}},
+      birth={(caAD)1710}{Rethen},
+      marriage={(caAD)1735}{V\"olkenrode (Niedersachen)},
+      death={1774-04-03}{Braunschweig (Niedersachsen)},
+    }
+  }
+  parent[id=BentKron1740]{
+    g[id=BenzDoro1743]{
+      female,
+      name={\pref{Dorothea} \surn{Benze}},
+      birth={1743-06-18}{Velpke (Niedersachsen)},
+      marriage={1776-04-25}{Velpke (Niedersachsen)},
+      death={1839-04-18}{G\"ottingen (Niedersachsen)},
+      comment={Steinhauerstochter},
+    }
+    parent[id=BentBbbb1740]{
+      g[id=BentChri1717]{
+        male,
+        name={\pref{Christoph} \surn{Bentze}},
+        birth={1717}{Velpke (Niedersachsen)},
+        death={1748-09-01}{Velpke (Niedersachsen)},
+        %comment={Steinhauer},
+      }
+      p[id=BentAndr1687]{
+        male,
+        name={\pref{Andreas} \surn{Bentze}},
+        birth={1687-02}{},
+        death={(caAD)1750}{Velpke (Niedersachsen)},
+      }
+    }
+    p[id=KronKath1710]{
+      female,
+      name={\pref{Katharina} \surn{Krone}},
+      birth={(caAD)1710}{},
+      death={1743/}{Velpke (Niedersachsen)},
+    }
+  }
+}
+\end{filecontents}
+\usepackage{showexpl}
+\lstset{gobble=2,frame=trbl,rframe={},backgroundcolor=\color{black!5!white}}
+\lstset{explpreset={numbers=none,columns=fixed,basicstyle=\footnotesize\ttfamily}}
+\lstset{overhang=2cm,pos=r,varwidth=true}
+\lstset{preset={\small\sffamily
+  \renewcommand\gtruselibrary[1]{}}}
+\usepackage{pbox}
+\newcommand\NiceDescribeStuff[2]{% #1=margin text, #2=body text
+  \medskip\par\noindent\leavevmode%
+  \marginpar{\hfill\pbox[t]{2\marginparwidth}{\ttfamily #1}%
+    \hspace*{-\marginparsep}}%
+  \ifstrempty{#2}{}{#2\smallskip\\}}
+\newcommand\NiceDescribeEnv[2]{% #1=envname, #2=parameters
+  \NiceDescribeStuff{%
+    \textcolor{gray}{\cs{begin}}\string{#1\string}\\
+    \textcolor{gray}{\cs{end}}\string{#1\string}}{#2}}
+\newcommand\NiceDescribeMacro[2]{% #1=macro, #2=parameters
+  \NiceDescribeStuff{\hbox to 0pt{\hss\string#1}}{#2}}
+\newcommand\NiceDescribeConstant[1]{% #1=constant
+  \NiceDescribeStuff{\hbox to 0pt{\hss #1\quad}}{}\ignorespaces}
+\usepackage[templates]{genealogytree}[2017/01/29 version 1.10]
+\gtruselibrary{largetrees}
+\usepackage{hypdoc}
+\usepackage[capitalise,nameinlink]{cleveref}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+  \DocInput{gtrlib.largetrees.dtx}
+  \PrintChanges
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+%
+% \CheckSum{0}
+%
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+%
+% \changes{v1.0}{2016/12/23}{Initial version}
+% \changes{v1.1}{2017/01/24}{Split into package and library}
+% \changes{v1.2}{2017/02/19}{Profession field went to genealogytree package}
+%
+% \GetFileInfo{gtrlib.largetrees.dtx}
+%
+% \DoNotIndex{\newcommand,\newenvironment,\def,\gdef,\edef}
+%
+%
+% \title{The \textsf{gtrlib.largetrees} package\thanks{This document
+%   corresponds to \textsf{gtrlib.largetrees}~\fileversion, dated \filedate.
+%   The package is available online at
+%   \url{https://github.com/Ri-Ga/gtrlib.largetrees}.}}
+% \author{Richard Gay \\ \texttt{richard.gay@t-online.de}}
+%
+% \maketitle
+%
+% \section{Introduction}
+%
+% The main goal of the \textsf{gtrlib.largetrees} package is to offer
+% additional database fields and formats for the \textsf{genealogytree}
+% package, particularly for typesetting large trees.
+% This package is the side product of typesetting an actual genealogy tree
+% with almost 400 persons on 16 levels and on a DIN-A0 poster.
+% The package provides the following extensions:
+% \begin{description}
+% \item[database fields:]\leavevmode
+%   \begin{itemize}[nosep]
+%   \item spouse, spousebirth, spousedeath
+%   \item children
+%   \end{itemize}
+% \item[formats:]\leavevmode
+%   \begin{itemize}[nosep]
+%   \item Person+Marriage+Children+Profession
+%   \end{itemize}
+% \item[node processors:]\leavevmode
+%   \begin{itemize}[nosep]
+%   \item sparse node processor
+%   \end{itemize}
+% \end{description}
+% In the following, each of the extensions is described and illustrated
+% individually.
+%
+% To use the package, use
+% \begin{LTXexample}
+% \usepackage{genealogytree}
+% \gtruselibrary{largetrees}
+% \end{LTXexample}
+% or
+% \begin{LTXexample}
+% \usepackage{gtrlib.largetrees}
+% \end{LTXexample}
+% Note that the following approach does \emph{not} work:
+% \begin{itemize}[nosep]
+% \item |\usepackage[largetrees]{genealogytree}|
+% \end{itemize}
+%
+% \section{Database Fields}
+%
+% \subsection{Spouse}
+%
+% Sometimes, basic information about the spouse of a person is nice to
+% have in a genealogy tree but a separate node in the tree would occupy
+% too much space. For instance, if you have a person in the main line of
+% ancestors, then you might also want to show a node for the sister of
+% that person. However, a separate node for her spouse might be too much.
+% In such a case, the database fields |spouse|, |spousebirth|, and
+% |spousedeath| can come handy.
+%
+% The |spouse| field can be used for the specification of the name of
+% the spouse. The |spousebirth| and |spousedeath| fields can be used
+% for specifying the birth and death events of the spouse. For these
+% events, the values are expected to be of the same format as other
+% events, such as the |birth| and |death| fields. In particular this
+% means that date and location can be specified.
+% The following example shows the usage of the fields at the example of
+% Gauss' first wife:
+% \begin{LTXexample}
+% \begin{genealogypicture}[processing=database,
+%   database format=person marriage children profession]
+% sandclock{ child{
+%   g[id=GauxCarl1777]{male,
+%     name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+%     birth={1777-04-30}{Braunschweig (Niedersachsen)},
+%     death={1855-02-23}{G\"ottingen (Niedersachsen)},
+%     marriage={1805-10-09}{Braunschweig (Niedersachsen)},
+%     spouse={\pref{Johanna} Elisabeth Rosina \surn{Osthoff}},
+%     spousebirth={1780-05-08}{Braunschweig (Niedersachsen)},
+%     spousedeath={1809-10-11}{G\"ottingen (Niedersachsen)},
+%   }}}
+% \end{genealogypicture}
+% \end{LTXexample}
+%
+% Note that currently only information about a single spouse can be
+% specified through the fields provided by this package.
+%
+% \subsection{Children}
+%
+% When one wants to have information about children in a genealogy tree
+% but cannot spend the space for separate nodes, then one can use the
+% |children|, |children-|, and |children+| keys provided by this package.
+% The following describes the individual keys and provides an illustration,
+% again using data from Gauss' first marriage \cite[Section~2.3.5]{GenealogyTreeDoc}.
+% \begin{itemize}
+% \item Use |children+={some infos}| for providing arbitrarily formatted
+%   information about children.
+%   \begin{LTXexample}
+% \begin{genealogypicture}[processing=database,
+%   database format=person marriage children profession]
+% sandclock{ child{
+%   g[id=GauxCarl1777]{male,
+%     name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+%     birth={1777-04-30}{Braunschweig (Niedersachsen)},
+%     death={1855-02-23}{G\"ottingen (Niedersachsen)},
+%     children+={Carl (\gtrsymBorn\,1806),
+%       Wilhelmina (\gtrsymBorn\,1808),
+%       Ludwig (\gtrsymBorn\,1809)},
+%   }}}
+% \end{genealogypicture}
+%   \end{LTXexample}
+% \item Use |children={D}{S}| to specify that the person has |D|
+%   daughters and |S| sons.
+%   \begin{LTXexample}
+% \begin{genealogypicture}[processing=database,
+%   database format=person marriage children profession]
+% sandclock{ child{
+%   g[id=GauxCarl1777]{male,
+%     name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+%     birth={1777-04-30}{Braunschweig (Niedersachsen)},
+%     death={1855-02-23}{G\"ottingen (Niedersachsen)},
+%     children={1}{2},
+%   }}}
+% \end{genealogypicture}
+%   \end{LTXexample}
+% \item Use |children-=N| for providing only the overall number of
+%   children of the person.
+%   \begin{LTXexample}
+% \gtrset{language=german}
+% \begin{genealogypicture}[processing=database,
+%   database format=person marriage children profession]
+% sandclock{ child{
+%   g[id=GauxCarl1777]{male,
+%     name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+%     birth={1777-04-30}{Braunschweig (Niedersachsen)},
+%     death={1855-02-23}{G\"ottingen (Niedersachsen)},
+%     children-={3},
+%   }}}
+% \end{genealogypicture}
+%   \end{LTXexample}
+%   Note that we show here also that the text ``children'' changes
+%   with the selected language.
+% \end{itemize}
+%
+% \section{Database Formats}
+% \label{sec:db-formats}
+%
+% This package extends \textsf{genealogytree}'s list of formats for
+% displaying database entries \cite[Section~7.3.5]{GenealogyTreeDoc}.
+%
+% \subsection{Person+Marriage+Children+Profession}
+% \label{sec:format-PMCP}
+%
+% This format is close to the format ``medium marriage below'', which
+% is defined by the \textsf{genealogytree} package. The format can be
+% selected by the |database format| key, as shown in the previous examples.
+% The format displays
+% \begin{enumerate}[nosep]
+% \item name, birth, and death of the person
+% \item a comment, if provided
+% \item the marriage event and the spouse
+% \item the children
+% \item the profession
+% \end{enumerate}
+% The following long example shows a full example, based on combined
+% data from the previous examples.
+% \begin{LTXexample}
+% \begin{genealogypicture}[processing=database,
+%   database format=person marriage children profession]
+% sandclock{ child{
+%   g[id=GauxCarl1777]{male,
+%     name={Johann \pref{Carl Friedrich} \surn{Gau\ss{}}},
+%     birth={1777-04-30}{Braunschweig (Niedersachsen)},
+%     death={1855-02-23}{G\"ottingen (Niedersachsen)},
+%     marriage={1805-10-09}{Braunschweig (Niedersachsen)},
+%     spouse={\pref{Johanna} Elisabeth Rosina \surn{Osthoff}},
+%     spousebirth={1780-05-08}{Braunschweig (Niedersachsen)},
+%     spousedeath={1809-10-11}{G\"ottingen (Niedersachsen)},
+%     children={1}{2},
+%     profession={Mathematiker, Astronom, Geod\"at und Physiker},
+%   }}}
+% \end{genealogypicture}
+% \end{LTXexample}
+%
+% \section{Node Processors}
+%
+% \subsection{Sparse node processor}
+%
+% The sparse node processor serves the purpose of saving space by
+% rotating nodes for which only few database fields are set.
+% This follows the consideration that horizontally displayed nodes
+% have the advantage of being easily readable, but require a rather wide
+% display for a nice appearance. In a large genealogy tree with many nodes
+% on a level, space can be saved by rotating those nodes for which only
+% few database fields are set. The sparse node processor allows one
+% to enable rotation dependent on how much information is available for
+% a node, rather than merely on the level of the node or whether the
+% node is a leaf or inner node.
+% The sparse node processor inherits from the ``fit'' processor defined
+% by the \textsf{genealogytree} package \cite[Section~6.2.1]{GenealogyTreeDoc}.
+%
+% The sparse node processor can be configured by several options.
+% Some of these options can be set globally, some also for individual levels.
+% The following options are defined:
+% \begin{description}[style=nextline]
+% \item[|sparse display|:] enables the node processor.
+% \item[\texttt{sparse node size from=\meta{min} to \meta{max}}:]
+%   sets minimum and maximum width of sparse nodes.
+% \item[\texttt{sparse max fields=\meta{N}}:]
+%   defines the maximum number \meta{N} of database fields
+%   of a person with which the node is still considered sparse and,
+%   therefore, displayed specially (rotated).
+% \item[\texttt{sparse inner from level=\meta{N}}:]
+%   specifies that inner nodes shall be
+%   displayed specially only if they are above or on level \meta{N}.
+% \item[\texttt{sparse leaf from level=\meta{N}}:]
+%   specifies that leaf nodes shall be
+%   displayed specially only if they are above or on level \meta{N}.
+% \item[|sparse inner never|:] specifies that inner nodes shall never
+%   be displayed specially.
+% \end{description}
+%
+% The following example shows the use and the effect of the options in an
+% example, again based on the tree for Gauss. Concretely, the example
+% demonstrates the following settings:
+% \begin{itemize}[nosep]
+% \item a node is considered sparse if at most 2 fields are defined:
+%    Hinrich Gooss (2 fields) is rotated,
+%    Katharina Lütken (3 fields) is not rotated;
+% \item inner nodes get special display earliest from level 2:
+%    Christoph Bentze (2 fields and on level 2) is rotated,
+%    Gebhard Dietrich Gau\ss{} (sparse due to only 2 fields,
+%    but on level 1) is not rotated);
+% \item leaf nodes get special display earliest from level 3:
+%    Katharina Krone (2 fields but on level 2) is not rotated,
+%    Andreas Bentze (2 fields and on level 3) is rotated;
+% \item sparse nodes on levels 3 and 2 have different width settings.
+% \end{itemize}
+% \begin{LTXexample}[pos=t,justification=\centering]
+% \usepackage[templates]{genealogytree}
+% \begin{genealogypicture}[template=database pole,
+%     database format=person marriage children profession,
+%     level size=2.5cm, node size=3cm,
+%     level 3/.style={sparse node size from=0.4cm to 1.2cm},
+%     sparse node size from=1cm to 2cm,
+%     sparse max fields=2,
+%     sparse inner from level=2,
+%     sparse leaf from level=3,
+%     sparse display,
+%     options for node={GauxCarl1777}{pivot},
+%   ]
+%   input{example.gauss.graph}
+% \end{genealogypicture}
+% \end{LTXexample}
+%
+% Note that sparse node display currently is only possible for the
+% database formats defined in \cref{sec:db-formats}. For enabling it
+% in combination with other database formats, the
+% |\gtrltDeclareFieldCount|\marg{db-format}\marg{macro} has to be used
+% (see the use of this macro in the implementation of the database formats
+% provided by this package).
+%
+% \printbibliography
+% \clearpage
+% \appendix
+%
+% \StopEventually{}
+% \section{Implementation}
+%
+% \subsection{Wrapper Package}
+%
+%\iffalse
+%<*package>
+%\fi
+% The package has the following dependencies:
+%    \begin{macrocode}
+\RequirePackage{genealogytree}[2017/01/29 version 1.10]
+\gtruselibrary{largetrees}
+%    \end{macrocode}
+%
+% The remaining code provides the \textsf{largetrees} library
+% for the \textsf{genealogytree} package.
+%\iffalse
+%</package>
+%<*gtrlib>
+%\fi
+%
+% \subsection{Dependencies}
+%
+% The library has the following dependencies:
+%    \begin{macrocode}
+\RequirePackage{etoolbox}
+%    \end{macrocode}
+%
+% \subsection{Database Fields}
+%
+% \subsubsection{Spouse}
+% This adds three new fields for providing information about the spouse
+% of a person, within the same node. The fields are for specifying
+% the name of the spouse as well as the birth date and the day of death.
+% \begin{macro}{\gtrDBspouse}
+% The |\gtrDBspouse| macro holds what is provided for the
+% |spouse| key of a database entry (this macro is defined
+% by |\gtr@db@new@store|).
+%    \begin{macrocode}
+\gtr@db@new@store{spouse}
+\gtr@db@new@event@store{spousebirth}
+\gtr@db@new@event@store{spousedeath}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\gtrifspousedefined}
+% The |\gtrifspousedefined|\marg{true}\marg{false} macro expands to
+% \meta{true} if the spouse of a database entry is defined, and
+% expands to \meta{false} otherwise. The distinction is made solely
+% on the |spouse| field -- i.e., |spousebirth| and |spousedeath|
+% are ignored.
+% This macro can be used, for instance, by database formats
+% (see \cref{sec:impl-database-formats}).
+%    \begin{macrocode}
+\def\gtrifspousedefined#1#2{\ifdefvoid{\gtrDBspouse}{#2}{#1}}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\gtrPrintSpouse}
+% \begin{macro}{\gtrPrintSpouseDetails}
+% The |\gtrPrintSpouseDetails| macro prints the name of the spouse
+% as well as the birth and death of the spouse, if provided by the
+% database entry. The |\gtrPrintSpouse| macro only prints the name.
+%    \begin{macrocode}
+\newcommand\gtrPrintSpouse{\gtrDBspouse}
+\newcommand\gtrPrintSpouseDetails{%
+  \gtrPrintSpouse
+  \begin{gtrprintlist}{\unskip\ (}{\unskip,\ }{\unskip)}{\unskip}%
+    \gtrifeventdefined{spousebirth}%
+      {\gtrlistseparator\gtrPrintEventPrefix{birth}\,%
+       \gtrPrintDate{spousebirth}}%
+      {}%
+    \gtrifeventdefined{spousedeath}%
+      {\gtrlistseparator\gtrPrintEventPrefix{death}\,%
+       \gtrPrintDate{spousedeath}}%
+      {}%
+  \end{gtrprintlist}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+%
+% \subsubsection{Children}
+% This adds a field for providing information about the
+% children of a person, within the same node.
+% \begin{macro}{\gtrDBchildren}
+% \begin{macro}{\gtrDBdaughters}
+% \begin{macro}{\gtrDBsons}
+% If detailed information about children is provided through the
+% |children+| key, then the |\gtrDBchildren| holds this detailed
+% information. Otherwise, i.e., if information about children is
+% provided through the |children-| or |children| key, then
+% |\gtrDBchildren| holds the number of children of the person.
+% The |\gtrDBdaughters| and |\gtrDBsons| macros store the number
+% of daughters and, respectively, sons of the person.
+%    \begin{macrocode}
+\gtrset{%
+  database/children/.code n args={2}{%
+    \numdef\gtrDBchildren{#1+#2}%
+    \def\gtrDBdaughters{#1}%
+    \def\gtrDBsons{#2}},%
+  database/children-/.store in=\gtrDBchildren,
+  database/children+/.store in=\gtrDBchildren,
+}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \begin{macro}{\gtrifchildrendefined}
+% The |\gtrifchildrendefined|\marg{true}\marg{false} macro expands to
+% \meta{true} if information about children of a database entry is
+% defined, and expands to \meta{false} otherwise.
+% This macro can be used, for instance, by database formats
+% (see \cref{sec:impl-database-formats}).
+%    \begin{macrocode}
+\def\gtrifchildrendefined#1#2{\ifdefvoid{\gtrDBchildren}{#2}{#1}}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\gtrPrintChildren}
+% The |\gtrPrintChildren| macro prints information about the children of
+% a person.
+%    \begin{macrocode}
+\def\gtrPrintChildren{%
+  \gtrTranslatedChildren:
+%    \end{macrocode}
+% If |\gtrDBdaughters| is defined, then information about children
+% must have been provided by the |children| key -- that is, numbers of
+% daughters and sons have been provided. Otherwise information about
+% children was provided though the |children+| (arbitrarily formatted
+% information) or |children-| (number of children in total) keys,
+% in which cases this information is printed as is.
+%    \begin{macrocode}
+    \ifdefvoid{\gtrDBdaughters}%
+      {\gtrDBchildren}%
+      {\gtrDBdaughters\kern0.5pt\gtrsymFemale~%
+       \gtrDBsons\kern0.5pt\gtrsymMale}}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \subsection{Node Processors}
+%
+% \subsubsection{Sparse Node Processor}
+%
+% The following defines the keys that can be used for enabling and
+% configuring sparse node display.
+%    \begin{macrocode}
+\gtrset{%
+%    \end{macrocode}
+% The |sparse display| key enables the node processor.
+%    \begin{macrocode}
+  sparse display/.style={node processor=\gtrltSparseNodeProcessor},
+%    \end{macrocode}
+% The |sparse node size from| sets minimum and maximum width of
+% sparse nodes.
+%    \begin{macrocode}
+  sparse node size from/.code args={#1 to #2}{%
+    \dimdef\gtr@@kv@@gtrlt@sparsenode@minsize{#1}%
+    \dimdef\gtr@@kv@@gtrlt@sparsenode@maxsize{#2}},
+%    \end{macrocode}
+% The |sparse max fields| defines the maximum number of fields
+% of a person with which the node is still considered sparse.
+%    \begin{macrocode}
+  sparse max fields/.code={%
+    \gdef\gtrlt@sparse@maxfields{#1}},%
+%    \end{macrocode}
+% The following three options specify when sparse nodes are displayed specially.
+% The |sparse inner from level| option specifies that inner nodes shall be
+% displayed specially only if they are above or equal a particular level.
+%    \begin{macrocode}
+  sparse inner from level/.code={\def\gtrlt@sparseinner@level{#1}},
+%    \end{macrocode}
+% The |sparse leaf from level| option specifies that leaf nodes shall be
+% displayed specially only if they are above or equal a particular level.
+%    \begin{macrocode}
+  sparse leaf from level/.code={\def\gtrlt@sparseleaf@level{#1}},
+%    \end{macrocode}
+% The |sparse inner never| option specifies that inner nodes shall never
+% be displayed specially.
+%    \begin{macrocode}
+  sparse inner never/.code={\undef\gtrlt@sparseinner@level},
+}
+%    \end{macrocode}
+%
+% The following registers the level-local macros used by the above
+% options.
+%    \begin{macrocode}
+\gtr@proc@register@level@local{\gtrlt@sparsenode@minsize}
+\gtr@proc@register@level@local{\gtrlt@sparsenode@maxsize}
+%    \end{macrocode}
+%
+% \begin{macro}{\gtrltSparseNodeProcessor}
+% The |\gtrltSparseNodeProcessor| is a node processor that inherits
+% from the ``fit'' node processor, which it augments by means for
+% displaying sparse nodes rotated.
+%    \begin{macrocode}
+\newcommand\gtrltSparseNodeProcessor{%
+  \gtrltIfSparseEnabled{\gtrltIfSparse{%
+    \let\gtrNodeMinWidth=\gtrlt@sparsenode@minsize%
+    \let\gtrNodeMaxWidth=\gtrlt@sparsenode@maxsize%
+    \gtrkeysappto\gtrNodeBoxOptions{%
+      rotate=90,gtrNodeDimensionsLandscape,%
+    }%
+  }{}}{}%
+  \csuse{gtr@boxcontent@fit}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\gtrltIfSparseEnabled}
+% Sparse display is enabled for leaf parent and leaf nodes
+% and (if sparse display is desired for inner nodes) for
+% inner nodes above the configured level. The
+% |\gtrltIfSparseEnabled|\marg{true}\marg{false} macro checks
+% the current node for whether these properties are satisfied
+% and expands to \meta{true} if this is the case and \meta{false}
+% otherwise.
+%    \begin{macrocode}
+\newcommand\gtrltIfSparseEnabled{%
+  \gtrifleaf
+    {\ifdef\gtrlt@sparseleaf@level%
+%    \end{macrocode}
+% For leaf nodes, if a mimimum level is specified (via
+% |sparse leaf from level|), then
+% sparse display is enabled if the node's level is greater or equal
+% than the specified minimum:
+%    \begin{macrocode}
+      {\ifnumgreater{1+\gtrnodelevel}{\gtrlt@sparseleaf@level}}%
+%    \end{macrocode}
+% If a mimimum level for leaf nodes is not specified, then sparse
+% display is enabled no matter the node's level:
+%    \begin{macrocode}
+      {\@firstoftwo}}%
+    {\ifdef\gtrlt@sparseinner@level%
+%    \end{macrocode}
+% For inner nodes, if a mimimum level is specified (via
+% |sparse inner from level|), then
+% sparse display is enabled if the node's level is greater or equal
+% than the specified minimum:
+%    \begin{macrocode}
+      {\ifnumgreater{1+\gtrnodelevel}{\gtrlt@sparseinner@level}}%
+%    \end{macrocode}
+% If a mimimum level for inner nodes is not specified, then sparse
+% display is disabled no matter the node's level:
+%    \begin{macrocode}
+      {\@secondoftwo}}}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\gtrltFieldCount}
+% \begin{macro}{\gtrltIfSparse}
+% The |\gtrltIfSparse|\marg{true}\marg{false} macro uses database format
+% specific code to count the number of fields available for a node
+% and expands to \meta{true} if this number is less than or equal the
+% maximum number of fields for sparse display (specified by
+% |sparse max fields|). Otherwise, the macro expands to \meta{false}.
+% |\gtrltFieldCount| is a counter used internally by the macro.
+%    \begin{macrocode}
+\newcount\gtrltFieldCount
+\newcommand\gtrltIfSparse{%
+  \gtrltFieldCount=0\relax
+  \gtrltCountDatabaseFields
+%    \end{macrocode}
+% Decrement the counter for using |\ifnumless| comparison below
+% rather than ``less-or-equal'' (for which there is no conditional):
+%    \begin{macrocode}
+  \advance\gtrltFieldCount by-1\relax%
+  \ifnumless{\the\gtrltFieldCount}{\gtrlt@sparse@maxfields}}
+%    \end{macrocode}
+%  \end{macro}
+%  \end{macro}
+%
+% \begin{macro}{\gtrltDeclareFieldCount}
+% The |\gtrltDeclareFieldCount|\marg{db-format}\marg{macro}
+% registers, for the given database format \meta{db-format},
+% macro code \marg{macro} for counting the number of
+% displayed database fields. The \meta{macro} must ensure that,
+% after expansion, the counter |\gtrltFieldCount| holds the
+% number of fields.
+%    \begin{macrocode}
+\newcommand\gtrltDeclareFieldCount[2]{%
+  \gtrset{database format/#1/.append code={%
+    \def\gtrltCountDatabaseFields{#2}}}}
+%    \end{macrocode}
+%  \end{macro}
+%
+% \begin{macro}{\gtrltFieldCountByConditionals}
+% The |\gtrltFieldCountByConditionals|\marg{cond-list} macro counts
+% the number of satisfied conditionals in the comma-separated list
+% \meta{cond-list} of conditionals. This number is returned in the
+% |\gtrltFieldCount| counter.
+%    \begin{macrocode}
+\newcommand\gtrltFieldCountByConditionals[1]{%
+%    \end{macrocode}
+% The |\do|\marg{conditional} macro increases |\gtrltFieldCount|
+% if \meta{conditional} is true and otherwise does nothing. For this,
+% the \meta{conditional} must be a macro with two argument, expanding
+% to the first argument if the conditional is true, and to the second
+% argument otherwise.
+%    \begin{macrocode}
+  \def\do##1{%
+    ##1{\advance\gtrltFieldCount by1\relax}{}}%
+  \gtrltFieldCount=0\relax
+  \docsvlist{#1}}
+%    \end{macrocode}
+%  \end{macro}
+%
+%
+% \subsection{Database Formats}
+% \label{sec:impl-database-formats}
+%
+% \subsubsection{Person+Marriage+Children+Profession}
+% The following code defines the format
+% ``\texttt{person marriage children profession}''.
+%    \begin{macrocode}
+\gtrDeclareDatabaseFormat{person marriage children profession}{}{%
+  \gtrPrintName%
+  \begin{gtreventlist}%
+    \gtr@list@event@birth%
+    \gtr@list@event@death%
+  \end{gtreventlist}%
+  \gtrifcommentdefined{\gtrPrintComment}{}%
+  \gtr@ifmarriagedefined{\tcbline
+    \begin{gtreventlist}
+       \gtr@list@event@marriage
+       \gtrifspousedefined{
+         \gtrTranslatedWith\ \gtrPrintSpouseDetails}{}%
+       \gtrifchildrendefined{, \gtrPrintChildren}{}%
+    \end{gtreventlist}}{%
+    \gtrifchildrendefined{\tcbline\gtrPrintChildren}{}}%
+  \gtrifprofessiondefined{\tcbline\gtrPrintProfession}{}%
+}
+%    \end{macrocode}
+% Specify how the number of displayed database fields of a node
+% are counted:
+%    \begin{macrocode}
+\gtrltDeclareFieldCount{person marriage children profession}{%
+  \gtrltFieldCountByConditionals{%
+    \gtrifeventdefined{birth},
+    \gtrifeventdefined{death},
+    \gtrifeventdefined{marriage},
+    \gtrifcommentdefined,
+    \gtrifspousedefined,
+    \gtrifchildrendefined,
+    \gtrifprofessiondefined,
+  }}
+%    \end{macrocode}
+%
+%
+% \subsection{Translations}
+% For text to be displayed in nodes (for instance because there is no
+% established symbol for the respective), we provide some additional
+% small translation facility. This feature is complementary to the
+% symbols facility provided by the \textsf{genealogytree} package.
+% \begin{macro}{\gtrlt@texttranslation@add}
+% The |\gtrlt@texttranslation@add|\marg{identifier} adds the
+% \meta{identifier} to the list of understood translatables
+% and provides a macro \cs{gtrTranslated\meta{identifier}} through
+% which the translation for the chosen language can be accessed.
+%    \begin{macrocode}
+\newcommand\gtrlt@texttranslation@add[1]{%
+  \begingroup\edef\x{\endgroup\noexpand\gtrset{%
+    textlang/#1/.store in=\expandonce{%
+      \csname gtrTranslated#1\endcsname}}}\x}
+%    \end{macrocode}
+% \end{macro}
+% The following are the identifiers for which there are translations.
+%    \begin{macrocode}
+\gtrlt@texttranslation@add{Children}
+\gtrlt@texttranslation@add{With}
+%    \end{macrocode}
+% The following are the actual translations used by this library.
+% We encapsulate the code in an |\AtBeginDocument| such that the
+% |append code| portion is ensured to be run after
+% \textsf{genealogytree} set its language code. This allows the
+% user of the library to use |\gtrset{language=XXX}| in the
+% preamble as well as in the document without any changes to the
+% normal use in \textsf{genealogytree}.
+%    \begin{macrocode}
+\AtBeginDocument{
+  \gtrset{language@/english/.append code={%
+    \gtrset{textlang/.cd,
+      Children=children,
+      With=with,
+    }
+  }}
+  \gtrset{language@/german/.append code={%
+    \gtrset{textlang/.cd,
+      Children=Kinder,
+      With=mit,
+    }
+  }}
+  \gtrset{language=\gtrlanguagename}}
+%    \end{macrocode}
+%
+%\iffalse
+%</gtrlib>
+%\fi
+% \Finale
+\endinput

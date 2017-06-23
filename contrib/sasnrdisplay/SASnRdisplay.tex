@@ -1,0 +1,1108 @@
+% $LastChangedDate: 2012-03-27 12:21:37 +0200 (Tue, 27 Mar 2012) $
+% $LastChangedRevision: 1479 $
+% $LastChangedBy: daleif $
+
+
+\documentclass[a4paper,article]{memoir}
+\setlrmarginsandblock{3cm}{3cm}{*}
+\setulmarginsandblock{2.5cm}{3cm}{*}
+\checkandfixthelayout[nearest]
+\usepackage[T1]{fontenc}
+\usepackage{kpfonts}
+\usepackage{xspace,calc,listings,enumitem,url,ragged2e}
+\setlist{  
+  listparindent=\parindent,
+  parsep=0pt,
+}
+\usepackage[scaled=0.8]{beramono}
+
+\hfuzz=5pt
+
+%\setlength\cftbeforechapterskip{0em plus 0.2em}
+
+\AtBeginDocument{\providecommand\href[2]{#2}}
+
+\DeclareUrlCommand\mypath{\urlstyle{sf}}
+%\urlstyle{rm}
+\newcommand\addCTAN[2][\textsf{CTAN}:]{%
+    {\footnotesize\href{http://mirror.ctan.org/#2}{#1\:{\mypath{#2}}}}% 
+}
+
+\newcommand\CTAN[1]{%
+  {\footnotesize\href{http://mirror.ctan.org/#1}{\textsf{CTAN:}~{\mypath{#1}}}}}
+
+
+\newcommand\pkg{\texttt{SASnRdisplay}\xspace}
+%\setsecnumdepth{none}
+\setsecheadstyle{\large\slshape\bfseries\memRTLraggedright}
+
+\usepackage[svgnames,dvipsnames]{xcolor}
+ \definecolor{felinesrcbgcolor}{rgb}{0.94,0.97,1}
+ \definecolor{felineframe}{rgb}{0.79,0.88,1}
+
+
+\usepackage[
+english,
+%grayscale,
+%noautotitles-sas,
+noneedspace
+]{SASnRdisplay}
+
+\captionsetup[lstlisting]{
+  font=small,
+  labelfont=bf
+}  
+
+
+
+\newcommand\R{\textsf{R}\xspace}
+\newcommand\SAS{\textsf{SAS}\xspace}
+\newcommand\sweave{\textsf{Sweave}\xspace}
+
+\usepackage{xkeyval}
+
+
+\setlength\unitlength{\linewidth+1em}
+\lstdefinestyle{Show}{
+  basicstyle=\ttfamily\small,
+  breaklines,
+  breakatwhitespace,
+  columns=flexible,
+  backgroundcolor=\color{BrickRed!10},
+  rulecolor=\color{BrickRed},
+  frame=single,
+  framesep=0.25em,
+  escapeinside=||,
+}
+\lstdefinestyle{inShow}{
+  style=Show,
+  basicstyle=\ttfamily\normalsize\color{BrickRed},
+}
+\lstnewenvironment{Show}[1][]{
+\lstset{
+  style=Show,#1
+}
+}{}
+%\setsecnumdepth{none}
+\newcommand\error[1]{\textcolor{OliveGreen}{>>#1<<}}
+
+\def\NAME{SASnRdisplay.sty}
+\newcommand\getsniplet[2]{
+  \begingroup
+  \Needspace{4\onelineskip}
+  \ifblank{#2}{
+    \lstinputlisting[style=Show,
+    rangeprefix=\%\ ,
+    includerangemarker=false,
+    linerange=#1-end\ #1,
+    columns=fixed,
+    xleftmargin=0.5em,
+    framexleftmargin=0.5em,
+    ]{\NAME}
+  }{
+    \lstinputlisting[style=Show,
+    rangeprefix=\%\ ,
+    includerangemarker=false,
+    linerange=#1-end\ #1,
+    title={Style: #2},
+    columns=fixed,
+    xleftmargin=0.5em,
+    framexleftmargin=0.5em,
+    ]{\NAME}}
+  \endgroup
+  \noindent\ignorespaces
+}
+
+\newcommand\showcolor[1]{>>{\color{#1}\rule{1em}{0.5em}}<<}
+
+\newenvironment{question}[1]{
+  \subsubsection*{\textnormal{\textit{\color{BrickRed}#1}}}
+  \phantomsection
+  \addcontentsline{toc}{subsection}{#1}
+}{}
+\lstnewenvironment{solution}[1][]{
+  \lstset{style=Show,gobble=2,columns=fixed,#1}
+}{}
+
+
+\usepackage{hyperref}
+
+\settocdepth{subsection}
+
+\pagestyle{plain}
+\begin{document}
+
+\title{The \textsf{SASnRdisplay} package}
+\author{Lars Madsen\thanks{Email: daleif@imf.au.dk,\SnRversion}}
+\maketitle
+
+\chapter*{Introdution}
+\label{cha:introdution}
+
+
+The \pkg package acts as a frontend to the versatile \texttt{listings}
+package in order assist the user in typesetting \SAS or
+\R code or output. The package replaces the similar
+\texttt{SASdisplay} package, which was only available to my local
+users.
+
+\fancybreak{}
+
+Please be aware that \pkg is \emph{not} fully compatible with
+\texttt{SASdisplay}, the default settings are different and some
+macros are named differently.
+
+\subsubsection*{Acknowledgements}
+\label{sec:acknowledgements}
+
+I'd like to thank Ulrike Fischer for hints about some very useful
+features in the \texttt{caption} package, Heiko Oberdiek for his help
+with \texttt{hyperref} details.  Plus a thanks to Jørgen Granfeldt and
+Preben Blæsild for answering my various questions about details within
+the \R or \SAS languages.
+
+\subsubsection*{Loaded package}
+\label{sec:loaded-package}
+
+The following packages will be loaded (without any options): \texttt{listings},
+\texttt{xkeyval}, \texttt{xcolor}, \texttt{etoolbox},
+\texttt{caption}, \texttt{needspace}. If you need to pass options to
+these packages, load them \emph{before} the \pkg package.
+
+
+
+\tableofcontents*
+
+\newpage
+
+\chapter{Interface}
+\label{cha:interface}
+
+\section{Environments}
+\label{sec:environments}
+
+\begin{solution}[escapeinside=XX]
+  \begin{env}[X\meta{options}X]
+    ...
+  \end{env}
+\end{solution}
+%
+Each environment support an optional \oarg{options} argument. The
+\meta{options} part should be listings related configuration.
+
+\renewcommand\descriptionlabel[1]{\hspace\labelsep\parbox{\textwidth-\labelsep}{\textbf{#1}}}
+\begin{description}\firmlist
+\item[SAScode, SAScode*] 
+  For typesetting \SAS code. The starred version is not automatically 
+  numbered. 
+\item[SASoutput, SASoutput*] 
+  Similar for \SAS output. Note that it might be an idea to decrease the
+  width of the \SAS output from within the \SAS programme.
+\item[Rcode, Rcode*] 
+  Typesets \R code
+\item[Routput, Routput*] 
+  Typesets \R output
+\end{description}
+
+\section{Input from external files}
+\label{sec:input-from-external}
+
+General syntax:
+\begin{quote}
+  \cs{macro}\oarg{options}\marg{filename}
+\end{quote}
+Available macros:
+\begin{description}\firmlist
+\item[\cs{inputSAScode}, \cs{inputSAScode*}] 
+Similar to the SAScode(*) environment, but get the data from external file.
+\item[\cs{inputSASoutput}, \cs{inputSASoutput*}] 
+Similar to the SASoutput(*) environment.
+\item[\cs{inputRcode}, \cs{inputRcode*}] 
+Similar to the Rcode(*) environment.
+\item[\cs{inputRoutput}, \cs{inputRoutput*}] 
+Similar to the Rcode(*) environment.
+\end{description}
+
+\section{Sniplets}
+\label{sec:sniplets}
+
+To typeset inline sniplets we provide
+\begin{description}\tightlist
+\item[\cs{SASinline}]
+\item[\cs{Rinline}] 
+\end{description}
+They both behave like \cs{verb}, thus one can write
+\begin{quote}
+  \cs{Rinline}\oarg{options}\verb+|x <- 34|+
+\end{quote}
+%
+Note that for \verb|\SASinline|, key words are marked, i.e.\ it is
+\SAS aware. This is not the case for \R.
+
+
+
+\section{Package options}
+\label{sec:package-options}
+
+\begin{solution}[escapeinside=XX]
+  \usepackage[X\meta{options}X]{SASnRdisplay}
+\end{solution}
+Available options:
+\begin{description}\firmlist
+\item[danish]
+  Loads Danish translations for some keywords. (Executed by default)
+\item[english] Similar for English.
+% \item[babel] Adding this option and we will bind the four \cs{...name}
+%   macros to their respective languages, i.e. automatically use
+%   \cs{addto}\cs{captionsX}. This will require that \pkg is loaded
+%   \emph{after} \texttt{babel}.
+\item[grayscale] Changes some build in colors to monochrome.
+\item[countbysection] Force counters to be dominated by the section counter.
+\item[countbychapter] Force counters to be dominated by the chapter
+  counter. This is the default if \cs{chapter} exist, otherwise
+  \texttt{countbysection} will be used.
+\item[consecutive] Use this if you just want consecutive
+  numbering throughout, that is the number of say \SAS code, is not
+  reset at every new chapter or section.
+\item[noautotitles-r, noautotitles-sas] Do not automatically add a
+  number to any of the code and outputs. It can still be added
+  manually by using the \texttt{caption=\marg{text}} option.
+\item[needspace=\meta{length}] 
+  This issue a \cs{needspace}\marg{length} before each code or output
+  environmnt or inclusion macro. It will ensure that if there is less
+  than \meta{length} space left on the page, a page break is issued
+  before the construction start. 
+
+  This feature is enabled by default with a default \meta{length} of
+  \verb|3\baselineskip|.
+\item[noneedspace] This disables the \texttt{needspace} feature.
+\item[sweave] Overloads the \sweave package, i.e.\ it makes
+  the \texttt{Sinput} and \texttt{Scode} environments behave as the
+  \texttt{Rcode} environment , and the \texttt{Soutput} like the
+  \texttt{Routput} environment.
+
+  If \texttt{Sinput} should have a slightly different look than
+  \texttt{Rcode}, then use the \texttt{Sinput} style to add your extra
+  configuration. (The \sweave package typesets the contents of the
+  \texttt{Sinput} env to be in the typewriter/monospace font plus
+  italic, whereas we just set it in typewriter/monospace.)
+  
+\item[sasweave] Similar for the sasweave package, adding this options,
+  we will overwrite \texttt{SASinput}, \texttt{SASoutput} and
+  \texttt{SAScode} environments with our versions. Note you will have
+  to load \pkg \emph{after} the \texttt{SasWeave}
+  package.\footnote{Because \texttt{SasWeave} use the same environment
+    names as we do.}
+
+  Please note: This option has \emph{not} been throughly
+  tested. Please let me know if it works as advertised.  
+
+\item[\meta{other}] Other options will be passed on to the
+  \texttt{listings} package.
+\end{description}
+
+
+\chapter{Configuration}
+\label{cha:configuration}
+
+As a frontend to listings, the configuration is based upon listings
+\emph{styles}, i.e.\ collections of listings configurations. These are
+applied in left to right fashion, the last configuration loaded takes
+precedence.
+
+
+\section{Titles}
+\label{sec:macros}
+
+These macros holds the titles for the four types of displays. English:
+\getsniplet{englishnames}{}
+And for Danish:
+\getsniplet{danishnames}{}
+
+
+\fancybreak{}
+
+Note if you are using \texttt{babel} and the \texttt{babel} option to
+\pkg, then these names are added to the language setup, and thus if
+you want to change then you will have to add your changes to the
+language setup as well.
+
+\section{Handling listings configuration of our environments and macros}
+\label{sec:handl-list-conf}
+
+The listings configuration we use in this package is based on the
+listings concept of \emph{styles}. A style is basically just giving a
+collection of listings key-value sets a more convenient name. At first
+glance, this may seem a tedious method for configuration instead of
+giving various features macro names and letting the user change those
+macros. Been there, done that. Given the shear number of
+\texttt{listings} options, this would make configuration very un-flexible.
+
+
+The general listings syntax for styles is
+\begin{Show}
+  \lstdefinestyle|\marg{name}|{
+    |\meta{key-value set}|
+  }
+\end{Show}
+One drawback is that if \meta{name} already exist, then you will
+replace the contents of this style. Currently there is \emph{no}
+manner in which to \emph{add} to a style.  
+
+Thus it is a rather bad idea to provide the configuration as one long
+style, because then changing a small thing, would require the user to
+retype the rest of the configuration. Instead we split the
+configuration into smaller themed pieces. The user then have a choice
+of either overwriting one of these pieces or override a special user
+style which is executed as the last style (and thus overwrites any
+former style).
+
+The settings can be seen in section~\ref{cha:defa-list-style}. The
+styles are broken into smaller pieces. In some cases it make sense to
+change one of these smaller pieces, in other cases it is easier to
+add stuff to the provided \texttt{\meta{name}-\meta{type}-user}
+styles. 
+
+
+
+\section{Configuration FAQ/Examples}
+\label{sec:configuration-faq}
+
+Here follows a list of FAQs as to how one would make some
+configuration changes. Again we remind the user, that it is not
+possible to add to a \texttt{listings} style. Thus you will have to
+add all your setting for, say, \texttt{r-user}, into one single call
+to \cs{lstdefinestyle}.
+
+\subsection*{Colors}
+\label{sec:colors}
+
+The default colors are \texttt{SnRFrame} \showcolor{SnRFrame} for the
+frame, and \texttt{SnRBG} \showcolor{SnRBG} for the background. If the
+\texttt{grayscale} option is used, the mentioned colored are mapped on
+to \texttt{SnRFrameGray} \showcolor{SnRFrameGray} and \texttt{SnRBGGray}
+\showcolor{SnRBGGray}.
+
+\begin{question}{I'd like other colors}
+  We automatically load the \texttt{xcolor} package for colors, so we
+  refer that package for details. If you just want to change, say, the
+  background color, try (\texttt{after} \pkg)
+  \begin{solution}
+    \definecolor{SnRBG}{gray}{0.8}
+  \end{solution}
+  for a gray tone (1 means white). If one loads the \texttt{xcolor}
+  package \emph{before} \pkg, then one can pass certain options to it
+  and get access to a lot of color names, a survey of these can be
+  found in the \texttt{xcolor} manual, \cite{xcolor}.
+
+  The two default colores are defined as
+  \begin{solution}
+    \definecolor{SnRBG}   {rgb}{0.94,0.97,1}
+    \definecolor{SnRFrame}{rgb}{0.79,0.88,1}
+  \end{solution}
+\end{question}
+
+\begin{question}{I'd like different colors for code and output}
+  Since the \texttt{\meta{name}-\meta{type}-user} styles are executed
+  at the very end of the configuration, it will be suitable to add
+  them there. Here is how to make the \SAS code have a blue background
+  while leaving the \SAS output with the default.
+  \begin{solution}
+    \lstdefinestyle{sas-code-user}{
+      backgroundcolor = \color{blue},
+    }
+  \end{solution}
+  Note: Remember that there will only be one \texttt{sas-code-user},
+  thus if you have several configurations to add to it, collect them
+  in one such \cs{lstdefinestyle}.
+\end{question}
+
+\begin{question}{How about the color of the text}
+  This can be seen in three different ways: regular text, comments and
+  keyword. (In our case keywords only apply to \SAS code.) This means
+  that colors will have to be inserted into say the
+  \texttt{basicstyle} key to change the basic font color. Here is
+  instead how to make all \SAS comments green, note that we have to
+  copy the rest of the font settings for \SAS comments, as we cannot
+  add to a setting.
+  \begin{solution}
+    \lstdefinestyle{sas-code-user}{
+      commentstyle = \normalfont\slshape\ttfamily\footnotesize\color{green},
+    }
+  \end{solution}
+  When dealing with \SAS keywords one can even add different colors to separate
+  groups of keywords, though this is a bit out of our scope in this manual.
+\end{question}
+
+
+
+\subsection*{Frames}
+\label{sec:frames}
+
+Listings supports a number of different types of frames, see the
+manual (\cite{listings}) for details.
+
+\begin{question}{I like the settings from the old \protect\texttt{SASdisplay}
+    package with the line above and below}
+  Here we choose to simply overwrite a \texttt{frame} style.
+  \begin{solution}
+    \lstdefinestyle{r-frame}{
+      frame     = lines,
+      framesep  = 0.5em,
+      framerule = 1mm,    % thickness of the rule
+    }
+  \end{solution}
+\end{question}
+
+\begin{question}{No rules}
+  \begin{solution}
+    \lstdefinestyle{r-frame}{}
+  \end{solution}
+\end{question}
+
+\fancybreak{}
+
+\begingroup\sloppy
+A user may want to experiment with the keys
+\texttt{x\meta{left|right}margin} and
+\texttt{framex\meta{left|right|\allowbreak top|\allowbreak bottom}margin}.
+
+\endgroup
+
+\subsection*{Captions}
+\label{sec:captions-1}
+
+This is not a configuration as such but rather a hint to how one adds
+a caption.
+
+If the \texttt{noautotitles} is not activated, all non-starred
+environments and input macros will get an automatic caption, including
+a number. If one wish to add extra text use the following to the
+options of the environment or input macro.
+\begin{solution}[gobble=0]
+  caption=|\marg{My text}|
+\end{solution}
+Remember the \texttt{\{\}} pair around the text.
+
+\fancybreak{}
+
+In this version of \pkg `list of \dots' are not supported due to
+technical difficulties.
+
+\fancybreak{}
+
+If you want to configure captions related to \texttt{listings}, please
+use
+\begin{solution}[gobble=0]
+  \captionsetup[lstlisting]{|\meta{options}|}
+\end{solution}
+For example, in this document we use
+\begin{solution}[gobble=0]
+  \captionsetup[lstlisting]{
+    font=small,
+    labelfont=bf
+  }  
+\end{solution}
+to make the label text bold, and the entire caption text in \cs{small}.
+
+
+
+Note that numbered construction without a caption are typeset as
+\verb|Name Num|, with a caption this change into \verb|Name Num: Caption|.
+
+\begin{question}{I do not like numbers, but I'd like to add some
+    titling info for some of my code.}
+  If you do not want to use the auto numbering scheme, then use the
+  \texttt{noautotitles-sas} or \texttt{noautotitles-r} package
+  options.  Then to add just a title, add the following to the
+  \meta{options}
+  \begin{solution}
+    title={My title text}
+  \end{solution}
+  It is simular to the \texttt{caption} option, but has no numbers or
+  preceeding text. 
+\end{question}
+
+\begin{question}{How do I refer to code or output?}
+  First of all, as with floats, it is the caption that provide the
+  number that one can refer to. So as long as the code or output is
+  numbered, then one can just add
+  \begin{Show}
+    label=|\meta{keyname}|
+  \end{Show}
+  to the environment or inclusion macro \meta{options}. 
+
+  You can of course also add a label even if it is not numbered, then
+  \cs{ref}\marg{key} will just not be weldefined. But
+  \cs{pageref}\marg{key} will!
+\end{question}
+
+
+\subsection*{Keywords}
+\label{sec:keywords}
+
+\begin{question}{In a presentaion, I'd like to highlight a word}
+  See the \texttt{emph} and \texttt{emphstyle} keys. Here is an
+  example.
+  \begin{solution}
+    \begin{SAScode*}[emph={INSIGHT},emphstyle=\color{red}\bfseries]
+      PROC INSIGHT DATA data=fisk;
+    \end{SAScode*}
+  \end{solution}
+  resulting in
+  \begin{SAScode*}[emph={INSIGHT},emphstyle=\color{red}\bfseries,gobble=2]
+    PROC INSIGHT DATA data=fisk;
+  \end{SAScode*}
+\end{question}
+
+\begin{question}{How do I disable the keyword marking?}
+  You could either specify en empty language, i.e.\ \texttt{language=}
+  to eithor the \meta{options} or to a global style. 
+
+  Or you could redefine the keyword style:
+  \begin{solution}
+    keywordstyle=
+  \end{solution}
+\end{question}
+
+
+\begin{question}{I typeset SAS code, but keywords are not being marked!?}
+  This is usually because the mono space font (i.e.\ the font behind
+  \cs{ttfamily}) does not support boldface (as that is the default
+  manner which we mark keywords).
+
+  One such example is the default \LaTeX\ font: Computer Modern. Its
+  mono space has no bold version.
+
+  Solutions: see
+  \url{http://www.tug.dk/FontCatalogue/typewriterfonts.html}, you will
+  need to look for fonts that are shown to support
+  \cs{bfseries}. 
+  
+  In this manual we use \texttt{beramono}. Another interesting
+  solution is to use
+  \begin{solution}
+    \renewcommand\ttdefault{txtt}
+  \end{solution}
+\end{question}
+
+
+\subsection*{Escape to \LaTeX}
+\label{sec:escape-latex}
+
+This is a very handy feature and can e.g.\ be used to get formatted
+\LaTeX\ code inside, say, a comment. For example using
+\begin{Show}[escapeinside={}]
+  escapeinside=||,
+\end{Show}
+means that if one write \verb+|$a_{ij}$|+ in a comment one would get
+$a_{ij}$ typeset in the output.
+
+A feature like this is \emph{not} enabled by default. Though a user
+can always add it globally to the settings of his/her document, say using
+\begin{Show}[escapeinside=]
+  \lstdefinestyle{sas-code-user}{
+    escapeinside=||,
+  }
+\end{Show}
+It does not have to be >>\texttt{|}<< that is the escape character.
+
+It can be locally disabled by adding 
+\begin{Show}
+  escapeinside={},
+\end{Show}
+in the \meta{options} for the environment or the input macro.
+
+\fancybreak{}
+
+The \texttt{listings} manual, \cite[section~4.14]{listings} list other
+features related to escaping back to normal \LaTeX\ formatting.
+
+
+\subsection*{Input encodings}
+\label{sec:input-encodings}
+
+
+\begin{question}{I keep getting errors when I include my program,
+    something about undefined chars!?}
+
+  There are two things at play here: firstly \texttt{listings} does
+  not support two-byte UTF8 (\texttt{listings} need to do a lot of
+  parsing, that and parsing may break when dealing with two-byte
+  UTF8), secondly one may have a situation where the main document
+  encoding is different from the encoding being used in code filers
+  being included.
+
+  Let us try and handle the later first. We assume you are using the
+  \texttt{inputenc} package. Then one can specify that, say, all code
+  should be interpreted with, say, the \texttt{latin1} encoding. Here
+  is how for included \SAS code:
+  \begin{solution}
+    \lstdefinestyle{sas-include-code-user}{
+      inputencoding=latin1
+    }
+  \end{solution}
+
+  \fancybreak{}
+
+  The other situation, i.e.\ the included\footnote{The solution is
+    only available for included files.} file is written in UTF8. Here
+  a solution exist if the two-byte UTF8 file, can safely be
+  transformed into a one-byte encoding such as \texttt{latin1}. And
+  example of this could be the situation with an \R file, written in
+  UTF8, including the Danish vowels æøå, but other that those only US
+  ascii is being used. A file like this can easily be recoded as a
+  \texttt{latin1} based file.
+
+  There is a package (\texttt{listingsutf8}) can than handle this. It
+  extends the file inclusion feature and extend the input encoding
+  syntax. In the case described above, adding \texttt{listingsutf8} to
+  your preamble, and using 
+  \begin{solution}
+    \lstdefinestyle{r-include-code-user}{
+      inputencoding=utf8/latin1
+    }
+  \end{solution}
+  may solve the problem. See \cite{listingsutf8} for a bit more details. 
+\end{question}
+
+
+\subsection*{Other}
+\label{sec:other}
+
+\begin{question}{I'd like to have line numbers}
+  Here is how to add line numbers to all \R code.
+  \begin{solution}
+    \lstdefinestyle{r-code-user}{
+      numbers     = left,
+      numberstyle = \tiny
+    }
+  \end{solution}
+  Line numbers can be configured further, see section 4.8 in the
+  \texttt{listings} manual, \cite{listings}.
+
+  Line numbers can be very handy when displaying source code. For
+  output, it might not be that relevant.
+
+  It \emph{is} possible to actually label and refer to specific lines
+  in a piece of code, see section 7 in the \texttt{listings} manual,
+  \cite{listings}.
+\end{question}
+
+
+
+
+\begin{question}{I have many blank lines, can some be ignored?}
+  Yes with the \texttt{emptylines} key. It determine the number of
+  consecutive blank lines to allow in the output. By default
+  \texttt{listings} will already ignore blank lines at the end of what
+  ever is shown. To show only one blank line in the output for \R, try
+  \begin{solution}
+    \lstdefinestyle{r-user}{
+      emptylines=1,
+    }
+  \end{solution}
+  If you are also using line numbers, you may want to use 
+  \begin{solution}
+    \lstdefinestyle{r-user}{
+      emptylines=*1,
+    }
+  \end{solution}
+  then the line numbers `jump' correctly in regards to the blank lines.
+\end{question}
+
+\begin{question}{Can also blank space at the start of lines be
+    ignored?}
+  Of course, that key is called \texttt{gobble}, its value will
+  indicate the number of characters to eat (from the left). Note that
+  it will not distinguish between spaces and non-spaces, it will just
+  eat a set number of characters at the start of each line.
+\end{question}
+
+\begin{question}{By the way, can one control the width of the \SAS
+    output from within a \SAS programme?}
+  Yes, try the >>\SASinline|OPTIONS LS=80;|<< setting.
+\end{question}
+
+
+\begin{question}{Can I show sniplets of code?}
+  Sure. See the \texttt{firstline} and \texttt{lastline} keys or the
+  \texttt{linerange}. They cannot be set globally, so can only be
+  added into environment or input macro options.
+
+  \fancybreak{}
+
+  There is also an experimental feature where instead of line numbers
+  one specify certain strings inside the external file. This can be
+  quite handy if the contents of the external file may
+  change.\footnote{Then one does not have to manually change the line
+    number references all the time.} Section 5.7 in the
+  \texttt{listings} manual (\cite{listings}) has more details. 
+\end{question}
+
+
+\begin{question}{The quotes look odd in my code listings, can it look
+    more like keyboard keys?}
+  Of course. Add the \texttt{textcomp} package, and issue
+  \begin{solution}
+    \lstdefinestyle{r-user}{
+      upquote=true,
+    }
+    \lstdefinestyle{sas-user}{
+      upquote=true,
+    }
+  \end{solution}
+\end{question}
+
+
+\begin{question}{I use the \sweave package and overload the look using
+    \pkg.  . I'd like \texttt{Sinput} to look more like the default in
+    \sweave.}
+  This can be done by using the extra \texttt{Sinput} style to
+  overload the basic style:
+  \begin{solution}
+    \lstdefinestyle{Sinput}{
+      basicstyle = \ttfamily\itshape
+    }
+  \end{solution}
+\end{question}
+
+
+\chapter{Examples}
+\label{sec:examples}
+
+
+\section{\SAS}
+\label{sec:sas}
+
+inline: \verb+\SASinline|RANGE xxx|+ results in 
+\SASinline|RANGE xxx|. 
+
+Personally I often add >>\dots<< around inline sniplets to indicate
+where they start and end. Sadly this is apparently not something one
+can add into the inline macro definition because of its \cs{verb}-like
+nature.
+
+\begin{SAScode}[caption={Test of caption}]
+PROC INSIGHT DATA data=fisk;
+SCATTER x1 x2 x3 x4 x5 * dosis vgt;
+RUN; 
+OUTPUT
+QUIT; /* a standard SAS comment */
+\end{SAScode}
+was typeset via
+\begin{Show}
+\begin{SAScode}[caption={Test of caption}]
+PROC INSIGHT DATA data=fisk;
+SCATTER x1 x2 x3 x4 x5 * dosis vgt;
+RUN; 
+OUTPUT
+QUIT; /* a standard SAS comment */
+\end{SAScode}
+\end{Show}
+%
+whereas
+
+\begin{SASoutput}
+                           TABLE OF NIVEAU BY FAG
+
+           NIVEAU     FAG
+
+           Frequency|
+           Percent  |
+           Row Pct  |
+           Col Pct  |kem     |mat     |mus     |samf    |  Total
+           ---------+--------+--------+--------+--------+
+           h        |      0 |      1 |      1 |      0 |      2
+                    |   0.00 |  20.00 |  20.00 |   0.00 |  40.00
+                    |   0.00 |  50.00 |  50.00 |   0.00 |
+                    |   0.00 |  50.00 | 100.00 |   0.00 |
+           ---------+--------+--------+--------+--------+
+           m        |      0 |      1 |      0 |      1 |      2
+                    |   0.00 |  20.00 |   0.00 |  20.00 |  40.00
+                    |   0.00 |  50.00 |   0.00 |  50.00 |
+                    |   0.00 |  50.00 |   0.00 | 100.00 |
+           ---------+--------+--------+--------+--------+
+           o        |      1 |      0 |      0 |      0 |      1
+                    |  20.00 |   0.00 |   0.00 |   0.00 |  20.00
+                    | 100.00 |   0.00 |   0.00 |   0.00 |
+                    | 100.00 |   0.00 |   0.00 |   0.00 |
+           ---------+--------+--------+--------+--------+
+           Total           1        2        1        1        5
+                       20.00    40.00    20.00    20.00   100.00
+
+\end{SASoutput}
+%
+comes from
+\begin{Show}
+\begin{SASoutput}
+                           TABLE OF NIVEAU BY FAG
+
+           NIVEAU     FAG
+
+           Frequency|
+           Percent  |
+           Row Pct  |
+           Col Pct  |kem     |mat     |mus     |samf    |  Total
+           ---------+--------+--------+--------+--------+
+           h        |      0 |      1 |      1 |      0 |      2
+                    |   0.00 |  20.00 |  20.00 |   0.00 |  40.00
+                    |   0.00 |  50.00 |  50.00 |   0.00 |
+                    |   0.00 |  50.00 | 100.00 |   0.00 |
+           ---------+--------+--------+--------+--------+
+           m        |      0 |      1 |      0 |      1 |      2
+                    |   0.00 |  20.00 |   0.00 |  20.00 |  40.00
+                    |   0.00 |  50.00 |   0.00 |  50.00 |
+                    |   0.00 |  50.00 |   0.00 | 100.00 |
+           ---------+--------+--------+--------+--------+
+           o        |      1 |      0 |      0 |      0 |      1
+                    |  20.00 |   0.00 |   0.00 |   0.00 |  20.00
+                    | 100.00 |   0.00 |   0.00 |   0.00 |
+                    | 100.00 |   0.00 |   0.00 |   0.00 |
+           ---------+--------+--------+--------+--------+
+           Total           1        2        1        1        5
+                       20.00    40.00    20.00    20.00   100.00
+
+\end{SASoutput}
+\end{Show}
+
+
+
+\section{\R}
+\label{sec:r}
+
+
+
+\verb+\Rinline|x <- a|+ result in \Rinline|x <- a|
+
+\inputRcode[
+ emptylines=*1,
+ numbers=left,
+ numberstyle=\tiny,
+ caption={With just one blank line showing, plus line numbers. Note we
+ only show the first 25 lines.},
+ linerange=1-25,
+]{opg_G17.R}
+\noindent
+was typeset via
+\begin{Show}
+\inputRcode[
+ emptylines=*1,
+ numbers=left,
+ numberstyle=\tiny,
+ caption={With just one blank line showing, plus line numbers. Note we
+ only show the first 25 lines.},
+ linerange=1-25
+]{opg_G17.R}
+\end{Show}
+
+
+
+\begin{Routput}[caption={Copied from an Sweave result.}]
+ [1] 0.0495
+\end{Routput}
+is just sumple use of the \texttt{Routput} environment.
+
+
+\chapter{Default style settings for \R and \SAS}
+\label{cha:defa-list-style}
+
+
+
+
+
+
+\section{Style settings for \R}
+\label{sec:style-settings-r}
+
+Note how there are three user styles. The style \texttt{r-user} apply
+to both \R code and \R output, whereas \texttt{r-code-user} and
+\texttt{r-output-user} apply only to code and output
+respectively. This means that if, say, the user want to change the
+framing to a line above and below instead of the default box, the user
+can either overwrite the \texttt{r-frame} style, or the
+\texttt{r-user} style.
+
+The style settings are divided into three separate groups: (a) the
+settings themselves, (b) user styles and (c) collector styles, which
+are just a common name and loading order for other styles and
+
+\subsection{\R configuration styles}
+\label{sec:r-conf-styl}
+
+
+\getsniplet{rvskip}{\texttt{r-vskips}}
+\getsniplet{rfonts}{\texttt{r-fonts}} The font is the base font for
+the rest. If for example one make use of \texttt{emphstyle=\bfseries},
+then one will get the \texttt{basicstyle} plus bold face (if possible)
+for things that are emphasized.
+\getsniplet{rcharsandbreaks}{\texttt{r-chars-and-breaks}}
+\getsniplet{rmarkup}{\texttt{r-markup}}
+\getsniplet{rframe}{\texttt{r-frame}}
+\getsniplet{rcolors}{\texttt{r-colors}}
+\noindent
+The colors being used as standard have special names. By default they
+are in color. If the \texttt{monochrome} option is issued they are
+mapped onto \texttt{SnRBGGray} and \texttt{SnRFrameGray}, the later
+being black by default.
+
+
+\getsniplet{rinline}{\texttt{r-inline}}
+Note that by default, the inline style for \verb|\Rinline|, shares
+nothing with the rest of the \R configuration and is loaded on its own.
+
+\subsection{\R user styles}
+\label{sec:user-styles}
+
+These are all empty by default. There are two types of these: (i)
+styles applying to both types (code and output) in one go, and (ii)
+ones that are specific to either code or output. We also have a third
+level \emph{file include} versus \emph{in document}. The more specific
+the name, the later it will come in the collector styles (i.e.\ its
+settings will apply last).
+
+\getsniplet{ruser}{\texttt{r-user} -- user stuff for everything \R}
+\getsniplet{rcodeuser}{\texttt{r-code-user} -- only for \R code}
+\getsniplet{routputuser}{\texttt{r-output-user} -- only for \R output}
+
+\fancybreak{}
+
+These three apply only to inclusion macros. Can be handy to specify an
+input encoding for, say, all included code files.
+
+\getsniplet{rincludeuser}{\texttt{r-include-user}}
+\getsniplet{rincludecodeuser}{\texttt{r-include-code-user}}
+\getsniplet{rincludeoutputuser}{\texttt{r-include-output-user}}
+
+\subsection{\R collector styles}
+\label{sec:r-collector-styles}
+
+Please note the calling sequence.
+
+\getsniplet{rstyle}{\texttt{r-style} -- all common code for \R}
+
+\getsniplet{rcode}{\texttt{r-code} -- specific for \R code}
+\getsniplet{routput}{\texttt{r-output} -- specific for \R output}
+
+
+\fancybreak{}
+
+Next we have the extra styles used for inclusion macros. They are the
+same as for \R code and \R output, with the addition of two extra styles.
+
+\getsniplet{rincludecode}{\texttt{r-include-code}}
+\getsniplet{rincludeoutput}{\texttt{r-include-output}}
+
+
+\section{Style settings for \SAS}
+\label{sec:style-settings-sas}
+
+The structure is similar to the one used for \R, though the font
+settings are split in two.
+
+\subsection{\SAS configuration styles}
+
+\getsniplet{sasinline}{\texttt{sas-inline}}
+\getsniplet{sasvskips}{\texttt{sas-vskips}}
+\getsniplet{sascolors}{\texttt{sas-colors}}
+\getsniplet{sascodefonts}{\texttt{sas-code-fonts}}
+\getsniplet{sasoutputfonts}{\texttt{sas-output-fonts}}
+\noindent
+Note how we actually split the font settings in two. This is because
+it is common to have \SAS code and \SAS output i different font
+sizes. As \R output is not that common, this split has not been made
+with \R, it will be up to the user.
+\getsniplet{sascharsandbreaks}{\texttt{sas-chars-and-breaks}}
+\getsniplet{sasmarkup}{\texttt{sas-markup}}
+Note that only the \texttt{/*...*/} style \SAS comments are supported
+for styling. The \texttt{*...;} syntax is \emph{not} supported. Also
+note we had to change the \SAS settings for \texttt{listings}
+otherwise we would be unable to style \SAS comments.
+
+\getsniplet{sasframe}{\texttt{sas-frame}}
+
+
+\subsection{\SAS user styles}
+
+\getsniplet{sasuser}{\texttt{sas-user} -- user stuff for everything \SAS}
+\getsniplet{sascodeuser}{\texttt{sas-code-user} -- only for \SAS code}
+\getsniplet{sasoutputuser}{\texttt{sas-output-user} -- only for \SAS output}
+
+\fancybreak{}
+
+These three apply only to inclusion macros. Can be handy to specify an
+input encoding for, say, all included code files.
+
+\getsniplet{sasincludeuser}{\texttt{sas-include-user}}
+\getsniplet{sasincludecodeuser}{\texttt{sas-include-code-user}}
+\getsniplet{sasincludeoutputuser}{\texttt{sas-include-output-user}}
+
+
+
+
+\subsection{\SAS collector styles}
+
+\getsniplet{sasstyle}{\texttt{sas-style} -- all common code for \SAS}
+\getsniplet{sascode}{\texttt{sas-code} -- specific for \SAS code}
+\getsniplet{sasoutput}{\texttt{sas-output} -- specific for \SAS output}
+\getsniplet{sasincludecode}{\texttt{sas-include-code}}
+\getsniplet{sasincludeoutput}{\texttt{sas-include-output}}
+
+
+
+\subsection*{Extra SAS keywords}
+\label{sec:extra-sas-keywords}
+
+Jørgen Granfeldt supplied extra \SAS keywords to supplement those
+supported by \texttt{listings}. The keywords are found in
+\texttt{\pkg.cfg} and is labelled as the \texttt{sas-more-keywords}
+style. Note that even though not required by \SAS, all supported
+keywords are written in upper case. JG explains that this is
+encouraged because that it makes it easier to tell the difference
+between build in \SAS commands and user supplied (lower case)
+variables and procedure names.
+
+Please note that we also change a list of \emph{other} keywords,
+otherwise we will be unable to style \SAS comments.
+
+
+Here is the current list.
+\def\NAME{SASnRdisplay.cfg}
+\getsniplet{sasmorekeywords}{\texttt{sas-more-keywords}, from \texttt{\pkg.cfg}}
+
+\begin{thebibliography}{9}
+\RaggedRight
+\bibitem{xcolor} Uwe Kern, \emph{Extending \LaTeX's color facilities:
+    the \textsf{xcolor} package}, 2006.
+  \addCTAN{/macros/latex/contrib/xcolor/}.
+
+\bibitem{listings} Various, \emph{The \textsf{listings} Package},
+  1996--2007.  \addCTAN{/macros/latex/contrib/listings/}.
+
+\bibitem{etoolbox}
+  Philipp Lehman,
+\emph{The etoolbox Package -- An e-TeX Toolbox for Class and Package
+  Authors}, 2011. \addCTAN{/macros/latex/contrib/listings/etoolbox}.
+
+
+\bibitem{listingsutf8}
+  Heiko Oberdiek, \emph{The \textsf{listingsutf8} package}, 2007.
+  \addCTAN{/macros/latex/contrib/oberdiek/}.
+
+\bibitem{caption} Axel Sommerfelt, \emph{Customizing captions of
+    floating environments using the caption package}, 2011.
+  \addCTAN{/macros/latex/contrib/caption}.
+
+
+
+
+\end{thebibliography}
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
+

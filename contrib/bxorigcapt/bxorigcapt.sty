@@ -1,0 +1,173 @@
+%%
+%% This is file 'bxorigcapt.sty'.
+%% 
+%% Copyright (c) 2017 Takayuki YATO (aka. "ZR")
+%%   GitHub:   https://github.com/zr-tex8r
+%%   Twitter:  @zr_tex8r
+%%
+%% This package is distributed under the MIT License.
+%%
+
+%% package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bxorigcapt}[2017/05/03 v0.2a]
+\def\bxoc@pkgname{bxorigcapt}
+\providecommand*\bxDebug[1]{}
+
+%% code guard
+\edef\bxoc@restore@codes{%
+\catcode39=\the\catcode39%
+\catcode46=\the\catcode46%
+\catcode47=\the\catcode47%
+\catcode58=\the\catcode58%
+\relax}
+\catcode39=12 % <'>
+\catcode46=12 % <.>
+\catcode47=12 % </>
+\catcode58=12 % <:>
+\AtEndOfPackage{%
+\bxoc@restore@codes
+\let\bxoc@restore@codes\relax}
+
+%--------------------------------------- options
+
+%% \bxoc@target@lang
+\let\bxoc@target@lang\relax
+
+%% language options
+\DeclareOption*{%
+  \edef\bxoc@target@lang{\CurrentOption}%
+}
+% dispatch
+\ProcessOptions*
+
+%--------------------------------------- general
+
+%% \bxoc@name@list
+% The list of caption names.
+\@onlypreamble\bxoc@name@list
+\def\bxoc@name@list{%
+  abstract,also,appendix,author,bib,cc,chapter,contents,%
+  encl,figure,glossary,headto,index,listfigure,listtable,%
+  page,part,preface,proof,ps,ref,seealso,see,subject,table,%
+  prepart,postpart,prechapter,postchapter,presection,postsection%
+}
+
+%% \bxoc@deprecated@ldf@list
+% The list of the names of deprecated commands.
+\@onlypreamble\bxoc@deprecated@ldf@list
+\def\bxoc@deprecated@ldf@list{}
+
+%--------------------------------------- public commands
+
+%%<+> \bxorigcaptDeprecateCommand{<csname>,...}
+\@onlypreamble\bxorigcaptDeprecateCommand
+\newcommand*\bxorigcaptDeprecateCommand[1]{%
+  \edef\bxoc@deprecated@ldf@list{\bxoc@deprecated@ldf@list,#1}}
+
+%--------------------------------------- hook
+
+%% \bxoc@babel@hook
+% Note that \bxoc@babel@hook must be invoked between the loading
+% of babel and the dispatch of babel's begin-document hook.
+\@onlypreamble\bxoc@babel@hook
+\let\bxoc@babel@hook\@empty
+\@ifpackageloaded{babel}{%
+  \AtEndOfPackage{\bxoc@babel@hook}%
+}{%else
+  \AtBeginDocument{%
+    \@ifpackageloaded{babel}{%
+      \bxoc@babel@hook
+    }{%else
+      \PackageWarning\bxoc@pkgname
+       {Babel is not loaded,}%
+    }%
+  }%
+}
+
+%--------------------------------------- deprecated ldf stuffs
+
+%% \bxoc@clear@deprecated@ldf
+\@onlypreamble\bxoc@clear@deprecated@ldf
+\def\bxoc@clear@deprecated@ldf{%
+  \begingroup
+    \@for\bxoc@tmpa:=\bxoc@deprecated@ldf@list\do{%
+      \ifx\@bxoc@tmpa\@empty\else
+        \expandafter\ifx\csname \bxoc@tmpa\endcsname\relax\else
+          \bxDebug{Smashed \@backslashchar\bxoc@tmpa}%
+          \global\expandafter\let\csname\bxoc@tmpa\endcsname\@empty
+        \fi
+      \fi
+    }%
+  \endgroup
+  \bxoc@clear@deprecated@ldf@a
+}
+\@onlypreamble\bxoc@clear@deprecated@ldf@a
+\def\bxoc@clear@deprecated@ldf@a{%
+  \global\let\bxoc@clear@deprecated@ldf@a\relax
+  \gdef\bxorigcaptDeprecateCommand##1{%
+    \edef\bxoc@deprecated@ldf@list{##1}%
+    \bxoc@clear@deprecated@ldf}}
+\g@addto@macro\bxoc@babel@hook{\bxoc@clear@deprecated@ldf}
+
+%--------------------------------------- save and restore
+
+%% variables
+\let\bxoc@@today\relax
+% \[bxoc@@<caption>name]
+
+%% \bxoc@save@captions
+%% \bxoc@restore@captions
+\@onlypreamble\bxoc@save@captions
+\let\bxoc@save@captions\@empty
+\let\bxoc@restore@captions\@empty
+\begingroup
+  \@for\bxoc@tmpa:=\bxoc@name@list\do{%
+    \edef\bxoc@next{%
+      \noexpand\g@addto@macro\noexpand\bxoc@save@captions{%
+        \let\expandafter\noexpand\csname bxoc@@\bxoc@tmpa name\endcsname
+            \expandafter\noexpand\csname\bxoc@tmpa name\endcsname}%
+    }\bxoc@next
+    \edef\bxoc@next{%
+      \noexpand\g@addto@macro\noexpand\bxoc@restore@captions{%
+        \let\expandafter\noexpand\csname \bxoc@tmpa name\endcsname
+            \expandafter\noexpand\csname bxoc@@\bxoc@tmpa name\endcsname}%
+    }\bxoc@next
+  }
+\endgroup
+
+%% \bxoc@restore@date
+\def\bxoc@restore@date{%
+  \let\today\bxoc@@today
+}
+
+%% \bxoc@enable@restore
+\@onlypreamble\bxoc@enable@restore
+\def\bxoc@enable@restore{%
+  \ifx\bxoc@target@lang\relax
+    \let\bxoc@target@lang\bbl@main@language
+  \fi
+  \bxDebug{target=\bxoc@target@lang}%
+  \expandafter\ifx\csname date\bxoc@target@lang\endcsname\relax
+    \PackageError\bxoc@pkgname
+     {Language '\bxoc@target@lang' not defined}%
+      \@ehc
+    \@namedef{date\bxoc@target@lang}{}%
+  \fi
+  \expandafter\ifx\csname captions\bxoc@target@lang\endcsname\relax
+    \@namedef{captions\bxoc@target@lang}{}%
+  \fi
+  \expandafter\g@addto@macro\csname date\bxoc@target@lang\endcsname{%
+    \bxoc@restore@date}%
+  \expandafter\g@addto@macro\csname captions\bxoc@target@lang\endcsname{%
+    \bxoc@restore@captions}%
+}
+
+%% Saves the current captions
+\bxoc@save@captions
+\let\bxoc@@today\today
+\g@addto@macro\bxoc@babel@hook{\bxoc@enable@restore}
+
+%--------------------------------------- done
+\endinput
+%% EOF

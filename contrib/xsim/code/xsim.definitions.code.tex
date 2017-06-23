@@ -1,0 +1,430 @@
+% ----------------------------------------------------------------------------
+% the XSIM package - definitions module
+% 
+%   eXercise Sheets IMproved
+% 
+% ----------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://github.com/cgnieder/xsim
+% E-Mail: contact@mychemistry.eu
+% ----------------------------------------------------------------------------
+% Copyright 2017 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% ----------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% ----------------------------------------------------------------------------
+\XSIMmodule{definitions}{definition of user commands}
+
+\xsim_load_modules:n {base,exercises,blanks,translations,interface,grades,random}
+
+% not exactly a user choice: the `exercises' environments rely on them:
+\DeclareExerciseParameter*!{exercise-env}
+\DeclareExerciseParameter*!{solution-env}
+\DeclareExerciseParameter !{exercise-name}
+\DeclareExerciseParameter !{solution-name}
+\DeclareExerciseParameter !{exercise-template}
+\DeclareExerciseParameter !{solution-template}
+\DeclareExerciseParameter* {counter}
+\DeclareExerciseParameter* {solution-counter}
+\DeclareExerciseParameter* {number}
+
+% ----------------------------------------------------------------------------
+
+% not exactly a user choice, must be present at various places:
+\DeclareExerciseProperty!  {id}
+\DeclareExerciseProperty!  {ID}
+\DeclareExerciseProperty   {counter}
+\DeclareExerciseProperty   {counter-value}
+\DeclareExerciseProperty * {print}
+\DeclareExerciseProperty *-{print!}
+\DeclareExerciseProperty * {use}
+\DeclareExerciseProperty * {used}
+\DeclareExerciseProperty *-{use!}
+\XSIMifchapterT{
+  \DeclareExerciseProperty {chapter-value}
+  \DeclareExerciseProperty {chapter}
+}
+\DeclareExerciseProperty  {section-value}
+\DeclareExerciseProperty  {section}
+
+% those are additional and wouldn't *need* to be present except for
+% pre-defined templates which make use of them:
+\DeclareExerciseProperty  {subtitle}
+\DeclareExerciseProperty  {points}
+\DeclareExerciseProperty  {bonus-points}
+\DeclareExerciseProperty  {page-value}
+\DeclareExerciseProperty  {page}
+
+\DeclareExercisePropertyAlias {ID} {id}
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseTagging {tags}
+\DeclareExerciseTagging {topics}
+
+\xsimsetup{tags/ingore-untagged=false}
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseGoal {points}
+\DeclareExerciseGoal {bonus-points}
+
+\NewDocumentCommand \printgoal {m}
+  { \ExerciseGoalValuePrint {#1} {} {} }
+
+\NewDocumentCommand \points {m}
+  {
+    \ExerciseGoalValuePrint {#1}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \addpoints {sm}
+  {
+    \AddtoExerciseGoal {points} {#2}
+    \IfBooleanF {#1} { \points {#2} }
+  }
+
+\NewDocumentCommand \printpoints {m}
+  {
+    \TotalExerciseTypeGoal {#1} {points}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \printtotalpoints {}
+  {
+    \TotalExerciseGoal {points}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \addbonus {sm}
+  {
+    \AddtoExerciseGoal {bonus-points} {#2}
+    \IfBooleanF {#1} { \points {#2} }
+  }
+
+\NewDocumentCommand \printbonus {m}
+  {
+    \TotalExerciseTypeGoal {#1} {bonus-points}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \printtotalbonus {}
+  {
+    \TotalExerciseGoal {bonus-points}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+% ----------------------------------------------------------------------------
+\NewDocumentCommand \pointsforgrade {m}
+  {
+    \GetGradeRequirementForGoal {#1} {points}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \goalsforgrade {mm}
+  {
+    \GetGradeRequirementForGoals {#2} {#1}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+\NewDocumentCommand \totalgoalforgrade {m}
+  {
+    \GetGradeRequirement {#1}
+      { \, \XSIMtranslate {point} }
+      { \, \XSIMtranslate {points} }
+  }
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseType {exercise} {
+  exercise-env      = exercise ,
+  solution-env      = solution ,
+  exercise-name     = \XSIMtranslate {exercise} ,
+  solution-name     = \XSIMtranslate {solution} ,
+  exercise-template = default ,
+  solution-template = default
+}
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseEnvironmentTemplate {default}
+  {
+    \subsection*
+      {
+        \XSIMmixedcase { \GetExerciseName } \nobreakspace
+        \GetExerciseProperty {counter}
+        \IfInsideSolutionF
+          {
+            \IfExercisePropertySetT {subtitle}
+              { ~ { \normalfont \itshape \GetExerciseProperty {subtitle} } }
+          }
+      }
+    \GetExercisePropertyT {points}
+      {
+        \marginpar
+          {
+            \IfInsideSolutionF { \rule {1.2cm} {1pt} \slash }
+            \PropertyValue
+            \GetExercisePropertyT {bonus-points}
+              { \nobreakspace ( + \PropertyValue ) }
+            \nobreakspace\XSIMtranslate {point-abbr}
+          }
+      }
+  }
+  {}
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseHeadingTemplate {none} {}
+
+\DeclareExerciseHeadingTemplate {default}
+  { \section* { \XSIMtranslate {default-heading} } }
+
+\DeclareExerciseHeadingTemplate {collection}
+  { \section* { \XSIMtranslate {collection-heading} } }
+
+\DeclareExerciseHeadingTemplate {per-section}
+  { \section* { \XSIMtranslate {per-section-heading} } }
+  
+\DeclareExerciseHeadingTemplate {per-chapter}
+  { \section* { \XSIMtranslate {per-chapter-heading} } }
+
+% ----------------------------------------------------------------------------
+
+\RequirePackage{array,booktabs}
+
+\DeclareExerciseTableTemplate {default*}
+  {
+    \XSIMputright \ExerciseTableCode
+      {
+        \toprule
+        \XSIMifblankTF {\ExerciseType}
+          {}
+          { \XSIMmixedcase { \GetExerciseParameter {exercise-name} } }
+        &
+      }
+    \ForEachUsedExerciseByType
+      {
+        \XSIMifeqTF {#1} { \ExerciseTableType {#1} }
+          {
+            \XSIMifblankTF { \ExerciseType }
+              {
+                \XSIMputright \ExerciseTableCode
+                  {
+                    \XSIMmixedcase
+                      { \ExerciseParameterGet {#1} {exercise-name} ~ }
+                  }
+              }
+              {}
+            \XSIMputright \ExerciseTableCode { #3 & }
+          }
+          {}
+      }
+    \XSIMputright \ExerciseTableCode
+      {
+        \XSIMtranslate {total} \\
+        \midrule \XSIMmixedcase { \XSIMtranslate {points} } &
+      }
+    \ForEachUsedExerciseByType
+      {
+        \XSIMifeqTF {#1} { \ExerciseTableType {#1} }
+          {
+            \XSIMputright \ExerciseTableCode
+              { \XSIMifblankTF {#5} {\printgoal{0}} {\printgoal{#5}} & }
+          }
+          {}
+      }
+    \XSIMputright \ExerciseTableCode
+      {
+        \XSIMifblankTF {\ExerciseType}
+          { \TotalExerciseGoal {points} {} {} }
+          { \TotalExerciseTypeGoal {\ExerciseType} {points} {} {} }
+        \\ \midrule
+        \XSIMtranslate {reached} &
+      }
+    \ForEachUsedExerciseByType
+      {
+        \XSIMifeqTF {#1} { \ExerciseTableType {#1} }
+          { \XSIMputright \ExerciseTableCode {&} }
+          {}
+      }
+    \XSIMputright \ExerciseTableCode { \\ \bottomrule }
+    \def\numberofcolumns{
+      \XSIMifblankTF {\ExerciseType}
+        {\numberofusedexercises}
+        {\csname numberof \ExerciseType s\endcsname}
+      }
+    \XSIMifeqF{\numberofcolumns}{0}
+      {
+        \begin {tabular} {l*{\numberofcolumns}{c}c}
+          \ExerciseTableCode
+        \end {tabular}
+      }
+  }
+
+\DeclareExerciseTableTemplate {default}
+  {
+    \XSIMputright \ExerciseTableCode
+      {
+        \toprule
+        \XSIMifblankTF {\ExerciseType}
+          {}
+          { \XSIMmixedcase { \GetExerciseParameter {exercise-name} } }
+        &
+        \XSIMmixedcase { \XSIMtranslate {points} } &
+        \XSIMtranslate {reached} \\
+        \midrule
+      }
+    \ForEachUsedExerciseByType
+      {
+        \XSIMifeqTF {#1} { \ExerciseTableType {#1} }
+          {
+            \XSIMifblankTF { \ExerciseType }
+              {
+                \XSIMputright \ExerciseTableCode
+                  {
+                    \XSIMmixedcase
+                      { \ExerciseParameterGet {#1} {exercise-name} ~ }
+                  }
+              }
+              {}
+            \XSIMputright \ExerciseTableCode
+              { #3 & \XSIMifblankTF {#5} {\printgoal{0}} {\printgoal{#5}} & \\ }
+          }
+          {}
+      }
+    \XSIMputright \ExerciseTableCode
+      {
+        \midrule
+        \XSIMtranslate {total} &
+        \XSIMifblankTF {\ExerciseType}
+          { \TotalExerciseGoal {points} {} {} }
+          { \TotalExerciseTypeGoal {\ExerciseType} {points} {} {} } &
+        \\ \bottomrule
+      }
+    \XSIMexpandcode
+      {
+        \noexpand \begin {tabular} {\XSIMifblankTF{\ExerciseType}{l}{c}cc}
+          \noexpand \ExerciseTableCode
+        \noexpand \end {tabular}
+      }
+  }
+
+% ----------------------------------------------------------------------------
+
+\DeclareExerciseTranslations {exercise} {
+  Fallback = exercise ,
+  English  = exercise ,
+  French   = exercice ,
+  German   = \"Ubung
+}
+
+\DeclareExerciseTranslations {question} {
+  Fallback = question ,
+  English  = question ,
+  French   = question ,
+  German   = Aufgabe
+}
+
+\DeclareExerciseTranslations {solution} {
+  Fallback = solution ,
+  English  = solution ,
+  French   = solution ,
+  German   = L\"osung
+}
+
+\DeclareExerciseTranslations {point-abbr} {
+  Fallback = p. ,
+  English  = p. ,
+  French   = p. ,
+  German   = P.
+}
+
+\DeclareExerciseTranslations {point} {
+  Fallback = point ,
+  English  = point ,
+  French   = point ,
+  German   = Punkt
+}
+
+\DeclareExerciseTranslations {points} {
+  Fallback = points ,
+  English  = points ,
+  French   = points ,
+  German   = Punkte
+}
+
+\DeclareExerciseTranslations {reached} {
+  Fallback = reached ,
+  English  = reached ,
+  French   = atteint ,
+  German   = erreicht
+}
+
+\DeclareExerciseTranslations {total} {
+  Fallback = total ,
+  English  = total ,
+  French   = totalement ,
+  German   = insgesamt
+}
+
+\DeclareExerciseTranslations {default-heading} {
+  Fallback = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s} ,
+  English  = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s} ,
+  German   = \XSIMmixedcase { \GetExerciseParameter {solution-name} en }~
+             zu~ den~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} en}
+}
+
+\DeclareExerciseTranslations {collection-heading} {
+  Fallback = \XSIMmixedcase { \GetExerciseParameter {exercise-name} s } ,
+  English  = \XSIMmixedcase { \GetExerciseParameter {exercise-name} s } ,
+  German   = \XSIMmixedcase { \GetExerciseParameter {exercise-name} en }
+}
+
+\DeclareExerciseTranslations {per-section-heading} {
+  Fallback = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s}~
+             of~ Section \nobreakspace \ExerciseSection ,
+  English  = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s}~
+             of~ Section \nobreakspace \ExerciseSection ,
+  German   = \XSIMmixedcase { \GetExerciseParameter {solution-name} en }~
+             zu~ den~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} en}~
+             in~ Abschnitt \nobreakspace \ExerciseSection
+}
+
+\DeclareExerciseTranslations {per-chapter-heading} {
+  Fallback = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s}~
+             of~ Chapter \nobreakspace \ExerciseChapter ,
+  English  = \XSIMmixedcase { \GetExerciseParameter {solution-name} s }~
+             to~ the~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} s}~
+             of~ Chapter \nobreakspace \ExerciseChapter ,
+  German   = \XSIMmixedcase { \GetExerciseParameter {solution-name} en }~
+             zu~ den~ \XSIMmixedcase { \GetExerciseParameter {exercise-name} en}~
+             in~ Kapitel \nobreakspace \ExerciseChapter
+}
+
+% ----------------------------------------------------------------------------
+\tex_endinput:D

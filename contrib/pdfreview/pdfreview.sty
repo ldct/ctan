@@ -1,0 +1,346 @@
+% This package is covered by the LaTeX project public license 
+% (see \url{http://www.latex-project.org/lppl.txt}). 
+% Please report bugs to the author (Michael Palmer, mpalmer@uwaterloo.ca) 
+
+\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+\ProvidesPackage{pdfreview}[2017/05/03 v1.00]
+
+\RequirePackage{
+    adjustbox,
+    calc,
+    graphicx,
+    ifthen,
+    kvoptions,
+    tikz,
+    xstring
+}
+
+\usetikzlibrary{calc}
+
+% improve file name handling
+\RequirePackage[extendedchars,space]{grffile}
+
+% provide \sout (strikeout)
+\RequirePackage[normalem]{ulem}
+
+\SetupKeyvalOptions{%
+   family=annotation,
+   prefix=prv@,
+}
+
+\DeclareBoolOption[true]{grid}
+\DeclareBoolOption[false]{twocolumn}
+\DeclareBoolOption[false]{notenumbers}
+\DeclareBoolOption[true]{inline}
+%
+\DeclareStringOption[black!30]{gridcolor}
+\DeclareStringOption[0.75]{bodywidth}
+\DeclareStringOption[1cm]{trim}
+\DeclareStringOption[0.5pt]{bodyframe}
+\DeclareStringOption[noname]{sourcedoc}
+\DeclareStringOption[0]{pageoffset}
+\DeclareStringOption[c]{alignnotes}
+\DeclareStringOption[yellow]{notesbg}
+\DeclareStringOption[black]{notesframe}
+\DeclareStringOption[3pt]{notesep}
+\DeclareStringOption[footnotesize]{fontsize}
+\DeclareStringOption[100]{maxscale}
+\DeclareStringOption[1]{stretch}
+\DeclareStringOption[2.5cm]{insertpagemargin}
+
+\ProcessKeyvalOptions*
+
+% break up trim options - passing raw kvoptions input through to adjustbox fails. 
+% count spaces
+\StrCount{\prv@trim}{ }[\prv@trimspaces]
+
+\ifthenelse{\equal{\prv@trimspaces}{0}}%
+  % no spaces - trim all four sides the same 
+  {\edef\prv@trimleft{\prv@trim}%
+   \edef\prv@trimright{\prv@trim}%
+   \edef\prv@trimtop{\prv@trim}%
+   \edef\prv@trimbottom{\prv@trim}%
+  }{\ifthenelse{\equal{\prv@trimspaces}{1}}%
+  % one space - apply separate trimming to h and v
+  {\StrCut{\prv@trim}{ }{\prv@trimh}{\prv@trimv}%
+   \edef\prv@trimleft{\prv@trimh}%
+   \edef\prv@trimright{\prv@trimh}%
+   \edef\prv@trimtop{\prv@trimv}%
+   \edef\prv@trimbottom{\prv@trimv}}
+  {% assume it's different parameters for all four sides
+   \StrCut{\prv@trim}{ }{\prv@trimleft}{\prv@trimtwo}%
+   \StrCut{\prv@trimtwo}{ }{\prv@trimbottom}{\prv@trimthree}%
+   \StrCut{\prv@trimthree}{ }{\prv@trimright}{\prv@trimtop}}}
+
+\newcommand{\sourcedoc}{\prv@sourcedoc}
+
+% control the split between the included page and the notes pane
+\newlength{\prv@noteswidth}
+\newlength{\prv@sourcebodywidth}
+\newlength{\prv@bodyoffset}
+\newlength{\prv@rightnotesoffset}
+\newlength{\prv@bodypadding}
+
+% empty space between body and notes 
+\setlength{\prv@bodypadding}{\prv@notesep}
+
+\newlength{\prv@bodyframewidth}
+\setlength{\prv@bodyframewidth}{\prv@bodyframe}
+
+\newcommand{\prv@notesfont}{\csname \prv@fontsize \endcsname}
+
+\newsavebox{\prv@charbox}
+\sbox{\prv@charbox}{\prv@notesfont\phantom{x}\strut}
+
+\newlength{\prv@xsep}
+\setlength{\prv@xsep}{0.75\wd\prv@charbox}
+
+\newlength{\prv@helpnumwidth}
+\setlength{\prv@helpnumwidth}{\widthof{\prv@notesfont$\prv@maxscale$}+2\prv@xsep}
+
+\RequirePackage[hidelinks]{hyperref}
+\RequirePackage{bookmark}
+
+\newlength{\prv@notestextwidth}
+\newlength{\prv@pageheight}
+\newlength{\prv@unitheight}
+\newlength{\prv@currentheight}
+
+\newsavebox{\prv@pagebox}
+\newsavebox{\prv@gridboxright}
+\newsavebox{\prv@gridboxleft}
+
+\tikzset{
+  notesfont/.style={
+    font=\prv@notesfont
+  },
+  %
+  notes/.style={
+    notesfont,
+    draw=\prv@notesframe,
+    fill=\prv@notesbg,
+    rounded corners=0.5pt,
+    inner xsep=\prv@xsep,
+    inner ysep=0.4\ht\prv@charbox,
+    outer ysep=0.5pt,
+    outer xsep=0pt,
+    text width=\prv@notestextwidth,
+    text height=\ht\prv@charbox
+  },
+  %
+  helpnum/.style={
+    notesfont,
+    draw=none,
+    text=\prv@gridcolor,
+    text width=\prv@helpnumwidth,
+    align=center,
+    inner xsep=0pt,
+    inner ysep=-1em, % hack to squash scale y offset caused by node text 
+  },
+  %
+  grid/.style={
+    draw=\prv@gridcolor, 
+    very thin,
+  },
+  %
+  boxnode/.style={
+    inner sep=0pt,
+    outer sep=0pt,
+    anchor=south west,
+    draw=none
+  },
+  %
+  strutline/.style={
+    draw=white,
+    line width=0pt
+  },
+  %
+  hypertarget/.style={
+    notes,
+    alias=targetnode,
+    append after command={
+      let \p1=(targetnode.north west) in
+      node[draw=none,at=(\p1)] {\hypertarget{#1}{}}
+    }
+  },
+  %
+  hyperlink/.style={
+    notes,
+    alias=sourcenode,
+    append after command={
+      let \p1=(sourcenode.north west),
+        \p2=(sourcenode.south east),
+        \n1={\x2-\x1},
+        \n2={\y1-\y2} in
+      node [inner sep=0pt, outer sep=0pt,anchor=north west,at=(\p1)] 
+      {\hyperlink{#1}{\phantom{\rule{\n1}{\n2}}}}
+    }
+  }
+}
+
+\newcommand{\prv@drawgridboxright}{%
+  \ifthenelse{\ht\prv@gridboxright<10}{%
+    \global\sbox{\prv@gridboxright}{%
+    \begin{tikzpicture}[y=\prv@unitheight,grid]%
+    \foreach \y in {0, 4, ..., \prv@maxscale}{%
+      \begin{scope}[yshift=\y\prv@unitheight]%
+        \draw (0,0) -- ++(\prv@noteswidth-\prv@helpnumwidth,0) node[helpnum,anchor=west]{$\y$};
+        \ifthenelse{\equal{\y}{\prv@maxscale}}{}{%
+        \foreach \z/\w in {1/0.25,2/0.5,3/0.25}{%
+           \draw (0,\z) -- ++(\w,0);
+        }}%
+      \end{scope}
+    }
+    \end{tikzpicture}}}{}%
+  \usebox{\prv@gridboxright}%
+}
+
+\newcommand{\prv@drawgridboxleft}{%
+  \ifthenelse{\ht\prv@gridboxleft<10}{%
+    \global\sbox{\prv@gridboxleft}{%
+    \begin{tikzpicture}[y=\prv@unitheight,grid,xscale=-1]%
+    %\draw[blue](0,0) rectangle (\prv@noteswidth,\prv@pageheight);
+    \foreach \y in {0, 4, ..., \prv@maxscale}{%
+      \begin{scope}[yshift=\y\prv@unitheight]%
+        \draw (0,0) -- ++(\prv@noteswidth-\prv@helpnumwidth,0) node[helpnum,anchor=east]{$\y$};
+        \ifthenelse{\equal{\y}{\prv@maxscale}}{}{%
+        \foreach \z/\w in {1/0.25,2/0.5,3/0.25}{%
+           \draw (0,\z) -- ++(\w,0);
+        }}%
+      \end{scope}
+    }
+    \end{tikzpicture}}}{}%
+  \usebox{\prv@gridboxleft}%
+}
+
+\newcounter{prv@offsetpage}
+\newcommand*{\prv@pagelabel}{}
+
+\newenvironment{page}[2][]{%
+\clearpage%
+%
+% calculate page number for bookmark
+\setcounter{prv@offsetpage}{#2+\prv@pageoffset}%
+\ifthenelse{\value{prv@offsetpage}<1}%
+  {\renewcommand*{\prv@pagelabel}{\roman{page}}}
+  {\renewcommand*{\prv@pagelabel}{\arabic{prv@offsetpage}}}
+\phantomsection\addcontentsline{toc}{section}{p.\ \prv@pagelabel}%
+% now, start the actual page content. we use a minipage for vertical centering
+\noindent\begin{minipage}[c][\textheight]{\textwidth}
+\noindent\begin{center}
+\begin{adjustbox}{width=\textwidth}%
+\begin{tikzpicture}[y=\prv@unitheight]%
+\ifprv@twocolumn
+  \ifprv@grid
+    \node[boxnode] at (0,0){\prv@drawgridboxleft};
+  \else
+    \draw[strutline](0,0) -- (\prv@noteswidth,0);
+  \fi
+\fi
+\ifprv@grid
+  \node[boxnode,anchor=south east] at (\textwidth,0) {\prv@drawgridboxright};
+\else
+  \draw[strutline](\textwidth,0) -- ++(-\prv@noteswidth,0);
+\fi
+\begin{scope}
+\setlength{\fboxsep}{0pt}
+\node[boxnode] at (\prv@bodyoffset,0) 
+    {\adjustbox{clip, trim=\prv@trimleft{} \prv@trimbottom{} \prv@trimright{} \prv@trimtop{},%
+               #1,width=\prv@sourcebodywidth,fbox=\prv@bodyframe}%
+               {\includegraphics[page=#2]{\sourcedoc}}};%
+\end{scope}
+\begin{scope}[xshift=\prv@rightnotesoffset]}%
+%
+{\end{scope}\end{tikzpicture}%
+\end{adjustbox}%
+\end{center}%
+\end{minipage}%
+}
+
+\newenvironment{leftnotes}%
+{\ifprv@twocolumn
+   \begin{scope}[xshift=\prv@helpnumwidth-\prv@rightnotesoffset]%
+ \else%
+   \begin{scope}
+ \fi}
+%
+{\end{scope}}
+
+% a no-op environment for the bureaucratically inclined
+\newenvironment{rightnotes}{}{}
+
+% use an insertpage environment for putting out the list of notes if requested
+\newcommand{\prv@noteslist}{\begin{insertpage}[List of notes]\begin{enumerate}}
+
+\newcommand{\prv@notealignment}{north west}
+\newcounter{note}
+
+\newcommand{\note}[3][\prv@alignnotes]{%
+\stepcounter{note}%
+\ifthenelse{\equal{#1}{b}}{\renewcommand{\prv@notealignment}{south west}}{%
+  \ifthenelse{\equal{#1}{t}}{\renewcommand{\prv@notealignment}{north west}}{%
+  \renewcommand{\prv@notealignment}{west}}}
+%
+\ifprv@inline
+    \node[anchor=\prv@notealignment,hypertarget=note\arabic{note}] at (0,#2){%
+    \bookmark[level=2,dest=note\arabic{note}]{Note \arabic{note}}%
+    \raggedright\setlength{\parindent}{1em}\noindent%
+      \ifprv@notenumbers\arabic{note})\ \fi%
+      #3
+    };
+\else
+    \node[anchor=\prv@notealignment,hypertarget=note\arabic{note},%
+          hyperlink=noteitem\arabic{note}] at (0,#2){%
+    \bookmark[level=2,dest=note\arabic{note}]{Note \arabic{note}}%
+    \raggedright\setlength{\parindent}{1em}\noindent%
+    \g@addto@macro\prv@noteslist{\item \hypertarget{noteitem\arabic{enumi}}{}{#3}%
+                                  \hyperlink{note\arabic{enumi}}{~$\uparrow$}}%
+    \arabic{note}.
+    };
+\fi
+}%
+
+\newcommand{\cnote}[2]{\note[c]{#1}{#2}}
+\newcommand{\bnote}[2]{\note[b]{#1}{#2}}
+\newcommand{\tnote}[2]{\note[t]{#1}{#2}}
+
+% provide for extra pages with text
+\newenvironment{insertpage}[1][General comments]%{}{}%
+{\clearpage%
+\phantomsection\addcontentsline{toc}{section}{#1}%
+\newgeometry{margin=\prv@insertpagemargin}
+\section*{#1}}
+%
+{\clearpage\aftergroup\restoregeometry}
+
+
+\AtBeginDocument{% divide up the page. Use package geometry if not yet loaded by user. 
+    \@ifpackageloaded{geometry}{}% use of both package options and \newgeometry is intentional. 
+        {\RequirePackage[hmargin=0.25cm,vmargin=2.5cm]{geometry}%
+         \newgeometry{hmargin=0.25cm,vmargin=2.5cm}}%
+    \setlength{\prv@sourcebodywidth}{\prv@bodywidth\textwidth}%
+    \ifprv@twocolumn%
+        \setlength{\prv@noteswidth}{0.5\textwidth-0.5\prv@sourcebodywidth-\prv@bodypadding}%
+        \setlength{\prv@bodyoffset}{\prv@noteswidth+\prv@bodypadding-\prv@bodyframe}%
+    \else%
+        \setlength{\prv@noteswidth}{\textwidth-\prv@sourcebodywidth-\prv@bodypadding}%
+        \setlength{\prv@bodyoffset}{0pt}%
+    \fi%
+    \setlength{\prv@rightnotesoffset}{\textwidth-\prv@noteswidth}%
+    \setlength{\prv@notestextwidth}{\prv@noteswidth-\prv@helpnumwidth-2\prv@xsep}%
+    \sbox{\prv@pagebox}{%
+      {\setlength{\fboxsep}{0pt}%
+      \adjustbox{clip,trim=\prv@trimleft{} \prv@trimbottom{} \prv@trimright{} \prv@trimtop{},%
+                 width=\prv@sourcebodywidth,fbox=\prv@bodyframe}{\includegraphics[page=1]{\sourcedoc}}%
+    }}%
+    \setlength{\prv@pageheight}{\ht\prv@pagebox}%
+    \setlength{\prv@unitheight}{\prv@stretch\prv@pageheight/\prv@maxscale}%
+}%
+
+\AtEndDocument{%
+\ifprv@inline% do nothing
+\else% close the notes list and print it out
+  \g@addto@macro\prv@noteslist{\end{enumerate}\end{insertpage}}
+  \clearpage
+  \prv@noteslist
+\fi}

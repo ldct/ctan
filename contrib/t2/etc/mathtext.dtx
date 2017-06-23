@@ -1,0 +1,212 @@
+% \iffalse
+%<*driver>
+\documentclass{ltxdoc}
+\begin{document}
+\DocInput{mathtext.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+%    \begin{macrocode}
+%<*mathtext>
+\ProvidesPackage{mathtext}
+  [1999/01/28 v1.0 transparent text-and-math defs]
+%    \end{macrocode}
+%
+% This stuff is intended to be put into the LaTeX kernel.
+% It adds new NFSS user-level command: |\DeclareTextMathSymbol|.
+% It does not touch in any way the previous behavior for encodings
+% which do not use |\DeclareTextMathSymbol|.
+%
+% The symbols defined via |\DeclareTextMathSymbol| work transparently
+% in both text and math mode. And interestingly, they expand a bit
+% faster than `normal' text-only symbols defined via |\DeclareTextSymbol|.
+%
+% This is a redefinition of the |\@@enc@update| defined in
+% |ltfssbas.dtx|. The only change is that we added updating of
+% new commands like |\T2A-tmcmd| to |\@current@tmcmd| or from
+% |\@changed@tmcmd|. These changes are fully backward-compatible,
+% and do not change the previous behavior.
+%    \begin{macrocode}
+\def\@@enc@update{%
+  \expandafter\let\csname\cf@encoding-cmd\endcsname\@changed@cmd
+  \expandafter\let\csname\cf@encoding-tmcmd\endcsname\@changed@tmcmd
+  \expandafter\let\csname\f@encoding-cmd\endcsname\@current@cmd
+  \expandafter\let\csname\f@encoding-tmcmd\endcsname\@current@tmcmd
+  \default@T
+  \csname T@\f@encoding\endcsname
+  \csname D@\f@encoding\endcsname
+  \let\enc@update\relax
+  \let\cf@encoding\f@encoding
+}
+%    \end{macrocode}
+% This is a new command, |\@current@tmcmd|, which is an analog of
+% |\@current@cmd| for `text and math' symbols.
+%    \begin{macrocode}
+\def\@current@tmcmd#1#2#3{%
+  \ifx\protect\@typeset@protect
+    \@tmchar#2#3%
+  \else
+    \noexpand#1%
+  \fi}
+%<!warn>\def\@tmchar#1#2{\if@mmode#2\else#1\fi}
+%<warn>\def\@tmchar#1#2{\if@mmode\math@warn#2\else#1\fi}
+%    \end{macrocode}
+% This is a new command, |\@changed@tmcmd|, which is an analog of
+% |\@changed@cmd| for `text and math' symbols.
+%    \begin{macrocode}
+\def\@changed@tmcmd#1#2#3{%
+  \ifx\protect\@typeset@protect
+    \@tmchar@#1%
+  \else
+    \noexpand#1%
+  \fi}
+\def\@tmchar@#1{%
+    \if@mmode
+      \expandafter\ifx\csname\cf@encoding math\string#1\endcsname\relax
+         \expandafter\ifx\csname ?math\string#1\endcsname\relax
+            \expandafter\def\csname ?math\string#1\endcsname{%
+               \TextSymbolUnavailable#1%
+            }%
+         \fi
+         \global\expandafter\let
+               \csname\cf@encoding math\string#1\expandafter\endcsname
+               \csname ?math\string#1\endcsname
+      \fi
+%<!warn>      \csname\cf@encoding math\string#1%
+%<warn>      \expandafter\math@warn\csname\cf@encoding math\string#1%
+         \expandafter\endcsname
+    \else
+      \expandafter\ifx\csname\cf@encoding\string#1\endcsname\relax
+         \expandafter\ifx\csname ?\string#1\endcsname\relax
+            \expandafter\def\csname ?\string#1\endcsname{%
+               \TextSymbolUnavailable#1%
+            }%
+         \fi
+         \global\expandafter\let
+               \csname\cf@encoding \string#1\expandafter\endcsname
+               \csname ?\string#1\endcsname
+      \fi
+      \csname\cf@encoding\string#1%
+         \expandafter\endcsname
+    \fi}
+\expandafter\let\csname?-tmcmd\endcsname\@changed@tmcmd
+%    \end{macrocode}
+% We should add initialization of |\|\meta{encoding}|-tmcmd|
+% to be |\@changed@tmcmd| when the new encoding is declared.
+%    \begin{macrocode}
+\def\DeclareFontEncoding@#1#2#3{%
+  \expandafter
+  \ifx\csname T@#1\endcsname\relax
+     \def\cdp@elt{\noexpand\cdp@elt}%
+     \xdef\cdp@list{\cdp@list\cdp@elt{#1}%
+                    {\default@family}{\default@series}%
+                    {\default@shape}}%
+     \expandafter\let\csname#1-cmd\endcsname\@changed@cmd
+     \expandafter\let\csname#1-tmcmd\endcsname\@changed@tmcmd
+  \else
+     \@font@info{Redeclaring font encoding #1}%
+  \fi
+  \global\@namedef{T@#1}{#2}%
+  \global\@namedef{M@#1}{\default@M#3}%
+  \xdef\LastDeclaredEncoding{#1}%
+%    \end{macrocode}
+% The following command is specific to the |mathtext| package, i.e.\ is
+% not for `generic' transparent text and math: it declares a symbol font
+% (which could then be redefined if necessary), which is needed to use
+% the |\DeclareTextMathSymbol|.
+%    \begin{macrocode}
+  \DeclareSymbolFont{#1letters}{#1}\rmdefault\mddefault\updefault
+  }
+%    \end{macrocode}
+%
+% \begin{macro}{\DeclareTextMathSymbol}
+% This is a new user-level NFSS macro. It is intended to be moved
+% to |ltoutenc.dtx| or |ltfssdcl.dtx|.
+%
+% It was written by Werner Lemberg |<wl@gnu.org>|.
+%
+% Parameters are: name, encoding, category, math character class,
+% and slot.
+%
+%    \begin{macrocode}
+\def\DeclareTextMathSymbol#1#2#3#4#5{%
+   \expandafter\def\expandafter#1%
+      \expandafter{%
+         \csname#2-tmcmd\expandafter\endcsname
+         \expandafter#1%
+         \csname#2\string#1\expandafter\endcsname
+         \csname#2math\string#1\endcsname
+      }%
+   \expandafter\chardef\csname#2\string#1\endcsname#5\relax
+   \expandafter\DeclareMathSymbol\csname#2math\string#1\endcsname
+     {#3}{#4}{#5}}
+\@onlypreamble\DeclareTextMathSymbol
+%    \end{macrocode}
+% \end{macro}
+%
+% The next few lines try to solve the following problem: if the first
+% unexpandable token of a cell in |\halign| (or |\valign|) is a Cyrillic
+% letter, then the look-ahead mechanism searching for possible |\omit|
+% will expand the |\ifmmode| test used in definitions of Cyrillic
+% letters, and e.g.~in the case of the |array| environment which
+% switches to math mode, will return wrong result, which will lead to
+% missing character or incorrect result. We use here some hackery and
+% redefine the |\if@mmode| test for the |\halign| and |\valign| commands
+% (as well as these commands). The really correct fix is possible within
+% e-\TeX\ (so, one should make a support do use the best possible solution,
+% and not only in this case). We ensure to execute this code only once,
+% because otherwise an endless loop will arise (e.g. if both T2A and T2B
+% are loaded in one document), because of |\halign| redefinition.
+%    \begin{macrocode}
+\let\if@mmode\ifmmode
+%    \end{macrocode}
+% This command stops look-ahead (protection is needed to avoid recursive
+% expansion when |\protected@write| is used inside |\halign|):
+%    \begin{macrocode}
+\DeclareRobustCommand\reset@if@mmode{\let\if@mmode\ifmmode}
+\def\if@mmode@{\reset@if@mmode\ifmmode}
+\let\org@halign\halign
+\DeclareRobustCommand\halign{\let\if@mmode\if@mmode@\org@halign}
+%    \end{macrocode}
+% wait until textcase and amsmath will not use "fake" |\valign| :-)
+%    \begin{macrocode}
+%\let\org@valign\valign
+%\DeclareRobustCommand\valign{\let\if@mmode\if@mmode@\org@valign}
+%    \end{macrocode}
+% This is needed to make single Cyrillic letters (without braces) work as
+% upper/lower indices (otherwise, |\let| will confuse \TeX). Do we need to
+% set |\everydisplay| similarly (it seems that not)?
+%    \begin{macrocode}
+\everymath\expandafter{\the\everymath\let\if@mmode\ifmmode}
+%    \end{macrocode}
+% We redefine some \LaTeX{} text-only commands to work `transparently'
+% in text and math mode.
+%    \begin{macrocode}
+\def\DeclareTextSymbol#1#2#3{%
+  \DeclareTextMathSymbol#1{#2}\mathalpha{#2letters}{#3}}
+%    \end{macrocode}
+% \begin{macro}{\gobble@math}
+% \begin{macro}{\math@warn}
+% These two commands are used for producing warning message
+% if a symbol declared via |\DeclareTextMathSymbol| command occurs in
+% math mode. This can be used e.g.\ to check that such symbols were not
+% used unintentionally in math mode (say, some Cyrillic letter instead
+% of similarly looking Latin letter; in general, Cyrillic letters are
+% perfectly legal and certainly could be used in math mode).
+%    \begin{macrocode}
+%<*warn>
+\DeclareOption{warn}{%
+\edef\reserved@a{\@backslashchar##1\expandafter\@gobble
+  \string\math\@backslashchar}%
+\expandafter\def\expandafter\gobble@math\reserved@a{}%
+\def\math@warn#1{#1\PackageWarning{mathtext}{letter
+  `\expandafter\gobble@math\string#1' used in math mode}}}
+\let\math@warn\@empty
+\ProcessOptions*
+%</warn>
+%</mathtext>
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+\endinput

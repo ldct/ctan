@@ -1,0 +1,251 @@
+%!TEX root = /Users/ego/Boulot/TKZ/tkz-fct/doc-fr/TKZdoc-fct-main.tex
+\section{Utilisation de Gnuplot}
+%–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––> 
+\subsection{Mécanisme d'interaction entre \TIKZ\ et \tkzname{Gnuplot}}
+
+\TEX\  est un système logiciel de composition de documents ( text processing programm ). Il permet bien sûr de calculer, mais avec des moyens limités. \TIKZ\ est ainsi limité par \TEX\ pour effectuer des calculs. Pour rappel ±16383.99999 pt est l'intervalle dans lequel \TEX\ stocke ses valeurs. Sachant que 1 cm est égal à 28.45274 pt, on s'aperçoit que \TEX\ ne  peut traiter que des dimensions inférieures à 5,75 mètres environ.
+Bien sûr, cela paraît suffisant, mais malheureusement, pendant un enchaînement de calculs, il est assez facile de dépasser ces limites.
+
+\bigskip 
+ \tkzActivOff  
+  \newcommand{\drawpage}[4]{%
+  \begin{scope}[xshift=#1, yshift=#2,font=\footnotesize]
+    \filldraw[fill=white!75!#4,draw=#4, very thin]%
+   (0,0) -- (4.2,0) -- (4.2,4.85) --(3.21,5.84)-- (0,5.84) -- cycle;
+   \fill[fill=#4,shade,top color=#4,bottom color=#4!40]%
+       (3.21,5.84) -- ++(0,-0.99) -- ++(0.99,0) -- cycle;
+    \path (2.1,2.97) node{#3};
+  \end{scope}
+}
+
+\begin{center}
+\begin{tikzpicture}[>=triangle 45,scale=.75]
+\drawpage{0cm}{0cm}{\texttt\blue\begin{minipage}{2cm}
+sample.tex
+
+with
+
+\tkzcname{draw plot[id=fct] function{---.};}
+\end{minipage}}{blue}
+\drawpage{12cm}{0cm}{\texttt \red sample.fct.gnuplot}{red}
+\drawpage{12cm}{-14cm}{\texttt\red sample.fct.table}{red}
+\drawpage{0cm}{-14cm}{\texttt\blue\begin{minipage}{2cm}
+sample.pdf 
+
+\bigskip 
+\shorthandoff{:}
+ \begin{tikzpicture}[domain=-1.5:.8]
+  \draw plot[id=f1,samples=200] function{x*x}; 
+ \end{tikzpicture}
+\end{minipage}}{blue} 
+
+\path (8.05,2.9) node(A) 
+     [diamond,%
+      draw,color   = black,
+      fill         = red!60,%
+      text         = black,%
+      minimum size = 3 cm,%
+      font         = \normalsize] 
+     {{\texttt \tikzname-\TEX}};  
+  \path (14.1,-4.08) node(B) 
+     [diamond,%
+      draw,color=black,fill=green!60,%
+      text = black,%
+      minimum size = 3 cm,%
+      font         = \normalsize] 
+     {{\texttt gnuplot}};
+  \path (8.05,-11.1) node(C) 
+     [diamond,%
+      draw,color   = black,
+      fill         = red!60,%
+      text         = black,%
+      minimum size = 3 cm,%
+      font         = \normalsize] 
+     {{\texttt \tikzname-\TEX}};   
+  \draw[->] (4.2,2.9) -- (A.west);
+  \draw[->] (A.east) -- (12,2.9);
+  \draw[->] (14.1,0) -- (B.north); 
+  \draw[->] (B.south) -- (14.1,-8.18);
+  \draw[->] (12 ,-11.1)--(C.east);
+  \draw[->] (C.west)--(4.2,-11.1); 
+ \draw[->,magenta] (4.2,2.9) to [ out =-80,in=260] node[below,pos=.5]{étape 1} (12,2.9);
+  \draw[->,magenta] (14.1,0) to [ out =200,in=160] node[left,pos=.5]{étape 2} (14.1,-8.18);   
+  \draw[->,magenta] (12 ,-11.1) to [ out =110,in=70] node[above,pos=.5]{étape 3} (4.2,-11.1); 
+  \end{tikzpicture}
+\end{center}
+
+\newpage 
+
+Pour tracer des courbes en 2D en contournant ces problèmes, un moyen simple offert par \TIKZ, est d'utiliser \tkzname{gnuplot}. 
+
+ \tkzname{tkz-fct.sty}  s'appuie sur le programme \tkzname{gnuplot} et le package  \tkzname{fp.sty}. Le premier est utilisé pour obtenir une liste de points, et le second pour évaluer ponctuellement des valeurs.
+ 
+ Vous devez donc installer \tkzname{Gnuplot},  son installation dépend de votre système, puis  il faudra que votre distribution trouve \tkzname{Gnuplot}, et que  \TeX\  autorise \tkzname{Gnuplot} à écrire un fichier.
+
+\begin{itemize}
+\item \textcolor{red}{\textbf{Étape 1}}
+
+On part du fichier \tkzname{sample.tex} suivant :
+
+\medskip    
+\begin{tkzltxexample}[]  
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\begin{tikzpicture}
+\draw plot[id=f1,samples=200,domain=-2:2] function{x*x};
+\end{tikzpicture}
+\end{document}
+\end{tkzltxexample} 
+ \tkzActivOn
+
+La compilation de ce fichier créé avec \TIKZ, produit un fichier nommé    \tkzname{sample.f1.gnuplot}. Le nom du fichier est obtenu à partir de \tkzcname{jobname} et de l'option \tkzname{id}. Ainsi un même fichier peut créer plusieurs fichiers distincts. C'est un fichier texte ordinaire, affecté de l'extension \tkzname{gnuplot}. Il contient un préambule indiquant à \tkzname{gnuplot} qu'il doit créer une table contenant les coordonnées d'un certain nombre de points obtenu par la fonction définie par $x\longrightarrow x^2$. Ce nombre de points est défini par l'option \tkzname{samples}. Cette étape ne présente aucune difficulté particulière. Le fichier obtenu peut être traité manuellement avec \tkzname{gnuplot}.  Le résultat est le fichier suivant : 
+
+\begin{tkzltxexample}[]  
+set table; set output "sample.f1.table"; set format "%.5f"
+set samples 200; plot [x=-2:2] x*x  
+\end{tkzltxexample} 
+
+Une table sera créée et enregistrée dans un fichier texte nommé "sample.f1.table". Les nombres seront formatés pour ne contenir que 5 décimales.
+La table contiendra 201 couples de coordonnées. 
+ 
+\item  \textcolor{red}{\textbf{Étape 2}} 
+
+Elle est la plus délicate car  le fichier \tkzname{sample.f1.gnuplot} doit être ouvert par \tkzname{gnuplot}. Cela implique d'une part, que   \TEX\  autorise l'ouverture\footnote{c'est ici que l'on parle des options \tkzname{--shell-escape} et \tkzname{--enable-write18}}
+   du  fichier \tkzname{sample.f1.gnuplot} par \tkzname{gnuplot} et d'autre part, que   \TEX\ puisse trouver \tkzname{gnuplot}\footnote{c'est ici que l'on parle de \tkzname{PATH}}. 
+
+Si \tkzname{gnuplot} trouve \tkzname{sample.f1.gnuplot} alors il produit un fichier texte \tkzname{sample.f1.table}, évidemment s'il ne trouve d'erreur de syntaxe dans l'expression de la fonction.
+
+\tkzHandBomb Malheureusement, une incompréhension peut surgir entre \TIKZ\ et  \tkzname{gnuplot}.  \TIKZ\ jusqu'à sa version 2.00 officielle, est conçu pour fonctionner avec \tkzname{gnuplot} version 4.0 et malheureusement, \tkzname{gnuplot} a changé de syntaxe. la documentation de gnuplot indique :
+
+\medskip\hspace{1cm}    
+\begin{tkzltxexample}[]
+	Features, changes and fixes in gnuplot version 4.2 (and >)
+'set table "outfile"; ---.; unset table' replaces 'set term table'  
+\end{tkzltxexample}
+
+
+La version 2.1 de \TIKZ\ a adopté   \tkzname{set table} et il n'y a plus d'incompatibilité entre \TIKZ\ et les versions récentes de \tkzname{gnuplot} (v>4.2). 
+   
+ \item \textcolor{red}{\textbf{Étape 3}} 
+ 
+ Le fichier \tkzname{sample.f1.table} obtenu à l'étape précédente est utilisé par \TIKZ\ pour tracer la courbe.
+ 
+\medskip\hspace{1cm}    
+\begin{tkzltxexample}[]   
+# Curve 0 of 1, 201 points
+# Curve title: "x*x"
+# x y type
+-2.00000 4.00000  i
+-1.98000 3.92040  i
+-1.96000 3.84160  i
+---.
+1.98000 3.92040  i
+2.00000 4.00000  i 
+\end{tkzltxexample} 
+\end{itemize}
+
+\begin{enumerate}
+
+\item  Il faut remarquer qu'au cours d'une seconde compilation, si le fichier  \tkzname{sample.f1.gnuplot} ne change pas, alors \tkzname{gnuplot} n'est pas lancé et le fichier présent \tkzname{sample.f1.table} est utilisé.
+
+\item On peut aussi remarquer  que si vous êtes paranoïaque et que vous n'autorisez pas le lancement de gnuplot, alors un première compilation permettra de créer le fichier \tkzname{sample.f1.table}, ensuite manuellement, vous pourrez lancer gnuplot  et obtenir le fichier \tkzname{sample.f1.table}.
+
+\item Il est aussi possible de créer manuellement ou encore avec un quelconque programme, un fichier data.table que \TIKZ\ pourra lire avec
+
+\begin{tkzltxexample}[]
+  \draw plot[smooth] file {data.table};  
+\end{tkzltxexample}
+\end{enumerate}
+
+
+
+\subsection{Installation de \tkzname{Gnuplot}} 
+
+Gnuplot est proposé avec la plupart des distributions Linux, et existe pour OS X ainsi que pour Windows. 
+
+\begin{enumerate}
+  \item \tkzname{Ubuntu}\NameSys{Linux Ubuntu} ou un autre système Linux: on l'installe en suivant la procédure classique d'installation d'un nouveau paquetage. 
+  \item \tkzname{Windows}\NameSys{Windows XP}  Les utilisateurs de Windows doivent se méfier, après avoir téléchargé la bonne version et installé \tkzname{gnuplot} alors il faudra  renommé wgnuplot en gnuplot. Ensuite il faudra modifier le \tkzname{path}. Si le chemin du programme est \shorthandoff{:}\tkzname{C:\textbackslash gnuplot} alors il faudra ajouter   \tkzname{{C:}\textbackslash gnuplot\textbackslash bin\textbackslash}\shorthandon{:}  aux variables environnement (Aller à "Poste de Travail" puis faire "propriétés", dans l'onglet "Avancé", cliquer sur "Variables d'environnement". ). 
+Ensuite pour compiler sous latex, il faudra ajouter au script de compilation l'option  \tkzname{--enable-write18 }. 
+  \item  \tkzname{OS X}\NameSys{OS X}  C'est le système en version Snow Leopard  qui pose le plus  de problème, car il faut compiler les sources.
+  Si vous n'utilisez \tkzname{gnuplot} qu'en collaboration avec \TIKZ\ alors il vous suffit de compiler les sources ainsi :
+ 
+ \begin{enumerate}
+
+\item  Télécharger les sources de \tkzname{gnuplot}, déposer les sources sur le bureau.
+\item Ouvrir un terminal puis taper cd et glisser le dossier des sources après cd (en laissant un espace)
+Cela doit donner
+
+\begin{tkzltxexample}[] 
+$ cd /Users/ego/Desktop/gnuplot-4.4.2 
+\end{tkzltxexample}
+
+\item ensuite taper la ligne suivante et valider
+ \begin{tkzltxexample}[]
+$ ./configure --with-readline=builtin
+\end{tkzltxexample}
+  \item puis
+\begin{tkzltxexample}[]
+$ make\end{tkzltxexample} 
+  \item et enfin 
+   \begin{tkzltxexample}[]
+$ sudo make install
+\end{tkzltxexample}  
+ \end{enumerate}
+\end{enumerate}
+
+
+\subsection{ Test de l'installation de tkz-base}
+Enregister le code suivant dans un fichier avec le nom test.tex, puis compiler avec pdflatex ou bien la chaîne dvi-->ps-->pdf. Vous devez obtenir cela :
+   
+
+\begin{tkzltxexample}[]
+\documentclass{scrartcl}
+\usepackage[usenames,dvipsnames]{xcolor}
+ \usepackage{tkz-fct}
+  \begin{document}
+    \begin{tikzpicture}
+      \tkzInit[xmin=-5,xmax=5,ymax=2]
+      \tkzGrid
+      \tkzAxeXY
+     \end{tikzpicture}
+ \end{document}    
+\end{tkzltxexample}
+
+\begin{tkzexample}[latex=8cm]
+	\begin{tikzpicture}
+	    \tkzInit[xmin=-5,xmax=5,ymax=2]  
+	    \tkzGrid
+	    \tkzAxeXY
+	 \end{tikzpicture} 
+\end{tkzexample}
+
+
+\subsection{ Test de l'installation de tkz-fct}
+Il suffit d'ajouter une ligne pour tracer la représentation graphique d'une fonction.
+
+\begin{tkzltxexample}[]
+\documentclass{scrartcl}
+\usepackage[usenames,dvipsnames]{xcolor}
+ \usepackage{tkz-fct}
+  \begin{document}
+    \begin{tikzpicture}[scale=1.25]
+      \tkzInit[xmin=-5,xmax=5,ymax=2]
+      \tkzGrid
+      \tkzAxeXY
+      \tkzFct[color=red]{2*x**2/(x**2+1)}
+     \end{tikzpicture}
+ \end{document}
+\end{tkzltxexample}
+
+\begin{tkzexample}[] 
+\begin{tikzpicture}[scale=1.25]
+    \tkzInit[xmin=-5,xmax=5,ymax=2]
+    \tkzGrid
+    \tkzAxeXY
+    \tkzFct[color=red]{2*x**2/(x**2+1)}
+ \end{tikzpicture}     
+\end{tkzexample} 
+\endinput
+

@@ -1,0 +1,1162 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% annot_pro package,                                   %%
+%% Copyright (C) 2002-2016  D. P. Story                 %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{annot_pro}
+%<package> [2016/10/18 v1.1b Provides selected PDF annotation support (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[fleqn]{amsmath}
+\usepackage[colorlinks,hyperindex=false]{hyperref}
+\let\uif\textsf\let\app\textsf
+\let\pkg\textsf\let\env\texttt
+\def\psf#1{\textsf{\textbf{#1}}}
+%\def\texorpdfstring#1#2{#1}
+%\pdfstringdefDisableCommands{\let\\\textbackslash}
+\OnlyDescription  % comment out for implementation details
+\EnableCrossrefs \CodelineIndex \RecordChanges
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{annot_pro}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{annot_pro}{aebdocfmt.def cannot be found}}
+\begin{document}
+  \GetFileInfo{annot_pro.sty}
+  \title{annot\_pro: Selected PDF Annotations}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{annot_pro.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index}
+The index goes here. Execute
+\begin{quote}
+    \texttt{makeindex -s gind.ist -o annot\_pro.ind annot\_pro.idx}
+\end{quote}
+    on the command line and recompile \texttt{annot\_pro.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list
+of changes goes here. Execute
+\begin{quote}
+    \texttt{makeindex -s gglo.ist -o annot\_pro.gls annot\_pro.glo}
+\end{quote}
+    on the command line and recompile \texttt{annot\_pro.dtx}.}
+\end{document}
+%</driver>
+% \fi
+%
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{web}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{web}{cannot find aebdonotindex.def}}
+%
+%    \begin{macrocode}
+%<*package>
+\RequirePackage{xkeyval}
+%    \end{macrocode}
+%    \changes{v1.1}{2016/09/29}{Introduced Free Text annotation}
+%    \changes{v1.0c}{2016/09/28}{Reformatted manual, reformatted DTX file}
+% \section{Background Information}
+%
+% The following annotation types will be supported (taken from table 8.20)
+%\begin{itemize}
+%   \item \textbf{Text}: Subtype \textbf{Text}. See Table 8.23, page 621. In particular, the values
+%         of the \textbf{Name} key are \textbf{Comment}, \textbf{Help}, \textbf{Insert}, \textbf{Key}, \textbf{NewParagraph},
+%         \textbf{Note} (the default), and \textbf{Paragraph}. Other supported names are \textbf{Check}, \textbf{Circle}, \textbf{Cross},
+%         \textbf{Star}, \textbf{RightArrow}, \textbf{RightPointer}, \textbf{UpArrow}, \textbf{UpLeftArrow}
+%   \item \textbf{Stamp}: Subtype \textbf{Stamp}. See Table 8.32, page 635. The values of the \textbf{Name} key are
+%         \textbf{Approved}, \textbf{AsIs}, \textbf{Confidential},
+%         \textbf{Departmental}, \textbf{Draft} (the default),
+%         \textbf{Experimental}, \textbf{Expired}, \textbf{Final},
+%         \textbf{ForComment}, \textbf{ForPublicRelease}, \textbf{NotApproved},
+%         \textbf{NotForPublicRelease}, \textbf{Sold}, \textbf{TopSecret}.
+%   \item \textbf{FileAttachment}: Subtype \textbf{FileAttachment}. Table 8.35, page 638. The Name key has values
+%          \textbf{Graph}, \textbf{Paperclip}, \textbf{PushPin}, and \textbf{Tag}.
+%\end{itemize}
+% The options available for any supported annotation
+%\begin{itemize}
+%   \item \verb!type=text | stamp | fileattachment!  (text, the default)
+%   \item \texttt{Contents} will be an argument of the command \cs{annotpro}
+%   \item \texttt{NM} unique name for the page, optional, if not provided,
+%         one will be generated.
+%   \item \texttt{color}, to color the annotation
+%   \item \verb!margin! to place the annotation in the margin
+%   \item \texttt{nohspace}, leave no horizontal space
+%   \item \texttt{novspace}, leave no vertical space
+%   \item \texttt{nospace}, leave neither vertical or horizontal space.
+%\end{itemize}
+% \section{Annotation types supported}
+% \subsection{Text Annotations}
+% The options for the text annotation (\texttt{type=text}) are
+%\begin{itemize}
+%   \item \texttt{name}, one of the standard icons listed above, default Note
+%   \item \texttt{open}, default \texttt{false}
+%\end{itemize}
+% \subsection{Rubber Stamp Annotations}
+% The options for the text annotation (\texttt{type=stamp}) are
+%\begin{itemize}
+%   \item \texttt{name}, the default is draft. If a name begins with \texttt{\#}, that signals
+%   a custom appearance.
+%   \item \texttt{ap}, when the name is a custom name, the \texttt{ap} is used to hold the indirect reference
+%         to the appearance. If a custom name is specified, \texttt{ap} is required, and \textsf{graphicxsp} is required.
+%   \item \texttt{open}, default \texttt{false}
+%\end{itemize}
+% \subsection{File Attachment Annotations}
+% The options for the text annotation (\texttt{type=fileattachement}) are
+%\begin{itemize}
+%   \item \texttt{name}, the default is \texttt{PushPin}.
+%   \item \texttt{file}, the file specification \textbf{FS} key
+%\end{itemize}
+% \subsection{Text Box (Free Text) Annotations}
+%   Beginning with Free Text
+%    \begin{macrocode}
+\DeclareOptionX{preview}{\previewtrue}
+\@ifundefined{ifpreview}{\newif\ifpreview\previewfalse}{}
+%    \end{macrocode}
+%    \changes{v1.1}{2016/09/29}{Added \string\texttt{useA10Icons} and \string\texttt{useTextBox} options}
+%    (2016/09/29) Added \texttt{useA10Icons} and \texttt{useTextBox} options
+%    \begin{macrocode}
+\newif\ifuseAAXdim\useAAXdimtrue
+\DeclareOptionX{useA10Icons}{\useAAXdimtrue}
+\DeclareOptionX{!useA10Icons}{\useAAXdimfalse}
+%    \end{macrocode}
+%    Require \pkg{richtext}, dated 2016/10/03 or later.
+%    \changes{v1.1a}{2016/10/18}{Require \string\pkg{richtext}, dated 2016/10/03 or later.}
+%    \changes{v1.1b}{2016/10/18}{Corrected date specification}
+%    \begin{macrocode}
+\DeclareOptionX{useTextBox}{\def\ap@requireRichTextAsNeeded{%
+    \RequirePackage{richtext}[2016/10/03]}}
+\let\ap@requireRichTextAsNeeded\relax
+\ProcessOptionsX\relax
+\RequirePackage{hyperref}
+\RequirePackage{calc}
+\RequirePackage{insdljs}
+\RequirePackage[structure]{taborder}
+\ap@requireRichTextAsNeeded
+%    \end{macrocode}
+% We see if \textsf{graphicxsp} is loaded, and set a simple switch one way or the other.
+% This switch is later used when creating a custom stamp.
+%    \begin{macrocode}
+\@ifpackageloaded{graphicxsp}{%
+    \let\ap@graphicxsp=1}{\let\ap@graphicxsp=0}
+%    \end{macrocode}
+% For now, we'll support setting the tab order only if the \pkg{eforms} package is loaded.
+%    \begin{macrocode}
+\@ifpackageloaded{eforms}{}
+    {\newif\ifto@structOrder\to@structOrderfalse}
+%    \end{macrocode}
+%    \cs{csarg} from \pkg{comments} package, handy.
+%    \begin{macrocode}
+\def\ap@csarg#1#2{\expandafter#1\csname#2\endcsname}
+%    \end{macrocode}
+% Definitions for creating a rectangle used to create a building box for the annot.
+% This switch is later used when creating a custom stamp.
+%    \begin{macrocode}
+\def\ap@Bbox#1#2{%
+    \edef\bbox@width{#1}\edef\bbox@height{#2}%
+    \hbox{\ifpreview\setlength\fboxrule{0.4pt}\setlength\fboxsep{0pt}%
+    \@tempdima=\bbox@width\advance\@tempdima by-\fboxrule
+    \@tempdimb=\bbox@height\advance\@tempdimb by-\fboxrule
+    \fbox{\parbox[c][\@tempdimb][c]{\@tempdima}{\hfill\vfill}}\else
+    \parbox[c][\bbox@height][c]{\bbox@width}{\hfill\vfill}\fi}%
+}
+%    \end{macrocode}
+% The postscript operators \texttt{pdf@llx}, etc., are defined in \textsf{hyperref}.
+%    \begin{macrocode}
+\def\ap@Rect{/Rect [pdf@llx pdf@ury pdf@urx pdf@lly]}
+%    \end{macrocode}
+%    \begin{macro}{\defineAPath}
+% A simple macro to define path.
+%    \begin{macrocode}
+\newcommand{\defineAPath}[1]{\def\ap@ctrl@Name{#1}%
+    \hyper@normalise\ap@defineAPath}
+\def\ap@defineAPath#1{\expandafter\xdef\ap@ctrl@Name{#1}}
+%    \end{macrocode}
+%    \end{macro}
+% \section{Key-Value Pairs for \texorpdfstring{\protect\cs{annotpro}}{\textbackslash annotpro}}
+%    \begin{macro}{type}
+% We support three types of annotation, text, stamp, and fileattachment.
+%    \begin{macrocode}
+\define@choicekey+{annotpro}{type}[\val\nr]%
+    {text,stamp,fileattachment,textbox}[text]{%
+    \edef\ap@save@type{\nr}%
+    \ifcase\nr\relax
+        \def\ap@type{Text}\or
+        \def\ap@type{Stamp}\or
+        \def\ap@type{FileAttachment}\or
+        \def\ap@type{FreeText}\fi
+}{\PackageWarning{annot_pro}{Bad choice for type, permissible values
+   are text, stamp, fileattachment, textbox. Try again}}
+\def\ap@freetext@type{3}
+\let\ap@type\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{name}
+% The name key can have many different values. The permitted values are
+% a function of the \texttt{type}.
+%    \begin{macrocode}
+\define@key{annotpro}{name}[]{\def\annotpro@name{#1}}
+\let\annotpro@name\@empty
+%    \end{macrocode}
+%    \end{macro}
+% For a text annotation, the following are permitted values for \texttt{name}:
+%    \begin{macrocode}
+\define@choicekey+{annnotprotext}{name}{%
+Comment,Key,Note,Help,NewParagraph,Paragraph,Insert,Check,%
+Circle,Cross,Star,RightArrow,RightPointer,UpArrow,UpLeftArrow,%
+CrossHairs}[Note]{\def\annotpro@@name{#1}}%
+{\PackageWarning{annot_pro}{Bad choice for name, permissible values
+are Comment, Key, Note, Help, NewParagraph, Paragraph, Insert, Check,
+Circle, Cross, Star, RightArrow, RightPointer, UpArrow,
+UpLeftArrow, CrossHairs. Try again}}
+\let\annotpro@@name\@empty
+%    \end{macrocode}
+% For a stamp annotation, the following are permitted values for \texttt{name}.
+%    \begin{macrocode}
+\define@choicekey+{annnotprostamp}{name}{%
+Approved,AsIs,Confidential,Departmental,Draft,%
+Experimental,Expired,Final,ForComment,%
+ForPublicRelease,NotApproved,NotForPublicRelease,Sold,%
+TopSecret}[Draft]{\def\annotpro@@name{#1}}%
+{\def\ap@custom@name{#1}}
+\let\ap@custom@name\@empty
+%    \end{macrocode}
+% If the user enters a value other than the one listed, that value is recorded
+% in the text macro \cs{ap@custom@name}. Usually, the user would enter the
+% names of stamps that come on his system, but are not part of the PDF Specs.
+%    \begin{macrocode}
+%    \end{macrocode}
+%    \begin{macro}{customStamp}
+% There is a third case. The user can create a custom stamp using graphicxsp
+% package.
+%    \begin{macrocode}
+\define@key{annotpro}{customStamp}[]{\def\ap@customstamp@name{#1}}
+\let\ap@customstamp@name\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{ap}
+% When the user specifies \texttt{customStamp}, he must supply a custom appearence
+% for the stamp with the \texttt{ap} key. The \textsf{graphicxsp} package is required
+% for this option.
+%    \begin{macrocode}
+\define@key{annotpro}{ap}[]{\def\annotpro@ap{#1}}
+\let\annotpro@ap\@empty
+%    \end{macrocode}
+%    \end{macro}
+% There is a third case. The user can create a custom stamp using graphicxsp
+% package.
+%    \begin{macro}{width}
+%    \begin{macro}{height}
+%    \begin{macro}{rotate}
+%    \begin{macro}{scale}
+%    \begin{macro}{widthTo}
+%    \begin{macro}{heightTo}
+% As of this writing, these are used when the user sets the name key equal
+% to one of the many stamp names that come with Acrobat (other than ones
+% that are documented in the PDF Specs. Use the width and height to set the
+% bounding box. Normally, distiller, will place the largest stamp the box
+% will hold, and center it in that box. (I think.)
+%    \begin{macrocode}
+\define@key{annotpro}{width}[]{\def\annotpro@width{#1}}
+\let\annotpro@width\@empty
+\define@key{annotpro}{height}[]{\def\annotpro@height{#1}}
+\let\annotpro@height\@empty
+\define@key{annotpro}{rotate}[]{\def\annotpro@rotate{#1}}
+\let\annotpro@rotate\@empty
+\define@key{annotpro}{scale}[]{\def\annotpro@scale{#1}}
+\let\annotpro@scale\@empty
+\define@key{annotpro}{widthTo}[]{\def\annotpro@widthTo{#1}}
+\let\annotpro@widthTo\@empty
+\define@key{annotpro}{heightTo}[]{\def\annotpro@heightTo{#1}}
+\let\annotpro@heightTo\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+% For a file attachment annotation, the following are permitted values for \texttt{name}.
+%    \begin{macrocode}
+\define@choicekey+{annnotprofileattach}{name}{%
+Graph,Paperclip,PushPin,Tag}[PushPin]{\def\annotpro@@name{#1}}
+{\PackageWarning{annot_pro}{Bad choice for name, permissible values
+are Graph,Paperclip,PushPin,Tag. Try again}}
+%    \end{macrocode}
+%    \begin{macro}{file}
+% When there is a file attachment, the absolute path to the file must be
+% specified using the \texttt{file} key. A path to the file can be defined
+% using \cs{defineAPath}.
+%    \begin{macrocode}
+\define@key{annotpro}{file}[]{%
+    \edef\annotpro@file{#1}%
+    \ifx\annotpro@file\@empty\else
+    \edef\ap@exp@tmp{\noexpand\filename@parse{#1}}\ap@exp@tmp
+    \edef\ap@thisFileName{\filename@base.\filename@ext}\fi
+}
+\let\annotpro@file\@empty
+\define@key{annotprofreetext}{name}[FreeText]{\def\annotpro@@name{#1}}
+\define@key{annotprofreetext}{defstyle}[]{\def\annotpro@@ds{#1}}
+\let\annotpro@@ds\@empty
+\define@key{annotprofreetext}{richtext}[]{\def\annotpro@@rt{#1}}
+\let\annotpro@@rt\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{margin}
+%    \begin{macro}{margintext}
+%    \begin{macro}{\margintextformat}
+% When margin is used, the command \cs{marginpar} is used to place the annotation
+% in the margins, this is nice for sticky notes (text annotations), small stamps,
+% and file attachments.
+%
+% You can optionally place (small amount of) text under the icon in the margins. The
+% format for the text can be redefined using the command \cs{margintextformat}.
+%    \begin{macrocode}
+\define@key{annotpro}{margin}[0]{%
+    \def\annotpro@margin{0}}
+\let\annotpro@margin\@empty
+\define@key{annotpro}{margintext}[]{%
+    \def\apmargintext{\centering\break
+    \parbox{\linewidth}{\apmargintextformat\strut#1}}}
+\let\apmargintext\@empty
+\newcommand{\margintextformat}[1]{\def\apmargintextformat{#1}}
+\margintextformat{\bfseries\tiny\color{blue}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{presets}
+% A convenience key to allow the introduction of pre-defined options, for example,
+% you might like all your comment fields to be red, so you can define
+% \verb!\def\myComments{type=text,name=Comment,color=red}!, then say
+%\begin{verbatim}
+%   \annotpro[presets=\myComment]{Way to go!}
+%\end{verbatim}
+%    \begin{macrocode}
+\define@key{annotpro}{presets}[]{\def\annotpro@presets{#1}}
+\let\annotpro@presets\@empty
+%    \end{macrocode}
+% Added 07/08/09 to support structure tab order.
+%    \end{macro}
+%    \begin{macro}{objdef}
+% This is a pdfmark feature that inserts a references to this COS object,
+% used with setting the tab order using the structure. Tabbing using structure
+% is supported by \textsf{eforms}.
+%    \begin{macrocode}
+\define@key{annotpro}{objdef}[]{\def\eq@objdef{/_objdef {#1}}%
+    \def\eq@objdefName{#1}}
+\let\eq@objdef\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{taborder}
+%    \begin{macrocode}
+\define@key{annotpro}{taborder}[]{\def\eq@taborder{#1}}
+\let\eq@taborder\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{open}
+% A key to set whether the popup annotation is open or not.
+%    \begin{macrocode}
+\define@choicekey+{annotpro}{open}[\val\nr]{true,false}[true]{%
+    \def\annotpro@open{#1}}{\PackageWarning{annot_pro}{Bad
+    choice for open, permissible values are true and false. Try again}}
+\def\annotpro@open{false}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{subject}
+%    \begin{macro}{title}
+% The subject and title (usually the author's name) of the annotation
+%    \begin{macrocode}
+\define@key{annotpro}{subject}[]{\def\annotpro@subject{#1}}
+\define@key{annotpro}{title}[]{\def\annotpro@title{#1}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{color}
+% The color of the annotation.
+%    \begin{macrocode}
+\define@key{annotpro}{color}[1 0 0]{\def\annotpro@color{#1}}
+%    \end{macrocode}
+%    For the FreeText annotation, we can specify background color \IndexOpt{bgcolor}\texttt{bgcolor},
+%    (default white) and border color \IndexOpt{bcolor}\texttt{bcolor} (default black).
+%    \begin{macrocode}
+\define@key{annotpro}{bgcolor}[]{\def\annotpro@bgcolor{#1}}
+\def\annotpro@bgcolor{white}
+\define@key{annotpro}{bcolor}[]{\def\annotpro@bcolor{#1}}
+\let\annotpro@bcolor\@empty
+\def\annotpro@def@bcolor{black}
+\def\ap@BE@i{4.08768}
+\def\ap@BE@i@calc{\ap@BE@i\space\ap@bwidthNum\space add}
+\def\ap@BE@ii{8.26857}
+\def\ap@BE@ii@calc{\ap@BE@ii\space add \ap@bwidthNum}
+\define@choicekey+{annotpro}{borderstyle}[\val\nr]{none,solid,%
+    dash1,dash2,dash3,dash4,dash5,dash6,cloud1,cloud2}[solid]{%
+    \ifcase\nr\relax
+        \def\ap@border@code{}\or
+        \def\ap@border@code{/BS <</S/S\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[2.0 2.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[3.0 3.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[4.0 4.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[4.0 3.0 2.0 3.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[4.0 3.0 16.0 3.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BS <</D[8.0 4.0 4.0 4.0]/S/D\ap@bwidth>>}\or
+        \def\ap@border@code{/BE<</I 1.0/S/C>>/RD[\ap@BE@i@calc\space\ap@BE@i@calc
+            \space\ap@BE@i@calc\space\ap@BE@i@calc]%
+        \ifx\ap@bwidth\@empty\else/BS <<\ap@bwidth>>\fi}\or
+        \def\ap@border@code{/BE<</I 2.0/S/C>>/RD[\ap@BE@ii@calc\space\ap@BE@ii@calc
+            \space\ap@BE@ii@calc\space\ap@BE@ii@calc]%
+        \ifx\ap@bwidth\@empty\else/BS <<\ap@bwidth>>\fi}\fi
+    \def\annotpro@border{#1}}{\PackageWarning{annot_pro}{Bad
+    choice for borderstyle,\MessageBreak permissible values are none, solid,%
+    dash1, dash2, dash3,\MessageBreak dash4, dash5, dash6, cloud1, cloud2. Try again}}
+\def\ap@border@code{/BS <</S/S\ap@bwidth>>}
+\define@choicekey+{annotpro}{borderwidth}[\val\nr]{.5,1,2,3,4,6,8,10}[1]{%
+    \edef\ap@bwidthNum{\val}%
+    \def\ap@bwidth{/W #1}}{\PackageWarning{annot_pro}{Bad
+    choice for borderwidth,\MessageBreak permissible values are .5, 1, 2,\MessageBreak
+    3, 4, 6, 8, 10. Try again}}
+\def\ap@bwidthNum{1}
+\let\ap@bwidth\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{readonly}
+% Set the annotation to readonly.
+%    \begin{macrocode}
+\define@key{annotpro}{readonly}[ 64 add]{\def\ap@readonly{#1}}
+\let\ap@readonly\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{nohspace}
+%    \begin{macro}{nohspace}
+%    \begin{macro}{nospace}
+% These are used only with text annotations. The position of the
+% annotation depends only on the upper-right corner. The bounding
+% box can be made to have no width or not height, or both. The upper-left
+% corner is always defined. The text annotation will take no horizontal,
+% vertical, or no space at all in {\TeX} space. The same effect can be accomplished
+% using 0pt width boxes or by smashing the bounding box.
+%    \begin{macrocode}
+\define@key{annotpro}{nohspace}[]{\def\annotpro@hspace{0pt}}
+\define@key{annotpro}{novspace}[]{\def\annotpro@vspace{0pt}}
+\define@key{annotpro}{nospace}[]{\def\annotpro@hspace{0pt}%
+    \def\annotpro@vspace{0pt}}
+\let\annotpro@hspace\@empty\let\annotpro@vspace\@empty
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{opacity}
+% Set the \texttt{opacity} of the annot, if creating a custom stamp using
+% graphicxsp, then the file needs to be distilled using \texttt{standard\_transparency}
+% job settings for distiller.
+%    \begin{macrocode}
+\define@key{annotpro}{opacity}[]{%
+    \def\ap@add@ops{[ /ca #1 /SetTransparency pdfmark}%
+    \def\annotpro@opacity{#1}}
+\let\annotpro@opacity\@empty
+%    \end{macrocode}
+%    \end{macro}
+% \subsection{Dimensions of Standard Text Icons}
+% Using the user interface, and the dimensions of each of the standard text annotations
+% were obtained and recorded here.
+%    \begin{macrocode}
+% Note in A10, text annots are not 18bp x 18bp and A10 adds CrossHairs
+\def\getargsiii#1#2#3{\def\ap@argi{#1}\def\ap@argii{#2}%
+    \def\ap@argiii{#3}}
+\ifuseAAXdim
+\@tfor\ap@text@dimen:={{Comment}{18bp}{18bp}}%
+{{Key}{13bp}{18bp}}{{Note}{18bp}{20bp}}{{Help}{20bp}{20bp}}%
+{{NewParagraph}{13bp}{20bp}}{{Paragraph}{20bp}{20bp}}%
+{{Insert}{17bp}{20bp}}{{Check}{20bp}{19bp}}%
+{{Circle}{20bp}{20bp}}{{Cross}{20bp}{19bp}}%
+{{Star}{20bp}{19bp}}{{RightArrow}{20bp}{20bp}}%
+{{RightPointer}{20bp}{17bp}}{{UpArrow}{17bp}{20bp}}%
+{{UpLeftArrow}{17bp}{17bp}}{{CrossHairs}{20bp}{20bp}}\do{%
+    \expandafter\getargsiii\ap@text@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+} \else
+\@tfor\ap@text@dimen:={{Comment}{20bp}{18bp}}%
+{{Key}{18bp}{17bp}}{{Note}{18bp}{20bp}}{{Help}{20bp}{20bp}}%
+{{NewParagraph}{13bp}{20bp}}{{Paragraph}{11bp}{20bp}}%
+{{Insert}{20bp}{17bp}}{{Check}{20bp}{19bp}}%
+{{Circle}{20bp}{20bp}}{{Cross}{20bp}{20bp}}%
+{{Star}{20bp}{19bp}}{{RightArrow}{20bp}{14bp}}%
+{{RightPointer}{20bp}{18bp}}{{UpArrow}{19bp}{20bp}}%
+{{UpLeftArrow}{17bp}{17bp}}{{CrossHairs}{24bp}{24bp}}\do{%
+    \expandafter\getargsiii\ap@text@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+} \fi
+%    \end{macrocode}
+% \subsection{Dimensions of Standard File Attachment Icons}
+% Similarly, the dimensions of each of the standard file attachment annotations
+% were obtained and recorded. All these dimensions have been reduced by 2pt, so that there final
+% dimensions match what is displayed through the ui.
+%    \begin{macrocode}
+\ifuseAAXdim
+\@tfor\ap@fa@dimen:={{Graph}{20bp}{20bp}}
+ {{Paperclip}{7bp}{17bp}}{{PushPin}{14bp}{20bp}}
+ {{Tag}{20bp}{16bp}}\do{%
+    \expandafter\getargsiii\ap@fa@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+\else
+\@tfor\ap@fa@dimen:={{Graph}{18bp}{18bp}}
+ {{Paperclip}{5bp}{15bp}}{{PushPin}{12bp}{18bp}}
+ {{Tag}{18bp}{14bp}}\do{%
+    \expandafter\getargsiii\ap@fa@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+} \fi
+%    \end{macrocode}
+% \subsection{Dimensions of Standard Stamp Appearances}
+%
+% Some default stamp dimensions, when the dimensions are not known or provided. May be
+% redefined.
+%    \begin{macrocode}
+\newcommand{\defaultStampWidth}{50bp}
+\newcommand{\defaultStampHeight}{50bp}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{Standard.pdf}
+%    \begin{macrocode}
+\newcommand{\standardStampWidth}{245.38bp}
+\newcommand{\standardStampHeight}{64.53bp}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{StandardBusiness.pdf}
+%    \begin{macrocode}
+\@tfor\ap@dimen:={{SBApproved}{163.50bp}{49.50bp}}
+{{SBCompleted}{175.87bp}{49.50bp}}
+{{SBConfidential}{209.62bp}{49.50bp}}
+{{SBDraft}{113.14bp}{49.75bp}}
+{{SBFinal}{97.80bp}{49.75bp}}
+{{SBForComment}{211.87bp}{49.50bp}}
+{{SBForPublicRelease}{290.04bp}{49.55bp}}
+{{SBInformationOnly}{275.00bp}{49.55bp}}
+{{SBNotApproved}{218.62bp}{49.50bp}}
+{{SBNotForPublicRelease}{346.04bp}{49.55bp}}
+{{SBPreliminaryResults}{304.04bp}{49.55bp}}
+{{SBVoid}{91.04bp}{49.75bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{SignHere.pdf}
+%    \begin{macrocode}
+\@tfor\ap@dimen:={{SBRejected}{22.68bp}{22.66bp}}
+{{SHAccepted}{23.29bp}{20.45bp}}
+{{SHInitialHere}{99.69bp}{30.34bp}}
+{{SHSignHere}{99.69bp}{30.34bp}}
+{{SHWitness}{99.69bp}{30.34bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{\texttt{Dynamic.pdf}}
+%    \begin{macrocode}
+\catcode`\#=11\relax
+\@tfor\ap@dimen:={{#DApproved}{255.64bp}{53.83bp}}
+{{#DConfidential}{163.28bp}{57.10bp}}
+{{#DReceived}{255.64bp}{55.11bp}}
+{{#DReviewed}{255.64bp}{55.11bp}}
+{{#DRevised}{127.47bp}{55.85bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+\catcode`\#=6\relax
+\newcommand{\stampWidth}[1]{\csname ap@#1Width\endcsname}
+\newcommand{\stampHeight}[1]{\csname ap@#1Height\endcsname}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file Words.pdf
+%    \begin{macrocode}
+\@tfor\ap@dimen:={{WordsAGenuineFind}{120.68bp}{190.83bp}}
+{{WordsBigSavings}{282.84bp}{117.86bp}}
+{{WordsDeals}{345.40bp}{132.55bp}}
+{{WordsHappyBirthday}{326.50bp}{166.32bp}}
+{{WordsHot}{249.64bp}{176.75bp}}
+{{WordsLookWhatsNew}{316.59bp}{229.81bp}}
+{{WordsNeato}{171.12bp}{86.88bp}}
+{{WordsTheBestJustGotBetter}{153.53bp}{153.53bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{Faces.pdf}
+%    \begin{macrocode}
+\@tfor\ap@dimen:={{FacesEcstatic}{223.20bp}{202.80bp}}
+{{FacesElectric}{295.80bp}{280.50bp}}
+{{FacesGrumpy}{289.92bp}{194.64bp}}
+{{FacesHappy}{161.65bp}{161.65bp}}
+{{FacesHurt}{289.50bp}{285.75bp}}
+{{FacesNeutral}{291.04bp}{279.32bp}}
+{{FacesSmirk}{276.75bp}{292.50bp}}
+{{FacesSurprised}{220.08bp}{215.04bp}}
+{{FacesWorried}{298.11bp}{235.12bp}}
+{{FacesWow}{242.32bp}{289.17bp}}
+{{FacesZippy}{290.59bp}{263.81bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+%    \end{macrocode}
+% The dimensions of the stamp appearances in the file \texttt{Pointers.pdf}
+%    \begin{macrocode}
+\@tfor\ap@dimen:={{PointersBogus}{128.32bp}{53.82bp}}
+{{PointersBug}{128.32bp}{51.94bp}}
+{{PointersDOA}{136.99bp}{51.48bp}}
+{{PointersFYEO}{128.32bp}{48.60bp}}
+{{PointersFix}{145.60bp}{58.11bp}}
+{{PointersNuke}{128.32bp}{52.30bp}}
+{{PointersOptimize}{128.32bp}{48.60bp}}
+{{PointersRedFlag}{128.32bp}{57.12bp}}
+{{PointersValidate}{128.32bp}{48.60bp}}
+{{PointersWarning}{128.32bp}{57.23bp}}
+{{PointersWhen}{128.32bp}{63.79bp}}\do{%
+    \expandafter\getargsiii\ap@dimen
+    \ap@csarg\edef{ap@\ap@argi Width}{\ap@argii}%
+    \ap@csarg\edef{ap@\ap@argi Height}{\ap@argiii}%
+}
+%    \end{macrocode}
+%    \subsection{Default dimensions of Free Text annotation}
+%    \begin{macrocode}
+\def\ap@FreeTextWidth{144bp}
+\def\ap@FreeTextHeight{72bp}
+%    \end{macrocode}
+%    \begin{macro}{\makeStamp}
+% A command to help the creation of custom stamps using graphicxsp. You've got to see it
+% to believe it.
+%    \begin{macrocode}
+\newcommand{\makeStamp}[3]{%
+\ap@csarg\def{stamp@#2}{%
+    \begin{sp@createImage}{#1}{#2\the\ap@cusstamp@cnt}
+        \ap@add@ops#3
+    \end{sp@createImage}}}
+\let\ap@add@ops\@empty
+%    \end{macrocode}
+%    \end{macro}
+% This command is used internal in \cs{annotpro} to generate an appearance for
+% the stamp.
+%    \begin{macrocode}
+\newcommand{\ap@useStamp}[1]{%
+    \global\advance\ap@cusstamp@cnt1\relax
+    \@nameuse{stamp@#1}}
+%    \end{macrocode}
+%    \begin{macro}{\setAnnotOptions}
+% A command for setting global options.
+%    \begin{macrocode}
+\newcommand{\setAnnotOptions}[1]{%
+    \setkeys{annotpro}{#1}%
+}
+%    \end{macrocode}
+%    \end{macro}
+% The following code is taken from the \textsf{datetime} package (and modified) as maintained by
+% Nicola Talbot. There is no need for the whole package, we just need
+% \cs{pdfdate}, named \cs{ap@pdfdate} in \textsf{annot\_pro}. We make all calculations in a group.
+%\changes{v1.0a}{2011/07/14}{Added \cs{ap@pdfdate}}
+%    \begin{macrocode}
+\begingroup
+\def\withoptz@#1{\ifnum#1<10 0\fi\the#1}
+\edef\ap@pdfdate{\the\year\withoptz@\month\withoptz@\day}
+%    \end{macrocode}
+% Calculate the minutes after the hour time by dividing by 60.
+%    \begin{macrocode}
+\count0=\time \count2=\count0
+%    \end{macrocode}
+% Calculate the number of hours after midnight by dividing by 60
+%    \begin{macrocode}
+\divide\count2by60
+\edef\ap@pdfdate{\ap@pdfdate\withoptz@{\count2}}
+\multiply\count2by60 \advance\count0by-\count2
+\xdef\ap@pdfdate{\ap@pdfdate\withoptz@{\count0}00}
+\endgroup
+%    \end{macrocode}
+% \section{The main code}
+%    \begin{macrocode}
+\newcount\ap@annot@cnt
+\newcount\ap@cusstamp@cnt
+{\catcode`\#=12\gdef\ap@signalCustomAP{#}}
+\def\pStamp#1{\ap@signalCustomAP#1}
+%    \end{macrocode}
+%    \begin{macrocode}
+\def\ap@RV@Body{<?xml version="1.0"?><body %
+    xfa:APIVersion="Acrobat:9.5.5" %
+    xfa:contentType="text/html" %
+    xfa:spec="2.0.2" xmlns="http://www.w3.org/1999/xhtml" %
+    xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/">}
+\def\ap@RV@endBody{<body>}
+%    \end{macrocode}
+%    The implementation of rich text in a FreeText annotation is a little different from
+%    that of a rich text form field. We made some adjustments here for an annotation.
+%    \begin{macrocode}
+\def\ap@sub#1{\rvorvstring{<span style="vertical-align:-0.0pt;">#1</span>}{#1}}%
+\def\ap@sup#1{\rvorvstring{<span style="vertical-align:+0.0pt;">#1</span>}{#1}}%
+\def\ap@uDec#1{\rt@amp\rt@hashtag#1;}
+\def\ap@uHex#1{\rt@amp\rt@hashtag x#1;}
+\def\ap@afterParaFont{%
+%    \end{macrocode}
+%    Cancel out certain attributes that are not used in annotation.
+%    \begin{macrocode}
+    \rt@formfieldfalse
+}
+\def\ap@afterFont{%
+    \rt@formfieldfalse
+    \let\rt@url\@empty
+}
+%    \end{macrocode}
+%    \begin{environment}{textboxpara}
+%    \begin{macrocode}
+\newenvironment{textboxpara}{%
+    \let\rt@sub\ap@sub\let\rt@sup\ap@sup
+    \let\rt@afterParaFont\ap@afterParaFont
+    \let\rt@afterFont\ap@afterFont
+    \def\rt@br{\rvorvstring{\rt@amp\rt@hashtag13;}{\string\r}}%
+    \def\rt@spc{\space}\let\uDec\ap@uDec\let\uHex\ap@uHex
+}{}
+%    \end{macrocode}
+%    \end{environment}
+%    \begin{macro}{\annotpro}
+% Here is the main command of this package, the first optional parameter
+% are key-value pairs, as defined above; the second parameter is the content
+% of the message. File attachments have not popup message, so the content
+% becomes the description of the attachment in the attachments panel; hence,
+% in this case, the length of the message should be short.
+%    \begin{macrocode}
+\newcommand{\annotpro}{%
+    \begingroup
+%    \end{macrocode}
+% Some of the stamp names begin with \texttt{\#}, the user must use
+% \verb!\#!
+%    \begin{macrocode}
+    \let\#\ap@signalCustomAP
+    \@nnotpro
+}
+\newcommand{\@nnotpro}[1][]{%
+%    \end{macrocode}
+% Increment a global counter, to count the annots as we create them.
+%    \begin{macrocode}
+    \global\advance\ap@annot@cnt1\relax
+%    \end{macrocode}
+% Process options
+%    \begin{macrocode}
+    \setkeys{annotpro}{#1}%
+    \@nn@tpro
+}
+\newcommand{\@nn@tpro}[1]
+{%
+%    \end{macrocode}
+% See if there were any presets, if so, expand them, and apply
+% \cs{setkeys} again.
+%    \begin{macrocode}
+  \ifx\annotpro@presets\@empty\else
+    \edef\ap@exp@tmp{\noexpand\setkeys{annotpro}{\annotpro@presets}}%
+    \ap@exp@tmp\fi
+%    \end{macrocode}
+% If no type was specified, assume \texttt{Text}.
+% \cs{setkeys} again.
+%    \begin{macrocode}
+  \ifx\ap@type\@empty\def\ap@type{Text}\def\ap@save@type{0}\fi
+%    \end{macrocode}
+% Now get the value of the name parameter, permissible values depend
+% on the stated \texttt{type}.
+%    \begin{macrocode}
+  \ifcase\ap@save@type\relax
+    \def\annot@subtype{annnotprotext}%
+    \ifx\annotpro@subject\@empty\def\annotpro@subject{Sticky Note}\fi
+    \ifx\annotpro@name\@empty\def\annotpro@name{Note}\fi
+    \def\ap@def@name{Note}\or
+    \ifx\annotpro@subject\@empty\def\annotpro@subject{Rubber Stamp}\fi
+    \def\annot@subtype{annnotprostamp}%
+    \def\ap@def@name{Draft}\or
+    \ifx\annotpro@subject\@empty
+        \def\annotpro@subject{File Attachment}\fi
+    \def\annot@subtype{annnotprofileattach}%
+    \def\ap@def@name{PushPin}\or
+    \ifx\annotpro@subject\@empty
+        \def\annotpro@subject{Text Box}\fi
+    \def\annot@subtype{annotprofreetext}%
+    \def\ap@def@name{FreeText}%
+  \fi
+%    \end{macrocode}
+% Get the name!
+%    \begin{macrocode}
+    \edef\ap@exp@tmp{%
+        \noexpand\setkeys{\annot@subtype}{name=\annotpro@name}}%
+    \ap@exp@tmp\xdef\ap@def@type{\ap@type}%
+%    \end{macrocode}
+% Encode text for contents, title, subject, and color; here \textsf{hyperref}
+% commands are used.
+%    \begin{macrocode}
+  \let\annotpro@enc@contents\@empty
+%    \end{macrocode}
+% \changes{v1.0b}{2012/11/10}{Included \cs{makespecialJS}}
+% We'll use \cs{makespecialJS} here.
+%    \begin{macrocode}
+  \makespecialJS
+%    \end{macrocode}
+%    If this is a FreeText annot, we get the rich text and default style from \texttt{\#1}.
+%    Supported keys are richtext and defstyle. The values of these keys are names defined
+%    by \cs{setRVVContents} and \cs{setDefaultStyle}. If \texttt{defstyle} is not specified, we
+%    use \cs{useDefaultDS}.
+%    \begin{macrocode}
+\if\ap@save@type\ap@freetext@type
+     \let\eq@RV@Body\ap@RV@Body\let\eq@RV@endBody\ap@RV@endBody
+     \setkeys{annotprofreetext}{#1}%
+     \ifx\annotpro@@ds\@empty
+        \def\ap@defaultstyle{\useDefaultDS}\else
+        \edef\ap@defaultstyle{\noexpand\useDS{\annotpro@@ds}}\fi
+     \ifx\annotpro@@rt\@empty
+        \let\annotpro@RC\@empty\let\annotpro@C\@empty\else
+        \edef\annotpro@RC{\noexpand\useRVContent{\annotpro@@rt}}%
+        \edef\annotpro@C{\noexpand\useVContent{\annotpro@@rt}}\fi
+%    \end{macrocode}
+%    If this is a FreeText annot, we define its rich and plain values; requires \pkg{richtext} package
+%    \begin{macrocode}
+\else
+  \pdfstringdef\annotpro@enc@contents{#1}%
+\fi
+  \let\annotpro@enc@title\@empty
+  \pdfstringdef\annotpro@enc@title{\annotpro@title}%
+  \let\annotpro@enc@subject\@empty
+  \pdfstringdef\annotpro@enc@subject{\annotpro@subject}%
+%    \end{macrocode}
+%    Color handling for \texttt{color}, \texttt{bgcolor}, and \texttt{bcolor} via \pkg{hycolor} package
+%    \begin{macrocode}
+  \HyColor@XZeroOneThreeFour{\annotpro@color}%
+    {\annotpro@enc@color}{annotpro}{color}%
+\ifx\annotpro@bgcolor\@empty\else
+  \HyColor@XZeroOneThreeFour{\annotpro@bgcolor}
+    {\annotpro@enc@bgcolor}{annotpro}{bgcolor}\fi
+\ifx\annotpro@bcolor\@empty
+    \edef\annotpro@bcolor{\annotpro@def@bcolor}\fi
+  \HyColor@FieldColor{\annotpro@bcolor}
+    {\annotpro@enc@bcolor}{annotpro}{bcolor}%
+%    \end{macrocode}
+% Initialize some commands to be used later
+%    \begin{macrocode}
+  \let\ap@this@AP\@empty\let\ap@this@FS\@empty\let\ap@this@CA\@empty
+  \let\ap@this@Rotate\@empty
+%    \end{macrocode}
+% See if opacity is requested, and set appropriate key.
+%    \begin{macrocode}
+  \ifx\annotpro@opacity\@empty\else
+        \def\ap@this@CA{/CA \annotpro@opacity}\fi
+%    \end{macrocode}
+% Now, perform annotation specific tasks such as setting the
+% bounding box.
+%    \begin{macrocode}
+  \ifcase\ap@save@type
+%    \end{macrocode}
+% \textbf{Text annotation.} We use the pre-defined dimensions for
+% these text icons, unless the user has specified \texttt{nohspace},
+% \texttt{novspace}, and \texttt{nospace}. If the name has not been
+% specified, we use the default (\texttt{Note}).
+%    \begin{macrocode}
+     \ifx\annotpro@@name\@empty\edef\annotpro@@name{\ap@def@name}\fi
+      \edef\ap@thisWidth{\ifx\annotpro@hspace\@empty
+        \@nameuse{ap@\annotpro@@name Width}\else
+        \annotpro@hspace\fi}%
+      \edef\ap@thisHeight{\ifx\annotpro@vspace\@empty
+        \@nameuse{ap@\annotpro@@name Height}\else
+      \annotpro@vspace\fi}%
+%    \end{macrocode}
+% \textbf{Stamp annotation.} This is a bit trickier, there are three
+% cases: (1) the user references a standard stamp; (2) the user
+% references a non-standard stamp, one that ships with Acrobat; (3)
+% the user wants to create his own custom stamp using
+% \textsf{graphicxsp} techniques.
+%    \begin{macrocode}
+  \or
+    \ifx\annotpro@@name\@empty
+        \ifx\ap@custom@name\@empty
+            \ifx\ap@customstamp@name\@empty
+%    \end{macrocode}
+% Neither \texttt{name} nor \texttt{customStamp} was specified, so we assume the default.
+%    \begin{macrocode}
+                \ifx\annotpro@@name\@empty
+                    \edef\annotpro@@name{\ap@def@name}\fi
+                \edef\ap@thisWidth{\standardStampWidth}%
+                \edef\ap@thisHeight{\standardStampHeight}%
+            \else
+%    \end{macrocode}
+% Here the user wants a stamp using \textsf{graphicxsp} techniques.
+%    \begin{macrocode}
+                \if\ap@graphicxsp0\PackageError{annot_pro}%
+                {Specifying a custom name for a stamp requires
+                    the graphicxsp package.}\fi
+                \ifx\annotpro@ap\@empty
+                \PackageError{annot_pro}{You must specify a value
+                    for the ap key}\fi
+                \def\ap@ImageRef{\annotpro@ap\the\ap@cusstamp@cnt}%
+                \expandafter\ap@useStamp\expandafter{\annotpro@ap}%
+%    \end{macrocode}
+% After making many experiments, there seems to be a need to
+% reduce dimensions by \texttt{2bp} so that the desired dimensions
+% are displayed through the user interface. There seems to
+% be an 1bp border around all stamps.
+%    \begin{macrocode}
+                \edef\ap@thisWidth{\widthOf{\ap@ImageRef}bp}%
+                \@tempdima=\ap@thisWidth\advance\@tempdima-2bp
+                \edef\ap@thisWidth{\the\@tempdima}%
+                \edef\ap@thisHeight{\heightOf{\ap@ImageRef}bp}%
+                \@tempdima=\ap@thisHeight\advance\@tempdima-2bp
+                \edef\ap@thisHeight{\the\@tempdima}%
+                \def\ap@this@AP{/AP << /N {\ap@ImageRef} >>}%
+                \edef\annotpro@@name{%
+                    \ap@signalCustomAP\ap@customstamp@name}%
+            \fi
+        \else
+%    \end{macrocode}
+% The command \cs{ap@custom@name} is non-empty, so the user it trying
+% to access a stamp on his own system. The user has indicated one of
+% the stamps documented in the PDF Reference, these all have the same
+% dimension
+%
+% For the bounding box, we use  \cs{defaultStampWidth} by
+% \cs{defaultStampHeight} as the dimensions, unless the values of
+% \texttt{width} and/or \texttt{height} are specified.
+%    \begin{macrocode}
+            \edef\annotpro@@name{\ap@custom@name}%
+            \@ifundefined{ap@\ap@custom@name Width}{%
+                \edef\ap@thisWidth{\ifx\annotpro@width\@empty
+                    \defaultStampWidth\else\annotpro@width\fi}%
+                \edef\ap@thisHeight{\ifx\annotpro@height\@empty
+                    \defaultStampWidth\else\annotpro@height\fi}%
+            }{%
+                \edef\ap@thisWidth{\ifx\annotpro@width\@empty
+                    \@nameuse{ap@\annotpro@@name Width}\else
+                    \annotpro@width\fi}%
+                \edef\ap@thisHeight{\ifx\annotpro@height\@empty
+                    \@nameuse{ap@\annotpro@@name Height}\else
+                    \annotpro@height\fi}%
+            }%
+        \fi
+    \else
+%    \end{macrocode}
+% This is the case of specifying one of the document stamps, as
+% listed in the PDF Reference.
+%    \begin{macrocode}
+        \edef\ap@thisWidth{\standardStampWidth}%
+        \edef\ap@thisHeight{\standardStampHeight}%
+    \fi
+%    \end{macrocode}
+% Let's use calc to allow for calculations on dimensions,
+% with this, we can conveniently resize the box.
+%    \begin{macrocode}
+     \ifx\annotpro@scale\@empty
+         \ifx\annotpro@widthTo\@empty
+             \ifx\annotpro@heightTo\@empty\else % heightTo
+                \edef\ap@thisWidth{%
+                    (\ap@thisWidth)*\noexpand
+                     \ratio{\annotpro@heightTo}{\ap@thisHeight}}%
+                \edef\ap@thisHeight{\annotpro@heightTo}%
+             \fi
+         \else % widthTo
+            \edef\ap@thisHeight{%
+                (\ap@thisHeight)*\noexpand
+                 \ratio{\annotpro@widthTo}{\ap@thisWidth}}%
+            \edef\ap@thisWidth{\annotpro@widthTo}%
+         \fi
+     \else %scale
+        \edef\ap@thisWidth{(\ap@thisWidth)*\noexpand
+            \real{\annotpro@scale}}%
+        \edef\ap@thisHeight{(\ap@thisHeight)*\noexpand
+            \real{\annotpro@scale}}%
+     \fi
+     \setlength{\@tempdima}{\ap@thisWidth}%
+     \edef\ap@thisWidth{\the\@tempdima}%
+     \setlength{\@tempdima}{\ap@thisHeight}%
+     \edef\ap@thisHeight{\the\@tempdima}%
+      \ifx\annotpro@rotate\empty\else
+          \def\ap@this@Rotate{/Rotate \annotpro@rotate}%
+          \ap@set@Rotate@BBox
+      \fi
+  \or
+%    \end{macrocode}
+% \textbf{File Attachment annotation.} There are only a few icons for
+% file attachments, and I've determined their dimensions using the user
+% interface. So, we use those.
+%
+% If a name has not been specified, we use the default (\texttt{PushPin}).
+%    \begin{macrocode}
+    \ifx\annotpro@@name\@empty\edef\annotpro@@name{\ap@def@name}\fi
+    \ifx\annotpro@file\@empty\PackageError{annot_pro}%
+        {You must specify a path the file to be
+         attached using the file key.}\fi
+%    \end{macrocode}
+% Set the \textbf{FS} key to specify the file.
+%    \begin{macrocode}
+    \def\ap@this@FS{/FS {apEmbedFile\the\ap@annot@cnt}}%
+    \edef\ap@thisWidth{\@nameuse{ap@\annotpro@@name Width}}%
+    \edef\ap@thisHeight{\@nameuse{ap@\annotpro@@name Height}}%
+    \ap@EmbedThisFile
+  \or
+%    \end{macrocode}
+% \textbf{Free text annotation.}
+%    \begin{macrocode}
+     \ifx\annotpro@@name\@empty\edef\annotpro@@name{\ap@def@name}\fi
+     \ifx\annotpro@width\@empty\else
+        \setlength\@tempdima{\annotpro@width}%
+            \def\annotpro@width{\the\@tempdima}\fi
+    \edef\ap@thisWidth{\ifx\annotpro@width\@empty
+        \@nameuse{ap@\annotpro@@name Width}\else
+        \annotpro@width\fi}%
+     \ifx\annotpro@height\@empty\else
+        \setlength\@tempdima{\annotpro@height}%
+            \def\annotpro@height{\the\@tempdima}\fi
+    \edef\ap@thisHeight{\ifx\annotpro@height\@empty
+        \@nameuse{ap@\annotpro@@name Height}\else
+        \annotpro@height\fi}%
+  \fi
+%    \end{macrocode}
+% if \texttt{margin} is specified, we insert a \cs{marginpar} here.
+%    \begin{macrocode}
+  \ifx\annotpro@margin\@empty\let\apmargintext\@empty
+    \expandafter\relax\else\expandafter\marginpar\fi
+%    \end{macrocode}
+% Set the bounding box, and layout the annotation using the \textbf{pdfmark} operator.
+%    \begin{macrocode}
+  {\pdf@rect{\ap@Bbox{\ap@thisWidth}{\ap@thisHeight}}\literalps@out{%
+  [ \eq@objdef\ap@Rect
+    /F 4\ap@readonly
+    /Open \annotpro@open
+    /Title (\annotpro@enc@title)
+    /Subj (\annotpro@enc@subject)
+%    \end{macrocode}
+%    We have different set of keys for FreeText when for the other annotation types.
+%    \begin{macrocode}
+\if\ap@save@type\ap@freetext@type
+%    \end{macrocode}
+%    The definitions of \cs{eq@RV@Body} and \cs{eq@RV@endBody} come from \pkg{richtext}, originally from
+%    \pkg{eforms}. The \psf{RC} and \psf{Contents} keys get their entries from \cs{annotpro@RC} and
+%    \cs{annotpro@C}, which are acquired from the \pkg{richtext} package.
+%    \begin{macrocode}
+    /RC(\eq@RV@Body\annotpro@RC\eq@RV@endBody)
+    /Contents (\annotpro@C)
+    /DS (\ap@defaultstyle)
+    \ifx\annotpro@bgcolor\@empty\else
+    /C [\annotpro@enc@bgcolor]\fi
+    /DA (\annotpro@enc@bcolor\space/Helv 12 Tf)
+    \ap@border@code
+\else
+    /Open \annotpro@open
+    /Contents (\annotpro@enc@contents)
+    /Color [\annotpro@enc@color]
+\fi
+%    \end{macrocode}
+% \changes{v1.0a}{2011/07/14}{Changed the value of the \texttt{/Name} key.}
+% Changed the value of \texttt{/Name} form a name to a string
+%    \begin{macrocode}
+    /Name (\annotpro@@name)
+    /Subtype/\ap@type
+    /NM (annotpro\the\ap@annot@cnt)
+    /M (D:\ap@pdfdate)
+    \ap@this@AP\ap@this@FS\ap@this@CA\ap@this@Rotate
+    /ANN pdfmark}\apmargintext}%
+    \to@insertStrucTabOrder{Annot}\endgroup
+}
+%    \end{macrocode}
+%    \end{macro}
+% When the user specifies the rotate key, we need to enlarge the
+% bounding box so the stamp can be rotated within that box.
+%    \begin{macrocode}
+\def\ap@set@Rotate@BBox{%
+    \CalculateSin\annotpro@rotate\CalculateCos\annotpro@rotate
+    \edef\c@cos{\UseCos\annotpro@rotate}%
+    \edef\c@sin{\UseSin\annotpro@rotate}%
+%    \end{macrocode}
+% Determine the quadrant i or iii versus ii or iv
+%    \begin{macrocode}
+    \@tempdimb=\c@cos pt
+    \@tempdimb=\c@sin\@tempdimb
+    \let\ap@sign\@empty
+    \ifdim\@tempdimb<\z@\def\ap@sign{-}\fi
+%    \end{macrocode}
+%What we are doing is calculating the \emph{smallest rectangle} whose sides are parallel
+%to the horizontal and vertical, that contained the rotated stamp. We use this computed
+%rectangle as the bounding rectangle of the rectangle.
+%
+%The basic algorithm is as follows:
+% If the angle is in the first or third quadrant, we use
+%\begin{align*}
+%    \text{width}  &=\text{width}'\cos(\theta)+\text{height}'\sin(\theta)\\
+%    \text{height} &=\text{width}'\sin(\theta)+\text{height}'\cos(\theta)
+%\end{align*}
+%else, we use
+%\begin{align*}
+%    \text{width} &=-\text{width}'\cos(\theta)+\text{height}'\sin(\theta)\\
+%    \text{height}&=\text{width}'\sin(\theta)-\text{height}'\cos(\theta)
+%\end{align*}
+% where, $\text{width}'$ and $\text{height}'$ are the original width and height of the bounding rectangle,
+% and $\text{width}$ and $\text{height}$ are the new dimensions of the rectangle, after rotation through
+% an angle of $\theta$.
+% \paragraph*{Width calculation.} Width held in \cs{ap@temp@thisWidth}.
+%    \begin{macrocode}
+    \@tempdima=\ap@sign\ap@thisWidth
+    \@tempdima=\c@cos\@tempdima
+    \@tempdimb=\ap@thisHeight
+    \@tempdimb=\c@sin\@tempdimb
+    \advance\@tempdima by\@tempdimb
+    \edef\ap@temp@thisWidth{\the\@tempdima}%
+%    \end{macrocode}
+% \paragraph*{Height calculation.} Final height held is \cs{@tempdima}.
+%    \begin{macrocode}
+    \@tempdima=\ap@thisWidth
+    \@tempdima=\c@sin\@tempdima
+    \@tempdimb=\ap@thisHeight
+    \@tempdimb=\c@cos\@tempdimb
+    \advance\@tempdima by\ap@sign\@tempdimb
+%    \end{macrocode}
+% Any negative dimensions are changed to positive.
+%    \begin{macrocode}
+    \@tempdimb=\ap@temp@thisWidth\relax
+    \ifdim\@tempdimb<\z@\@tempdimb=-\the\@tempdimb\fi
+    \ifdim\@tempdima<\z@\@tempdima=-\the\@tempdima\fi
+%    \end{macrocode}
+% Here are the final calculations, \cs{ap@thisWidth} and \cs{ap@thisHeight}.
+%    \begin{macrocode}
+    \edef\ap@thisWidth{\the\@tempdimb}%
+    \edef\ap@thisHeight{\the\@tempdima}%
+}
+%    \end{macrocode}
+% Some code for embedding a file in the PDF document.
+%    \begin{macrocode}
+\def\ap@EmbedThisFile{%
+    \literalps@out{%
+    [ /_objdef {apEmbedFile\the\ap@annot@cnt}/type/dict/OBJ pdfmark
+    [ {apEmbedFile\the\ap@annot@cnt} <<
+        /F (\ap@thisFileName)
+        /UF (\ap@thisFileName)
+        /EF << /F {apFileStream\the\ap@annot@cnt} >>
+        /Type/Filespec
+    >> /PUT pdfmark}%
+    \literalps@out{%
+    [ /_objdef {apFileStream\the\ap@annot@cnt}/type/stream/OBJ pdfmark
+    [ {apFileStream\the\ap@annot@cnt} (\annotpro@file)
+        (r) file /PUT pdfmark
+    [ {apFileStream\the\ap@annot@cnt} <<
+        /Type/EmbeddedFile
+    >> /PUT pdfmark
+    [ {apFileStream\the\ap@annot@cnt} /CLOSE pdfmark}%
+}
+%    \end{macrocode}
+% Set global options for this package.
+%    \begin{macrocode}
+\setAnnotOptions{title,subject,open=false,color}
+%</package>
+%    \end{macrocode}
+%  \Finale
+\endinput

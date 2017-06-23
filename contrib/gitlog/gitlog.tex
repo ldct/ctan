@@ -1,0 +1,364 @@
+% gitlog.tex
+% Copyright 2015 Brent Longborough
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% The Current Maintainer of this work is Brent Longborough.
+% -----------------------------------------------------
+\documentclass[a4paper,12pt,twoside,openany]{memoir}
+% =====================================================
+\usepackage[british]{babel}
+\selectlanguage{british}
+\usepackage[style=iso]{datetime2}
+\usepackage[local,pcount,grumpy,markifdirty]{gitinfo2}
+\usepackage{tgpagella}
+\usepackage{tgadventor}
+\usepackage{fontspec}
+\setmainfont[Numbers={Proportional,OldStyle},Ligatures=TeX]{TeX Gyre Pagella}
+\setsansfont[Numbers={Proportional,OldStyle},Ligatures=TeX]{TeX Gyre Adventor}
+\setmonofont{Consolas}
+\usepackage{enumitem}
+\setlist[description]{%
+    format=\ttfamily\bfseries,
+    style=nextline,
+    leftmargin=3em,
+    itemsep=0.5\onelineskip}
+\setulmarginsandblock{0.11111\paperwidth}{0.22222\paperwidth}{*}
+\setlrmarginsandblock{0.11111\paperwidth}{0.22222\paperwidth}{*}
+\setheadfoot{1.2\baselineskip}{0.0849\paperwidth}
+\setmarginnotes{0.125\foremargin}{0.75\foremargin}{\onelineskip}
+\setheaderspaces{*}{*}{0.618}
+\checkandfixthelayout[fixed]
+% \makepagenote
+% \continuousnotenums
+% \notepageref
+% \foottopagenote
+% \renewcommand*{\printpageinnotes}[1]{%
+%   (p.\pageref{#1})\space}
+% \renewcommand\printpageinnoteshyperref[1]{%
+%   (p.\pageref*{#1})\space}
+% \renewcommand*{\pagenotesubhead}[3]{%
+%   \subsubsection*{#1: #3}}
+\tightlists
+\chapterstyle{bringhurst}
+\pagestyle{empty}
+\aliaspagestyle{chapter}{empty}
+\settocdepth{subsection}
+\setsecnumdepth{none}
+\newcommand{\bpara}[1]{\par\vspace{\beforeparaskip}\noindent\textbf{#1}\,}
+\newcommand{\rpara}[1]{\par\noindent\textbf{#1}\,}
+\newcommand{\tcmd}[1]{\texttt{\textbackslash#1}}
+\newcommand{\dark}[1]{\texttt\textbf{{#1}}}
+\newcommand{\sfit}[1]{\textit{#1}}
+\newcommand{\git}{\sfit{git}}
+\newcommand*{\emailat}{@}
+\newcommand{\tpname}{\sfit{gitlog}}
+\newcommand{\tpfname}{\textsf{gitlog.sty}}
+% -----------------------------------------------------
+\usepackage[%
+	bookmarksnumbered,
+	bookmarksopen,
+	linktocpage,
+	]{hyperref}
+\hypersetup{
+   pdfauthor={Brent Longborough},
+   pdftitle={The gitlog package: git change logs for LaTeX},
+   pdfkeywords={git;changelog;dvcs},
+}
+\usepackage[%
+    write,
+	bibfile=gitlog.sample.bib,
+	github=Hightor/gitlog,
+	title={Sample Git Change Log},
+]{gitlog}
+\begin{document}
+\frontmatter
+% -----------------------------------------------------
+\title{%
+	~\\[2\baselineskip]
+	\Huge \tpfname\\[2ex]%
+	\Large A proof of concept for automatic typesetting \\of change logs from the \git\ \textsc{dvcs}
+	}
+\author{Brent Longborough}
+\date{\DTMenglishmonthname{\DTMfetchmonth{gitdate}} \DTMfetchyear{gitdate}}
+\maketitle
+
+{\centering
+Release:\gitRels\ (\gitAbbrevHash)\\
+}
+% -----------------------------------------------------
+\thispagestyle{empty}
+\aliaspagestyle{chapter}{plain}
+\clearforchapter
+\tableofcontents*
+% -----------------------------------------------------
+\mainmatter
+\pagestyle{giruled}
+\aliaspagestyle{chapter}{giplain}
+\chapter{Introduction}
+The \git{} distributed version control system
+maintains an historical log of update activity.
+The \tpname{} package provides a way automatically 
+to typeset such a log, optionally linking commits 
+from the typeset log
+to one of the online \textsc{dvcs} hosting services.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\section{Limitations}
+
+The current release (\gitRel) 
+is intended only as a \emph{proof-of-concept}, 
+and should not be used for production-level work
+unless you're happy with these limitations:
+\begin{itemize}
+\item Formatting maliciously-coded documents 
+\textbf{\emph{can cause arbitrary files to be overwritten.}} 
+Although this problem is easy to avoid 
+(and requires the \sfit{--shell-escape} command line option),
+there are no built-in protections.
+\item The \git\ change log is built and formatted using the 
+facilities of \sfit{biblatex} and \sfit{biber}.
+The way this is currently implemented makes it unlikely that 
+documents using \tpname\ can contain `normal' bibliographies.
+\item New lines in the \git\ change log commit messages are 
+simply converted to spaces. 
+The result is pretty ugly, 
+unless you've had the foresight 
+to punctuate your commit messages nicely.
+\end{itemize}
+
+\noindent 
+That said, I think \tpname\ will still be useful to a subset of \TeX\ users,
+and I welcome suggestions and contributed code via email or Github, where the url is 
+\url{https://github.com/Hightor/gitlog/issues}.
+
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\section{How \tpname\ works}
+\begin{enumerate}
+\item The package uses a git command internally, via the \tcmd{write18} command,
+to write out the change log in the shape of a rather strange
+\sfit{.bib} file
+
+\item The change log .bib file contains a series of items of type \sfit{gitcommit},
+defined and formatted by the \tpname\ 
+data model and bibliography styles which accompany the package.
+
+\item The rest of the work is done by persuading \sfit{biblatex} and \sfit{biber}
+to treat this data as a bibliography.
+
+\item Optionally, you can generate your own `change log bibliography', 
+using this command (joined up into a single line):\\[\baselineskip]
+{\ttfamily
+git --no-pager log --reverse --date=short\\ 
+--pretty="format:@gitcommit\{\%h,\%n author = \{\%an\},\%n\\
+date = \{\%ad\}, \%n title = \{\%B\}, \%n commithash = \{\%H\}\\
+\}" > \textit{filename}
+}
+
+\end{enumerate}
+
+% -----------------------------------------------------
+\chapter{Using the package}
+\label{ch:using}
+To collect and typeset \git{} history,
+you load the \tpname\ package in the usual way:\\[0.5\baselineskip]
+\texttt{\textbackslash usepackage[$<options>$]\{gitlog\}}
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\section{Package options}
+
+The following options are available:
+
+\subsection{General options}
+
+\begin{description}
+
+\item[\texttt{title=\textit{log title}}]
+This option allows you to change the chapter title associated with 
+the typeset change log.
+The default is `Change Log'.
+
+\item[\texttt{date}, \texttt{nodate}]
+These complementary options
+allow you to specify whether or not you want 
+the author date and name to be added to the change log.
+The default is \texttt{nodate}.
+
+
+\end{description}
+
+\subsection{Options for controlling the .bib file}
+
+\begin{description}
+
+\item[\texttt{write}, \texttt{nowrite}]
+These complementary options
+allow you to specify whether or not you want 
+\tpname\ to generate the special change log (\sfit{.bib}) 
+for you.
+
+If you specify \texttt{write}, then \tpname\ will regenerate the 
+change log every time the document is formatted. 
+Note that this option is implemented with the \tcmd{write18} command,
+and requires that your document be processed with the \TeX option 
+\texttt{--shell-escape}.
+
+If you specify \texttt{nowrite}, then \tpname\ will not write anything,
+and the \texttt{--shell-escape} option is not required.
+However, in this case, 
+you are responsible for generating the change log 
+in the correct format for \tpname\ to use, 
+as well as being able to hand-tailor it.
+
+If neither option is specified, the default depends on whether or not
+you use the \sfit{bibfile} option, described next.  
+
+\clearpage
+\item[\texttt{bibfile=\textit{filename}}]
+The \git\ change log data is kept in 
+a file in \sfit{biblatex .bib} format, 
+which \tpname\ writes (if requested) and then reads 
+to format the change log.
+
+If this option is not specified, then a default filename
+is used:
+\textit{<jobname>}\texttt{.gitlog.bib}. 
+In this case, the default option \sfit{write} is used,
+but can be suppressed by specifying \texttt{nowrite}.
+
+This can be overridden by specifying your own choice
+of filename using this option.
+In this case, the default option \sfit{nowrite} is used,
+but you can force \tpname\ to write to your file 
+by specifying \texttt{write}.
+
+\dark{Warning:} there is \emph{no} protection against writing
+to any file name whatsoever. 
+The default settings are reasonably `safe'; 
+where you need to ship the document without its repository,
+then  
+\begin{quote}
+{\ttfamily
+[write,bibfile=\jobname.local.bib]
+}
+\end{quote}
+is probably a safe set of options to use.
+
+\end{description}
+
+\subsection{Options for linking to on-line services}
+
+The change log typeset by \tpname\ can include links
+connecting each commit to its corresponding page
+in either the GitHub or the Atlassian Bitbucket 
+online repository services. 
+(Trade marks of their respective owners.)
+
+To use this feature, you must load the \sfit{hyperref} package
+before loading \tpname, and use one of the following, 
+mutually exclusive, options.
+
+\begin{description}
+
+\item[\texttt{github=\textit{repository-path}}]
+When each commit in the changelog is typeset,
+a link is generated to the corresponding page on GitHub,
+with a \textsc{url} in this format:
+\begin{quote}
+{\ttfamily\small
+https://github.com/{\rmfamily\itshape repository-path}/commit/{\rmfamily\itshape commit-hash}
+}
+\end{quote}
+
+\item[\texttt{bitbucket=\textit{repository-path}}]
+When each commit in the changelog is typeset,
+a link is generated to the corresponding page on Atlassian Bitbucket,
+with a \textsc{url} in this format:
+\begin{quote}
+{\ttfamily\small
+https://bitbucket.org/{\rmfamily\itshape repository-path}/commits/{\rmfamily\itshape commit-hash}
+}
+\end{quote}
+
+\end{description}
+
+\section{Typesetting the change log}
+
+The command \tcmd{printGitLog}
+typesets the change log, as a new chapter containing a pseudo-bibliography,
+at that point in the document. 
+At the moment, there are very few options to allow you to tailor the typography.
+
+A sample change log can be seen at the end of this manual.
+
+% -----------------------------------------------------
+\chapter{Etc}
+\section{Release notes}
+
+\rpara{R0.0.beta: 2015-11-24}
+Initial beta release
+
+\section{Acknowledgements}
+
+The \href{http://tex.stackexchange.com}{\TeX.SE community}
+has been a constant source of help, inspiration, and amazement.
+
+I'd also like to register my thanks to the owners of the packages and tools 
+on which \tpname\ depends: 
+biblatex, etoolbox, hyperref, and kvoptions,
+and also to 
+\href{http://tex.stackexchange.com/users/35864/moewe}{moewe at \TeX.SE} for
+invaluable help during my ongoing stumblings with \sfit{biblatex}.
+
+We all depend heavily on the constant hard work
+so unstintingly given to the community by the Guardians of CTAN. 
+Thank you all.
+
+The failings, of course, I claim for myself.
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\section{Copyright \& licence}
+Copyright \copyright\ \DTMfetchyear{gitdate}, Brent Longborough,
+who has asserted his moral right
+to be identified as the author of this work.
+
+This work --- \tpname\ --- may be distributed and/or modified under the
+conditions of the LaTeX Project Public License: either version 1.3
+of this license, or (at your option) any later version.
+
+The latest version of this license can be found
+at the \LaTeX\ Project website,%
+\footnote{(\url{http://www.latex-project.org/lppl.txt})}
+and version 1.3 or later is part of all recent distributions of
+\LaTeX.
+
+This work has the LPPL maintenance status `maintained';
+the Current Maintainer of this work is Brent Longborough.
+
+% This work consists of the files
+%     gitlog.sty, gitlog.bbx, gitlog.dbx, 
+%     gitlog.tex, gitlog.sample.bib, gitHeadLocal.gin, 
+%     gitlog.pdf, and README.md
+
+% - - - - - - - - - - - - - - - - - - - - - - - - - - -
+\section{From the author}
+Although my limitations as a \TeX nician
+mean that I'm going to need a lot of expert help
+to turn \tpname\ into a delightful author experience,
+I hope you find the package useful and the concept interesting.
+I'll be very happy to receive your comments by email.\\[\baselineskip]
+Brent Longborough\\[\baselineskip]
+\textsf{brent+ctancontrib (bei) longborough (punkt) org}\\
+and at \href{http://tex.stackexchange.com/users/344/brent-longborough}{\TeX.SE}
+% -----------------------------------------------------
+\printGitLog
+% -----------------------------------------------------
+\end{document}

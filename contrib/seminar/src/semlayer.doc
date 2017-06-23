@@ -1,0 +1,271 @@
+% BEGIN semlayer.doc
+%%
+\def\fileversion{1.0}
+\def\filedate{93/04/01}
+%%
+%% LaTeX style option `semlayer.sty'.
+%% For use with LaTeX v2.09 and the `seminar' document style.
+%%
+%% COPYRIGHT 1993, by Timothy Van Zandt, Timothy.VAN-ZANDT@insead.edu
+%%
+%% This file may be distributed and/or modified under the conditions of
+%% the LaTeX Project Public License, either version 1.2 of this license
+%% or (at your option) any later version.  The latest version of this
+%% license is in:
+%% 
+%%    http://www.latex-project.org/lppl.txt
+%% 
+%% and version 1.2 or later is part of all distributions of LaTeX version
+%% 1999/12/01 or later.
+%%
+%%
+% **************************************************************************
+% This is `semlayer.doc', which contains the documented code for
+% `semlayer.sty'. You can use it in this form as the input file
+% `semlayer.sty'. You can also create a stripped input file using
+% sem-make.tex. You can print the documented code using sem-code.tex.
+% sem-make.tex and sem-code.tex are distributed with seminar.sty.
+% **************************************************************************
+%
+% \EndDocPreamble
+%
+% \CheckSum{276}
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+%
+%
+% \section{Overlays}
+%
+% The main thing that the "\process@slide" macro does is successively send the
+% main slide and then each overlay and layer to a slide output routine. In
+% order to make the definition of that macro easier to understand, we first
+% set up the overlays interface.
+%
+% Overlays must be implemented by some extra macros, such as in
+% "semcolor.sty". Specifically, the commands "\@overlay" and "\make@overlay"
+% should be defined.
+%
+% The reason for including the interface in "seminar.sty" is to encourage
+% those who implement overlays to use a uniform interface, and to illustrate
+% how overlays work. To be honest, though, it may not be possible to implement
+% overlays without PostScript or a graphics language with similar capabilities
+% using the interface that is defined here and without rewriting the basic
+% slides macros.
+%
+% This system of overlays is so good and the system using invisible fonts is
+% so lousy, that no special provisions have been made for supporting the
+% latter. Actually, overlay should (and could easily) be implemented as \TeX{}
+% primitives, saving everyone a lot of trouble.
+%
+% The system for overlays is not explained here in great detail. See
+% "semcolor.sty" and "pstricks.tex" for an example of how overlays can be
+% implemented.
+%
+%    \begin{macrocode}
+\addto@hook\before@newslide{%
+  \global\def\overlay@list{}%
+  \setcounter{overlay}{0}}
+%    \end{macrocode}
+%
+% \begin{macro}{\process@slide,\overlay@loop,\layer@loop}
+% "\process@slide" is the beginning of the ``output'' routine for slides.
+% "\@slidebox" is copied to "\@@slidebox". The "\make@overlay#1" macro should
+% set "\@slidebox" to the contents of "\@@slidebox", but with only the
+% material for overlay "#1" visible.
+%    \begin{macrocode}
+\newbox\@@slidebox
+\def\process@@slide{%
+  \ifx\overlay@list\@empty
+    \finish@slide
+    \output@slide
+  \else
+    \setbox\@@slidebox\box\@slidebox
+    \make@overlay{0}%
+    \finish@slide
+    \output@slide
+    {\let\theoverlay\theslide\layer@loop{0}}%
+    \overlay@loop
+  \fi}
+\def\overlay@loop{%
+  \begingroup
+    \overlay@prep
+    \c@overlay=1
+    \@whilenum\c@overlay<10
+      \do{%
+        \test@member{\the\c@overlay}{\overlay@list}%
+        \if@test
+          \make@overlay{\the\c@overlay}%
+          \finish@slide
+          \output@slide
+        \fi
+        \layer@loop{\the\c@overlay}%
+        \advance\c@overlay by 1}%
+  \endgroup}
+\def\layer@loop#1{%
+  \begingroup
+    \layer@prep
+    \@for\currlayer:=\layer@list\do{%
+    \test@member{#1-\currlayer}{\overlay@list}%
+      \if@test
+        \make@overlay{#1-\currlayer}%
+        \finish@slide
+        \output@slide
+      \fi}%
+  \endgroup}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\layer@prep,\overlay@prep}
+%    \begin{macrocode}
+\def\layer@prep{%
+  \ifarticle\pagestyle{\layer@pagestyle}\fi
+  \let\thepage\thelayer
+  \ifx\thelayerframe\@empty\else\let\theslideframe\thelayerframe\fi
+  \let\slidelabel\layerlabel}
+\def\overlay@prep{%
+  \ifarticle\pagestyle{\overlay@pagestyle}\fi
+  \let\thepage\theoverlay
+  \ifx\theoverlayframe\@empty\else\let\theslideframe\theoverlayframe\fi
+  \let\slidelabel\overlaylabel}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\layerframe,\overlayframe}
+%    \begin{macrocode}
+\def\layerframe{\@slideframe{layer}}
+\def\overlayframe{\@slideframe{overlay}}
+\def\thelayerframe{}
+\def\theoverlayframe{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\overlaylabel,\layerlabel}
+%    \begin{macrocode}
+\def\overlaylabel{\bf Overlay \theoverlay}
+\def\layerlabel{\bf Layer \thelayer}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\theoverlay,\thelayer}
+%    \begin{macrocode}
+\newcounter{overlay}
+\def\theoverlay{\theslide-\alph{overlay}}
+\def\currlayer{}
+\def\thelayer{\theoverlay-\currlayer}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\ifoverlays,\iflayers}
+% Overlays and layers can be turned on and off independently.
+%    \begin{macrocode}
+\newif\ifoverlays
+\newif\iflayers
+\@ifundefined{@overlay}%
+  {\let\@overlay\relax}%
+  {\ifarticle\else\overlaystrue\layerstrue\fi}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\nooverlays@err,\@overlay}
+% "\@overlay" is set to "\relax" if it is not defined, for easy error
+% detection.
+%    \begin{macrocode}
+\def\nooverlays@err{%
+  \@seminarerr{You need to use additional macros for overlays,
+    e.g., semcolor.sty}\@ehd
+  \global\overlaysfalse
+  \global\layersfalse}
+\@ifundefined{@overlay}{}{}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\overlay}
+% The "\overlay" command starts by checking that the argument is a number
+% between 0 and 9. If so, "\@overlay" is invoked. Except for overlay 0, the
+% counter for cross-references is set to "overlay", and its value is set to
+% the argument of "\overlay".
+%    \begin{macrocode}
+\def\overlay#1{%
+  \ifoverlays\ifx\@overlay\relax\nooverlays@err\fi\fi
+  \ifslide
+    \@tempcnta=#1
+    \@testfalse
+    \ifnum\@tempcnta>-1 \ifnum\@tempcnta<10 \@testtrue\fi\fi
+    \if@test
+      \c@overlay=\@tempcnta
+      \ifnum\c@overlay=0
+        \advance\c@slide by -1
+        \refstepcounter{slide}%
+      \else
+        \advance\c@overlay by -1
+        \refstepcounter{overlay}%
+        \ifoverlays
+          \xdef\overlay@list{\overlay@list,\the\c@overlay}%
+        \fi
+      \fi
+      \ifoverlays
+        \@overlay{\the\c@overlay}%
+      \fi
+    \else
+      \@seminarerr{\string\overlay\space argument must be
+        an integer between 0 and 9}\@eha
+    \fi
+  \else
+    \@seminarerr{\string\overlay\space can only be used
+      in slide environments}\@eha
+  \fi
+  \ignorespaces}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\colorlayers}
+% Color layers use the same mechanism as overlays; only the interface differs.
+%    \begin{macrocode}
+\def\colorlayers#1{%
+  \edef\@tempc{#1}%
+  \edef\layer@list{\layer@list,#1}%
+  \def\@tempa##1{%
+    \@namedef{##1}{%
+      \iflayers\ifx\@overlay\relax\nooverlays@err\fi\fi
+      \ifslide
+        \iflayers
+          \xdef\overlay@list{\overlay@list,\the\c@overlay-##1}%
+          \@overlay{\the\c@overlay-##1}%
+        \fi
+      \else
+        \@seminarerr{Color layer `##1' can only be used in
+          slide environments}\@eha
+      \fi}}
+  \@for\@tempb:=\@tempc\do{%
+    \expandafter\@tempa\expandafter{\@tempb}}}
+\def\layer@list{}
+%    \end{macrocode}
+% \end{macro}
+%
+%
+% \begin{macro}{\layerpagestyle,\overlaypagestyle}
+%    \begin{macrocode}
+\def\overlaypagestyle#1{\@ifgoodps{#1}{\edef\overlay@pagestyle{#1}}}
+\def\layerpagestyle#1{\@ifgoodps{#1}{\edef\layer@pagestyle{#1}}}
+\overlaypagestyle{}
+\layerpagestyle{}
+%    \end{macrocode}
+% \end{macro}
+%
+\endinput
+% END semlayer.doc

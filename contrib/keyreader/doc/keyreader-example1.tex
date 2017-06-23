@@ -1,0 +1,118 @@
+\documentclass{article}
+\usepackage{keyreader}[2012/11/01]
+\usepackage{xcolor}
+\usepackage{graphicx}
+\makeatletter
+
+% Choice keys with braced default:
+\krddefinekeys[JKV]{jorg}{%
+  choice/key1/{A/X}/{
+      A/X.do=\def\currcolor{blue},
+      A/Y.do=\def\currcolor{green},
+      B/X.do=\def\currcolor{red},
+      B/Y.do=\def\currcolor{magenta}
+    }
+    /\def\val{Value of key1: #1}
+  ;
+  choice/align/justified/{
+      center.do=\def\curralign##1{\hfil##1\hfil},
+      right.do=\def\curralign##1{\hfill##1},
+      left.do=\def\curralign##1{##1\hfill},
+      justified.do=\let\curralign\@iden
+    }
+  ;
+}
+\krdpresetkeys[JKV]{jorg}{key1=A/X,align=justified}
+\newcommand\jorgcommand[2][]{%
+  \krdsetkeys[JKV]{jorg}{#1}%
+  \endgraf\bigskip
+  \parbox{\hsize}{\centering\textbf{\textcolor{\currcolor}{\val}}}%
+  \endgraf
+  \parbox{\hsize}{\curralign{\textcolor{\currcolor}{#2}}}%
+}
+
+% Shadow box:
+\newdimen\shadowsize
+\krddefinekeys*[KV]{ebox}[mp@]{%
+  bool/frame/true;
+  bool+/shadow/true//
+    \mp@shadowtrue
+    \@@warning{Invalid value for 'shadow': 'true' assumed}
+  ;
+  cmd/framecolor/black;
+  cmd/shadecolor/white;
+  cmd/shadowcolor/gray;
+  cmd/framesize/.4pt;
+  cmd/boxsize/.1\columnwidth;
+  cmd/shadowsize/1pt;
+  choice+/align/center/
+    center.do=\let\mp@alignright\hfil\let\mp@alignleft\hfil,
+    right.do=\let\mp@alignright\hfill\let\mp@alignleft\relax,
+    left.do=\let\mp@alignright\relax\let\mp@alignleft\hfill,
+    justified.do=\let\mp@alignright\relax\let\mp@alignleft\relax
+    //
+    \let\mp@alignright\hfil\let\mp@alignleft\hfil
+    \@@warning{Invalid value for 'align'; 'center' used}
+  ;
+}
+\savevaluekeys[KV]{ebox}{frame,framecolor,framesize}
+\krdpresetkeys[KV]{ebox}{%
+  frame,framecolor=black,shadecolor=white,framesize=0.5pt,boxsize,align
+}
+\krdpostsetkeys[KV]{ebox}{%
+  shadow=\usevalue{frame},shadowcolor=\usevalue{framecolor}!40,
+  shadowsize=\usevalue{framesize}*4
+}
+\newcommand*\ebox[2][]{%
+  \krdsetkeys[KV]{ebox}{#1}%
+  \begingroup
+  \ifmp@frame
+    \fboxrule=\dimexpr\mp@framesize\relax
+  \else
+    \fboxrule=0pt
+  \fi
+  \ifmp@shadow
+    \shadowsize=\dimexpr\mp@shadowsize\relax
+  \else
+    \shadowsize=0pt
+  \fi
+  \setbox0=\hbox{%
+    \fcolorbox{\mp@framecolor}{\mp@shadecolor}{%
+      \hbox to\mp@boxsize{%
+        \mp@alignright #2\mp@alignleft
+      }%
+    }%
+  }%
+  \hskip\shadowsize
+  \color{\mp@shadowcolor}%
+  \rule[-\dp0]{\wd0}{\the\dimexpr\ht0+\dp0\relax}%
+  \llap{\raisebox{\shadowsize}{\box0\hskip\shadowsize}}%
+  \endgroup
+}
+\makeatother
+
+\begin{document}
+\parindent-60pt
+% Shadow boxes:
+\scalebox{2}{%
+  \ebox[shadecolor=brown!70]{ebox1}%
+  \ebox[framecolor=magenta,boxsize=2cm,align=right]{ebox2}%
+  \ebox[shadow=false,framesize=1pt,framecolor=red,boxsize=1.5cm,align=left]{ebox3}%
+  \ebox[framesize=1pt,framecolor=green,shadowcolor=blue]{ebox4}%
+  \ebox[frame=false,shadow,shadowcolor=yellow,framesize=.5pt]{ebox5}%
+}
+
+% Choice keys:
+\def\name#1{\texttt{\textcolor{black}{#1}}}
+\def\atext{%
+  \name{choice} keys of the \name{keyreader} package.
+}
+\jorgcommand[key1=A/X,align=justified]{\atext}
+\jorgcommand[key1=A/Y,align=center]{\atext}
+\jorgcommand[key1=B/X,align=right]{\atext}
+\jorgcommand[key1=B/Y,align=left]{\atext}
+\jorgcommand{\atext}
+% Invalid value for key1 ('x+y' not allowed):
+% \jorgcommand[key1=x+y]{\atext}
+
+\end{document}

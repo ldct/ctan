@@ -1,0 +1,236 @@
+% Copyright 1994 Michael John Downes
+% Copyright 2013 TeX Users Group
+% This file is part of the dialogl package, released under the LPPL;
+% see dialogl.ins for details.
+%
+%    Originally published in TUGboat with ltugboat documentstyle.
+%    Switched to generic article/twocolumn afterward.
+%    Does not work with either LaTeX2e or LaTeX 2.09 compatibility mode :(.
+\documentstyle[doc,dialogl-doc]{article}
+
+\title{Interaction tools: {\tt dialog.sty} and {\tt menus.sty}}
+\author{Michael Downes}
+\date{November 3, 1994}
+
+% one latex2e command gets used.
+\def\ensuremath#1{\ifmmode #1\else $#1$\fi\relax}
+
+\hyphenation{pro-duces}
+
+\renewcommand{\thepart}{\arabic{part}}
+\renewcommand{\thesection}{\thepart.\arabic{section}}
+
+%    Some customizations of doc.sty parameters.
+\def\PrintMacroName#1{}
+%
+%\renewcommand{\PrintDescribeMacro}[1]{}
+%\renewcommand{\PrintDescribeEnv}[1]{}
+
+\setlength{\MacroIndent}{0pt}
+\def\MacroFont{\verbatimfont}% doc.sty uses \MacroFont
+
+%    No modules in the files to be processed; so don't bother checking.
+\DontCheckModules
+
+\multicoldefaultlayout
+\begin{document}
+\jobswitch % print only selected parts if \jobname so indicates; see
+           % dialog.sty
+\maketitle
+\thispagestyle{empty}
+
+\begin{multicols}{2}
+\section*{Introduction}
+
+\ifall
+This article describes
+\fn{dialog.sty} and \fn{menus.sty}, which
+provide functions for printing messages or menus on screen and reading
+users' responses. The file \fn{dialog.sty} contains basic message and
+input-reading functions; \fn{menus.sty} takes \fn{dialog.sty} for its
+base and uses some of its functions in defining more complex menu
+construction functions. These two files are set up in the form of
+\LaTeX{} documentstyle option files, but in writing them I spent some
+extra effort to try to make them usable with \plaintex/ or other
+common macro packages that include \plaintex/ in their base, such as
+\AmSTeX{} or \eplain/.
+
+The appendix describes \fn{grabhedr.sty}, required by \fn{dialog.sty},
+which provides two useful file-handling features: (1)~a command
+\cw{inputfwh} that when substituted for \cw{input} makes it possible to
+grab information such as file name, version, and date from standardized
+file headers in the style promoted by Nelson Beebe\Dash and to grab it
+in the process of first inputting the file, as opposed to inputting the
+file twice, or \cw{read}ing the information separately (unreliable due
+to system-dependent differences in the equivalence of \tex/'s \cw{input}
+search path and \cw{openin} search path). And (2)~functions
+\cw{localcatcodes} and \cw{restorecatcodes} that make it possible for
+\fn{dialog.sty} (or any file) to manage internal catcode changes
+properly regardless of the surrounding context.
+
+These files and a few others are combined in
+\else
+This package is part of
+\fi
+a suite of files that goes
+by the name of {\bf dialogl}, available on the Internet by anonymous ftp
+from CTAN (Comprehensive \tex/ Archive Network), e.g., \fn{ftp.shsu.edu}
+(USA), or \fn{ftp.uni-stuttgart.de} (Europe).
+%
+\ifall
+The file \fn{listout.tex} is a utility for verbatim printing of plain
+text files, with reasonably good handling of overlong lines, tab
+characters, other nonprinting characters, etc. It uses \fn{menus.sty} to
+present an elaborate menu system for changing options (like font size,
+line spacing, or how many spaces should be printed for a tab character).
+\else
+It includes the packages \pkg{dialog}, \pkg{menus}, and \pkg{grabhedr}
+and a utility file \fn{listout.tex} for verbatim printing of plain text
+files.
+\fi
+
+\ifmenus
+Here's an example from the menu system of \fn{listout.tex} to
+demonstrate the use of some features from \fn{dialog.sty} and
+\fn{menus.sty}. First, the menu that you would see if you wanted to
+change the font or line spacing:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%    This funny way of calling \samepage is (I think) the most
+%    convenient way to avoid turning off page breaks for the preceding
+%    paragraph.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\next{\begin{verbatim}\samepage}\next
+===============================================
+  F  Change font
+  S  Change font size
+  L  Change line spacing
+
+Current settings: typewriter 8 / 10.0pt.
+
+    Q  Quit         X  Exit        ?  Help
+===============================================
+
+Your choice?
+\end{verbatim}
+Suppose you wanted to change line spacing to 9 points, so you entered
+\qc{\l} (lowercase \qc{\L}) and then \verb'9pt', except that on your
+first attempt you accidentally mistyped \verb'9pe' instead of
+\verb'9pt'. Here's what you would see on screen:
+\begin{verbatim}
+Your choice? l
+Desired line spacing [TeX units] ? 9pe
+?---I don't understand "9pe".
+Desired line spacing [TeX units] ? 9pt
+
+* New line spacing: 9.0pt
+\end{verbatim}
+Both lowercase \verb'l' and capital \verb'L' are acceptable responses,
+and the value given for line spacing is checked to make sure it's a
+valid \tex/ dimension. Before continuing, the internalized version of
+the user's value is echoed on screen to confirm that the entered value
+was read correctly.
+
+Now here's how the above menu is programmed in \fn{listout.tex}.
+A function \cw{menuF} is constructed using \cw{fxmenu}:
+\begin{verbatim}
+\fxmenu\menuF{}{
+F  Change font
+S  Change font size
+L  Change line spacing
+}{
+Current settings: &\mainfont &\mainfontsize / %
+&\the&\normalbaselineskip.
+}
+%
+\def\moptionF{\lettermenu F}
+\end{verbatim}
+In the definition of \cw{moptionF}, \cw{lettermenu} is a high-level
+function from \fn{menus.sty} that prints \cw{menuF} on screen (given
+the argument \verb'F'), reads a line of input from the user, extracts
+the first character and forces it to uppercase, then branches to
+the next menu as determined by that character. The response of
+\verb'l' causes a branch to the function \cw{moptionFL}:
+\begin{verbatim}
+\def\moptionFL{%
+  \promptmesj{%
+    Desired line spacing [TeX units] ? }%
+  \readline{Q}\reply
+\end{verbatim}
+If \verb'Q', \verb'X', or \verb'?' was entered, the test
+\cw{xoptiontest} will return `true'; then we should skip the dimension
+checking and go directly to \cw{optionexec}, which knows what to do
+with those responses:
+\begin{verbatim}
+  \if\xoptiontest\reply
+  \else
+\end{verbatim}
+Otherwise we check the given dimension to make sure it's usable. If so,
+echo the new value as confirmation.
+\begin{verbatim}
+    \checkdimen\reply\dimen@
+    \ifdim\dimen@>\z@
+      \normalbaselineskip\dimen@\relax
+      \normalbaselines
+      \confirm{New line spacing:
+        \the\normalbaselineskip}%
+      \def\reply{Q}%
+    \fi
+\end{verbatim}
+If \cw{reply} was changed to \verb'Q' during the above step,
+\cw{optionexec} will pop back up to the previous menu level (normal
+continuation); otherwise \cw{reply} retains its prior definition\Dash
+e.g., \verb'9pe'\Dash to which \cw{optionexec} will simply say ``I
+don't understand that'' and repeat the current prompt.
+\begin{verbatim}
+  \fi
+  \optionexec\reply
+}
+\end{verbatim}
+
+For maximum portability, \fn{listout.tex} uses in its menus only
+lowest-common-denominator ordinary printable ASCII characters in the
+range 32\dash 126. Fancier menus can be obtained at a cost of forgoing
+system independence, for instance by using em\tex/'s \verb'/o' option
+to output the box-drawing characters in the standard PC DOS character
+set.
+\fi
+
+\subsection*{Notation}
+
+Double-hat notation such as \verb'^^J' is used herein for
+control characters, as in \TB{}, although occasionally the alternate
+form `{\sc control}-J' is used when the emphasis is away from the
+character's tokenized state inside \tex/. A couple of abbreviations
+from \fn{grabhedr.sty} are used frequently in the macro code: \cw{xp@}
+= \cw{expandafter}, and \cw{nx@} = \cw{noexpand}. Standard
+abbreviations from \fn{plain.tex} such as \cw{z@} or \cw{toks@} are
+used without special comment.
+
+\ifall
+\part{Basic dialog functions: \fn{dialog.sty}}
+\fi
+\ifdialog\hDocInput{dialogl.dtx}\fi
+
+\ifall
+\part{Menu functions: \fn{menus.sty}}
+\setcounter{section}{0}
+\fi
+\ifmenus\hDocInput{menus.dtx}\fi
+
+\ifall
+%    It's hard to make this part title come out right without assuming
+%    \partname is defined.
+\part*{Appendix\penalty-10000
+Miscellaneous support functions:
+\fn{grabhedr.sty}}
+\setcounter{section}{0}
+\renewcommand{\thepart}{A} % for use in \thesection
+\fi
+\ifgrabhedr\hDocInput{grabhedr.dtx}\fi
+
+\end{multicols}
+
+\ifdim\textwidth>\textheight
+\typeout{^^JWarning: remember to print using LANDSCAPE orientation^^J}
+\fi
+\end{document}

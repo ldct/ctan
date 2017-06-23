@@ -1,0 +1,600 @@
+% \iffalse
+% makeindex -s gglo.ist -o aeb_dad.gls aeb_dad.glo
+% makeindex -s gind.ist -o aeb_dad.ind aeb_dad.idx
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% aeb_dad package                                      %%
+%% Copyright (C) 2012--2016 D. P. Story                 %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{aeb_dad}
+%<package> [2016/10/26 v1.2b Drag and drop stamps matching game (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex=false]{hyperref}[2012/10/12] % to support calculate for pdfyrc
+\pdfstringdefDisableCommands{\let\\\textbackslash}
+\OnlyDescription
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\def\ltag{<}\def\rtag{>}
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{aeb_dad}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro} \let\setupFullwidth\relax
+     \PackageInfo{aeb_dad}{aebdocfmt.def cannot be found}}
+\begin{document}
+  \GetFileInfo{aeb_dad.sty}
+  \title{\textsf{aeb\_dad}: Drag and drop stamps in a game or learning setting}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{aeb_dad.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o aeb\_dad.ind aeb\_dad.idx} on the command line and recompile
+    \texttt{aeb\_dad.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o aeb\_dad.gls aeb\_dad.glo} on the command line and recompile
+    \texttt{aeb\_dad.dtx}.}
+\end{document}
+%</driver>
+% \fi
+%
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{aeb_dad}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{aeb_dad}{aebdonotindex.def cannot be found}}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%
+% \paragraph*{Description.}
+% The \textsf{aeb\_dad} package consists of {\LaTeX} commands and JavaScript for creating a
+% \underbar{d}rag \underbar{a}nd \underbar{d}rop ``game'' of matching. The
+% user drags and drops an icon image and drops it into a target region (a
+% push button), then clicks on the button. If the placement is correct, the
+% image centers itself in the target region and the border changes color.
+% If the user drops the image in the wrong region, the icon is returned to
+% its initial position. In each case an alert message appears and announces
+% ``Right'' or ``Wrong''.
+%
+% Generally, \textsf{AA} and \textsf{AR} do not support drag and
+% drop. In version 11 (XI) of \textsf{AR}, you can move a stamp around on a page.
+% This opens a number of possibilities. \textsf{aeb\_dad} uses a (rubber)
+% stamp as the icons that can be move around in \textsf{ARXI} (and
+% \textsf{AAXI}). You cannot attach JS to a stamp, however, that is why the
+% target of the drop is a push button. The user drops the stamp on a target
+% and presses the underlying button. The JS associated with the button then
+% determines whether the stamp that is within its bounding rectangle is the
+% correct one.
+%
+% \paragraph*{Documentation and Code.}\strut\par\medskip\noindent
+% The \textsf{eforms} package is also required, but it is not listed here. Include
+% \textsf{eforms} prior to this package. The \textsf{web} package is encourage, but
+% not required.
+%    \begin{macrocode}
+\RequirePackage{annot_pro}[2012/11/10]
+\RequirePackage{xkeyval}
+\RequirePackage{calc}
+\RequirePackage{refcount}
+\newcounter{aebdadcnt}
+\edef\dad@subCat{\the\catcode`\_}
+\def\dd@csarg#1#2{\expandafter#1\csname#2\endcsname}
+\@makeother\_
+%    \end{macrocode}
+% \DescribeMacro{\ddDimens} is a macro to set the dimensions of
+% the stamp icons and the push buttons.
+%    \begin{macrocode}
+\newcommand{\ddDimens}[1]{\setkeys{ddm}{#1}}
+%    \end{macrocode}
+% The width of the icon stamp. (Height appropriately scaled)
+%    \begin{macrocode}
+\define@key{ddm}{iconwidthTo}[]{{%
+    \def\ddm@argi{#1}\ifx\ddm@argi\@empty
+        \global\let\ddm@iconwidthTo\@empty
+    \else
+        \setlength{\dimen@}{#1}%
+        \xdef\ddm@iconwidthTo{\the\dimen@}%
+    \fi
+}}
+\define@key{ddm}{iconwidth}[\defaultStampWidth]{{%
+    \setlength{\dimen@}{#1}%
+    \xdef\ddm@iconwidth{\the\dimen@}%
+}}
+\define@key{ddm}{iconheight}[\defaultStampHeight]{{%
+    \setlength{\dimen@}{#1}%
+    \xdef\ddm@iconheight{\the\dimen@}%
+}}
+%    \end{macrocode}
+% The width of the target button.
+%    \begin{macrocode}
+\define@key{ddm}{targetwidth}{{%
+    \setlength{\dimen@}{#1}%
+    \xdef\ddm@targetwidth{\the\dimen@}%
+}}
+%    \end{macrocode}
+% The height of the target button.
+%    \begin{macrocode}
+\define@key{ddm}{targetheight}{{%
+    \setlength{\dimen@}{#1}%
+    \xdef\ddm@targetheight{\the\dimen@}%
+}}
+%    \end{macrocode}
+% We set some reasonable defaults for \cs{ddDimens}.
+%    \begin{macrocode}
+\ddDimens{iconwidth,iconheight,iconwidthTo,%
+    targetwidth=1.25in,targetheight=1.25in}
+%    \end{macrocode}
+% \DescribeMacro{\ddGameIcon} is a convenience command for placing
+% the icon stamps. The one required argument is the name associated
+% with the stamp.
+%    \begin{macrocode}
+\newcommand{\ddGameIcon}[1]{%
+    \expandafter\if\csname\thisDDNAME-init\endcsname0\relax
+        \refstepcounter{aebdadcnt}\phantomsection
+        \edef\@currentlabelname{Beginning of DAD Game: \thisDDNAME}%
+        \label{aebdadcnt\theaebdadcnt}%
+        \dd@EmitPageAction
+        \global\dd@csarg\let{\thisDDNAME-init}=1\relax
+    \fi
+    \ifx\ddm@iconwidthTo\@empty
+        \def\ddGameIconArgs{type=stamp,name=\##1,%
+        width=\ddm@iconwidth,%
+        height=\ddm@iconheight}%
+    \else
+        \def\ddGameIconArgs{type=stamp,name=\##1,%
+        width=\ddm@iconwidth,%
+        height=\ddm@iconheight,
+        widthTo=\ddm@iconwidthTo}%
+    \fi
+%    \end{macrocode}
+% Finally we use \cs{annotpro} to create the stamp.
+%    \begin{macrocode}
+    \expandafter\annotpro\expandafter[\ddGameIconArgs]{}%
+}
+%    \end{macrocode}
+% \DescribeMacro{\ddBtnAppr} is the preset button appearance for the
+% target buttons.
+%    \begin{macrocode}
+\newcommand{\ddBtnAppr}{\S{S}\BG{}
+    \AA{\AAMouseEnter{%
+        \JS{btnMouseUpAction(event,this.pageNum,"\thisDDNAME");}}}%
+}
+%    \end{macrocode}
+% \DescribeMacro{\ddTargetOfIcon} is a convenience command for placing
+% a push button. The two are arguments, the first is the name of the stamp
+% associated with this target, the second is the caption that is to go beneath
+% the button.
+%    \begin{macrocode}
+\newcommand{\ddTargetOfIcon}[2]{%
+    \expandafter\if\csname\thisDDNAME-init\endcsname0\relax
+        \refstepcounter{aebdadcnt}\phantomsection
+        \edef\@currentlabelname{Beginning of DAD Game: \thisDDNAME}%
+        \label{aebdadcnt\theaebdadcnt}%
+        \dd@EmitPageAction
+        \global\dd@csarg\let{\thisDDNAME-init}=1\relax
+    \fi
+    \parbox[t]{\ddm@targetwidth}
+    {\kern0pt\pushButton[\presets{\ddBtnAppr}
+    ]{\thisDDNAME @\##1}{\ddm@targetwidth}{\ddm@targetheight}%
+    \ddTargetCaption{#2}}%
+}
+\newcommand{\ddTargetFmt}[1]{\def\ddm@targetfmt{#1}}
+\ddTargetFmt{}
+\newcommand{\ddTargetCaption}[1]{\\[3pt]%
+    \parbox[t]{\linewidth}{\centering\ddm@targetfmt#1}}
+%    \end{macrocode}
+% \paragraph*{Page and Document JavaScript}\strut\par\medskip\noindent
+% As of this writing, only one drag and drop stamp game per page. The
+% \DescribeMacro{\initDDGame}\cs{initDDGame} macro should appear on that page.
+%    \begin{macrocode}
+\newcommand{\thisDDName}[1]{%
+    \setAnnotOptions{subject={#1}}%
+    \gdef\thisDDNAME{#1}%
+}
+\newcount\dd@GameCnt \dd@GameCnt=0
+\newcommand{\initDDGame}[1]{\thisDDName{#1}%
+     \global\advance\dd@GameCnt1\relax
+     \global\dd@csarg\let{#1-init}0\relax
+}
+%    \end{macrocode}
+%    \changes{v1.2b}{2016/10/26}{Removed \string\cs{thisPageAction} in favor of a push button action}
+%    Removed \cs{thisPageAction} in favor of a page open action of a push button. This is to
+%    cover the case where the begins on the first page.
+%    \begin{macrocode}
+\def\dd@EmitPageAction{%
+    \@ifundefined{ddEmitOnPage\getpagerefnumber{aebdadcnt\theaebdadcnt}}
+    {\global\dd@csarg
+     \let{ddEmitOnPage\getpagerefnumber{aebdadcnt\theaebdadcnt}}\@empty
+        \pushButton[\F{\FHidden}\BG{}\BC{}\S{S}
+        \AApageopen{ddPageOpen(this.pageNum);}
+     ]{btnEmitPA-\theaebdadcnt}{0bp}{0bp}%
+    }{}%
+}
+%    \end{macrocode}
+% \DescribeMacro{\ddReset} is the reset button for the drag and drop matching game.
+%
+% It is recommended that the reset button be between the icons and the
+% target buttons. The game executes a \texttt{Field.setFocus()} method to take the focus
+% off of the stamps when they are dropped. The focus goes on the reset button.
+% If the reset button is out of the user's sight, AA or AR will scroll the page
+% to place the reset button in the (middle of the) viewing area
+%    \begin{macrocode}
+\newcommand{\ddReset}[1][]{\def\dd@arg{#1}%
+    \ifx\dd@arg\@empty\else\thisDDName{#1}\fi
+    \mbox{\makebox[0pt][l]{%
+    \pushButton[\W0\BC{}\BG{}\S{S}]{ddHReset\thisDDNAME}{0bp}{0bp}}%
+    \pushButton[\CA{Reset}\A{\JS{%
+        resetDDM(this.pageNum,"\thisDDNAME");}}
+    \AA{\AAOnFocus{\JS{%
+        this.getField("ddHReset\thisDDNAME").setFocus();
+    }}}]{ddReset\thisDDNAME}{}{11bp}}%
+}
+%    \end{macrocode}
+% Open action, to warn user that XI is required for reader.
+%    \begin{macrocode}
+\OpenAction{\JS{ddOpenDocAction();}}
+%    \end{macrocode}
+% \paragraph*{Document JavaScript.}
+% The JavaScript function called by the target push buttons.
+%    \begin{macrocode}
+\newcommand{\ddRightMsg}{"Right!"}
+\newcommand{\ddWrongMsg}{"Wrong!"}
+\newcommand{\ddDragOnlyOne}{"Drag one icon at a time"}
+\newcommand{\ddExternalMsg}{"Drag and Drop of icons does not work "
+    + "in a browser. Save this file to your computer and view it in "
+    + "Adobe Reader XI or later, or in the Acrobat application."}
+\newcommand{\ddBadAppMsg}{"Any version of Adobe Acrobat, "
+    +"or Adobe Reader XI is required!"}
+%    \end{macrocode}
+%    \cmd\ddTrueName\DescribeMacro{\ddTrueName} is a convenience command for referencing
+%    the \texttt{ddTrueName} JavaScript function, defined below. There must be no spurious spaces
+%    in the argument of \cs{ddTrueNaqme}. The first argument is the name of the DD Game as set in the document
+%    by \cs{initDDGame}; the second argument is a name of a stamp (excluding \texttt{\#}).
+%    \changes{v1.2}{2016/08/22}{Added \string\cs{ddTrueName}}
+%    \begin{macrocode}
+\def\ddTrueName(#1,#2){ddTrueName("#1","#2")}
+%    \end{macrocode}
+%    Now for the document JavaScript.
+%    \begin{macrocode}
+\begin{insDLJS}{dadjs}{AcroTeX Stamp Game JavaScript}
+var oDADStamp=new Object();
+var oDADCnt=new Object();
+var aDDPageCtrl=new Array(this.numPages);
+var oDADAlerts=new Object();
+var ddTO;
+%    \end{macrocode}
+%    \texttt{activeStampName} holds the name of the stamp that is being moved around.
+%    \changes{v1.2}{2016/08/22}{Added JS variable activeStampName}
+%    \begin{macrocode}
+var activeStampName="";
+%    \end{macrocode}
+%    \texttt{ddTrueName} is a JS function that returns the ``true'' (internal) name of the game/stamp
+%    combination.
+%    \changes{v1.2}{2016/08/22}{Added JS function ddTrueName}
+%    \begin{macrocode}
+function ddTrueName (ddName,stampName) {
+    return ddName+"@#"+stampName;
+}
+function btnMouseUpAction(event,page,ddName)
+{
+    var stamps;
+    var aBtnRect=event.target.rect;
+    var cBtnName=event.target.name;
+    var l = cBtnName.indexOf("@#");
+    cBtnName = cBtnName.substring(1+l);
+    // convert to rotated user coordinates
+    var mxToDefault=(new Matrix2D()).fromRotated(this,page);
+    var mxToRotated=mxToDefault.invert();
+    var aBtnRectRot=mxToRotated.transform(aBtnRect);
+%    \end{macrocode}
+% Format for Default User Space: \texttt{[left,bottom,right,top]}
+%    \begin{macrocode}
+    var btnWidth=aBtnRect[2]-aBtnRect[0];
+    var btnHeight=aBtnRect[3]-aBtnRect[1];
+%    \end{macrocode}
+% Originally, we gathered all annots on this page,
+%\begin{verbatim}
+%       stamps=this.getAnnots(page);
+%\end{verbatim}
+% Now we gather the selected annots (throughout the entire document)
+%    \begin{macrocode}
+    stamps=this.selectedAnnots;
+    if (typeof stamps == "undefined") return;
+    if (stamps.length>1) {
+        app.alert({cMsg: \ddDragOnlyOne,
+        nIcon: 3, cTitle: "AcroTeX Drag and Drop"});
+        for (var i=0; i<stamps.length; i++) {
+            var index=stamps[i].subject+page;
+            stamps[i].rect=oDADStamp[index][stamps[i].AP][0];
+            stamps[i].setProps({rotate:0})
+        }
+        resetFocus("ddReset"+ddName);
+        this.dirty=false;
+        return;
+    }
+    for (var i=0; i<stamps.length; i++) {
+        var aStmpRect=stamps[i].rect;
+        var index=stamps[i].subject+page;
+%    \end{macrocode}
+%    Format for Rotated User Space: \texttt{[left,top,right,bottom]}
+%    \begin{macrocode}
+        var stmpWidth=aStmpRect[2]-aStmpRect[0];
+        var stmpHeight=aStmpRect[3]-aStmpRect[1];
+        var nHorzCenter=(aStmpRect[2]+aStmpRect[0])/2;
+        var nVertCenter=(aStmpRect[3]+aStmpRect[1])/2;
+%    \end{macrocode}
+%    See if the center of this stamp is in the button rect
+%    \begin{macrocode}    	
+        if ( (nHorzCenter >= aBtnRectRot[0] )%
+&&(nHorzCenter<=aBtnRectRot[2]) ) {
+            if ( (nVertCenter>=aBtnRectRot[3])%
+&& (nVertCenter<=aBtnRectRot[1]) ) {
+%    \end{macrocode}
+%    Now see if it is the correct one, and center the stamp inside the rectangle.
+%    \begin{macrocode}
+                if (( (cBtnName==stamps[i].AP)%
+&& (stamps[i].subject==ddName))%
+&& (!oDADStamp[index][stamps[i].AP][1]) ) {
+%    \end{macrocode}
+%    center stamp on button face\\
+%    Field: \texttt{[left,bottom,right,top]}\\
+%    Annot: \texttt{[left,top,right,bottom]}\\
+%    We get the original rectangle, and use it to calculate the width and height.
+%    \begin{macrocode}
+                    activeStampName=stamps[i].AP.substring(1);
+                    var aStmpRect=oDADStamp[index][stamps[i].AP][0];
+                    var stmpWidth=aStmpRect[2]-aStmpRect[0];
+                    var stmpHeight=aStmpRect[3]-aStmpRect[1];
+                    oDADStamp[index][stamps[i].AP][1]=true;
+                    var deltaX=(btnWidth-stmpWidth)/2;
+                    var deltaY=(btnHeight-stmpHeight)/2;
+%    \end{macrocode}
+%    We calculate the dimensions of the centered icon. If the user rescaled the icon
+%    it will be locked in at its original scale.
+%    \begin{macrocode}
+                    aCenterStamp=[
+                       aBtnRectRot[0]+deltaX,
+                       aBtnRectRot[3]-deltaY,
+                       aBtnRectRot[0]+deltaX+stmpWidth,
+                       aBtnRectRot[3]-deltaY-stmpHeight];
+                    ddCorrectAction(event,ddName);
+                    event.target.strokeColor=color.green;
+%    \end{macrocode}
+%    Correct stamp in the correct target field. We want to center the stamp, make sure
+%    the user did not rotate it, or resize it.
+%    \begin{macrocode}
+                    stamps[i].setProps({rotate:0});
+                    stamps[i].rect=aCenterStamp;
+                    event.target.readonly=true;
+                    resetFocus("ddReset"+ddName);
+                    break;
+                } else {
+%    \end{macrocode}
+%    Attach the stamp name to the \texttt{stampName} property of \texttt{ddWrongAction} so we can
+%    conveniently reference it when using custom a wrong actions.
+%    \begin{macrocode}
+%                    ddWrongAction.stampName=stamps[i].AP;
+                    activeStampName=stamps[i].AP.substring(1);
+                    ddWrongAction(event,ddName);
+                    if (!oDADAlerts[ddName].oAlrtChk.bAfterValue)
+                        ddReturnStamp(page,ddName,stamps[i]);
+                    else {
+                        ddReturnStamp.o=stamps[i];
+                        ddTO=app.setTimeOut("ddReturnStamp("
+                            +page+",\""+ddName
+                            +"\",ddReturnStamp.o);",250);
+                    }
+                    break;
+                }
+            } else {
+                // too high or two low.
+                if(!oDADStamp[index][stamps[i].AP][1])
+                    ddReturnStamp(page,ddName,stamps[i]);
+            }
+        } else {
+            // outside left or right of button
+            if(!oDADStamp[index][stamps[i].AP][1])
+                ddReturnStamp(page,ddName,stamps[i]);
+        }
+    }
+    this.dirty=false;
+}
+function ddReturnStamp(page,ddName,oStamp) {
+    var index=oStamp.subject+page;
+    oStamp.setProps({rotate:0})
+    oStamp.rect=oDADStamp[index][oStamp.AP][0];
+    resetFocus("ddReset"+ddName);
+}
+function resetDDM(page,ddName) {
+    var stamps=this.getAnnots(page);
+    for (var i=0; i<stamps.length; i++) {
+        if ( stamps[i].subject == ddName ) {
+            stamps[i].rect=oDADStamp[ddName+page][stamps[i].AP][0];
+            stamps[i].setProps({rotate:0})
+            oDADStamp[ddName+page][stamps[i].AP][1]=false;
+        }
+    }
+    oDADCnt[ddName+page]=[0,0];
+    for (var i=0; i<this.numFields; i++) {
+        var fname=this.getNthFieldName(i);
+%    \end{macrocode}
+% All fields have the two character sequence \texttt{"@\#"} in it.
+% We search for this, if not found, it is an ordinary field.
+%    \begin{macrocode}
+        var getIndexOf = fname.indexOf("@#");
+        if ( (getIndexOf!=-1) %
+&& (fname.substring(0,getIndexOf)==ddName) ) {
+            var f=this.getField(fname);
+            if (f.readonly) {
+                f.readonly=false;
+                f.strokeColor=color.black;
+            }
+        }
+    }
+    if (typeof ddCustomResetAction=="function")
+        ddCustomResetAction(page,ddName);
+    this.dirty=false;
+}
+var ddGoodVersion=true;
+var ddNotification=false;
+function ddAlertInBrowser() {
+    app.alert({cMsg:\ddExternalMsg,
+        nIcon: 3, cTitle: "AeB DAD Match"});
+}
+function ddAlertBadApp() {
+    app.alert({cMsg:\ddBadAppMsg,
+        nIcon: 3, cTitle: "AeB DAD Match"});
+}
+function ddOpenDocAction() {
+    if (this.external) {
+%    \end{macrocode}
+% \changes{v1.0a}{2012/11/14}{Stamps cannot be moved in a browser, even
+% when using the Acrobat plug-in.}
+% Stamps cannot be moved in a browser, even
+% when using the Acrobat plug-in.
+%    \begin{macrocode}
+        if (!ddNotification) {
+            ddNotification=true;
+            ddTO=app.setTimeOut("ddAlertInBrowser()",250);
+        }
+        ddGoodVersion=false;
+    } else {
+        if (app.viewerType == "Reader" && app.viewerVersion<11) {
+            if (!ddNotification) {
+                ddNotification=true;
+                ddTO=app.setTimeOut("ddAlertBadApp()",250);
+            }
+            ddGoodVersion=false;
+        }
+    }
+}
+function ddPageOpen(page) {
+%    \end{macrocode}
+% We want to execute the stamp code only once, the first time the page
+% is opened. The array \texttt{aDDPageCtrl} keeps track of whether this
+% \changes{v1.2a}{2016/08/22}{Fixed issue with reset button not working as expected when
+% there are more than one reset buttons on different pages.}
+% Fixed issue with reset button not working as expected when
+% there are more than one reset buttons on different pages.
+% page has been already opened. Traced problem to the assignment of \texttt{bDDInit}, using
+% array \texttt{aDDPageCtrl} to track the pages.
+%    \begin{macrocode}
+    var bDDInit=false;
+    if (!aDDPageCtrl[page]) {
+        var bDDInit=true;
+        aDDPageCtrl[page]=true;
+    }
+    if (bDDInit) {
+console.println("Executing ddPageOpen for page "+(page+1));
+        this.syncAnnotScan();
+%    \end{macrocode}
+% We get the array of all annots on this page.
+%    \begin{macrocode}
+        var stamps=this.getAnnots(page);
+        if (stamps==null) return;
+        for (var i=0; i<stamps.length; i++) {
+            var si=stamps[i];
+            if ( si.type=="Stamp") {
+%    \end{macrocode}
+% We store only annots of type Stamp.
+%    \begin{macrocode}
+                var index=si.subject+page;
+%    \end{macrocode}
+% If \texttt{oDADStamp[stamps[i].subject+this.pageNum]}, is undefined,
+% we define it.
+%    \begin{macrocode}
+                if (typeof oDADStamp[index]=="undefined" ) {
+                    oDADStamp[index]=new Array();
+%    \end{macrocode}
+% \texttt{oDADCnt} will keep track of the score. The first entry
+% is the number correct, the second entry is the number of tries.
+%    \begin{macrocode}
+                    oDADCnt[index]=[0,0];
+%    \end{macrocode}
+% Grant user right to permanently dismiss alert box.
+%    \begin{macrocode}
+                    oDADAlerts[si.subject]=new Object();
+                    oDADAlerts[si.subject].oAlrtChk={bAfterValue:false};
+                }
+%    \end{macrocode}
+% Stamp data is stored by \texttt{<subject><page>}, a particular stamp
+% is referenced by its \texttt{AP} name. We save the original rectangle
+% and a boolean \texttt{false}. When the stamp is placed correctly, we
+% change this to \texttt{true}.
+%    \begin{macrocode}
+                oDADStamp[index][si.AP]=[si.rect, false];
+            }
+        }
+    } else console.println("Bypassing ddPageOpen for page "+page);
+}
+function resetFocus(fname) {
+    this.getField(fname).setFocus();
+}
+var gDDStats=new Object();
+var ddStats=new Object();
+function ddCorrectAction(event,ddName) {
+    var page = event.target.page;
+    oDADCnt[ddName+page][0] += 1;
+    oDADCnt[ddName+page][1] += 1;
+    gDDStats[ddName]={nCorrect: oDADCnt[ddName+page][0],
+        nTries: oDADCnt[ddName+page][1]};
+    ddStats=gDDStats[ddName];
+    if (typeof ddCustomCorrectAction == "function")
+%    \end{macrocode}
+% Customization: If \texttt{ddCustomCorrectAction()} is defined, we use it.
+%    \begin{macrocode}
+        ddCustomCorrectAction(event,ddName);
+    else
+        ddCorrectActionDef(event,ddName);
+}
+%    \end{macrocode}
+%    Added JavaScript functions \texttt{ddCorrectActionDef()} and
+%    \texttt{ddWrongActionDef()}, these are used to create both custom and default response actions.
+%    \changes{v1.2}{2016/08/22}{Added ddCorrectActionDef and
+%    ddWrongActionDef}
+%    \begin{macrocode}
+function ddCorrectActionDef(event,ddName) {
+    if (!oDADAlerts[ddName].oAlrtChk.bAfterValue)
+        app.alert({cMsg: \ddRightMsg, nIcon: 3,
+            cTitle: "AeB DAD Matching",
+            oCheckbox:oDADAlerts[ddName].oAlrtChk});
+}
+function ddWrongAction(event,ddName) {
+    var page = event.target.page;
+    oDADCnt[ddName+page][1] += 1;
+    gDDStats[ddName]={nCorrect: oDADCnt[ddName+page][0],
+        nTries: oDADCnt[ddName+page][1]};
+    ddStats=gDDStats[ddName];
+    if (typeof ddCustomWrongAction == "function")
+%    \end{macrocode}
+% Customization: If \texttt{ddCustomWrongAction()} is defined, we use it.
+%    \begin{macrocode}
+        ddCustomWrongAction(event,ddName);
+    else
+        ddWrongActionDef(event,ddName);
+}
+function ddWrongActionDef(event,ddName) {
+    if (!oDADAlerts[ddName].oAlrtChk.bAfterValue)
+        app.alert({cMsg: \ddWrongMsg, nIcon:0,
+            cTitle: "AeB DAD Matching",
+            oCheckbox:oDADAlerts[ddName].oAlrtChk});
+        else
+            app.beep(4);
+}
+\end{insDLJS}
+%    \end{macrocode}
+%    \begin{macrocode}
+\catcode`\_=\dad@subCat
+%</package>
+%    \end{macrocode}
+%\Finale

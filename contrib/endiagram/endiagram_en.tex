@@ -1,0 +1,1306 @@
+% arara: pdflatex
+% arara: biber
+% arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the ENdiagram package
+%
+%   easy creation of potential energy curve diagrams
+%
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://www.bitbucket.org/cgnieder/endiagram
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+% Copyright 2011--2013 Clemens Niederberger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Clemens Niederberger.
+%
+% This work consists of the files endiagram.sty, endiagram_en.tex,
+% README and the derived file endiagram_en.pdf.
+% --------------------------------------------------------------------------
+\documentclass[load-preamble+]{cnltx-doc}
+\usepackage[utf8]{inputenc}
+\usepackage{endiagram}
+
+\setcnltx{
+  package = endiagram ,
+  title   = \ENdiagram ,
+  authors = Clemens Niederberger ,
+  email   = contact@mychemistry.eu ,
+  url     = https://bitbucket.org/cgnieder/endiagram/ ,
+  add-cmds = {
+    AddAxisLabel, 
+    ENcurve, ENsetup,
+    MakeOrigin,  ShowEa, ShowGain,
+    ShowNiveaus
+  } ,
+  add-envs = { MOdiagram } ,
+  add-silent-cmds = {
+    arrow,
+    calory, ch, chemfig, chemsetup, color, command,
+    DeclareChemIUPAC, draw,
+    fontfamily,
+    iso,
+    joule,
+    kilo,
+    lewis, libertineLF,
+    mole,
+    node,
+    per,
+    schemestart, schemestop, selectfont, setatomsep, sisetup,
+    tert, tikz, transitionstatesymbol
+  }
+}
+
+\newpackagename\ENdiagram{endiagram}
+
+\defbibheading{bibliography}{\addsec{References}}
+
+\usepackage{chemmacros,chemfig,ragged2e}
+
+\usepackage{acro}
+\acsetup{short-format=\scshape}
+\DeclareAcronym{su}{
+  short = su ,
+  long  = standard unit
+}
+\DeclareAcronym{CTAN}{
+  short = ctan ,
+  long  = Comprehensive \TeX{} Archive Network
+}
+\DeclareAcronym{MWE}{
+  short = mwe ,
+  long  = minimal working example
+}
+
+\begin{filecontents}{\jobname.bib}
+@book{brueckner,
+  author    = {Reinhard Br\"uckner},
+  title     = {Reaktionsmechanismen},
+  publisher = {Springer-Verlag Berlin Heidelberg},
+  edition   = {3.\,Auflage, 2.\,korrigierter Nachdruck},
+  year      = {2009},
+  isbn      = {978-3-8274-1579-0}
+}
+@package{pkg:tikz,
+  author    = {Till Tantau and Mark Wibrow and Christian Feuersänger},
+  title     = {Ti\textbf{\textit{k}}Z/pgf},
+  sorttitle = {TikZ},
+  version   = {2.10},
+  date      = {2010-20-25},
+  url       = {http://sourceforge.net/projects/pgf/},
+  urldate   = {2013-04-18}
+}
+@package{pkg:siunitx,
+  author    = {Joseph Wright},
+  title     = {siunitx},
+  version   = {2.5q},
+  date      = {2013-03-11},
+  url       = {mirror.ctan.org/macros/latex/contrib/siunitx/}
+}
+\end{filecontents}
+
+% \setlength{\marginparwidth}{1.5\marginparwidth}
+
+\newcommand*\TikZ{Ti\textit{k}Z}
+
+\begin{document}
+
+\section{Licence and Requirements}
+\license
+
+\ENdiagram\ needs the \bnd{l3kernel}~\cite{bnd:l3kernel} and the package
+\pkg{xparse}. \pkg{xparse} is part of the
+\bnd{l3packages}~\cite{bnd:l3packages} bundle. \ENdiagram\ also needs
+\TikZ~\cite{pkg:pgf} and \pkg{siunitx}~\cite{pkg:siunitx}.
+
+Basic knowledge of \TikZ/pgf is recommended.
+
+\section{Caveat}
+This package is in an experimental state.  There is lots of code to clean up
+and there are many loose ends to be tied together until I'll be satisfied to
+publish this package as stable.  However, as the unofficial release on my blog
+has gotten quite some interest\footnote{$\ge 400$ downloads} I decided to
+publish this experimental version on the \CTAN{} nonetheless.
+
+If you detect any bugs -- and I guess you will -- please write me a short email
+with a \ac{MWE} showing the undesired behaviour or report on issue on
+\url{https://www.bitbucket.org/cgnieder/endiagram}.
+
+\section{Setup}
+
+There are two kinds of options: choice options where you can choose one of the
+values separated with \code{|}; an underlined value is a default value that is
+used, if no value is given.  The others need a value of a certain type like a
+number (\meta{num}), arbitrary input (\meta{text}), \TikZ\ options
+(\meta{tikz}) \etc.
+
+As a rule commands are only defined inside the \env{endiagram} environment.
+
+Options can also be set up with this command:
+\begin{commands}
+  \command{ENsetup}[\oarg{module}\marg{options}]
+    The setup command.
+\end{commands}
+
+\begin{sourcecode}
+  \ENsetup{option1 = value1, option2 = value2}
+  \ENsetup{module/option = value}
+  \ENsetup[module]{option = value}
+\end{sourcecode}
+
+Options that belong to a module are specific to a command.  The command
+\cs*{command} they belong to can \emph{only} have the options marked with
+\module*{command} in his argument \oarg{options}.
+
+All other options can also be set globally as package options.  These are
+options which do \emph{not} belong to a module like for example the
+\option{draft} option (see page~\pageref{key:debug}):
+\begin{sourcecode}
+  \usepackage[draft]{endiagram}
+\end{sourcecode}
+
+\section{The Curve --  \cs*{ENcurve}}
+The potential energy curves are drawn inside the \env{endiagram}
+environment using the command \cs{ENcurve}.
+\begin{environments}
+  \environment{endiagram}[\oarg{options}]
+    The basic environment for the potential energy curves
+\end{environments}
+\begin{commands}
+  \command{ENcurve}[\oarg{options}\Marg{\meta{level1},\meta{level2},\meta{level3}}]
+    The basic command for drawing the actual curve.
+\end{commands}
+The command needs a comma separated list of relative energy levels.
+\cs{ENcurve}\Marg{1,4,0} means the maximum is four times higher above the end
+level than the starting level.
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\cs{ENcurve} can read any number of values but needs \emph{at least three}.
+Less values will cause an error.
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}[scale=.7]
+    \ENcurve{1,7,2.5,6,3,4,0}
+  \end{endiagram}
+\end{example}
+
+\subsection{Properties}
+\subsubsection{Scaling}
+
+Values given to \cs{ENcurve} are multiples of \ENdiagram's \ac{su}.  As a default
+it is set to \SI{.5}{cm} but can be changed using an option.  There are other ways
+to influence the size of the diagram, too.
+\begin{options}
+ \keyval{unit}{length}\Default{.5cm}
+   The standard unit for \cs{ENcurve} and some other commands.  This document
+   refers to it with \ac{su}. \label{key:unit}
+ \keyval{scale}{factor}\Default{1}
+   A scaling factor that allows scaling the diagram.
+\end{options}
+
+A changed \ac{su}:
+\begin{example}[side-by-side]
+  \begin{endiagram}[unit=2em]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Scaled by the factor \code{1.5}:
+\begin{example}[side-by-side]
+  \begin{endiagram}[scale=1.5]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\subsubsection{Influencing the position relative to the axes}
+
+The \option{offset} options control the length and position of the horizontal
+axis relative to the curve.
+\begin{options}
+  \keyval{offset}{num}\Default{0}
+    \meta{num} is a multiple of the \ac{su} (see page~\pageref{key:unit}).
+  \keyval{r-offset}{num}\Default{0}
+    \meta{num} is a multiple of the \ac{su}.
+  \keyval{l-offset}{num}\Default{0}
+    \meta{num} is a multiple of the \ac{su}.
+\end{options}
+
+The default behaviour for comparison:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\option{l-offset} controls the distance of the start of the $x$ axis to the
+start of the curve:
+\begin{example}[side-by-side]
+  closer to the $y$ axis:\par
+  \begin{endiagram}[l-offset=-1]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\option{r-offset} controls the ``protruding'' of the $x$ axis after the curve:
+\begin{example}[side-by-side]
+  $x$ axis extended to the right:\par
+  \begin{endiagram}[r-offset=1]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\option{offset} changes both values equally:
+\begin{example}[side-by-side]
+  $x$ extended to the left and the right:\par
+  \begin{endiagram}[offset=1]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\subsubsection{Increment between the levels}
+
+With the option \option{step} the default increment between the levels can be
+changed:
+\begin{options}
+  \keyval{step}{num}\Module{ENcurve}\Default{2}
+    \meta{num} is a multiple of the \ac{su} (see page~\pageref{key:unit}).
+\end{options}
+
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{1,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve[step=3]{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Sometimes a certain level should be shifted against the others.  This is
+possible using an optional argument to the value of that level:
+\begin{commands}
+  \command{ENcurve}[\Marg{\meta{level}\oarg{offset},...}]
+    \meta{offset} is a multiple of the \ac{su} (see page~\pageref{key:unit})
+    and is set to \code{0} as default. The level will be shifted to the right
+    (positive values) or left (negative values).
+\end{commands}
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{1,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{1,4[.5],0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{1,4[-.5],0}
+  \end{endiagram}
+\end{example}
+
+\subsubsection{The shape}
+
+The option \option{looseness} changes the shape of the curve:
+\begin{options}
+  \keyval{looseness}{value}\Module{ENcurve}\Default{.5}
+     should be a number between \code{0} and \code{1}.
+\end{options}
+
+\begin{example}
+  \begin{endiagram}
+    \ENcurve[looseness=0]{0,3,1}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{0,3,1}% corresponds looseness=.5
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve[looseness=1]{0,3,1}
+  \end{endiagram}
+\end{example}
+
+\subsubsection{Ending minima}
+
+Sometimes potential energy curves are drawn with local minima at the start and
+the end of the cuve.  The option \option{minima} en- or disables them:
+\begin{options}
+  \keybool{minima}\Module{ENcurve}\Default{false}
+    Draw local minima at the ends of the curve.
+\end{options}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve[minima]{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\subsubsection{\TikZ{} style}
+
+The style of the curve can be changed using \TikZ{} options:
+\begin{options}
+  \keyval{tikz}{tikz}\Module{ENcurve}\Default
+     Valid are options that can be used with \cs*{draw}.
+\end{options}
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve[tikz={red,dotted}]{0,3,1}
+  \end{endiagram}
+\end{example}
+
+\subsection{The Axes}
+
+There are also possibilities to customize the axes.
+\begin{options}
+  \keychoice{axes}{xy,y,y-l,y-r,x,all,false}\Default{xy}
+    Number and type of axes.
+  \keyval{x-axis}{tikz}\Default
+    \TikZ{} options to the $x$ axis.
+  \keyval{y-axis}{tikz}\Default
+    \TikZ{} options to the $y$ axis.
+  \keychoice{x-label}{below,right}\Default{below}
+    Position of the $x$ axis label.
+  \keychoice{y-label}{above,left}\Default{left}
+    Position of the $y$ axis label.
+  \keyval{x-label-pos}{value}\Default{.5}
+    Position of the $x$ axis label when \keyis{x-label}{below} is set.
+  \keyval{y-label-pos}{value}\Default{.5}
+    Position of the $y$ axis label when \keyis{y-label}{left} is set.
+  \keyval{x-label-offset}{length}\Default{0pt}
+    Distance between label and $x$ axis.
+  \keyval{y-label-offset}{length}\Default{0pt}
+    Distance between label and $y$ axis.
+  \keyval{x-label-angle}{angle}\Default{0}
+    Angle which rotates the $x$ axis label counter clockwise.
+  \keyval{y-label-angle}{angle}\Default{0}
+    Angle which rotates the $y$ axis label counter clockwise.
+  \keyval{x-label-text}{text}\Default{\$\cs*{xi}\$}
+    $x$ axis label.
+  \keyval{y-label-text}{text}\Default{\$E\$}
+   $y$ axis label.
+\end{options}
+
+No axes:
+\begin{example}[side-by-side]
+  \begin{endiagram}[axes=false]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+All axes:
+\begin{example}[side-by-side]
+  \begin{endiagram}[axes=all]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Only the $x$ axis:
+\begin{example}[side-by-side]
+  \begin{endiagram}[axes=x]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Changed labels:
+\begin{example}[side-by-side]
+  \begin{endiagram}[x-label-text=\footnotesize reaction coordinate]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Different positions of the labels:
+\begin{example}
+  \begin{endiagram}[
+     x-label=right,
+     y-label=above]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}[
+     x-label-pos=.7,
+     y-label-pos=.7,
+     y-label-angle=-90,
+     y-label-offset=5pt]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+Crazy setup:
+\begin{example}[side-by-side]
+  \begin{endiagram}[x-axis={draw=blue,dashed,font=\color{green}}]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+\end{example}
+
+\subsection{Debugging Information}
+
+For precise adjustments of details -- particularly with the options and
+commands described in the next sections -- some information is useful that is
+hidden normally.  These options enable access:
+\begin{options}
+  \keybool{debug}\Default{false}
+    Enable debug mode of \ENdiagram. \label{key:debug}
+  \keybool{draft}\Default{false}
+    An alias to \option{debug}.
+  \keybool{final}\Default{true}
+    The opposite of \option{draft}.
+\end{options}
+
+\begin{example}
+  \begin{endiagram}[debug]
+    \ENcurve{1,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}[debug,unit=2em]
+    \ENcurve[step=3,minima]{1,4,0}
+  \end{endiagram}
+\end{example}
+Shown are a grid, the origin and the coordinates and names of the levels.
+Depending on the commands you're using you get more information.  It is
+described with the commands they belong to.
+
+\section{The Levels}
+\subsection{The \cs*{ShowNiveaus} Command}
+The command \cs{ShowNiveaus} draws horizontal lines to the levels:
+\begin{commands}
+  \command{ShowNiveaus}[\oarg{options}]
+    Draw a visual hint of the different niveaus.
+\end{commands}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus
+  \end{endiagram}
+\end{example}
+
+\subsection{Customization}
+
+A number of options allow fine-tuning:
+\begin{options}
+  \keyval{length}{num}\Module{ShowNiveaus}\Default{1}
+    The length of the lines. \meta{num} is a multiple of the \ac{su} (see
+    page~\pageref{key:unit}).
+  \keyval{shift}{num}\Module{ShowNiveaus}\Default{0}
+    Shift to the right (positive values) or the left (negative values).
+    \meta{num} is a multiple of the \ac{su}.
+  \keyval{tikz}{tikz}\Module{ShowNiveaus}\Default
+    \TikZ options to modify the style of the lines.
+\end{options}
+
+Longer lines:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[length=2]
+  \end{endiagram}
+\end{example}
+
+Without option \option{shift} the lines are centered to the extrema , \ie,
+they protrude by half of the value specified with option \option{length}.
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[shift=.5]
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[length=2,shift=1]
+  \end{endiagram}
+\end{example}
+Maybe the examples in the next section will make it more clear why option
+\option{shift} can be useful.
+
+\subsection{Choose Levels Explicitly}
+
+If you don't want to draw a line to every level you can use this option:
+\begin{options}
+  \keychoice{niveau}{\Marg{\meta{id1},\meta{id2}}}\Module{ShowNiveaus}
+    The \meta{id} is the name of the level as shown by the \option{debug}
+    option, see page~\pageref{key:debug}.
+\end{options}
+
+The debug information helps in choosing the right level.  The names of the
+levels follow the scheme \code{N-\meta{number of curve}-\meta{number of
+    level}}.
+\begin{example}
+  \begin{endiagram}[debug]
+    \ENcurve{3,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[niveau=N1-2]
+  \end{endiagram}
+\end{example}
+
+Every level can have a different color, length and shift:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[length=2,tikz=red,niveau=N1-2]
+    \ShowNiveaus[niveau=N1-1,shift=-.5]
+    \ShowNiveaus[niveau=N1-3,shift=.5]
+  \end{endiagram}
+\end{example}
+
+\section{The Energy Gain}
+\subsection{The \cs*{ShowGain} Command}
+
+The command \cs{ShowGain} enables you the show the energy gain or loss of the
+reaction.  It is always the difference between the first and the last level.
+\begin{commands}
+  \command{ShowGain}[\oarg{options}]
+    Draw a visual hint of the energy gain.
+\end{commands}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowGain
+  \end{endiagram}
+\end{example}
+
+\subsection{Customization}
+
+The command has options to modify the appearance.
+\begin{options}
+  \keyval{tikz}{tikz}\Module{ShowGain}\Default{<->}
+    \TikZ{} options for the vertical line.
+  \keyval{connect}{tikz}\Module{ShowGain}\Default{dashed,help lines}
+    \TikZ{} options for the connecting line.
+  \keybool{connect-from-line}\Module{ShowGain}\Default{false}
+    The connecting line starts either at the maximum/minimum or at the line
+    drawn by \cs{ShowNiveaus}.  This option works with the default values but
+    otherwise can lead to unwanted results.  To avoid that you can either set
+    \cs{ShowGain} \emph{before} \cs{ShowNiveaus} or you need to choose another
+    way.
+  \keyval{offset}{num}\Module{ShowGain}\Default{0}
+    Shifts the vertical line to the right (positive value) or the left
+    (negative value).  \meta{num} is a multiple of \ac{su} (see
+    page~\pageref{key:unit}).
+  \keychoice{label}{\default{true},false,\meta{text}}\Module{ShowGain}\Default{false}
+    Use the default label (\code{true}) or an own label
+    (\meta{text}).\label{key:showgain_label}
+  \keychoice{label-side}{right,left}\Module{ShowGain}\Default{right}
+    The side of the vertical line on which the label should be placed.
+  \keyval{label-pos}{<value>}\Module{ShowGain}\Default{.5}
+    Position at the line. \code{0} means at the height of $H_1$, \ie, the
+    starting level, \code{1} means at the height of $H_2$, \ie, the ending
+    level.
+  \keyval{label-tikz}{<tikz>}\Module{ShowGain}\Default
+    \TikZ{} options for the label.
+\end{options}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowGain[connect={dotted,red},offset=2]
+  \end{endiagram}
+\end{example}
+
+Using the \option{label} option:
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+     \ShowGain[label]
+  \end{endiagram}
+  \begin{endiagram}
+    \ENcurve{0,4,3}
+    \ShowGain[label]
+  \end{endiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowGain[label=exothermic]
+  \end{endiagram}
+\end{example}
+
+Connecting lines and levels are overlapping:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus
+    \ShowGain[connect=red]
+  \end{endiagram}
+\end{example}
+
+A possible solution:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus
+    \ShowGain[connect-from-line,connect=red]
+  \end{endiagram}
+\end{example}
+
+Better would be to set \cs{ShowNiveaus} \emph{after} \cs{ShowGain},
+particularly if you're not using the default settings.
+\begin{example}
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowNiveaus[niveau=N1-1]
+    \ShowGain[connect={red,dotted}]
+  \end{endiagram}
+  \begin{endiagram}
+    \ENcurve{3,4,0}
+    \ShowGain[connect={red,dotted}]
+    \ShowNiveaus[niveau=N1-1]
+  \end{endiagram}
+\end{example}
+
+\subsection{Debugging Information}
+Using the \option{debug} option (see page~\pageref{key:debug}) gives you
+further information:
+\begin{example}[side-by-side]
+  \begin{endiagram}[debug]
+    \ENcurve{3,4,0}
+    \ShowGain
+  \end{endiagram}
+\end{example}
+
+\section{The Activation Energy}
+\subsection{The \cs*{ShowEa} Command}
+This command is similar to the commands \cs{ShowNiveaus} and \cs{ShowGain}.
+\begin{commands}
+  \command{ShowEa}[\oarg{options}]
+    Draw a visual hint af the activation energy.
+\end{commands}
+
+It enables to show the activation energy:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{2,4,0}
+    \ShowEa
+  \end{endiagram}
+\end{example}
+
+The default behaviour shows the difference between the \emph{first} maximum
+after a \emph{previous} minimum to that minimum:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{2,0,4}
+    \ShowEa
+  \end{endiagram}
+\end{example}
+
+This also holds if there is more than one maximum.  How you choose a different
+one is described in the next section.
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa
+  \end{endiagram}
+\end{example}
+
+\subsection{Choose Level Explicitly}
+The default behaviour is all right if there is only one maximum.  If there are
+more one might want to choose a different one.  The following options allow
+that.
+\begin{options}
+  \keychoice{max}{first,all}\Module{ShowEa}\Default{first}
+    Show the difference to the first maximum or to all maxima.
+  \keychoice{from}{\Marg{(\meta{coordinate1})to(\meta{coordinate2})}}\Module{ShowEa}
+    Specify the coordinates that should be connected.  You can either use the
+    coordinates \code{(\meta{x},\meta{y})} or the name \code{(\meta{name})} of
+    the node.
+\end{options}
+
+Using \keyis{max}{all}:
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa[max=all]
+  \end{endiagram}
+\end{example}
+
+Since in most cases this won't be what you want you can specify the
+coordinates yourself.  The option \option{debug} (see
+page~\pageref{key:debug}) may help.
+\begin{example}
+  \begin{endiagram}[debug]
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa
+  \end{endiagram}
+  \quad
+   \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa[from={(0,1) to (6,4)}]
+  \end{endiagram}
+
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa[from={(N1-1) to (N1-3)}]
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa[from={(N1-5) to (N1-4)}]
+  \end{endiagram}
+\end{example}
+In every case the position of the vertical line is determined by the \emph{first}
+coordinate.
+
+\subsection{Customization}
+Again there are a number of options to customize the appearance.
+\begin{options}
+  \keyval{tikz}{tikz}\Module{ShowEa}\Default{<->}
+    \TikZ{} options for the vertical line.
+  \keyval{connect}{tikz}\Module{ShowEa}\Default{dashed,help lines}
+    \TikZ{} options for the horizontal line.
+  \keychoice{label}{\default{true},false,\meta{text}}\Module{ShowEa}\Default{false}
+    Use the default label ($E_{\mathrm{a}}$) or an own
+    label.\label{key:showea_label}
+  \keychoice{label-side}{right,left}\Module{ShowEa}\Default{right}
+    The side of the vertical line where the label should appear.
+  \keyval{label-pos}{value}\Module{ShowEa}\Default{.5}
+    Determines the vertical position of the label relative to the vertical line.
+    \code{0} means at the lower end, \code{1} means at the upper end.
+  \keyval{label-tikz}{tikz}\Module{ShowEa}\Default
+    \TikZ options for the label.
+\end{options}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve[step=4]{1,6,0}
+    \ShowEa[label,label-pos=.3]
+  \end{endiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+    \ShowEa[
+      from    = {(N1-1) to (N1-3)},
+      connect = {draw=none},
+      label   = endoth.]
+    \ShowEa[
+      from  = (N1-3) to (N1-5),
+      label = exoth.,
+      label-pos = .7]
+    \ShowGain[label=exoth.] 
+  \end{endiagram}
+\end{example}
+
+\subsection{Debugging Information}
+The \option{debug} option gives you further information.
+\begin{example}
+  \begin{endiagram}[debug]
+    \ENcurve{1,5,2,3,0}
+    \ShowEa[max=all]
+  \end{endiagram}
+  \quad
+  \begin{endiagram}[debug]
+    \ENcurve{1,5,2,3,0}
+    \ShowEa[from={(0,1) to (6,3)}]
+  \end{endiagram}
+\end{example}
+
+\section{Several Curves in one Diagram}
+It's easy to draw several curves.  You only need to use \cs{ENcurve} more than
+once.
+\begin{example}
+  \begin{endiagram}
+    \ENcurve[tikz=blue]{1,4,0}
+    \ENcurve[tikz=red]{1,2.5,0}
+    \draw[blue] (5,5) -- ++(1,0) node[black,right] {without enzyme};
+    \draw[red] (5,4) -- ++(1,0) node[black,right] {with enzyme};
+  \end{endiagram}
+\end{example}
+
+The commands \cs{ShowNiveaus}, \cs{ShowGain} and \cs{ShowEa} always relate to
+the curve set at last.  This means you can use them selectively.
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve[tikz=blue]{1,4,0}
+    \ShowEa[tikz={blue,<->}]
+    \ENcurve[tikz=red]{1,2.5,0}
+  \end{endiagram}
+
+  \begin{endiagram}
+    \ENcurve[tikz=blue]{1,4,0}
+    \ENcurve[tikz=red]{1,2.5,0}
+    \ShowEa[tikz={red,<->}]
+  \end{endiagram}
+\end{example}
+
+Using more than one curves explains the multiple numbering of the level names:
+\begin{example}[side-by-side]
+  % the names of the levels (N1-1)
+  % and (N1-3) are hidden behind
+  % (N2-1) and (N2-3), resp.
+  \begin{endiagram}[debug]
+    \ENcurve{1,4,0}
+    \ENcurve{1,2.5,0}
+  \end{endiagram}
+
+  \begin{endiagram}
+    \ENcurve[tikz=blue]{1,4,0}
+    \ENcurve[tikz=red]{1,2.5,0}
+    \draw[<->] (N1-2) -- (N2-2) ;
+  \end{endiagram}
+\end{example}
+
+Of course it's possible to choose different options for different curves.
+This means you can use curves with a different number of maxima.
+\begin{example}[side-by-side]
+  \begin{endiagram}
+    \ENcurve[step=4]{1,6,0}
+    \ENcurve[
+      tikz={densely dotted}]
+     {1,4[1],2.5,3[-1],0}
+  \end{endiagram}
+\end{example}
+
+\section{Usage of \TikZ}
+Since the \env{endiagram} environment only is a \env*{tikzpicture} environment
+(well, more or less) you can use \TikZ{} commands inside it.  This means you
+can easily add additional information to the diagram.
+\begin{example}
+  % needs the package `chemmacros'
+  \begin{endiagram}
+    \ENcurve{1,5,2,3,0}
+    \ShowNiveaus[length=2,niveau={N1-2,N1-3,N1-4}]
+    \node[above,xshift=4pt] at (N1-2) {[\"UZ1]$^{\transitionstatesymbol}$} ;
+    \node[below] at (N1-3) {ZZ} ;
+    \node[above,xshift=4pt] at (N1-4) {[\"UZ2]$^{\transitionstatesymbol}$} ;
+  \end{endiagram}
+  \quad
+  \begin{endiagram}
+    \ENcurve{2,3,0}
+    \draw[<-,red] (N1-2) -- ++(2,1) node[right] {transition state} ;
+  \end{endiagram}
+\end{example}
+
+\subsection{The Origin}
+The nodes \code{(origin-l)} and \code{(origin-r)} are set at the end of the
+environment.  This means they are \emph{not} available inside the
+\env{endiagram} environment.  If you want to use them you either need to look
+up their coordinates using the \option{debug} option (see
+page~\pageref{key:debug}) \ldots
+
+\begin{example}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3[.5],0}
+    \draw[dashed,help lines]
+      (N1-2) -- (N1-2 -| -1.5,-1)
+      node[left,black] {max} ;
+  \end{endiagram}
+\end{example}
+\ldots\ or use this option:
+\begin{options}
+  \keyval{tikz}{tikz}\Default
+    \TikZ{} options for the \env{endiagram} environment.
+\end{options}
+With it you can pass arbitrary \TikZ{} options to the internal \code{tikzpicture}
+environment.
+\begin{example}[side-by-side]
+  \begin{endiagram}[
+      y-label = above,
+      tikz    = {remember picture}]
+    \ENcurve{1,3[.5],0}
+  \end{endiagram}
+  \tikz[remember picture,overlay]{
+    \draw[dashed,help lines]
+      (N1-2) -- (N1-2 -| origin-l)
+      node[left,black] {max} ;
+  }
+\end{example}
+
+There is an easier way, though: you can use the following command \emph{after}
+drawing all curves:
+\begin{commands}
+  \command{MakeOrigin}
+    Helper command to make the origin of the coordinate system
+    known.\label{cmd:makeorigin}
+\end{commands}
+
+\begin{example}[side-by-side]
+  \begin{endiagram}[y-label = above]
+    \ENcurve{1,3[.5],0}
+    \MakeOrigin
+    \draw[dashed,help lines]
+      (N1-2) -- (N1-2 -| origin-l)
+      node[left,black] {max} ;
+  \end{endiagram}
+\end{example}
+
+\section{Axes Ticks and Labels}
+\subsection{Automatic Ticks}
+
+The $y$ axes can get ticks automatically.
+\begin{options}
+  \keychoice{ticks}{y,\default{y-l},y-r,none}\Default{none}
+    Adds ticks to the specified axes.
+  \keyval{ticks-step}{num}\Default{1}
+    \meta{num} is a multiple of the \ac{su}. \keyis{ticks-step}{2} means that
+    only every second tick is added.
+\end{options}
+\ENsetup{
+  AddAxisLabel/font=\libertineLF
+}
+
+\begin{example}
+  \ENsetup{ticks,y-label=above}
+  \begin{endiagram}
+    \ENcurve{1,5,2.5,4,0}
+  \end{endiagram}
+  \quad
+  \begin{endiagram}[ticks-step=2]
+    \ENcurve{1,5,2.5,4,0}
+  \end{endiagram}
+\end{example}
+These ticks obey the \option{energy-unit} option, see
+section~\ref{sec:reale_werte}.
+
+\subsection{The \cs*{AddAxisLabel} Command}
+% TODO auf Unterschied zwischen den Ticks produziert durch AddAxisLabel und
+% Option ticks hinweisen
+To be able to add labels to the ticks there is the command
+\begin{commands}
+  \command{AddAxisLabel}[\oarg{options}\Marg{(\meta{point1})[\meta{opt.\@
+      label}];(\meta{point2});...}]
+    Add axis labels to points.
+  \command{AddAxisLabel}[\sarg\oarg{options}\Marg{\meta{level1}[\meta{opt.\@
+      label}];\meta{level2};...}]
+    Add axis labels to levels.
+\end{commands}
+As you can see there are two variants.  The first one awaits a list of
+coordinates in the \TikZ{} sense.  The second awaits $y$ values.  Every of
+these values has an optional argument with which you can specify the label.
+
+The first variant also draws lines between the points specifiad and the $y$
+axis.  Internally this command calls \cs{MakeOrigin}, see
+page~\pageref{cmd:makeorigin}, which means it should be used \emph{after}
+drawing all curves.
+
+Example for the second variant:
+\begin{example}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1;2;3}
+  \end{endiagram}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1[10];2[20];3[30]}
+  \end{endiagram}
+\end{example}
+
+Example for the first variant:
+\begin{example}[side-by-side]
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel{(N1-1)[$H_1$];(N1-3)[$H_2$]}
+  \end{endiagram}
+\end{example}
+
+The optional arguments can also get \TikZ{} options. The description should read:
+\begin{commands}
+  \command{AddAxisLabel}[\oarg{options}\Marg{(\meta{point1})[\meta{opt.\@
+      label},\meta{tikz}];(\meta{point2});...}]
+    Add axis labels to points.
+  \command{AddAxisLabel}[\sarg\oarg{options}\Marg{\meta{level1}[\meta{opt.\@
+      label},\meta{tikz}];\meta{level2};...}]
+    Add axis labels to levels.
+\end{commands}
+
+\begin{example}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1[10];2[20,{draw,fill=green!15}];3[30]}
+  \end{endiagram}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel{(N1-1)[$H_1$];(N1-3)[$H_2$,{draw,font=\color{red},fill=green!15}]}
+  \end{endiagram}
+\end{example}
+
+\subsection{Customization}
+
+You have several options to customize the labels:
+\begin{options}
+  \keychoice{axis}{y-l,y-r,x}\Module{AddAxisLabel}\Default{y-l}
+    Choose which axis gets the labels.
+  \keyval{connect}{tikz}\Module{AddAxisLabel}\Default{dashed,help lines}
+    Change the style of the lines.
+  \keyval{font}{commands}\Module{AddAxisLabel}\Default
+    You can add commands like \cs*{footnotesize} and/or \cs*{color}\Marg{red}
+    to format the label text.
+\end{options}
+
+\begin{example}
+  \begin{endiagram}[y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel{(2,3)[\"UZ]}
+  \end{endiagram}
+  \begin{endiagram}[y-label=above,x-label=right]
+    \ENcurve{1,3,2}
+    \AddAxisLabel[axis=x,connect=dotted]{(2,3)[\"UZ]}
+  \end{endiagram}
+  \begin{endiagram}[axes=all,y-label=above]
+    \ENcurve{1,3,2}
+    \AddAxisLabel[axis=y-r,connect=red]{(2,3)[\"UZ]}
+  \end{endiagram}
+\end{example}
+
+\section{Actual Values}\label{sec:reale_werte}
+\subsection{The Basics}
+
+If you want to have a more quantitative diagram or use actual values for the
+energies you can use these options:
+\begin{options}
+  \keyval{energy-unit}{unit}\Default
+    The unit of the energy scale.  A unit in the \pkg{siunitx} sense.
+  \keyval{energy-step}{num}\Default{1}
+    Determines which increment on the energy scale corresponds to the
+    \ac{su}.
+  \keyval{energy-zero}{num}\Default{0}
+    Shifts the origin of the energy scale by \meta{num} in multiples of the
+    energy scale.
+  \keyval{energy-unit-separator}{anything}\Default{/}
+    Separates the $y$ axes label from the unit.
+  \keyval{energy-round}{num}\Default{3}
+    Rounds the value to this number of figures.
+  % \keybool{energy-round-places}\Default{false}
+  %   Switch rounding mode to places.
+\end{options}
+Choosing a unit will add ticks and labels to the $y$ axis automatically and has
+an impact on the commands \cs{ShowGain} and \cs{ShowEa}, see
+section~\ref{ssec:real_einfluss}.
+
+\begin{example}
+  \begin{endiagram}[ticks,y-label=above,energy-step=10]
+    \ENcurve{1,3,2}
+  \end{endiagram}
+  \begin{endiagram}[y-label=above,energy-step=10,energy-zero=30]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1;2;3}
+  \end{endiagram}
+\end{example}
+
+\begin{example}
+  \begin{endiagram}[
+      y-label=above,
+      energy-step=15,
+      energy-zero=30,
+      energy-unit=\kilo\joule]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1;2;3}
+  \end{endiagram}
+  \begin{endiagram}[
+      y-label=above,
+      energy-step=10,
+      energy-unit=\kilo\joule,
+      energy-unit-separator={ in }]
+    \ENcurve{1,3,2}
+    \AddAxisLabel*{1;2;3}
+  \end{endiagram}
+\end{example}
+
+\begin{example}
+  \ENsetup{
+    energy-unit=kJ,
+    energy-step=10,
+    energy-zero=.613,
+    y-label-offset=20pt
+  }
+  \begin{endiagram}
+    \ENcurve{1.0613,4.3465,2.9876}
+    \ShowGain[label]
+  \end{endiagram}
+\end{example}
+  % \begin{endiagram}% [energy-round-places]
+  %   \ENcurve{1.0613,4.3465,2.9876}
+  %   \ShowGain[label]
+  % \end{endiagram}
+
+\subsection{Impact on Other Commands}\label{ssec:real_einfluss}
+
+Using the option \option{energy-unit} changes the default labels of
+\cs{ShowGain} and \cs{ShowEa}.  Now an actual value is shown:
+\begin{example}
+  % uses \DeclareSIUnit{\calory}{cal}
+  \sisetup{per-mode = fraction}
+  \ENsetup{
+    energy-step           = 100,
+    energy-unit           = \kilo\calory\per\mole,
+    energy-unit-separator = { in },
+    y-label               = above,
+    AddAxisLabel/font     = \libertineLF\footnotesize
+  }
+  \begin{endiagram}[scale=1.5]
+    \ENcurve{2.232,4.174,.308}
+    \AddAxisLabel*{0;1;2;3;4}
+    \ShowEa[label,connect={draw=none}]
+    \ShowGain[label]
+  \end{endiagram}
+\end{example}
+
+This behaviour can be switched off, though:
+\begin{options}
+  \keybool{calculate}\Default{true}
+  Switch the calculating of activation energy and energy gain on or off.
+\end{options}
+\begin{example}
+  % uses \DeclareSIUnit{\calory}{cal}
+  \sisetup{per-mode = fraction}
+  \ENsetup{
+    energy-step           = 100,
+    energy-unit           = \kilo\calory\per\mole,
+    energy-unit-separator = { in },
+    y-label               = above,
+    AddAxisLabel/font     = \footnotesize,
+  }
+  \begin{endiagram}[scale=1.5,calculate=false]
+    \ENcurve{2.232,4.174,.308}
+    \AddAxisLabel*{0;1;2;3;4}
+    \ShowEa[label,connect={draw=none}]
+    \ShowGain[label]
+  \end{endiagram}
+\end{example}
+
+\section{Example}
+
+The illustration of the Bell-Evans-Polanyi principle
+(figure~\ref{fig:bell-evans-polanyi}) serves as an example for a more complex
+usage. One reaction is coloured as it an exception to the principle. The
+figure is a reproduction of a similar figure in~\cite{brueckner}.
+
+\begin{sourcecode}
+  % uses the packages `chemmacros', `chemfig' and `libertine'
+  \setatomsep{1.5em}
+  \DeclareChemIUPAC\iso{\textit{i}}
+  \chemsetup[chemformula]{format=\libertineLF}
+  \ENsetup{
+    ENcurve/minima,
+    AddAxisLabel/font=\libertineLF\footnotesize
+  }
+  \begin{endiagram}[
+     tikz         = {yscale=1.5}, scale        = 1.7,
+     y-label      = above,        y-label-text = $\Delta H$,
+     x-label      = right,        x-label-text = RK,
+     energy-step  = 10]
+    \ENcurve{0,3.5,1}
+    \ENcurve[tikz=red]{0,3.7,.4}
+    \ENcurve{0,4.3[.2],2.4}
+    \ENcurve{0,4.7[.3],2.7}
+    \ENcurve{0,4.9[.35],2.9}
+    \ENcurve{0,5.2[.4],3.3}
+    \AddAxisLabel*{1;2;3;4;6}
+    \AddAxisLabel{
+      (N1-1)[0]; (N1-2)[35]; (N2-2)[37]; (N3-2)[43]; (N4-2)[47]; (N5-2)[49];
+      (N6-2)[52]
+    }
+    \draw[right] (N1-3) ++ (1,0)
+      node {\small \ch{2 "\chemfig{=_[:30]-[::-60]\lewis{0.,}}~" + N2} } ;
+    \draw[right,red] (N2-3) ++ (1,-.3)
+      node {\small \ch{2 "\chemfig{[:-60]*6(=-=-(-\lewis{0.,})=-)}~" + N2} } ;
+    \draw[right] (N3-3) ++ (1,-.2)
+      node {\small \ch{2 "\tert-\lewis{0.,Bu}~" + N2} } ;
+    \draw[right] (N4-3) ++ (1,-.1)
+      node {\small \ch{2 "\iso-\lewis{0.,Pr}~" + N2} } ;
+    \draw[right] (N5-3) ++ (1,0)
+      node {\small \ch{2 "\lewis{0.,Et}~" + N2} } ;
+    \draw[right] (N6-3) ++ (1,0)
+      node {\small \ch{2 "\lewis{0.,Me}~" + N2} } ;
+    \draw[above,font=\fontfamily{fxlf}\selectfont\footnotesize]
+     (N1-3) node {10} (N2-3) node[red] {4}
+     (N3-3) node {24} (N4-3) node {27}
+     (N5-3) node {29} (N6-3) node {33} ;
+  \end{endiagram}
+
+  \setatomsep{2em}
+  \schemestart
+    \chemfig{R-[:30]N=N-[:30]R}
+    \arrow{->[$\Delta$]}[,2.1]
+    \ch{2 "\lewis{0.,R}~" + N2}
+  \schemestop
+\end{sourcecode}
+
+\begin{figure}
+  \centering
+  \centering
+  \setatomsep{1.5em}
+  \DeclareChemIUPAC\iso{\textit{i}}
+  \chemsetup[chemformula]{format=\libertineLF}
+  \ENsetup{
+    ENcurve/minima,
+    AddAxisLabel/font=\libertineLF\footnotesize
+  }
+  \begin{endiagram}[
+     tikz         = {yscale=1.5}, scale        = 1.7,
+     y-label      = above,        y-label-text = $\Delta H$,
+     x-label      = right,        x-label-text = RK,
+     energy-step  = 10]
+    \ENcurve{0,3.5,1}
+    \ENcurve[tikz=red]{0,3.7,.4}
+    \ENcurve{0,4.3[.2],2.4}
+    \ENcurve{0,4.7[.3],2.7}
+    \ENcurve{0,4.9[.35],2.9}
+    \ENcurve{0,5.2[.4],3.3}
+    \AddAxisLabel*{1;2;3;4;6}
+    \AddAxisLabel{
+      (N1-1)[0]; (N1-2)[35]; (N2-2)[37]; (N3-2)[43]; (N4-2)[47]; (N5-2)[49];
+      (N6-2)[52]
+    }
+    \draw[right] (N1-3) ++ (1,0)
+      node {\small \ch{2 "\chemfig{=_[:30]-[::-60]\lewis{0.,}}~" + N2} } ;
+    \draw[right,red] (N2-3) ++ (1,-.3)
+      node {\small \ch{2 "\chemfig{[:-60]*6(=-=-(-\lewis{0.,})=-)}~" + N2} } ;
+    \draw[right] (N3-3) ++ (1,-.2)
+      node {\small \ch{2 "\tert-\lewis{0.,Bu}~" + N2} } ;
+    \draw[right] (N4-3) ++ (1,-.1)
+      node {\small \ch{2 "\iso-\lewis{0.,Pr}~" + N2} } ;
+    \draw[right] (N5-3) ++ (1,0)
+      node {\small \ch{2 "\lewis{0.,Et}~" + N2} } ;
+    \draw[right] (N6-3) ++ (1,0)
+      node {\small \ch{2 "\lewis{0.,Me}~" + N2} } ;
+    \draw[above,font=\fontfamily{fxlf}\selectfont\footnotesize]
+     (N1-3) node {10} (N2-3) node[red] {4}
+     (N3-3) node {24} (N4-3) node {27}
+     (N5-3) node {29} (N6-3) node {33} ;
+  \end{endiagram}
+
+  \setatomsep{2em}
+  \schemestart
+    \chemfig{R-[:30]N=N-[:30]R}
+    \arrow{->[$\Delta$]}[,2.1]
+    \ch{2 "\lewis{0.,R}~" + N2}
+  \schemestop
+  \caption{\label{fig:bell-evans-polanyi}Enthalpie-Entwicklung
+    entlang der Reaktionskoordinate bei einer Serie von Thermolysen
+    aliphatischer Azoverbindungen.  Alle Thermolysen dieser Serie -- mit
+    Ausnahme der farbig hervorgehobenen -- folgen dem
+    Bell-Evans-Polanyi-Prinzip~\cite{brueckner}.}
+\end{figure}
+
+\end{document}
+
+
+\end{document}

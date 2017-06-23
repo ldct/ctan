@@ -1,0 +1,775 @@
+%\iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% richtext package,                                    %%
+%% Copyright (C) 2016  D. P. Story                      %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+%<package>\ProvidesPackage{richtext}
+%<package> [2016/10/03 v1.0c richtext: create rich text strings (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex=false]{hyperref}
+\usepackage{calc}
+\let\uif\textsf\let\app\textsf
+\let\pkg\textsf\let\env\texttt
+\def\psf#1{\textsf{\textbf{#1}}}
+%\pdfstringdefDisableCommands{\let\\\textbackslash}
+\OnlyDescription  % comment out for implementation details
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{richtext}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{richtext}{aebdocfmt.def cannot be found}}
+\begin{document}
+\def\CMD#1{\textbackslash#1}
+  \GetFileInfo{richtext.sty}
+  \title{\textsf{richtext}: Creating Rich Text Strings}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@acrotex.net}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \renewenvironment{theglossary}{%
+    \let\efill\relax
+    \begin{itemize}}{\end{itemize}}
+   \value{GlossaryColumns}=1
+  \DocInput{richtext.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o richtext.ind richtext.idx} on the command line and recompile
+    \texttt{richtext.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o richtext.gls richtext.glo} on the command line and recompile
+    \texttt{richtext.dtx}.}
+\end{document}
+%</driver>
+% \fi
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{web}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{web}{cannot find aebdonotindex.def}}
+%    \begin{macrocode}
+%<*package>
+\RequirePackage{xkeyval}
+\RequirePackage{ifxetex}[2006/08/21]
+%    \end{macrocode}
+%   \section{Introduction}
+%   This package supports the creation of \emph{rich text strings} (a type of pdf string). A
+%   rich text string is used in a rich text field as the value of the PDF key \psf{RV}. We also support
+%   the \psf{DS} key which determines the default style.
+%
+%    From the PDF Reference (PDF~1.7), page 1310, ``these rich text strings are fully-formed XML documents that conform to the rich
+%    text conventions specified for the XML Forms Architecture (XFA) specification,
+%    which is itself a subset of the XHTML 1.0 specification, augmented with a
+%    restricted set of CSS2 style attributes.''
+%
+%   A rich text field may be created using the \pkg{eforms} package, like so
+%\begin{verbatim}
+%   \textField[\Ff{\FfRichText}\Ff{\FfMultiline}<other-options>
+%       \DS{<defaultstyle>}\RV{<richvalue>}\V{<value>}
+%   ]{<fldname>}{<width>}{<height>}
+%\end{verbatim}
+%    This package provides commands and methods for `conveniently' create values
+%    \texttt{<richvalue>} and \texttt{<defaultstyle>} for \psf{RV} and
+%    \psf{DS}; additionally, the value \texttt{<value>} of the \psf{V} key is the `plain' text
+%    value of the field; that is the text with all the formatting stripped out.
+%
+%\section{Preliminaries}
+%    \begin{macrocode}
+\newif\ifrt@formfield \rt@formfieldtrue
+\newif\ifrt@needsbody\rt@needsbodyfalse
+\@ifpackageloaded{eforms}%
+    {\ifxetex\let\@eqV\@eqnuV\fi}{\rt@needsbodytrue}
+\providecommand\eq@RV@Body{<?xml version="1.0"?><body %
+    xfa:APIVersion="Acroform:2.7.0.0" %
+    xfa:contentType="text/html" %
+    xfa:spec="2.1" xmlns="http://www.w3.org/1999/xhtml" %
+    xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/">}
+\providecommand\eq@RV@endBody{</body>}
+\def\rt@bBody{\ifrt@needsbody\eq@RV@Body\fi}
+\def\rt@eBody{\ifrt@needsbody\eq@RV@endBody\fi}
+%    \end{macrocode}
+%\section{Documentation for the \texorpdfstring{\protect\psf{RV}}{RV} key}
+%
+%We follow the \app{Acrobat} user interface.
+%There two tabs of interest \uif{Font} and \uif{paragraph}.
+%
+%\begin{description}
+%\item[Font]\leavevmode
+%\begin{description}
+%    \item[\uif{Text}]\leavevmode
+%    \begin{itemize}
+%        \item\uif{Font:} \texttt{<font-name>}
+%        \item\uif{Size:} 10
+%        \item\uif{Baseline Shift:} 0 points
+%        \item\uif{Underline:} No Underline, Underline, Double Underline, Word Underline, Word Double Underline
+%        \item\uif{Style:} Bold, Italic, Strike-through
+%        \item\uif{Color:} RGB
+%    \end{itemize}
+%\end{description}
+%\item[Paragraph]\leavevmode
+%\begin{description}
+%    \item[\uif{Alignment}]\leavevmode
+%        \begin{itemize}
+%            \item Horizontal: left, center, right, justify
+%            \item Vertical: top, middle, bottom
+%        \end{itemize}
+%    \item[\uif{Indents}]\leavevmode
+%        \begin{itemize}
+%            \item \uif{Left:} 0 points
+%            \item \uif{Right:} 0 points
+%            \item \uif{First:} None, First Line, Hanging
+%            \item \uif{By:} 0 points
+%        \end{itemize}
+%    \item[\uif{Spacing}]\leavevmode
+%        \begin{itemize}
+%            \item \uif{Above:} 0 points
+%            \item \uif{Below:} 0 points
+%            \item \uif{Line Spacing:} Single, 1.5 Lines, Double Lines, Exactly (At: 0 points)
+%        \end{itemize}
+%\end{description}
+%\item[Link] \uif{Enter a URL for this link}
+%\item[On main Properties Menu bar:] Also supported are subscript (\texttt{<sub>\penalty0</sub>}) and superscript
+%(\texttt{<sup>\penalty0</sup>})\leavevmode
+%\end{description}
+%    \subsection{The \texorpdfstring{\protect\uif{Font}}{Font}
+%    and \texorpdfstring{\protect\uif{Link}}{Link} tabs}
+%    We support the attributes seen in the above list. We further
+%    support subscripts, superscript, and links in this section.
+%    \begin{macrocode}
+\newif\ifrtfontstyle\rtfontstylefalse
+%    \end{macrocode}
+%    The keys of the \texttt{rtFont} key-value family. Supported keys are \texttt{font}, \texttt{size}, \texttt{raise}, \texttt{ulstyle},
+%    \texttt{color}, \texttt{url}, and \texttt{style}. Superscripts and subscripts are handled differently.
+%    \begin{macrocode}
+%    \end{macrocode}
+%    The \IndexKey{font}\texttt{font} key's value is a font name, if the name contains a space, it should be enclosed
+%    in single quotes: \texttt{font=Arial} or \texttt{font='Myriad Pro'}.
+%    \begin{macrocode}
+\define@key{rtFont}{font}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@font\@empty\else\rtfontstyletrue
+        \def\rf@font{font-family:#1}\fi}
+%    \end{macrocode}
+%    The value of \IndexKey{size}\texttt{size} is the size of the font, as measured in points
+%     \texttt{font=12pt}, note the use of the entity `\texttt{pt}'.
+%    \begin{macrocode}
+\define@key{rtFont}{size}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@size\@empty\else\rtfontstyletrue\def\rf@size@num{#1}%
+        \def\rf@size@pt{#1pt}\def\rf@size{font-size:#1pt}\fi}
+\def\rf@size@num{12}\def\rf@size@pt{12pt}
+%    \end{macrocode}
+%    The key \IndexOpt{raise}\texttt{raise} corresponds to the user interface item \uif{Baseline Shift},
+%    measured in points, for example, \texttt{raise=6pt}.
+%    \begin{macrocode}
+\define@key{rtFont}{raise}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@raise\@empty\else\rtfontstyletrue
+        \def\rf@raise{vertical-align:#1pt}\fi}
+%    \end{macrocode}
+%    The key \IndexOpt{ulstyle}\texttt{ulstyle} supplies an underline attribute, for example,
+%    \texttt{ul=word} underlines each word in the span.
+%    \begin{macrocode}
+\define@choicekey+{rtFont}{ulstyle}[\val\nr]%
+    {none,ul,2ul,wul,2wul}[none]{%
+    \ifcase\nr\relax
+        \def\rf@ul{none}\or
+        \def\rf@ul{underline}\or
+        \def\rf@ul{double}\or
+        \def\rf@ul{word}\or
+        \def\rf@ul{double word}\fi
+    \rtfontstyletrue
+}{}
+%    \end{macrocode}
+%    The key \IndexOpt{color}\texttt{color} supplies a color attribute for the text in the span.
+%    There are two formats: \texttt{rrggbb} (hex) and \texttt{rgb(r,g,b)} (0-255). For example,
+%    \texttt{color=ff0000} or \texttt{color=rgb(255,0,0)} both color the text red.
+%    \begin{macrocode}
+\def\rt@r{r}\let\rt@One=1 \let\rt@Zero=0
+\def\rt@parseColor#1(#2\@nil{\def\rt@argi{#2}\ifx\rt@argi\@empty
+\let\rt@rgbdec\rt@Zero\else\let\rt@rgbdec\rt@One\fi}
+\def\rt@gobbletonil#1\@nil{}
+\bgroup\@makeother\#\@makeother\&%
+\gdef\rt@hashtag{#}\gdef\rt@amp{&}\egroup
+\define@key{rtFont}{color}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@color\@empty\else\rtfontstyletrue
+    \rt@parseColor#1(\@nil
+    \if\rt@rgbdec\rt@One
+        \def\rf@color{color:#1}\else
+        \def\rf@color{color:\rt@hashtag#1}\fi
+\fi}
+\let\rf@color\@empty
+%    \end{macrocode}
+%    The key \IndexOpt{url}\texttt{url} enable the rich text string to contain
+%    a URL hypertext link.
+%    \begin{macrocode}
+\define@key{rtFont}{url}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rt@url\@empty\else\rtfontstyletrue\def\rt@url{#1}\fi}
+%    \end{macrocode}
+%    The \texttt{rtFontStyle} family provides keys \IndexOpt{bold}\texttt{bold},
+%    \IndexOpt{italic}\texttt{italic} and \IndexOpt{strikeit}\texttt{strikeit}.
+%    They are possible values of the \texttt{style} key, define below. The \texttt{style} key
+%    can take on one or several values.
+%    \begin{macrocode}
+\define@choicekey+{rtFontStyle}{bold}[\val\nr]{normal,bold}[bold]%
+    {\edef\rfS@bold{\val}}{}
+\define@choicekey+{rtFontStyle}{italic}[\val\nr]{normal,italic}[italic]%
+    {\edef\rfS@italic{\val}}{}
+\define@key{rtFontStyle}{strikeit}[]{\def\rfS@strikeit{line-through}}
+\let\rfS@normal\@empty\let\rfS@bold\@empty
+\let\rfS@italic\@empty\let\rfS@strikeit\@empty
+%    \end{macrocode}
+%    Continuing the \texttt{rtFont} family, the \IndexOpt{style}\texttt{style} can take on
+%    several values: The key-value of \texttt{style=\{bold,italic,strikeit\}} sets the text to bold, italic,
+%    and strike out. Multiple attributes must be enclosed in parentheses, as shown above.
+%    \begin{macrocode}
+\define@key{rtFont}{style}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@style\@empty\else\rtfontstyletrue\def\rf@style{#1}\fi}
+%    \end{macrocode}
+%    We provide a \IndexKey{raw}\texttt{raw} experimental key. The value of this key is passed through; it must
+%    be of the proper syntax.
+%    \begin{macrocode}
+\define@key{rtFont}{raw}[]{\def\rt@argi{#1}\ifx\rt@argi\@empty
+    \let\rf@raw\@empty\else\rtfontstyletrue\def\rf@raw{#1}\fi}
+%    \end{macrocode}
+%    The \DescribeMacro{\resetRtFontKeys} is an internal command to reset all keys to their default values.
+%    \begin{macrocode}
+\def\resetRtFontKeys{% rtFont family
+    \let\rf@font\@empty\let\rf@size\@empty
+    \let\rf@raise\@empty\let\rf@ul\@empty
+    \let\rf@color\@empty\let\rf@style\@empty\let\rt@url\@empty
+    \let\rf@raw\@empty
+    % rtFontStyle family
+    \let\rfS@normal\@empty\let\rfS@bold\@empty
+    \let\rfS@italic\@empty\let\rfS@strikeit\@empty
+    \rtfontstylefalse}
+%    \end{macrocode}
+%    Now give all keys their default values.
+%    \begin{macrocode}
+\resetRtFontKeys
+%    \end{macrocode}
+%    As we interpret the rich text string, we must save it properly formatted in both
+%    rich and plain format. These are macro for accumulating the strings.
+%    \begin{macrocode}
+\newcommand{\@AddToRichText}{\g@addto@macro\rt@RichText}
+\newcommand{\@AddToPlainText}{\g@addto@macro\rt@PlainText}
+%    \end{macrocode}
+%    Some utility commands
+%    \begin{macrocode}
+\def\rt@excl{!}
+\def\rt@csarg#1#2{\expandafter#1\csname#2\endcsname}
+%    \end{macrocode}
+%    \begin{macro}{\useRV}
+%    The \cs{useRV} command expands to the rich string defined by \cs{rtpara} and is used as the value
+%    of the \psf{RV} key.
+%    \begin{macro}{\useV}
+%    The \cs{useV} command expands to the plain string defined by \cs{rtpara} and is used as the value
+%    of the \psf{V} key.
+%    \begin{macrocode}
+\newcommand{\useRV}[1]{\@nameuse{#1-ri}}
+\newcommand{\useV}[1]{\@nameuse{#1-pl}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \DescribeMacro{\rvorvstring}\cmd{rvorvstring} is similar to \cs{texorpdfstring}, the first argument
+%    is a rich string while the second is a plain string. The two must match correctly, or the PDF reader
+%    may not display correctly; on error the reader displays the plain text.
+%    \begin{macrocode}
+\newif\if@rvstring \@rvstringfalse
+\def\rvorvstring{\if@rvstring
+     \expandafter\@firstoftwo
+   \else
+     \expandafter\@secondoftwo
+   \fi
+}
+%    \end{macrocode}
+%    \paragraph*{Subscripts (\cs{sub}\DescribeMacro{\sub}) and superscripts (\cs{sup}\DescribeMacro{\sup})} There are two versions, one for rich text expansion
+%    and one for plain text expansion. Within \cs{rtpara} these two are \cs{let} to \cs{sub} and \cs{sup}.
+%    \begin{macrocode}
+\def\rt@sub#1{\rvorvstring{<sub>#1</sub>}{#1}}
+\def\rt@sup#1{\rvorvstring{<sup>#1</sup>}{#1}}
+%    \end{macrocode}
+%    Other supported markup: \cs{br}\DescribeMacro{\br}, \cs{bf}\DescribeMacro{\bf}, and
+%    \cs{it}\DescribeMacro{it}.
+%    \begin{macrocode}
+\def\rt@br{\rvorvstring{<br />}{\string\r}}
+\def\rt@bf#1{\rvorvstring{<b>#1</b>}{#1}}
+\def\rt@it#1{\rvorvstring{<i>#1</i>}{#1}}
+\def\rt@spc{\rvorvstring{<span style="xfa-spacerun:yes">\rt@amp
+        \rt@hashtag160\rt@SC</span>}{ }}
+%    \end{macrocode}
+%    Some convenience commands
+%    \begin{macrocode}
+\def\rt@SC{;}\def\rt@CN{:}\def\rt@fs{font-style}\def\rt@fw{font-weight}
+\def\rt@td{text-decoration}
+%    \end{macrocode}
+%    \paragraph*{The \cs{span} command} There are two versions of the \cs{span} command, these
+%    are \cs{rt@remove@span} for plain text and \cs{rt@span} for rich text strings.
+%    \begin{macrocode}
+\def\rt@remove@span#1#2{#2}
+%\let\rt@remove@span\@gobble
+%    \end{macrocode}
+%    \begin{macro}{\rt@span}
+%    This is the internal \cs{span} command, it is \cs{let}\cs{span}\cs{rt@span}. Of course
+%    \cs{span} is a {\TeX} primitive, so we must be careful not to overwrite it.
+%    \begin{macrocode}
+\def\rt@StyleAttr{\ifx\rf@font\@empty\else\rf@font\rt@SC\fi
+    \ifx\rf@size\@empty\else\rf@size\rt@SC\fi
+    \ifrt@formfield\ifx\rf@raise\@empty\else\rf@raise\rt@SC\fi\fi
+    \ifx\rf@ul\@empty\ifx\rfS@strikeit\@empty\else
+        \rt@td\rt@CN\rfS@strikeit\rt@SC\fi
+    \else\rt@td\rt@CN\rf@ul\ifx\rfS@strikeit\@empty\else\space
+        \rfS@strikeit\fi\rt@SC\fi
+    \ifx\rfS@bold\@empty\else\rt@fw\rt@CN\rfS@bold\rt@SC\fi
+    \ifx\rfS@italic\@empty\else\rt@fs\rt@CN\rfS@italic\rt@SC\fi
+    \ifx\rf@color\@empty\else\rf@color\rt@SC\fi
+    \ifx\rf@raw\@empty\else\rf@raw\fi}
+%    \end{macrocode}
+%    The \DescribeMacro{\span}\cs{span} is let to \cs{rt@span} within the \cs{rtpara} command.
+%    \changes{v1.0c}{2016/10/03}{Added \string\cs{rt@afterFont} to allow access by \string\pkg{annot\_pro}.}
+%    \begin{macrocode}
+\let\rt@afterFont\relax
+\newcommand\rt@span[2]{\resetRtFontKeys
+    \edef\x{\noexpand\setkeys{rtFont}{#1}}\x\rt@afterFont
+    \edef\x{\noexpand\setkeys{rtFontStyle}{\rf@style}}\x
+    \edef\rt@Style@ttr{\rt@StyleAttr}%
+    \ifx\rt@url\@empty
+%    \end{macrocode}
+%    We are processing a regular \cs{span}.
+%    \begin{macrocode}
+        \ifx\rt@StyleAttr\@empty\def\x{#2}\else
+        \edef\x{<span\ifrtfontstyle\space
+        style="\rt@Style@ttr"\fi>#2</span>}\fi
+    \else
+%    \end{macrocode}
+%    We are processing a \cs{span} with the \texttt{url} key set.
+%    \begin{macrocode}
+        \ifx\rt@StyleAttr\@empty\edef\x{<a href="\rt@url">#2</a>}\else
+        \edef\x{<a href="\rt@url"
+        \ifrtfontstyle style="\rt@Style@ttr">#2</a>\fi}\fi
+    \fi
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \subsection{The \texorpdfstring{\protect\uif{Paragraph}}{Paragraph} tab}
+%    We now come to the \cs{rtpara} command, which sets the attributes of the \uif{Paragraph}
+%    tab.
+%    \begin{macro}{\rtpara}
+%    This is how you define a rich text string, through the use of \cs{rtpara}. The command
+%    takes three options: (1) The optional first takes key-values just defined in the \texttt{rtFont}
+%    and the \texttt{rtPara} families.
+%\begin{verbatim}
+% halign: text-align:left|center|right|justify
+% valign: text-valign:top|middle|bottom
+%           top is same as no text-valign attribute (vertical-align)
+% Indents:
+%   Left: margin-left:10pt;
+%   Right: margin-right:10pt
+%   First: text-indent: 12pt (Indent)
+%          text-indent:-12pt; (Hanging)
+%          None
+% Spacing > Line Spacing Line: height:18pt
+% Above margin-top:11pt; Below margin-bottom:11pt;
+%       applies to all text in field, not individual paragraphs
+% line-height: <num>pt
+%   Single Space: line-height:\rt@size
+%   1.5 Lines   : line-height: 1.8*max(\rt@size)
+%   Double      : line-height: 2.4*max(\rt@size)
+%   Exact       : line-height: <num>pt
+%\end{verbatim}
+%\paragraph*{Alignment}
+% The \IndexKey{halign}\texttt{halign} key effects the horizontal alignment of a paragraph, choices
+% are \texttt{left}, \texttt{center}, \texttt{right}, and \texttt{justify}. The default is \texttt{left}.
+%    \begin{macrocode}
+\define@choicekey+{rtPara}{halign}[\val\nr]%
+    {left,center,right,justify}[left]{%
+    \ifcase\nr\relax
+        \def\rt@halign{text-align:left}\or
+        \def\rt@halign{text-align:center}\or
+        \def\rt@halign{text-align:right}\or
+        \def\rt@halign{text-align:justify}\fi
+    \rtfontstyletrue
+}{}
+%    \end{macrocode}
+%    The \IndexKey{valign}\texttt{valign} seems to effect all paragraphs in the rich text field. Its value
+%    determines the vertical placement of the paragraphs: \texttt{top}, \texttt{middle}, and \texttt{bottom}.
+%    The default is \texttt{top}.
+%    \begin{macrocode}
+\define@choicekey+{rtPara}{valign}[\val\nr]{top,middle,bottom}[top]{%
+    \ifcase\nr\relax
+        \def\rt@valign{text-valign:top}\or
+        \def\rt@valign{text-valign:middle}\or
+        \def\rt@valign{text-valign:bottom}\fi
+    \rtfontstyletrue
+}{}
+\let\rt@halign\@empty\let\rt@valign\@empty
+%    \end{macrocode}
+%\paragraph*{Indents}
+%    With the \IndexKey{margleft}\texttt{margleft} and \IndexKey{margright}\texttt{margright}
+%    you set the left and right margins of the effected paragraph. The default is \texttt{0pt}.
+%    \begin{macrocode}
+\define@key{rtPara}{margleft}{\def\rt@margleft{margin-left:#1pt}}
+\define@key{rtPara}{margright}{\def\rt@margright{margin-right:#1pt}}
+%    \end{macrocode}
+%    The \IndexKey{indent}\texttt{indent} key sets the amount of indent of a paragraph, values
+%    are \texttt{none}, \texttt{first}, and \texttt{hanging}. The amount of indent is determined
+%    by the key \IndexKey{indentby}\texttt{indentby}, which is set to \texttt{12pt} by default.
+%    \begin{macrocode}
+\define@choicekey+{rtPara}{indent}[\val\nr]{none,first,hanging}[none]{%
+    \edef\rt@indenttype{\nr}%
+}{}
+\define@key{rtPara}{indentby}[12]{\def\rt@indentby{#1pt}}
+\let\rt@margleft\@empty\let\rt@margright\@empty
+\def\rt@indenttype{0}\def\rt@indentby{12pt}
+%    \end{macrocode}
+%\paragraph*{Spacing}
+%    With the \IndexKey{margtop}\texttt{margtop} and \IndexKey{margbottom}\texttt{margbottom}
+%    you set the space above and below a paragraph. The default is \texttt{0pt}.
+%    \begin{macrocode}
+\define@key{rtPara}{margtop}[0]{\def\rt@margtop{#1pt}}
+\define@key{rtPara}{margbottom}[0]{\def\rt@margbottom{#1pt}}
+\def\rt@margtop{0pt}\def\rt@margbottom{0pt}
+%    \end{macrocode}
+%    The \IndexKey{linespacing}\texttt{linespacing} key the spacing
+%    lines. The default is \texttt{0pt}. Choices are \texttt{single} (spacing),
+%    \texttt{oneandhalf} (spacing), \texttt{double} (spacing), and \texttt{exact} (spacing).
+%    \begin{macrocode}
+\define@choicekey{rtPara}{linespacing}[\val\nr]%
+    {single,oneandhalf,double,exact}[single]{%line-height
+        \edef\rt@linespacingtype{\nr}%
+        \ifcase\nr
+            \let\rt@linesp\@empty\or
+            \setlength{\@tempdima}{1.8pt*\rf@size@num}%
+            \edef\rt@linesp{\the\@tempdima}\or
+            \setlength{\@tempdima}{2.4pt*\rf@size@num}%
+            \edef\rt@linesp{\the\@tempdima}\or
+            \def\rt@linesp{\rf@size@pt}\fi
+}{}
+\let\rt@linesp\@empty\def\rt@linespacingtype{0}
+%    \end{macrocode}
+%    The \IndexKey{lineheight}\texttt{lineheight} key
+%    \begin{macrocode}
+\define@key{rtPara}{lineheight}[]{\def\rt@lineheight{#1pt}}
+\let\rt@lineheight\@empty
+%    \end{macrocode}
+%    More convenience definitions.
+%    \begin{macrocode}
+\def\rtp@ti{text-indent}\def\rtp@mt{margin-top}
+\def\rtp@mb{margin-bottom}\def\rtp@lh{line-height}
+%    \end{macrocode}
+%    We put the parameters all together.
+%    \begin{macrocode}
+\def\rt@ParaAttr{%
+% Alignment
+    \ifx\rt@halign\@empty\else\rt@halign\rt@SC\fi
+\ifrt@formfield
+    \ifx\rt@valign\@empty\else\rt@valign\rt@SC\fi
+% Indents
+    \ifx\rt@margleft\@empty\else\rt@margleft\rt@SC\fi
+    \ifx\rt@margright\@empty\else\rt@margright\rt@SC\fi
+    \ifcase\rt@indenttype\space\or
+        \rtp@ti\rt@CN\rt@indentby\rt@SC\or
+        \rtp@ti\rt@CN-\rt@indentby\rt@SC\fi
+% Spacing
+    \rtp@mt\rt@CN\rt@margtop\rt@SC\rtp@mb\rt@CN\rt@margbottom\rt@SC
+    \ifx\rt@linesp\@empty\else
+        \if\rt@linespacingtype3%
+            \ifx\rt@lineheight\@empty
+                \rtp@lh\rt@CN\rt@linesp\rt@SC
+            \else
+                \rtp@lh\rt@CN\rt@lineheight\rt@SC
+            \fi
+        \else
+            \rtp@lh\rt@CN\rt@linesp\rt@SC
+        \fi
+    \fi
+\fi
+}
+\begingroup
+\catcode`\@=0 @catcode`@\=12
+@gdef@rtbs{\}
+@endgroup
+\def\rt@cs#1{\rvorvstring{\rtbs\rtbs#1}{\string\134#1}}
+%    \end{macrocode}
+%    The \DescribeMacro{\rtpara}\cmd{rtpara} takes three arguments. The first optional argument is key-value pairs
+%    from the \texttt{rtFont} and \texttt{rtPara} families. The second is a name this rich string. The third is the
+%    rich string itself, with supported markup.
+%    \changes{v1.0c}{2016/10/03}{Added \string\cs{rt@afterParaFont} to allow access by \string\pkg{annot\_pro}.}
+%    \begin{macrocode}
+\let\rt@afterParaFont\relax
+%    \end{macrocode}
+%    \changes{v1.0c}{2016/10/03}{Added \string\cs{rt@dir}}
+%    (2016/10/03) Added the \texttt{dir} HTML attribute, default is \texttt{"ltr"}.
+%    \begin{macrocode}
+\def\rt@dir{ dir="ltr"}
+%    \end{macrocode}
+%    \begin{macrocode}
+\newcommand\rtpara[2][]{\begingroup
+    \setkeys{rtPara,rtFont}{#1}\rt@afterParaFont
+    \edef\rt@Para@ttr{\rt@ParaAttr\rt@StyleAttr}%
+    \global\let\rt@RichText\@empty
+    \global\let\rt@PlainText\@empty
+    \def\rt@ctrlName{#2}%
+%    \end{macrocode}
+%    Before taking the next parameter, we'll make some special definitions.
+%    \begin{macrocode}
+    \def\{{\string\{}\def\}{\string\}}%
+    \def\1{\string\1}\def\2{\string\2}\def\3{\string\3}%
+    \@makeother\$\@makeother\#\@makeother\^\@makeother\_\@makeother\~%
+    \@makeother\&\def\&{\rvorvstring{\string&amp;}{\string&}}% req
+    \@makeother\<\def\<{\rvorvstring{\string&lt;}{\string<}}% req
+    \@makeother\>\def\>{\rvorvstring{\string&gt;}{\string>}}%
+    \@makeother\'\def\'{\rvorvstring{\string&apos;}{\string'}}%
+    \@makeother\"\def\"{\rvorvstring{\string&quot;}{\string"}}%
+    \let\cs\rt@cs
+    \rtpara@cont}
+%    \end{macrocode}
+%    \cs{rtpara} continues with \cs{rtpara@cont}.
+%    \begin{macrocode}
+\def\rtpara@cont#1{%
+    \let\sup\rt@sup\let\sub\rt@sub
+    \let\br\rt@br\let\bf\rt@bf\let\it\rt@it
+    \let\spc\rt@spc
+    \let\span\rt@remove@span
+    \@rvstringfalse
+    \edef\x{#1}\expandafter\@AddToPlainText\expandafter{\x}%
+    \let\span\relax
+    \@rvstringtrue
+    \rtpara@i#1\span!;\endgroup}
+%    \end{macrocode}
+%    Step 1: \cs{rtpara} comes here.
+%    \begin{macrocode}
+\def\rtpara@i#1\span#2;{\def\argii{#2}%
+    \g@addto@macro\rt@RichText{#1}%
+    \ifx\argii\rt@excl
+        \rt@csarg\xdef{\rt@ctrlName-ri}%
+            {%
+                <p\rt@dir\ifx\rt@Para@ttr\@empty\else\space
+                    style="\rt@Para@ttr"\fi>\rt@RichText</p>%
+             }%
+        \rt@csarg\xdef{\rt@ctrlName-pl}{\rt@PlainText}%
+        \let\rt@next\relax
+    \else
+        \def\rt@next{\rtpara@ii#2;}%
+    \fi
+\rt@next}
+%    \end{macrocode}
+%    Step 2: \cs{rtpara@i} comes here.
+%    \begin{macrocode}
+\def\rtpara@ii#1#2#3;{\def\argii{#2}%
+    \ifx\argii\rt@excl
+        \let\rt@next\relax
+    \else
+        \let\span\rt@span
+        \let\br\rt@br\let\bf\rt@bf\let\it\rt@it
+%    \end{macrocode}
+%    We have encountered \cs{span\{<argi>\}\{<argii>\}} and we expand it appropriately.
+%    \begin{macrocode}
+        \@rvstringtrue
+        \span{#1}{#2}\edef\rt@tmp{\noexpand\g@addto@macro
+            \noexpand\rt@RichText{\x}}\rt@tmp
+        \rt@csarg\xdef{\rt@ctrlName-ri}%
+            {%
+                <p\rt@dir\ifx\rt@Para@ttr\@empty\else\space
+                    style="\rt@Para@ttr"\fi>\rt@RichText</p>%
+             }%
+        \rt@csarg\xdef{\rt@ctrlName-pl}{\rt@PlainText}%
+        \let\span\relax
+    \def\rt@next{\rtpara@i#3;}%
+    \fi\rt@next}
+%    \end{macrocode}
+%    \end{macro}
+%    There is a special definition for \IndexKey{par}\texttt{par} and
+%    \IndexKey{skipline}\texttt{skipline}, these should be used between paragraphs to add
+%    a blank line between paragraphs.
+%    \begin{macrocode}
+\rt@csarg\def{par-ri}{}\rt@csarg\def{par-pl}{\string\r}
+\rt@csarg\def{skipline-ri}%
+    {<p><span style="xfa-spacerun:yes">\rt@amp
+        \rt@hashtag160;</span></p>}
+\rt@csarg\def{skipline-pl}{\string\r\space}
+\def\rt@skipline{skipline}
+\rt@csarg\def{br-ri}{}\rt@csarg\def{br-pl}{\string\r}
+%    \end{macrocode}
+%    \section{Documentation for the \texorpdfstring{\psf{DS}}{DS} key}
+%    The \psf{DS} key sets the default style. According to the JavaScript API for Acrobat reference,
+%    the default style supports alignment, textFont, (font family, font style, font weight), textColor,
+%    and textSize
+%\begin{verbatim}
+%   /DS(font: Helvetica,sans-serif 12.0pt;text-align:left;color:#000000)
+%   f=this.getField("RichText")
+%   style=f.defaultStyle;
+%   style.fontFamily;
+%   style.fontStyle;
+%   style.fontWeight;
+%   style.textFont;
+%   style.alignment;
+%   style.textColor;
+%   style.textSize;
+%\end{verbatim}
+%    \begin{macrocode}
+\def\rt@DSAttr{\ifx\rf@font\@empty\else\rf@font\rt@SC\fi
+    \ifx\rf@size\@empty\else\rf@size\rt@SC\fi
+    \ifx\rf@raise\@empty\else\rf@raise\rt@SC\fi
+    \ifx\rf@ul\@empty\ifx\rfS@strikeit\@empty\else
+        \rt@td\rt@CN\rfS@strikeit\rt@SC\fi
+    \else\rt@td\rt@CN\rf@ul\ifx\rfS@strikeit\@empty\else\space
+        \rfS@strikeit\fi\rt@SC\fi
+    \ifx\rfS@bold\@empty\else\rt@fw\rt@CN\rfS@bold\rt@SC\fi
+    \ifx\rfS@italic\@empty\else\rt@fs\rt@CN\rfS@italic\rt@SC\fi
+    \ifx\rf@color\@empty\else\rf@color\rt@SC\fi}
+%    \end{macrocode}
+%    \begin{macro}{\useDefaultDS}
+%    A fixed definition for default \psf{DS}.
+%    \begin{macrocode}
+\newcommand\useDefaultDS{font-family:Helvetica,sans-serif;%
+    font-size:12.0pt;font-style:normal;font-weight:normal;%
+    text-align:left;color:\rt@hashtag000000}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\setDefaultStyle}
+%\begin{verbatim}
+%   \setDefaultStyle{myDS}{font=Arial,...,color=#ff0000}
+%\end{verbatim}
+%    \begin{macrocode}
+\newcommand{\setDefaultStyle}[2]{\begingroup
+    \edef\x{\noexpand\setkeys{rtFont}{#2}}\x
+    \edef\x{\noexpand\setkeys{rtFontStyle}{\rf@style}}\x
+    \ifx\rf@ul\@empty\else
+        \let\rt@ul\@empty\PackageWarning{richtext}{%
+            The ul key is not supported within\MessageBreak
+            \string\setDefaultStyle. Ignoring it}\fi
+    \ifx\rf@raise\@empty\else
+        \let\rt@raise\@empty\PackageWarning{richtext}{%
+            The raise key is not supported within\MessageBreak
+            \string\setDefaultStyle. Ignoring it}\fi
+    \ifx\rt@url\@empty\else\let\rf@url\@empty
+        \PackageWarning{richtext}{%
+            The url key is not supported within\MessageBreak
+            \string\setDefaultStyle. Ignoring it}\fi
+%    \end{macrocode}
+%    Fill in any missing essential attributes.
+%    \begin{macrocode}
+     \ifx\rf@font\@empty
+        \def\rf@font{font-family:Helvetica,sans-serif}\fi
+     \ifx\rf@size\@empty\def\rf@size{font-size:\rf@size@pt}\fi
+     \ifx\rf@color\@empty\def\rf@color{color:\rt@hashtag000000}\fi
+    \rt@csarg\xdef{#1-DS}{\rt@DSAttr}%
+\endgroup}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\useDS}
+%    \verb!\useDS{<name>}!
+%    \begin{macrocode}
+\newcommand{\useDS}[1]{\@nameuse{#1-DS}}
+%    \end{macrocode}
+%    \end{macro}
+%    \section{Passing the rich content to \texorpdfstring{\psf{RV}}{RV}
+%       and \texorpdfstring{\psf{V}}{V}}
+%    \begin{macro}{\setRVVContent}
+%    |\setRVVContent{{name_1}{name_1}...{name_k}}| or |\setRVVContent{name}|
+%    \changes{v1.0a}{2016/09/30}{Allow \string\cs{setRVVContent} to have only one argument.}
+%    \begin{macrocode}
+\newif\ifrt@firsttok \rt@firsttoktrue
+\newif\ifrt@itsskipline \rt@itsskiplinefalse
+%    \end{macrocode}
+%    \cmd{\rt@addtoRVV} is a convenience internal command to add the name \texttt{\#1}
+%    both to \cs{toks0}, which holds the \psf{RV} string, and to \cs{toks2}, which holds the \psf{V} string.
+%    \begin{macrocode}
+\def\rt@addtoRVV#1{%
+    \toks4={\useRV{#1}}\edef\rt@tmpRV{\the\toks0\the\toks4}%
+    \toks4={\useV{#1}}\edef\rt@tmpV{\the\toks2\the\toks4}%
+    \toks0=\expandafter{\rt@tmpRV}\toks2=\expandafter{\rt@tmpV}%
+}
+%    \end{macrocode}
+%    We begin \cmd{\setRVVContent}
+%    \begin{macrocode}
+\def\rt@testifbgroup{\@ifnextchar\bgroup
+    {\let\rt@nultiargs=1\rt@gobbletonil}
+    {\let\rt@nultiargs=0\rt@gobbletonil}}
+\newcommand{\setRVVContent}[2]{\begingroup
+    \rt@firsttoktrue \rt@itsskiplinefalse
+    \rt@testifbgroup#2\@nil
+    \def\contName{#1}\toks0={}\toks2={}\toks4={}%
+    \if\rt@nultiargs1\def\rt@next{\setRVVContent@i#2;}\else
+    \def\rt@next{\setRVVContent@i{#2};}\fi\rt@next}
+\def\setRVVContent@i#1{\def\rt@argi{#1}%
+    \ifx\rt@argi\rt@SC
+%    \end{macrocode}
+%    If a semi-colon (\cs{rt@SC}), we are finished. Make the definitions
+%    for \psf{RV} and \psf{V}, and exit.
+%    \begin{macrocode}
+        \rt@csarg\xdef{\contName-vcont}{\the\toks0}%
+        \rt@csarg\xdef{\contName-pcont}{\the\toks2}%
+        \let\rt@next\endgroup
+    \else
+%    \end{macrocode}
+%    See if the current argument has been declared earlier by \cs{rtpara}.
+%    If not, we issue a warning and ignore it.
+%    \begin{macrocode}
+        \expandafter\ifx\csname #1-ri\endcsname\relax
+            \PackageWarning{richtext}
+            {The name '#1' is not declared,\MessageBreak
+            will ignore it. Check the spelling}%
+            \def\rt@next{\setRVVContent@i}%
+        \else
+%    \end{macrocode}
+%    We want to automatically induce \texttt{par} between non-\texttt{lineskip}
+%    tokens. The automatic \texttt{par} goes in prior to the token, so we first
+%    skip the first token.
+%    \begin{macrocode}
+            \ifrt@firsttok\rt@firsttokfalse\else
+%    \end{macrocode}
+%    Not the first token, see if it is a \texttt{skipline}, if yes, register it
+%    as a skip line for the next token.
+%    \begin{macrocode}
+                \ifx\rt@argi\rt@skipline
+                    \rt@itsskiplinetrue
+                \else
+%    \end{macrocode}
+%    If the previous token was a \texttt{skipline}, we don't induce a \texttt{par}.
+%    \begin{macrocode}
+                    \ifrt@itsskipline
+                        \rt@addtoRVV{br}\rt@itsskiplinefalse
+                    \else
+%    \end{macrocode}
+%    Finally, if this is not a \texttt{skipline}, and the previous token is not a \texttt{skipline},
+%    we induce a \texttt{par}.
+%    \begin{macrocode}
+                        \rt@addtoRVV{par}%
+                    \fi
+                \fi
+            \fi
+            \rt@addtoRVV{#1}%
+            \def\rt@next{\setRVVContent@i}%
+        \fi
+    \fi\rt@next
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\useRVContent}
+%    \verb!\useRVConent{<name>}!
+%    \begin{macro}{\useVContent}
+%    \verb!\useVConent{<name>}!
+%    \begin{macrocode}
+\def\useRVContent#1{\@nameuse{#1-vcont}}
+\def\useVContent#1{\@nameuse{#1-pcont}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+\endinput
+
+% iPad
+% Landscape
+% w: 7.75in
+% h: 5.8in

@@ -1,0 +1,254 @@
+\documentclass[pagesize=auto, parskip=half, headings=normal]{scrartcl}
+
+\usepackage{fixltx2e}
+\usepackage{etex}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{hologo}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\newcommand*{\mail}[1]{\href{mailto:#1}{\texttt{#1}}}
+\newcommand*{\pkg}[1]{\textsf{#1}}
+\newcommand*{\cls}[1]{\textsf{#1}}
+\newcommand*{\cs}[1]{\texttt{\textbackslash#1}}
+\makeatletter
+\newcommand*{\cmd}[1]{\cs{\expandafter\@gobble\string#1}}
+\makeatother
+\newcommand*{\opt}[1]{\texttt{#1}}
+\newcommand*{\meta}[1]{\textlangle\textsl{#1}\textrangle}
+\newcommand*{\marg}[1]{\texttt{\{}\meta{#1}\texttt{\}}}
+
+\addtokomafont{title}{\rmfamily}
+
+\title{The \pkg{smartref} package\thanks{This manual corresponds to \pkg{smartref.sty}~v1.9, dated~2002/02/28.}}
+\author{Giuseppe Bilotta\thanks{\mail{bourbaki@bigfoot.com}}}
+\date{2002/02/28}
+
+
+\begin{document}
+
+\maketitle
+
+The purpose of this package is to extend the capability of the
+the \cmd{\ref} command; precisely, whenever a label is set, this
+package records, along with the label, the values of some other
+counters (which, can be selected by the user); then, the value of
+these counters can be recalled, with a command similar to
+\cmd{\pageref}; moreover, this package adds a command (\cmd{\s\meta{name}ref}) for
+each counter added, that displays something only if the value of
+the \meta{name} counter is changed from when the label is set. For
+example, let's say that we are using the \cls{amsbook} class, and we
+are numbering theorems within sections; when we want to refer to
+a theorem in another section, same chapter, we just say
+`\verb|as in theorem \ref{zorn}|'; but if we want to refer to a theorem in
+another chapter, we have to set a label for that chapter and then
+say `\verb|as in theorem \ref{zorn}, in chapter \ref{chapterofzorn}|';
+if we, later on, move the referenced theorem (or the referencing
+line) in some other chapter, we might need to update the
+references; with this package, there's no need for that: you say,
+at the beginning of the document:
+%
+\begin{verbatim}
+    \addtoreflist{chapter}
+\end{verbatim}
+%
+and then, every \cmd{\label} is recorded alongside with the chapter in
+which it occurred. When we refer to the theorem, we might now say
+%
+\begin{verbatim}
+    theorem \ref{zorn}, chapter \chapterref{zorn}
+\end{verbatim}
+%
+if we are sure it will always be in another chapter, or
+%
+\begin{verbatim}
+    theorem \ref{zorn}\schapterref{zorn}
+\end{verbatim}
+%
+where the second command prints nothing if the chapter is the same
+as the current, or prints `\verb|, chap. \chapterref{zorn}|' if the chapter
+has changed. Since this command sequence is supposed to be used with
+quite a frequency, it is not-so-short-handed by \cmd{\srefchapterref}
+(\cmd{\sref\meta{name}ref}, in general).
+
+Here's a complete list of the commands made available by this
+package.
+%
+\begin{quote}
+  \cmd{\addtoreflist}\marg{name}
+\end{quote}
+%
+This is the first command called: it says that the \meta{name} counter
+is to be recorded alongside with all the (following) labels;
+please use it \emph{before} defining any label, because the result is
+unknown if the SmartReference list changes during use (nothing
+special should happen, anyhow; it should work correctly).
+
+The previous command defines a few commands, whose name depends
+on the counter chosen. The commands are:
+%
+\begin{quote}
+  \cmd{\sget\meta{name}val}\texttt{\{}\cs{\meta{variable}}\texttt{\}}\marg{foo}
+\end{quote}
+%
+This command gets the value of counter \meta{name} recorded with label
+\meta{foo}, and puts this value in the chosen \cs{\meta{variable}}.
+
+\begin{quote}
+  \cs{\meta{name}ref}\marg{foo}
+\end{quote}
+%
+This command prints the value of the counter \meta{name} recorded with
+label \meta{foo}.
+
+\begin{quote}
+  \cs{if\meta{name}changed}
+\end{quote}
+%
+`If' construct for the next two commands:
+%
+\begin{quote}
+  \cmd{\is\meta{name}changed}\marg{foo}
+\end{quote}
+%
+Checks whether the \meta{name} counter is changed from value recorded
+with \meta{foo}, and sets \cs{\meta{name}changed} accordingly
+
+\begin{quote}
+  \cmd{\s\meta{name}ref}\marg{foo}
+\end{quote}
+%
+This command prints nothing if the value of \meta{name} is not
+different, but prints
+%
+\begin{quote}
+  \ttfamily
+  , \cmd{\short\meta{name}name} \cs{\meta{name}ref}\marg{foo}
+\end{quote}
+%
+if the
+value did change; the \cmd{\short\meta{name}name} should be defined by the
+user. It queries by using the previous command.
+
+\begin{quote}
+  \cmd{\sref\meta{name}ref}\marg{foo}
+\end{quote}
+%
+Equivalent of `\cmd{\ref}\marg{foo}\cmd{\s\meta{name}ref}\marg{foo}'.
+
+\pagebreak[2]
+
+The only options accepted, as for now, are \opt{chapter} and \opt{part};
+\opt{chapter} does the following:
+%
+\begin{itemize}
+\item adds the \texttt{chapter} counter to the smart list
+\item defines \cmd{\shortchaptername} to be `Cap.' if \pkg{babel} is loaded with
+  option \opt{italian}, `Chap.' otherwise
+\item defines \cmd{\smartref} to be \cmd{\srefchapterref}
+\end{itemize}
+
+\opt{part} does the following:
+%
+\begin{itemize}
+\item adds the \texttt{part} counter to the smart list
+\item defines \cmd{\shortpartname} to be `Parte' if \pkg{babel} is loaded with
+  option \opt{italian}, `Part' otherwise
+\item defines \cmd{\smartref} to be \cmd{\srefpartref} if previously undefined,
+  or adds \cmd{\spartref} to previous definition of \cmd{\smartref} (saved in
+  \cmd{\nopart@smartref}) otherwise (this is mainly to be used after the
+  option \opt{chapter}).
+\end{itemize}
+
+As of version~1.6, the package comes with a small style file:
+%
+\begin{quote}
+  \texttt{byname.sty};
+\end{quote}
+%
+it can be used alone, or within \pkg{smartref}, when the option
+\opt{byname} is used; it adds the command
+%
+\begin{quote}
+  \cmd{\byname}\marg{label}
+\end{quote}
+%
+that can be used when referencing to a section (subsection, etc) by
+name instead of number. As of version~1.8, the same style file also
+provides the command \cmd{\byshortname} that does the same as \cmd{\byname},
+except that it uses the ``short'' name (the one provided in square
+brackets).
+
+Note that the references create by \pkg{smartref} and \pkg{byname} are \emph{not}
+hyperlink, when \pkg{hyperref} is active. Maybe in the future \dots
+
+(You can still have ``named'' links with \pkg{hyperref} using the \pkg{nameref}
+style file provided with \pkg{hyperref} itself).
+
+\medskip\centerline{$***$}\medskip
+
+Please send me any bugs, comments, suggestions, hacks, etc etc
+etc \dots
+
+Giuseppe Bilotta
+
+Email: \mail{bourbaki@bigfoot.com}
+
+Heartily thanks to James Kilfiger (\mail{mapdn@csv.warwick.ac.uk}) whose
+consulence has been essential (let me say vital) to the birth of
+this small package in its first revision (v0.1); it was him who
+gave me the idea to hack the \cmd{\label} command, and then encouraged
+me to put the newborn code in a package (and telling me how to do
+it!); it was also him that pointed out a potential bug in
+documents where chapters don't start on a page on their own
+(seems that the bug is not present, anyway \dots).
+
+\medskip\centerline{$***$}
+
+
+\section*{TODOs:}
+
+\begin{itemize}
+\item \pkg{Babel}: instead of \cmd{\chaptername} (for example), this package uses
+  \cmd{\short\-chapter\-name}, and this is not yet changed by \pkg{Babel}; you can
+  set it up to your short form of chapter. Please send me the short
+  names, so that I can implement them.
+
+\item Maybe put an option (\opt{long}) to make \cmd{\short\meta{name}name} an alias for
+  \cs{\meta{name}name}
+
+\item Options: If the option is not recognized, check if it's a counter,
+  and add it; otherwise, do nothing
+
+\item Smartrefs: check for counters that get reset by other counters
+  (section in chapter, etc); maybe link to the \cmd{\@addtoreset}
+  internal command \dots
+
+\item \pkg{ByName}: refine, and add commands to do both references with a single
+  command
+\end{itemize}
+
+\medskip\centerline{$***$}
+
+
+\section*{History:}
+
+\begin{labeling}{v1.9}
+\item[v0.1] First release (only did chapter and part).
+\item[v1.0] First customizable release.
+\item[v1.1] Made it work with \pkg{HyperRef}.
+\item[v1.5] Added \pkg{nameref.sty}: reference by name.
+\item[v1.6] Changed name to \pkg{byname.sty}, because of name conflict with style
+  file from the \pkg{HyperRef} bundle.
+\item[v1.8] Fixed bugs in \pkg{smartref}, changed behaviour for unknown options,
+  fixed bug in \pkg{byname} that actually prevented it from functioning
+  properly.
+\item[v1.9] Fixed limitation with \hologo{AmSLaTeX}: would not handle \cmd{\labels} within
+  equation because \hologo{AmSLaTeX} redefines the \cmd{\label} command for
+  equations.\\
+  Made \cmd{\smartref} robust.	 
+\end{labeling}
+
+\end{document}

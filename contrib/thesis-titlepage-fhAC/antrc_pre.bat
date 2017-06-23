@@ -1,0 +1,13 @@
+set JAVA_HOME=c:/Programme/Java/jdk1.5.0_06
+rem set JAVA_HOME=c:/Programme/Java/j2sdk1.4.2_10
+set PATH=%JAVA_HOME%;%PATH%
+set JWDSP_HOME=c:/Programme/Apache Software Foundation/Tomcat 5.5
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/build/jdom.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/jaxen-jdom.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/jaxen-core.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/saxpath.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/xalan.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/xerces.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Java/jdom-1.0/lib/xml-apis.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Apache Software Foundation/Maven 1.0/lib/log4j-1.2.8.jar;
+set CLASSPATH=%CLASSPATH%;c:/Programme/Apache Software Foundation/cocoon-2.1.5.1/lib/endorsed/jakarta-regexp-1.3.jar;

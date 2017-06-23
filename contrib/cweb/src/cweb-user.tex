@@ -1,0 +1,779 @@
+% $DocId: cweb-user.tex,v 2.10 1995/11/20 22:34:16 schrod Exp $
+%------------------------------------------------------------
+
+%
+% user manual/requirement definition for cweb class
+%
+% [LaTeX]
+% (history at end)
+
+
+% This file is either a subdocument of the style doc or a document on
+% its own. In the former case it's a chapter, in the latter it's a
+% ``normal'' LaTeX progltx document.
+%     If it's a subdocument, this file will be included after
+% \begin{document}. We can detect this: \document redefines
+% \documentclass to be \@twoclasseserror. Then we also have to define
+% how this document is ended: Either by \endinput or by an additional
+% revision log.
+% Of course, this test works only if LaTeX 2e is used for processing.
+
+\expandafter\ifx \csname @twoclasseserror\endcsname \documentclass
+
+        \let\endSubDocument=\endinput
+
+        \chap What's this class for?.
+
+\else
+
+        \let\endSubDocument=\relax
+
+        \documentclass{progltx}
+
+        \usepackage{cweb-doc}           % additional document-specific markup
+        \usepackage{a4-9}               % Tschichold's A4 layout
+
+
+        \begin{document}
+
+        \title{The \texttt{cweb} Class}
+        \author{Joachim Schrod%
+            \thanks{Email: \texttt{jschrod@acm.org}}%
+            }
+
+        \RCS $DocDate: 1995/11/20 22:34:16 $
+        \date{%
+            \RCSDocDate\\[3pt] % LaTeX Error: Paragraph terminated too early
+            (Revision \RCSStyleRevision{} of \texttt{cweb.cls})%
+            }
+
+        \maketitle
+
+        \sect
+
+\fi
+
+\cweb{} is a Literate Programming tool that enables you to combine
+documentation and actual C or \C++ code in one document. The \cls{cweb}
+class allows you to use \LaTeX{} for the documentation of your \cweb{}
+programs. Now a \cweb{} document is like a usual \LaTeX{}
+document---as you have probably written dozens before.  With all the
+features of \LaTeX{}, and with all the quirks of \LaTeX{}.
+
+Originally, \cweb{} was only usable with Plain \TeX{}, as \cweave{}
+outputs \TeX{} code that looks as if it were Plain \TeX{}. Well, it
+isn't---it's just not the normal \LaTeX{} markup. No change in
+\cweave{} is necessary to use \LaTeX{}.
+
+For the sake of those \cweb{} programmers who have used the original
+markup interface (i.e., the Plain \TeX{} macros) before, I'll
+sometimes contrast the approach presented here with the original one.
+Then I'll call the original interface ``Plain \cweb{}''. The new
+interface is called ``\LaTeX{} \cweb{}''.
+
+If you never used \cweb{} before, you won't find enough information in
+this manual. Please read the user manual of \cweb{} first, and then
+come back again. I assume a working knowledge, and will only present
+the new stuff introduced by this class.
+
+
+\sect This bundle does \emph{not} support inclusion of \cweb{} code in
+other (general) \LaTeX{} documents. This is not the task of the
+\cls{cweb} class -- its task is the usage of \LaTeX{} for creation of
+\cweb{} documents.
+
+Note also that you will not be able to \LaTeX{} your \cweb{} documents
+(i.e., the program files) directly. You must still process them first
+by \cweave{}, then you can use \LaTeX{} to process the resulting
+\TeX{} file.
+
+
+\sect You have to use \cweb{} version~3 and you need at least \LaTeX{}
+version \mbox{$\langle$1994/12/01$\rangle$} (or any later one), this
+class does not work with older versions.
+
+
+\sect A \cweb{} document has two concurrent structures, a
+\textsl{document structure} and a \textsl{program structure}.
+
+The basic building block of the document structure, the bricks that
+build up our document, are called \textsl{chunks}. We use chunks to
+present one point of our work to our reader, the presentation has both
+informal (explanation) and formal parts (code). This is the essence of
+Literate Programming, that we tell each point twice, once on an
+abstract and once on a technical level.
+
+A chunk consists of three parts: (1)~the \textsl{documentation part},
+(2)~the \textsl{definition part}, and (3)~the \textsl{program part}.
+Each of these parts can be empty. The documentation part is mostly
+text with \LaTeX{} tags. In this text material from \textsl{restricted
+program mode} can appear. The definition part consists of a series of
+either \textsl{macro} or \textsl{format definitions}. The program part
+is one piece of a refinement, identified by a name (see below).
+
+A chunk starts with `\verb*|@ |', and gets assigned a unique
+identification, a number; we'll use that number to refer to that
+chunk. In particular, the number is of interest when we want to refer
+to the code part of the chunk, otherwise it's often regarded as
+superfluous.
+
+\sect And we have higher-level structure elements as well. They combine a
+sequence of chunks and a sequence of structure elements on a lower
+level, both sequences may be empty. As usual in \LaTeX{}, we call
+these elements \textsl{section divisions} or short \textsl{sections}.
+We do not give them names
+like `part,' `chapter,' `subsection,' etc., to denote their level;
+most often we'll use level-numbers (sometimes called \textit{rank})
+instead.
+
+A section division starts with `|@*|' and is followed by a character, the rank
+indicator. The highest rank is~`|@**|', you can think of it as an
+equivalence to \LaTeX{}'s |\part|. (Often we don't use that rank in
+smaller programs, as we don't use |\part| in smaller articles.) A
+section on the next rank is started with~`\verb*|@* |' (synonym to
+`|@*0|'), roughly equivalent to chapters.  Then we'll use numbers to
+mark the next ranks, from |@*1| to~|@*9| (sections to
+sub$^{9}$sections). That's outrageous---I'll hope you'll never use
+11~hierarchy levels in your documents, they would be unreadable.
+
+A section has a title, that title comes after the section start tag
+and ends with a full stop. If you need periods in your title, enclose
+them in braces. (That behavior can be changed if there's enough
+interest. I can also make it possible to use braces to delimit the
+section title, as in |\section|, etc. Send mail with your opinion.)
+
+As a matter of convenience, a section implicitly starts a chunk;
+i.e., one does not need to use `\verb*|@ |' after the section title.
+Of course, it doesn't hurt to use it either.
+
+\medskip
+
+The explanation might have been a bit too abstract, so let me make one
+thing plain clear: You should \emph{never ever} use |\part|,
+|\chapter|, |\section|, or any other \LaTeX{} sectioning command in
+your \cweb{} documents. Use the sectioning commands of \cweb{}, i.e.,
+`|@*|\textit{rank}'.
+
+
+
+\sect The description above does not mean that the output is fixed to
+the style you'll know from the \cls{book} or \cls{report} document
+classes. Quite in contrary, the default layout is oriented along the
+\cls{article} class.
+
+There is a very easy possibility to change that default layout: With
+the option |baseclass| (see chunk~\ref{chunk:baseclass}) you can
+specify the document class \cls{cweb} inherits from. If that document
+class has chapters (like \cls{report} or \cls{book}), you'll get the
+layout as you're used from these classes.
+
+
+\sect In Plain \cweb{}, the term \textit{section} was used for
+`chunk.' We abstain from that usage, as sections are used in \LaTeX{}
+(and in almost all other documentation systems, for that matter) to
+designate higher-level structure elements. We prefer to follow the
+traditional usage of terms here, even if that means that we'll have to
+confront Plain \cweb{} users with a slight shift in semantics.
+
+And you'll find the term \textit{starred section} in Plain \cweb{} and
+might think these are our sections. Well, almost. There's a subtle,
+but important difference between these starred sections and our
+terminology: A starred section is just a chunk with a special
+attribute (a title). That title will appear in a table of contents,
+but that does not mean that the starred section is an element to
+denote a structural \emph{hierarchy}.
+
+You won't find a section number like `1.5.2' in Plain \cweb{}, do you?
+--- In \LaTeX{} \cweb{}, you've got the choice. You have the new
+support of the hierarchical structure, or you may stay with Plain
+\cweb{}'s (flat) structure.
+
+
+\sect We still have one open point in our explanation of the
+document's structure. As mentioned at the start, we've got two
+concurrent structures, let's have a look at the program structure
+finally.
+
+A \cweb{} program consists of a tree of \textsl{refinements}. A
+refinement is a sequence of program parts with the same name, ordered
+in appearance in the document. The root of the tree is the refinement
+with the special name~|@c|.
+
+The complete program text is defined by the depth-first traversal
+(DFS, i.e.\ infix-order) of the tree, the tool \ctangle{} extracts the
+program text from a \cweb{} document.
+
+
+
+
+\chap Markup for your document structure.
+
+Like every \LaTeX{} document, a \cweb{} document starts with a
+document class specification; then comes the preamble, terminated by
+the document start. This way we brought some structure in the \cweb{}
+limbo, but this shouldn't be a problem for you. You must tag the end
+of the document, as you do in other \LaTeX{} files. But here you must
+take a bit more care:
+%
+\begin{quote}
+  \itshape
+
+  Assert that the\/ |\end{document}| is in the documentation part of
+  a\/ chunk, neither in the definition nor in the program part.
+
+\end{quote}
+%
+If it would be in the program part, \cweave{} would readily process it
+and \LaTeX{} would never see this tag. Nevertheless, if you make this
+mistake, you will detect it early: \ctangle{} will copy this tag to
+the C file as well, and your program will be erroneous\,\dots
+
+And there's another difference you'll have to take care of: Usually
+you can put arbitrary text after the end of your document, \LaTeX{}
+will not see it. Please note that both \ctangle{} and \cweave{} will
+still see it---don't put a program part or even complete chunks there.
+For technical reasons, there must not be any |\fi| token after the
+document end, too.
+
+
+\sect The resulting structure of your \cweb{} document is exemplified
+in figure~\ref{fig:structure}. Note that |\end{document}| is placed
+in a new, empty, chunk. This isn't necessary, you could write more
+documentation there---but it's considered good style to use a sole
+chunk for document finish.
+
+%% my little joke
+\begin{figure}
+
+\setbox0=\vbox{\parindent=0pt \hsize=.85\textwidth
+\begin{minipage}{\hsize}
+\begin{verbatim}
+\documentclass{cweb}
+
+\begin{document}
+
+\title{My Program, Doomed for the ACM Software Systems Award}
+\author{Joe L. User}
+
+\maketitle
+
+\tableofcontents        % if you want
+
+
+@* A PSPACE solution for the Traveling Salesman.
+
+< insert your program here >
+
+
+
+@
+\end{document}
+\end{verbatim}
+\end{minipage}
+}
+
+\begin{center}
+\fboxsep=1em
+\fbox{\box0}
+\end{center}
+
+\caption{Exemplified \cweb{} document structure}
+\label{fig:structure}
+\end{figure}
+
+
+\sect If you don't call \cweave{} with the |-x| option, an identifier
+index and a list of all refinements is created at the end of the
+document. You can specify an introductionary text for the index with
+the tag |\cwebIndexIntro|, the introduction is the argument of this
+tag.
+
+
+
+
+\chap Configuration.
+
+You may configure the \cls{cweb} class in several ways, with class
+options, redefinitions in the preamble, supplying additional
+packages, and by subclassing it.
+
+At start of the processing, the file |cweb.cfg| is read if it exists.
+That file may contain configuration code that shall apply to all your
+\cweb{} documents. You can set the paper size there, etc. Please don't
+set the default structure there (see
+chunk~\ref{chunk:structure-option}), others would get different results
+when they process your document.
+
+
+\sect Options are specified with the new ``keyword$=$value''-scheme,
+first introduced with the \pkg{graphicx} package. I.e., the options have a
+set of possible values, you may choose one. For instance, the option
+|structure| has the possible values |flat| and |hierarchic|. You tell
+that you want a flat document structure by
+%
+\begin{quote}
+  |\documentclass[structure=flat]{cweb}|
+\end{quote}
+%
+As usual, options are separated by commas. From the set of possible
+option values, two ones are special: The \textsl{predefined value} and
+the \textsl{default value}. The predefined value is the one that's
+used when you don't specify the option at all. The default value is
+used of you don't specify the value in the option; e.g.,
+%
+\begin{quote}
+  |\documentclass[suppress]{cweb}|
+\end{quote}
+%
+selects the default value of the option |suppress|. (Not that there is
+one currently. :--)
+
+There is always a predefined value, a default value may not be there.
+If a default value exists, it is always different from the predefined
+one. The default value gives you an easy specification of an option
+value that is expected to be common. If that value would be the
+predefined one, you won't need to specify the option in the first
+hand.
+
+The following options are available and explained below:
+%
+\begin{options}
+\item[structure] Select the structure model used by the \cls{cweb}
+  class.
+\item[suppress] Suppress output of different document parts.
+\item[baseclass] Select the base document class.
+\item[language] Select a language for inserted texts.
+\end{options}
+
+
+\sect \label{chunk:structure-option}
+
+We have two possibilities to output chunks and sections, either
+as a flat or as a hierarchic structure. This configuration is selected
+by the option |structure|, either through the value |flat| or
+|hierarchic|.
+%
+\begin{options}
+
+\item[flat] The flat structure is the ``classic'' approach,
+  the way Plain \cweb{} renders its chunks. Then each chunk starts
+  with its number. The chunk numbers are output in boldface, followed
+  by a dot and a quad.
+
+  Sections show chunk numbers as well (remember, they implicitly
+  start a chunk). ``Important'' sections are added to the table of
+  contents.
+
+\item[hierarchic] The hierarchic structure is the
+  ``modernistic'' (aka \LaTeX{}) approach, then we mark the start of a
+  chunk by a start sign. (By default, that's a paragraph sign, `\P').
+  Chunk numbers are rendered in the margin of the program part. If
+  there's no program part, no chunk number will be rendered---after
+  all, they are only used for identification of program parts.
+
+  Section numbers are hierarchic, like in other \LaTeX{} document
+  classes.
+
+\end{options}
+%
+The predefined value of |structure| is |hierarchic|. There doesn't
+exist a default value.
+
+
+\sect The option |suppress| allows to select suppression of different
+document parts. You have different parts you can suppress. The value
+of the |suppress| option is a comma-separated list of identifiers,
+enclosed in braces. If you have only one thing you want to suppress,
+you don't need to surround that identifier by braces. Possible
+identifiers are:
+
+\begin{options}
+
+\item[changehints] suppress output of hints that a changefile was
+  used: The change flag (by default a star at the start of a chunk)
+  and the list of changed chunks at the end of the document.
+
+\item[unchanged] suppress output of chunks that are not changed by
+  a changefile. This value implies |changehints|---by definition all
+  printed chunks are changed, it doesn't make any sense to hint to
+  that fact in addition.
+
+\item[index] suppress the identifier index.
+
+\item[reflist] suppress the refinement list.
+
+\item[format] suppress output of `|@f|' directives.
+
+\end{options}
+
+The predefined value is the empty list, i.e., nothing is suppressed.
+There is no default value since I don't know which parts are
+suppressed most often. Send email with your demands, I'll add a
+default if I see that there is one major application of this option.
+
+
+\sect \label{chunk:baseclass} The option |baseclass| allows to select
+the base document class used by the \cls{cweb} class.  In particular,
+if the base class has |\chapter| defined the layout of major section
+divisions (`|@**|' and `\verb*|@* |') will be changed to be in a
+chapter layout.
+
+The predefined value is |article|, the default value is |report|.
+
+
+\sect The option |language| allows to adapt inserted texts to
+different languages. E.g., with the option `|language=german|' German
+texts are inserted for cross references, headings, etc. That option
+will neither switch on language-specific hyphenation, nor will it
+trigger any other processing -- that's the task of Babel or any other
+\LaTeX{} language style.
+
+There is neither a predefined nor a default value. (Without the
+|language| option, inserted texts are in English.)
+
+That option actually triggers the usage of a package
+\pkg{cwbl-\textit{language}}. To see if a language is supported, you
+have to look for respective files in the \LaTeX{} \cweb{} macro
+directory.%
+    \footnote{That's |texmf/tex/latex/cweb|, on a TDS compliant
+    installation. Please beware that pseudo operating systems like DOS
+    cripple file names and shorten them to eight characters; if you
+    see a file |cwbl-ger.sty| you'll know that the option value
+    |german| is supported.}
+Of course, the easiest way to check the availability is to try it
+out -- you'll get a comprehensible error message if there is no
+respective \cweb{} language package. In November 1995, |german|,
+|french|, and |italian| were supported, more might have been added
+later.
+
+\smallskip
+
+For compatibility with Babel, some other options (e.g., |german| or
+|french|) are also supported as nicknames for
+|language=|\textit{option}. If you use packages that make also use of
+these options (e.g., \pkg{babel} or \pkg{varioref}), you'll probably
+prefer them over |language| since they are picked up by those packages
+as well.
+
+
+
+
+
+\chap Restrictions.
+
+The following restrictions will not be withdrawn as far as I can
+see---except if somebody will send me a patch with changes. I tried to
+sort the restrictions in order of severity.
+
+
+\sect \emph{(Restrictions due to the design of \cweave{}.)}
+
+Please be aware that the vertical bar (`\verb"|"') is used by \cweb{}
+to delimit small C code pieces in the documentation parts, and is
+therefore processed (and mangled) by \cweave{}. \emph{You cannot use
+it for \TeX{} any more.}
+
+In particular, you cannot specify rules for the |tabular| or the
+|array| environment. Since you most certainly want to do so: You have
+two choices left:
+%
+\begin{enumerate}
+
+\item Make sure you have the \pkg{array} package (by Frank Mittelbach and
+  David Carlisle, from the Tools bundle) installed. Then you may use
+  the package \pkg{cwebarray}, it defines `|I|' (that's an uppercase~`i')
+  as a specifier for rules. I.e., instead of
+  \verb"\begin{tabular}{l|l}" you have to write
+  |\begin{tabular}{lIl}|. Not the most elegant solution, but it
+  works\,\dots
+
+\item
+  Use `|^^7c|' instead of `\verb"|"'. I.e., instead of
+  \verb"\begin{tabular}{l|l}" you may write |\begin{tabular}{l^^7cl}|.
+
+\end{enumerate}
+%
+These two choices are compatible, you may use both in one document.
+Needless to say, I consider the first alternative the better one.
+
+
+\sect Neither a refinement name nor an index entry made by~|@^| may
+consist of a \emph{single} dot-accented term. I.e., you must not
+write `|@<\.O@>|', `|@^\.o@>|', or even `|@^\.{foolish}@>|'. Of
+course you may write `|@^\.o, accent@>|' or `|@< Handle accent \.o @>|'.
+
+
+\sect \emph{(Restriction due to the implementation of \LaTeX{}.)}
+
+One cannot use restricted C mode in moving arguments. Most notably,
+this is disturbing in the section titles and in |\caption|
+tags. Sorry, folks.
+
+(Basically, that's because the definition of |\addcontentsline|, etc.,
+in the \LaTeX{} kernel is brain damaged; it wants to expand its
+argument. And I don't want to maintain redefinitions of such basic
+macros.)
+
+
+\sect \emph{(Restrictions due to \TeX{}.)}
+
+\C++ comments (i.e., from |//| to the end of the line) are typeset as C
+comments. This is especially bad if they are used for a whole block of
+comment lines, as it is quite common. Please put such comment blocks
+in the documentation part. (An |\everyline| implementation would be
+needed to lift that restriction, and that's impossible in general.)
+
+
+
+
+\chap Details.
+
+The following tags are reserved and must neither be used nor redefined:
+ |\ATL|,
+ |\B|,
+ |\M|,
+ |\N|,
+ |\PB|,
+ and~|\Y|.
+
+|\9| is already explained in the \cweb{} user manual: It's a special
+control sequence used for the index entries tagged with~`|@:|'. Its
+default definition is setup in such a way that you can cheat
+\cweave{} concerning the sort order of this entry: If you enter
+`|@:sort}{print@>|' you will get an index entry ``print'' next to the
+place where the index entry ``sort'' would be. But you're allowed to
+change this default definition.%
+    \footnote{Remember: A package is a very good place to place such
+    redefinitions; your document should be concerned with contents, not
+    with appearance.}
+
+The names of all other control sequences defined by this
+class---besides the common \LaTeX{} control sequences---start with
+|cweb|, |Cweb|, or |cwbb|. Please don't define new control sequences starting
+with this prefix. (The control sequences starting with |Cweb| may be
+redefined in a package to change the appearance of the \cweb{}
+document or the behavior in a controlled manner, check the
+description of the internal interface for this possibility.)
+
+
+\sect Plain \cweb{} users
+should note that the macros from |cwebmac.tex| are not available any
+more. E.g., you cannot use |\.| to typeset typewriter material; use
+either |\texttt| or~|\verb|, as it fits the situation. On the other hand,
+now you're able to use |\.| for the dot accent, you can define |\3|
+for the `sharp~s', |\C++| for the \C++ logo,%
+  \footnote{I will not define any such logos in this class. A
+  package like \pkg{logos} with lots of name definitions is the
+  appropriate place for this.}
+etc.
+
+Another detail for ex-plainies: The table of contents is produced by
+the |\tableofcontents| tag (during the second \LaTeX{} run), not
+automatically. But this is the standard \LaTeX{} behavior.
+
+
+
+
+\chap Known Problems.
+\label{sec:problems}
+
+There is a bunch of known bugs, problems, and ommisions.
+
+\bigbreak
+
+\noindent \textit{Bugs:}
+ %
+\begin{itemize}
+
+\item The presentation of |@l| redefinitions is not proper. But it
+wasn't in Plain \cweb{}, either.
+
+\end{itemize}
+
+\noindent \textit{Problems:}
+ %
+\begin{itemize}
+
+\item You can't use |\index| and |\makeindex| as-is to create an
+  index. Add your entries instead to \cweave{}'s index using `|@^|',
+  `|@.|', or `|@:|'. That problem is caused by a clash in the usage of
+  the filename extension |idx| by \cweave{} and \LaTeX{}. The
+  \pkg{index} package by \textsc{David Jones} will help you to define
+  additional index categories (that use an other extension) if you
+  don't want to mix identifiers and your other index entries.
+
+\end{itemize}
+
+\noindent \textit{Ommisions} (``wouldn't it be nice, if''s):
+ %
+\begin{itemize}
+
+\item The current chunk number and most section titles (below rank 1
+  or~2, depending on the base class) are not available as a mark for
+  inclusion in a running head.
+
+\item Better integration of \pkg{rcs} package. That package is used to
+  support including information from the revision management system
+  RCS into the document. E.g., the revision log at the end of that
+  document was produced by that package.
+
+\end{itemize}
+
+
+\sect I would like to thank those who helped me to improve this bundle.
+% In particular, XXX provided XXXsubstantial parts of the code.
+
+\textsc{Michael M\"uller} and \textsc{Zden\v{e}k Wagner} did thorough
+checks that helped me to improve the alpha test version.
+
+\textsc{Christian Kumpf} triggered the addition of language support
+and pointed out where configuration could be made easier by supplying
+more macros in the protected interface. \textsc{Andreas Scherer}
+provided packages for French and Italian \cweb{} documents.
+
+\textsc{Laurent Desnogues},
+\textsc{Felix G\"artner},
+and
+\textsc{John S. Robinson}
+provided error and problem reports.
+\textsc{Bronne Louis} pointed out the embarrassing error that section
+numbers were not reset when a higher-level section began.
+
+
+
+\endSubDocument
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+\begin{rcslog}
+$DocLog: cweb-user.tex,v $
+\Revision 2.10 1995/11/20 22:34:16 schrod
+Add language support.\\
+Triggered by Christian Kumpf \path|<smurf@igd.fhg.de>| and Andreas
+Scherer \path|<scherer@physik.rwth-aachen.de>|.
+
+Use my `official' (ACM) email address.
+
+\Revision 2.9 1995/11/20 10:39:34 schrod
+    Explicate that one must not use |\section| etc., that one cannot
+\LaTeX{} the \cweb{} program directly but must run \cweave{} first,
+and that the \cls{cweb} class does not provide inclusion of \cweb{}
+programs in other \LaTeX{} documents.\\
+Clarification triggered by Laurent Desnogues
+\path|<laurent.desnogues@aiguemarine.unice.fr>|.
+
+\Revision 2.8 1995/09/15 10:22:58 schrod
+The \cls{cweb} class needs at least \LaTeX{} version
+\mbox{$\langle$1994/12/01$\rangle$}.\\
+Problem reported by John S. Robinson \path|jsrobin@umiacs.umd.edu|.
+
+\Revision 2.7 1995/09/12 22:58:38 schrod
+|cwbb| is also a reserved namespace.
+
+Added acknowledgements.
+
+\Revision 2.6 1995/08/29 17:34:14 schrod
+    \LaTeX{} \cweb{}, version 1.0.
+
+\Revision 2.5 1995/08/29 02:07:28 schrod
+Discard dependencies on 10\,pt fonts.
+
+Support suppression of format directives.
+
+\Revision 2.4 1995/08/27 19:31:11 schrod
+Suppression of index and reference list is supported.
+
+Discard documentation on |\cwebSecNoEject|, that's part of the
+protected interface.
+
+\Revision 2.3 1995/08/27 17:24:45 schrod
+Make usage of baseclass with chapters work.
+
+\Revision 2.2 1995/08/27 13:25:59 schrod
+Add possibility to suppress change hints. Suppression of unchanged
+chunks suppress change hints as well, they are meaningless as all
+printed chunks are changed by definition.
+
+Update problems section, they were partly resolved by the current
+changes. Added hint to \pkg{index} package that resolves the problem
+of extensions clashes with \MakeIndex{}.
+
+\Revision 2.1 1995/08/25 19:11:17 schrod
+Add keyword-value option style, with new \pkg{keyvald} package.
+
+Hierarchic strucutures are supported now, in addition to the flat
+structure of the beta-test version. One can choose with an option. For
+that step, the terminology was cleaned up, too: Chunks are not named
+sections any more. (That change involved reimplementation of almost
+all the structure and toc stuff.)
+
+The chunk number supplied by \cweave{} is used now, not some computed
+number. Change flags are printed, too.
+
+One can suppress output of unchanged sections.
+
+One can select the baseclass with an option. That may be used to use
+\cls{report} or \cls{book} to get chapter-style layout. Of course,
+using an arbitrary baseclass is dangerous, it must conform to the
+conventions of \LaTeX{} standard classes.
+
+\Revision 1.10 1995/08/08 00:14:28 schrod
+Updated to \LaTeXe{}, the |cweb| style is now a document class. Used
+my standard templates for that, no changes in functionality.
+
+\Revision 1.9  1993/08/10  14:15:40  schrod
+New page on main section only if group level $<$ |\cwebSecNoEject|.
+Default for the latter is 3.
+
+Document that logos will not be defined in this style file.
+
+Copy of plain macros for |\CwebNumber| does not work. Repaired the
+most important one (subscript must be accessed via |\sb|).
+Incompatibility to NFSS will be addressed later.\\
+(Problems reported by Zden\v{e}k Wagner \path|<wagner@csearn.bitnet>|.)
+
+\Revision 1.8  1993/08/10  11:21:03  schrod
+Reference to section number does not render a period after the
+number any more.
+
+\Revision 1.7  1993/08/09  18:05:54  schrod
+Mentioned that `\verb"|"' cannot be used for LaTeX purposes, in
+particular, not for ruled tables. Described workarounds, one of them
+is the new style option |cwebarray|.\\
+(Problem reported by Felix G\"artner
+\path|<theedge@rbg.informatik.th-darmstadt.de>|.)
+
+\Revision 1.6  1993/06/17  16:10:06  schrod
+`|cweb|' was still an option in the example.
+
+\Revision 1.5  1993/06/17  15:09:30  schrod
+\cweb{} 3.0 was released officially on June 16, 1993. Mentioned in
+the documentation that this version is needed for the |cweb| style.
+
+\Revision 1.4  1993/06/15  15:19:11  schrod
+It's a style now, was an option formerly.
+
+\Revision 1.3  1993/06/14  15:40:42  schrod
+Added section about restrictions (no restricted C mode material
+in moving arguments, no single dot-accented term in an index entry).
+
+\Revision 1.2  1993/05/12  20:23:32  schrod
+Adapted to recent changes of \cweave{} (of April 93): Main sections
+have a group level, represented in the table of contents.
+
+Boxed the example, it was not legible formerly.
+
+\Revision 1.1  1993/04/09  15:00:37  schrod
+Initial revision
+
+\end{rcslog}
+
+
+
+\end{document}
+
+% LocalWords:  baseclass DFS PSPACE graphicx changehints changefile reflist idx
+% LocalWords:  cwebarray cwebmac plainies ommisions if''s rcs cwbb uller Zden

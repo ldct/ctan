@@ -1,0 +1,122 @@
+%% Copyright 2016-… Maïeul Rouquette
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Maïeul Rouquette
+% This work consists of the files claves.dbx, claves.bbx
+% 0. Preamble
+
+\ProvidesFile{claves.dbx}[2017/04/09 v1.2.0 biblatex bibliography style (MR)]
+
+\ifdef{\biblatexmultipledm@bibstyle}
+	{\RequireBibliographyStyle{\biblatexmultipledm@bibstyle}}
+	{\RequireBibliographyStyle{verbose}}
+
+
+\RequirePackage{xpatch}
+
+% 1. Tools to declare new clavis
+\newcommand{\AddBiblatexClavis}[1]{%
+  \appto\biblatex@claves{#1,}%
+  \DeclareStyleSourcemap{%
+  	\maps[datatype=bibtex]{%
+  		\map[overwrite]{%
+  			\step[fieldsource=#1,final]%
+  			\step[fieldset=claves,fieldvalue={\string\multiclavesseparator\space\string\clavisformat{#1}\string\clavisseparator{}},append]%
+  			\step[fieldset=claves,origfieldval, append]
+  			}%
+			\map[overwrite]{%
+  			 \step[fieldsource=entrykey,match=\regexp{^#1$},final]
+				 \step[fieldset=claves_definition, origfieldval]
+  			}%
+    }%
+  }%
+}
+
+% 2. Format
+\newcommand{\multiclavesseparator}{\addsemicolon\ifpunct{\addspace}{}}
+\newcommand{\clavisseparator}{\addspace}
+\DeclareFieldFormat{claves}{\mkbibparens{#1}}
+\DeclareFieldFormat{claves_definition}{\clavisformat{#1}}
+\newcommand{\clavisformat}[1]{#1}
+
+% 3. Patching macro standard to add claves
+
+\newcommand{\@biblatex@claves@bibmacronotpatched}[1]{%
+  \PackageError{biblatex-claves}{Fail when patching `#1' bibmacro}%
+}%
+
+\xpatchbibmacro{title}
+  {\newunit}
+  {\usebibmacro{claves}}
+  {}
+  {\@biblatex@claves@bibmacronotpatched{title}}
+  
+\newbibmacro{claves}{%
+	\iffieldundef{claves}%
+	  {}%
+	  {
+	  \nopunct%
+		\setunit{\addspace}%
+		\printfield{claves}
+		}%
+	\newunit%
+}
+
+%4. List of claves
+
+\newcommand{\citeallclaves}{\nocite{\biblatex@claves}}
+
+\newcommand{\@biblatex@claves@bibdrivernotpatched}[1]{%
+  \PackageError{biblatex-claves}{Fail when patching `#1' bibdriver}%
+}%
+
+\newcommand{\clavesadddashinset}{%
+  \xpatchbibdriver{set}
+    {\booltrue{bbx@inset}}
+    {}%
+    {}%
+    {\@biblatex@claves@bibdrivernotpatched{claves}}%
+}
+\defbibenvironment{claves}%Inspired from shorthand environment
+  {\list
+     {\printtext[claves_definition]{\printfield[labelwidth]{entrykey}}}
+     {\setlength{\labelwidth}{\shorthandwidth}%
+      \setlength{\leftmargin}{\labelwidth}%
+      \setlength{\labelsep}{\biblabelsep}%
+      \addtolength{\leftmargin}{\labelsep}%
+      \setlength{\itemsep}{\bibitemsep}%
+      \setlength{\parsep}{\bibparsep}%
+      \renewcommand*{\makelabel}[1]{##1\hss}%
+	    \renewcommand{\entrysetpunct}{\endgraf}%Break between set of an enty
+	    \clavesadddashinset%Add the dash inside set (modify default style)
+	    }%
+	   }
+  {\endlist}
+  {\item}
+
+\DeclareSortingScheme{claves}{
+  \sort{
+    \field{entrykey}
+  }
+}
+
+
+%5. Inheritance
+  \DeclareDataInheritance{*}{*}{%
+	  \noinherit{claves_definition}%
+  }%
+
+  \DeclareDataInheritance{*}{inbook}{%
+	  \noinherit{claves}%
+  }%
+
+\endinput

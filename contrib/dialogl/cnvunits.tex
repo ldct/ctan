@@ -1,0 +1,139 @@
+% Copyright 1994 Michael John Downes
+% Copyright 2013 TeX Users Group
+% This file is part of the dialogl package, released under the LPPL;
+% see dialogl.ins for details.
+
+\newdimen\zdim \newdimen\tempdim \newdimen\tempdima
+
+% Conversion factors:
+%
+%       According    Scaled   Rational       Prime
+% Unit  to TeX       Points   Form           Factorization
+%-----------------------------------------------------------------
+% 1 sp  0.00002 pt   1        1/65536 pt     1 / 2^16
+% 1 mm  2.84526 pt   186467   7227/2540 pt   3*3*11*73 / 2*2*5*127
+% 1 cm  28.45274 pt  1864679  7227/254 pt    3*3*11*73 / 2*127
+% 1 pt  1.0 pt       65536    100/7227 in    2*2*5*5 / 3*3*11*73
+% 1 pc  12.0 pt      786432   12/1 pt
+% 1 dd  1.07 pt      70124    1238/1157 pt   2*619 / 13*89
+% 1 cc  12.8401 pt   841489   14856/1157 pt  2*2*2*3*619 / 13*89
+% 1 bp  1.00374 pt   65781    803/800 pt     11*73 / 2*2*2*2*2*5*5
+%                             [1/72 in]
+% 1 in  72.2699 pt   4736286  7227/100 pt    3*3*11*73 / 2*2*5*5
+%       [2.54 cm]             [254/100 cm]
+
+\def\points#1#2#3{\tempdim#2\relax
+  \edef#3{\csname cnvunits#1\expandafter\endcsname\the\tempdim}%
+}
+
+\def\inches#1#2#3{%
+  \tempdim=#2\relax
+  \tempdima=\ifdim\tempdim<\zdim -\fi\tempdim % absolute value
+  \roundup\tempdima{#1}{in}%
+%    In the interest of maximum accuracy we push \tempdima as near
+%    to \maxdimen as possible before dividing, using the prime
+%    factorization of the fraction 7227/100 which is the
+%    points/inches conversion factor.
+  \ifdim\tempdima<.01\maxdimen
+    \multiply\tempdima 100 \divide\tempdima 7227
+  \else
+    \ifdim\tempdima<.1\maxdimen
+      \multiply\tempdima 10 \divide\tempdima 11
+      \multiply\tempdima 10 \divide\tempdima 657
+    \else
+      \divide\tempdima 9 \multiply\tempdima 5
+      \divide\tempdima 803 \multiply\tempdima 20
+    \fi
+  \fi
+  \tempdim=\ifdim\tempdim<\zdim -\fi \tempdima
+  \edef#3{%
+    \csname cnvunits#1\expandafter\endcsname\the\tempdim}%
+}
+
+%    Function \roundup for rounding upward. #1 must be a dimension
+%    register. If it holds a negative value it will be rounded
+%    `outward' away from zero rather than `upward' toward zero. #3
+%    is a TeX units string such as "pt" or "in". If #2 = 0 then
+%    this will round up to the nearest tenth; if #2 = 00, nearest
+%    hundredth; and so forth (up to 5 zeros). If #2 is empty then
+%    full accuracy up to TeX's limits will be used.
+%
+%    The rounded result will be returned in the dimension register
+%    #1.
+
+\def\roundup#1#2#3{%
+  \if .#2.\else
+    \begingroup
+      \ifdim#1>\zdim
+        \advance#1-\maxdimen \advance#1.#25#3\relax
+      \fi
+      \ifdim#1<\zdim
+    \endgroup
+        \advance#1.#25#3
+      \else
+    \endgroup
+      \fi
+  \fi
+}
+
+\begingroup
+\catcode`\P=12 \catcode`\T=12
+\lowercase{%
+\expandafter\gdef\csname cnvunits\endcsname#1PT{#1}
+\expandafter\gdef\csname cnvunits0\endcsname#1.#2PT{%
+  #1.\takeone#20\takeone}
+\expandafter\gdef\csname cnvunits00\endcsname#1.#2PT{%
+  #1.\taketwo#200\taketwo}
+\expandafter\gdef\csname cnvunits000\endcsname#1.#2PT{%
+  #1.\takethree#2000\takethree}
+\expandafter\gdef\csname cnvunits0000\endcsname#1.#2PT{%
+  #1.\takefour#20000\takefour}
+\expandafter\gdef\csname cnvunits00000\endcsname#1.#2PT{%
+  #1.\takefive#200000\takefive}
+}%
+\endgroup
+
+\def\takeone#1#2\takeone{#1}
+\def\taketwo#1#2#3\taketwo{#1#2}
+\def\takethree#1#2#3#4\takethree{#1#2#3}
+\def\takefour#1#2#3#4#5\takefour{#1#2#3#4}
+\def\takefive#1#2#3#4#5#6\takefive{#1#2#3#4#5}
+
+\def\showinches#1{\inches{00}{#1}\converted
+  \immediate\write16{%
+    #1 = (after conversion) \converted\space inches}}
+
+\showinches{0in} \showinches{1in} \showinches{2.0in}
+\showinches{2.2in} \showinches{8.5in} \showinches{1pc}
+\showinches{6pc} \showinches{1cm} \showinches{1mm}
+\showinches{1bp} \showinches{72bp} \showinches{1cc}
+\showinches{1dd} \showinches{72dd} \showinches{5000pt}
+\showinches{-5000pt} \showinches{\maxdimen}
+\showinches{-\maxdimen} \showinches{.999\maxdimen}
+\showinches{1pt} \showinches{.01pt}
+
+\endinput
+
+%    From the TeX log:
+
+0in = (after conversion) 0.00 inches
+1in = (after conversion) 1.00 inches
+2.0in = (after conversion) 2.00 inches
+2.2in = (after conversion) 2.20 inches
+8.5in = (after conversion) 8.50 inches
+1pc = (after conversion) 0.17 inches
+6pc = (after conversion) 1.00 inches
+1cm = (after conversion) 0.39 inches
+1mm = (after conversion) 0.04 inches
+1bp = (after conversion) 0.01 inches
+72bp = (after conversion) 1.00 inches
+1cc = (after conversion) 0.18 inches
+1dd = (after conversion) 0.01 inches
+72dd = (after conversion) 1.07 inches
+5000pt = (after conversion) 69.18 inches
+-5000pt = (after conversion) -69.18 inches
+\maxdimen  = (after conversion) 226.70 inches
+-\maxdimen  = (after conversion) -226.70 inches
+.999\maxdimen  = (after conversion) 226.48 inches
+1pt = (after conversion) 0.01 inches
+.01pt = (after conversion) 0.00 inches

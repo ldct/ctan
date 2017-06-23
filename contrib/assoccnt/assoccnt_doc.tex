@@ -1,0 +1,997 @@
+%% LaTeX package assoccnt - version 0.8 (2015/09/29)
+%% Documentation for assoccnt.sty
+%%
+%%
+%%
+%% -------------------------------------------------------------------------------------------
+%% Copyright (c) 2015 by Dr. Christian Hupfer <christian dot hupfer at yahoo dot de>
+%% -------------------------------------------------------------------------------------------
+%%
+%% This work may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in
+%%   http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2005/12/01 or later.
+%%
+%% This work has the LPPL maintenance status `author-maintained'.
+%%
+%% This work consists of all files listed in README
+%%
+
+
+\documentclass[12pt,paper=a4]{article}
+
+
+\usepackage[lmargin=2cm,rmargin=2cm]{geometry}
+\usepackage{savesym}%
+\usepackage{bbding}%
+\savesymbol{Cross}%
+
+\usepackage{blindtext}%
+\usepackage{xcolor}
+\usepackage{imakeidx}%
+\usepackage{tcolorbox}
+\usepackage[tikz]{bclogo}
+\usepackage{marginnote}
+
+\usepackage{datetime}%
+
+\usepackage{scrlayer-scrpage}%
+
+
+
+\tcbuselibrary{listings}%
+\tcbuselibrary{documentation}%
+
+\usepackage{array}%
+
+
+
+\usepackage{amsmath}%
+\usepackage{amsthm}%
+
+%\usepackage{calc} % Only for testing
+\usepackage{totcount}%
+\usepackage{enumitem}%
+
+\usepackage[globalsuspend=true]{assoccnt}%
+
+
+
+\usepackage{bookmark}%
+
+
+\newcommand{\packagename}[1]{\textcolor{blue}{\textbf{\Envelope~#1}}\index{Paket!#1}}%
+
+
+
+\newcommand{\MarkupPackageName}[2][lightgray]{%
+\colorbox{#1}{\textcolor{black}{#2}}%
+}%
+
+\newcommand{\MarkupCounterName}[2][yellow]{%
+\colorbox{#1}{\textcolor{black}{\texttt{#2}}}%
+}%
+
+
+\let\DeclareAssociatedCountersOrig\DeclareAssociatedCounters
+
+
+\newtcolorbox{docCommandArgs}[1]{colbacktitle={blue},coltitle={white},title={Description of arguments of command \cs{#1}}}
+
+
+\def\packageversion{\assoccntpackageversion}%
+
+\makeindex
+
+\newcommand{\PackageDocName}{assoccnt}%
+
+
+\newtotcounter{totalpages}%
+\newtotcounter{anothertotalpages}%
+
+\newtotcounter{totalproofs}%
+\newtotcounter{totalsections}%
+
+\DeclareAssociatedCounters{section}{totalsections}%
+\DeclareAssociatedCounters{proof}{totalproofs}
+
+
+\DeclareAssociatedCounters{page}{totalpages,anothertotalpages}%
+
+
+
+\begin{document}
+\mmddyyyydate
+
+
+\setlength{\parindent}{0pt}
+
+\thispagestyle{empty}%
+
+\begin{center}
+\begin{tcolorbox}[colback=yellow!30!white,width=0.8\textwidth]
+\large \bfseries%
+\begin{center}%
+\begin{tabular}{c}%
+\textsc{\PackageDocName} \tabularnewline
+\tabularnewline
+Associate counters stepping simultaneously \tabularnewline
+\tabularnewline
+Version \packageversion \tabularnewline
+\tabularnewline
+\today \tabularnewline
+\tabularnewline
+\addtocounter{footnote}{2}
+Author: Christian Hupfer\(^\mathrm{\fnsymbol{footnote}}\)% }{\makeatletter christian.hupfer@yahoo.de}
+\tabularnewline
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+\makeatletter
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}%
+\footnotetext{christian.hupfer@yahoo.de}%
+\makeatother
+
+\end{center}
+
+\tableofcontents
+\clearpage
+
+
+
+
+\pagestyle{scrheadings}%
+\setheadsepline{2pt}[\color{blue}]
+\setfootsepline{2pt}[\color{brown}]
+\ifoot{\PackageDocName}
+\cfoot{\packageversion}
+\ofoot{\today}
+
+\setcounter{footnote}{0}
+
+
+\section{Introduction}
+
+The aim of this package is to provide some additional support for example for a package like \MarkupPackageName{totcount}. 
+
+For example, the total number of pages in a document could be achieved by using
+
+\begin{dispExample}%
+\regtotcounter{page}
+...
+The number of pages in the document is \number\totvalue{page} page(s). 
+\end{dispExample}%
+
+This will work, as long there is no reset of the page counter, as it might happen in the case of \cs{setcounter} or  \cs{pagenumbering} being applied in the document. The result is a false page counter total value. 
+
+This package provides associate counters, i.e. counters that are increased simultaneously with a driver counter and are not influenced by a a resetting of the driver counter, as long as not being added to the reset list by definition of the counter or explicitly by \cs{@addtoreset}. 
+
+This package defines some macros to handle associated counters. The only interception to the standard behaviour is within the redefined commands \cs{addtocounter} and \cs{setcounter}. The usual commands still work, as there is code added to their definition. In a previous version, \cs{stepcounter} and \cs{refstepcounter} were redefined, but since these use \cs{addtocounter} effectively, it was decided to use the basic command. 
+
+Internally, the associated counters are stored in one list per counter -- it is not recommended to operate on those lists directly. 
+
+Please note, that this package does not provide means for simultaneous stepping of counters defined by plain \TeX{} \cs{newcount} command.
+
+
+\section{Package options}%
+
+As of version \packageversion~ the package has only one option, regarding the suspending of counters globally, regardless, whether they are drivers or associated counters (more on this facility of the package, see \ref{section::suspendedresumedcounters}).
+
+\begin{docKey}{globalsuspend}{=\meta{true/false}}{initially false}
+  If this key is set to \meta{true}, a a general driver can be set to the suspended list, i.e, it is not updated via \cs{addtocounter}. If unsure, do not use this option or say explicitly 
+
+  \begin{dispListing}
+    \usepackage[globalsuspend=false]{assoccnt}
+  \end{dispListing}%
+\end{docKey}
+
+
+
+\section{Requirements and incompatibilities}%
+
+\subsection{Required packages}
+
+\begin{itemize}
+\item \packagename{etoolbox}
+\item \packagename{xkeyval}
+\item \packagename{xcolor}
+\item \packagename{xstring}
+\end{itemize}
+
+\subsection{Incompatibilities}
+
+
+\begin{itemize}
+\item This package does not work really well with the \packagename{calc} package. Load \packagename{calc} \textbf{before} \packagename{\PackageDocName}! \marginnote{\bcbombe}
+\item This package does not work together when the Package \packagename{xifthen} is included. As of version \packageversion~I could not figure out, where the strange behaviour comes in. It's most likely an incompatibility between \packagename{etoolbox} and \packagename{xifthen}
+\marginnote{\bcbombe}
+\end{itemize}
+
+\section{Documentation of Macros}
+\tcbset{color command={blue}}
+
+\subsection{Redefined standard commands}
+
+\begin{docCommand}{setcounter}{\oarg{options}\marg{counter}\marg{counter value}}
+
+This command behaves like the standard macro \cs{setcounter}, but has an additional optional 1st argument. This optional argument can be used to enable the setting of the driver counter value as well as the associated counter values at once.
+
+\begin{docCommandArgs}{setcounter}%
+
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+  \item \oarg{options}: As of version \packageversion, the only option is the key value argument
+
+    \begin{docKey}{AssociatedToo}{=\meta{true/false}}{initially false}
+      If enabled (\meta{true}), \cs{setcounter} will use the counter value for \underline{all} counters associated to this driver counter as well. Initially, this option is set to \meta{false}. 
+    \end{docKey}
+
+    \begin{docKey}{AssociatedCounters}{=\meta{csv list of counters}}{initially unset}
+      If the comma separated list of counter is set, \cs{setcounter} increases those counters only, that are driven counters of the 2nd argument, any unknown counter in this list will generate a warning and is ignored otherwise. 
+    \end{docKey}
+    The option keys \refKey{AssociatedToo} and \refKey{AssociatedCounters} are mutually exclusive!
+
+  \item \marg{counter} 
+
+    Holds the name of the counter to be set. 
+\item \marg{counter value}
+  Holds the value to be set 
+\end{enumerate}
+\end{docCommandArgs}
+
+\end{docCommand}%
+
+
+\subsection{Associated counters commands}
+
+All macros have the general rule, that the driver counter is specified as 1st argument to the macro.
+
+
+\begin{docCommand}{DeclareAssociatedCounters}{\oarg{options}\marg{driver counter}\marg{associated counters list}}
+This command is the main macro of the package. It declares the counter names being specified in comma - separated - list (CSV) which should be stepped simultaneously when the driver counter is increased by \cs{stepcounter}.
+
+\begin{docCommandArgs}{DeclareAssociatedCounters}
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+  \item \oarg{options}: As of \packageversion, the optional argument \oarg{options} is not used so far, but is reserved for later purposes.
+
+  \item \marg{driver counter} 
+
+    Holds the name of the driver counter to which the list of counters should be associated
+\item \marg{associated counters list}
+
+  A comma separated list of counter names that should be associated to the driver counter
+\end{enumerate}
+\end{docCommandArgs}
+
+
+\begin{itemize}
+\item This command will be a preamble command in future
+\item This command should be used as early as possible, i.e. in the preamble of the document, since the driven counters are not increased as long as they are not associated to the driver counter. On the hand, it is possible, to control the starting point of the association at any position in the body of the document, when the association should start later on. 
+\end{itemize}
+
+
+% Relax for documentation purposes
+\renewcommand{\DeclareAssociatedCounters}[3][]{\relax}%
+\begin{dispExample}
+%%%% The association of anothertotalpages in this example just takes place here, so the stepping of the counter will start from here and providing a 'wrong' value.
+%%%% 
+\DeclareAssociatedCounters{page}{totalpages,anothertotalpages}%
+This document has \number\totvalue{totalpages} (note: \number\totvalue{anothertotalpages}) pages.
+\end{dispExample}
+%\let\DeclareAssociatedCounters\DeclareAssociatedCountersOrig%
+
+\begin{itemize}
+  \item Current version state:
+    \begin{itemize}
+      \item No checking whether the 2nd and 3rd arguments hold counter names is applied.
+      \item No check is done whether two (or more) associated counters are mutually associated. 
+      \end{itemize}
+  \item A self-association of the driver counter to itself is ignored internally as this would lead to inconsistent counter values. 
+  \item The order of the specification of associated counters in the 2nd arguments is of no importance.
+  \item Specifing an associated counter name multiple times has no effect, only the first occurence of the name will be used.
+\end{itemize}
+
+\end{docCommand}
+
+
+\begin{docCommand}{AddAssociatedCounters}{\oarg{options}\marg{driver counter}\marg{associated counters list}}
+This command adds some counters to the associated counter list for a specific driver counter -- if this list does not exists, the \LaTeX{} run will be stopped. You have to use \refCom{DeclareAssociatedCounters} first, to set up the driver counter hook.
+
+
+\begin{docCommandArgs}{AddAssociatedCounters}
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+  \item \oarg{options}: As of \packageversion, the optional argument \oarg{options} is not used so far, but is reserved for later purposes.
+
+  \item \marg{driver counter} 
+
+    Holds the name of the driver counter to which the list of counters should be associated
+\item \marg{associated counters list}
+
+  A comma separated list of counter names that should be associated to the driver counter
+\end{enumerate}
+\end{docCommandArgs}
+
+
+% macro of the package. It declares the counter names being specified in comma - separated - list (CSV) which should be stepped simultaneously when the driver counter is increased by \cs{stepcounter}.
+
+\end{docCommand}%
+
+\begin{docCommand}{RemoveAssociatedCounter}{\marg{driver counter}\marg{associated counter}}
+This command removes a counter from the existing list for a driver counter, i.e. the counter will not be increased any longer by \cs{stepcounter}. It can be increased however manually, of course. 
+\end{docCommand}
+
+
+
+\begin{dispExample}
+\RemoveAssociatedCounter{page}{anothertotalpages}
+This document has \number\totvalue{totalpages} (beware: \number\totvalue{anothertotalpages}) pages.
+\end{dispExample}
+
+
+
+\begin{docCommand}{RemoveAssociatedCounters}{\marg{driver counter}\marg{list of associated counters}}
+This command removes the comma-separated-value list of counters from the existing list for a driver counter, i.e. the counters will not be increased any longer by \cs{stepcounter}. They can be increased however manually, of course. 
+
+Take care not to confuse the commands \refCom{RemoveAssociatedCounters}
+and{}\linebreak \refCom{RemoveAssociatedCounter}
+\end{docCommand}
+
+\begin{docCommand}{ClearAssociatedCounters}{\marg{driver counter}}
+This command clears the internal list for all counters associated to the \marg{driver counter}. The counters will not be increased automatically.
+\end{docCommand}
+
+
+\clearpage
+
+
+\subsection{Driver counter commands}
+
+
+\begin{docCommand}{AddDriverCounter}{\oarg{options}\marg{driver counter name}}
+
+\begin{docCommandArgs}{AddDriverCounter}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \oarg{options}: As of \packageversion, the optional argument \oarg{options} is not used so far, but is reserved for later purposes. 
+
+  \item \marg{driver counter name} 
+
+    Holds the name of the driver counter that should be added to the list of driver counters.
+\end{enumerate}
+
+\end{docCommandArgs}
+
+\end{docCommand}%
+
+
+\begin{docCommand}{ClearDriverCounter}{\oarg{options}}%
+
+This clears completely the list of driver counters, such that no counters are regarded as being associated -- i.e. no driver is hold as being a driver counter.
+
+The optional argument is not used as of version \packageversion. 
+
+\end{docCommand}
+
+
+\subsection{Commands for queries}
+
+Sometimes it might be necessary to get information, whether a counter is regarded as a driver or as an associated counter. This section describes some query macros in order to obtain this information.
+
+
+\begin{docCommand}{IsAssociatedToCounter}{\marg{driver counter}\marg{associated counter}\marg{True branch}\marg{False branch}}
+This macro checks, whether a counter is associated to a particular given driver counter and expands the corresponding branch. If the internal driver counter list does not exist, the false branch will be used, since this also means, that the possibly associated counter is not associated at all. 
+
+
+
+\begin{docCommandArgs}{IsAssociatedToCounter}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+  \item \marg{driver counter} 
+
+    Holds the name of the driver counter to which \marg{associated counter} the could possibly be associated.
+\item \marg{associated counter}
+
+  Contains the name of the possibly associated counter.
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is associated to the driver, otherwise it is ignored.
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is \textbf{not} associated to the driver, otherwise it is ignored.
+
+\end{enumerate}
+\end{docCommandArgs}
+
+
+\begin{dispExample}
+% Remove associated counter first for demonstration purposes
+\RemoveAssociatedCounter{page}{anothertotalpages}
+\IsAssociatedToCounter{page}{totalpages}{Yes, totalpages is associated}{No, totalpages is not associated}
+
+\IsAssociatedToCounter{page}{anothertotalpages}{Yes, anothertotalpages is associated}{No, anotherpages is not associated}
+\end{dispExample}
+
+See also
+
+\begin{itemize}
+  \item \refCom{IsAssociatedCounter} for checking whether a counter is associated 
+  \item \refCom{IsDriverCounter} in order to check whether a counter is a driver. 
+  \item \refCom{GetDriverCounter} returns the driver counter name for a given associated counter name
+  \item \refCom{AssociatedDriverCounterInfo} prints verbose information to the document (not to the screen!)
+\end{itemize}
+
+
+\end{docCommand}
+
+
+\begin{docCommand}{GetDriverCounter}{\marg{counter name}}%
+
+This commands returns the driver counter to which the counter name of the first argument is connected to. If the counter is not defined, the macro returns nothing. 
+
+\begin{itemize}
+  \item No check whether the counter name is defined is performed
+  \item No check whether the counter is associated at all is performed. Usage of this command in conjunction with \refCom{IsAssociatedCounter} is strongly encouraged. 
+\end{itemize} 
+
+
+\begin{dispExample}%
+totalpages is associated to the \textcolor{blue}{\textbf{\GetDriverCounter{totalpages}}} counter. 
+% Try with an undefined counter name
+humptydumpty is associated to the \textcolor{blue}{\textbf{\GetDriverCounter{humptydumpty}}} counter. 
+
+\end{dispExample}% 
+
+\end{docCommand}%
+
+
+\begin{docCommand}{IsAssociatedCounter}{\marg{counter name}\marg{True branch}\marg{False branch}}%
+
+This commands tests, whether a given counter name is an associated counter and expands correspondingly the true or the false branch. The command does not tell to which driver the counter it is associated -- this information can be obtained by \refCom{GetDriverCounter}. 
+
+\begin{docCommandArgs}{IfAssociatedCounter}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \marg{counter name}%
+
+  Contains the name of the possibly associated counter
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is associated to a driver, otherwise it is ignored
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is \textbf{not} associated a  driver, otherwise it is ignored
+
+\end{enumerate}
+\end{docCommandArgs}
+
+
+\begin{dispExample}
+\IsAssociatedCounter{section}{Yes, section is an associated counter}{No, section counter does not have the associated counter properties}
+\IsAssociatedCounter{totalpages}{Yes, totalpages is an associated counter}{No, totalpages counter does not have the associated counter properties}
+\end{dispExample}
+
+\end{docCommand}%
+
+
+
+\begin{docCommand}{IsDriverCounter}{\marg{driver counter name}\marg{True branch}\marg{False branch}}%
+
+This commands tests, whether a given counter name is a driver counter and expands correspondingly the true or the false branch.
+
+\begin{docCommandArgs}{IfDriverCounter}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \marg{driver counter name}%
+
+  Contains the name of the possible driver counter
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is a driver, otherwise it is ignored
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is \textbf{not} a  driver, otherwise it is ignored
+\end{enumerate}
+\end{docCommandArgs}
+
+
+\begin{dispExample}
+\IsDriverCounter{section}{Yes, section is a driver counter}{No, section counter does not have driver properties}
+\end{dispExample}
+
+\end{docCommand}%
+
+\begin{docCommand}{IsSuspendedCounter}{\marg{counter name}\marg{true branch}\marg{false branch}}
+See \nameref{section::suspendedresumedcounters} on this topic. 
+
+This command checks, whether a counter is suspended, i.e. not updated at all and expands the corresponding branches.
+
+\begin{docCommandArgs}{IfSuspendedCounter}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \marg{counter name}%
+
+  Contains the name of counter presumed to be suspended
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is suspended, otherwise it is ignored
+
+\item \marg{True branch}
+
+  This code is expanded if the counter is \textbf{not} suspended, otherwise it is ignored
+
+\end{enumerate}
+\end{docCommandArgs}
+
+
+
+\end{docCommand}
+
+
+\begin{docCommand}{AssociatedDriverCounterInfo}{\marg{counter name}}
+
+This command is purposed for statistics only, for package/class authors for example and should not be used in a real document, as it generates verbose output to the document.
+
+
+
+\begin{dispExample}
+%% Adding the counter anothertotalpages first
+\AddAssociatedCounters{page}{anothertotalpages}%
+\AssociatedDriverCounterInfo{page}%
+\end{dispExample}
+
+\begin{dispExample}
+% This shows information on an associated counter
+\AssociatedDriverCounterInfo{totalpages}%
+\end{dispExample}
+
+\begin{dispExample}
+% This shows information on a counter which is neither a driver nor an associated counter
+\AssociatedDriverCounterInfo{equation}%
+\end{dispExample}
+
+
+\end{docCommand}%
+
+\subsection{Information on counters}
+
+On occasions it might be important to have some information which counter has been changed last. Since there are four commands manipulating counter values, there are four corresponding routines for this:
+
+\begin{docCommand}{LastAddedToCounter}{}
+This command has no arguments and expands to the name of the counter which was used last in \cs{addtocounter}. There is no further typesetting done with the countername. 
+
+\begin{dispExample}
+  \newcounter{SomeCounter}
+  
+  \addtocounter{SomeCounter}{10}
+
+  The last counter something added to was \PrettyPrintCounterName{\LastAddedToCounter}.
+\end{dispExample}%
+
+\end{docCommand}%
+
+\begin{docCommand}{LastSteppedCounter}{}
+This command has no arguments and expands to the name of the counter which was stepped last using \cs{stepcounter}. There is no further typesetting done with the countername. 
+
+\begin{dispExample}
+  \stepcounter{SomeCounter}
+
+  The last counter being stepped  was \PrettyPrintCounterName{\LastSteppedCounter}.
+\end{dispExample}%
+
+\end{docCommand}%
+
+\begin{docCommand}{LastRefSteppedCounter}{}
+
+\begin{dispExample}
+  \begin{equation}
+    E = mc^2 \label{eq::einstein}
+  \end{equation}
+  % \stepcounter{SomeCounter}
+
+  The last counter being refstepped  was \PrettyPrintCounterName{\LastRefSteppedCounter}.
+\end{dispExample}%
+
+\end{docCommand}%
+
+
+
+
+
+\begin{docCommand}{LastSetCounter}{}
+This command has no arguments and expands to the name of the counter which was set last using \refCom{setcounter}. There is no further typesetting done with the countername. 
+
+\begin{dispExample}
+  \setcounter{SomeCounter}{21}%
+
+  The last counter being stepped  was \PrettyPrintCounterName{\LastSetCounter}.
+\end{dispExample}%
+
+\end{docCommand}%
+
+Please note, that all of this commands are only working in the current run of compilation, i.e. \underline{after} there has been some operation on the counters. They can't be used for information on the last changed counter in a previous run. 
+
+\subsection{Minor macros}
+
+For the informational output on counter properties in conjunction with the macro
+ \refCom{AssociatedDriverCounterInfo}, some helper macros have been defined:
+
+\begin{docCommand}{PrettyPrintCounterName}{\oarg{countertype}\marg{counter name}}
+This command just prints a counter name with frame. It's meant of informational use only.
+\begin{docCommandArgs}{PrettyPrintCounterName}
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \oarg{options}% 
+
+  As of version \packageversion, the only option is a key value:
+  \begin{docKey}{countertype}{=\meta{general,driver,associated}}{general}
+    Use
+    \begin{itemize}
+    \item \meta{general} for an arbitrary counter name
+    \item \meta{driver} for a driver counter
+    \item \meta{associated} for an associated counter
+    \end{itemize}
+  \end{docKey}
+
+\item \marg{counter name}
+  Contains the name of counters to be displayed
+
+\end{enumerate}
+\end{docCommandArgs}%
+
+Please note, that as of version \packageversion, this command does not autodetect the property of the counter nor if the 2nd argument holds a real counter name at all 
+\end{docCommand}%
+
+\begin{docCommand}{GeneralCounterInfoColor}{}
+This macro holds the text color for a general counter, it defaults to \meta{\textcolor{\GeneralCounterInfoColor}{\expandafter{\GeneralCounterInfoColor}}}%
+\end{docCommand}
+
+
+\begin{docCommand}{DriverCounterInfoColor}{}
+This macro holds the text color for a driver counter, it defaults to \meta{\textcolor{\DriverCounterInfoColor}{\expandafter{\DriverCounterInfoColor}}}%
+\end{docCommand}
+
+\begin{docCommand}{AssociatedCounterInfoColor}{}
+This macro holds the text color for an associated counter, it defaults to \meta{\textcolor{\AssociatedCounterInfoColor}{\expandafter\AssociatedCounterInfoColor}}%
+\end{docCommand}
+
+\begin{dispExample}
+  \PrettyPrintCounterName[countertype=general]{equation}
+\end{dispExample}
+
+
+
+\section{Suspending and resuming associated counters}\label{section::suspendedresumedcounters}
+
+Rather than remove an associated counter from the list, it is possible to suspend the automatic stepping for a while and then resume it, for example, if the value of a counter should not be stepped within a specific chapter etc. 
+
+\begin{docCommand}{SuspendCounters}{\oarg{options}\marg{counters list}}%
+\begin{docCommandArgs}{SuspendCounters}%
+
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \oarg{options}% 
+
+  Not used so far, reserved for later usages
+
+\item \marg{counters list}%
+
+  Contains the name of counters to be suspended, separated by commas (CSV - list)
+\end{enumerate}
+
+\end{docCommandArgs}
+\end{docCommand}%
+
+\begin{docCommand}{ResumeSuspendedCounters}{}
+  This command has no arguments and revokes the suspension of \textbf{all} counters.
+\end{docCommand}
+
+
+Some remarks:
+
+\begin{itemize}
+\item 
+Please note, that it is possible, to suspend an arbitrary counter, if the package option \refKey{globalsuspend} is set to \meta{true}. Handle this option with care!
+\item If a driver counter is suspended, all counters associated to it are suspended too!
+\end{itemize}%
+
+\begin{dispExample}
+\textbf{This example shows 4 equations, but only two of them are counted}
+\newtotcounter{totalequations}
+\DeclareAssociatedCounters{equation}{totalequations}
+
+\begin{equation}
+E_{0} = mc^2
+\end{equation}
+
+Now suspend the totalequations:
+
+\SuspendCounters{totalequations}
+\begin{equation}
+E^2 = \left({ pc}\right)^2 + E^{2}_{0}
+\end{equation}
+
+\begin{equation}
+  m(v) = \frac{m_{0}}{\sqrt{1-\frac{v^2}{c^2}}} 
+\end{equation}
+
+And resume it: \ResumeSuspendedCounters
+
+\begin{equation}
+  E = h \nu
+\end{equation}
+
+There are \number\totvalue{totalequations}~equations in here!
+\end{dispExample}
+
+
+
+
+\section{Internals commands}
+
+Basically spoken, all internal commands use \cs{@@assoccnt@@} as prefix and are designed to be used only within the package. There is no need to call them in a document directly. Nevertheless, the macros are described for completeness. The direct usage is discouraged, however, if needed, they have to included in a \cs{makeatletter} \ldots \cs{makeatother} pair\footnote{Well, \cs{makeatother} could be omitted, but it is not advised to do so}.
+
+\begin{docCommand}{@@assoccnt@@removefromlist}{\marg{list name}\marg{entry name}}
+
+This command removes an entry (i.e. a counter name) from a general list -- it is not connected to the associated counter features at all. 
+\begin{docCommandArgs}{@@assoccnt@@removefromlist}%
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \marg{list command sequence name}%
+
+  Contains the name of the list
+
+\item \marg{entry name}
+
+  This argument should contain the name to be removed from the list. If this name is not present, the original list is maintained unchanged. 
+
+\end{enumerate}
+\end{docCommandArgs}
+
+\end{docCommand}%
+
+
+\begin{docCommand}{@@assoccnt@@generateboundtocounterslist}{\marg{associated counter name}}
+
+This command generates a list for each associated counter, holding the counter names to which this counter is associated to. As of version \packageversion~this list can contain only \textbf{one} entry, since a counter cannot not be associated to multiple driver counters.  
+
+The only argument \marg{associated counter name} holds the name of the associated counter name. The list name is managed internally and should not be redefined. 
+
+\makeatletter
+\begin{dispExample}
+\@@assoccnt@@generateboundtocounterslist{totalpages}%
+\end{dispExample}%
+\makeatother
+
+\end{docCommand}%
+
+
+\begin{docCommand}{@@assoccnt@@addassociatedcounter}{\oarg{option}\marg{associated counters list name}\marg{associated counter name}}
+
+This is the low level command, that 
+\begin{enumerate}
+  \item adds a single counter as an associated one to the appropiate list and prevents a multiple addition to this list 
+  \item adds a driver counter to the list of driver counters
+  \item prevents multiple addition of the associated counter to other lists
+\end{enumerate}
+
+Use the wrapper command \cs{AddAssociatedCounter} for proper usage. 
+
+\begin{docCommandArgs}{@@assoccnt@@addassociatedcounter}%
+\begin{enumerate}[label={\textcolor{blue}{\#\arabic*}}]
+\item \oarg{driver counter name}
+
+  Contains the name of driver counter
+
+\item \marg{associated counters list name}
+
+  This argument should contain the list name for the per driver counter list of associated counters, i.e. use \cs{@@assoccnt@@generatelistname} for this argument
+
+\item \marg{associated counter name}
+  
+  The name of the counter to be associated. 
+
+\end{enumerate}
+\end{docCommandArgs}
+
+\end{docCommand}
+
+
+
+\begin{docCommand}{@@assoccnt@@associatedcounterslistsuffix}{}
+This command holds the name of the suffix for the associated counters list. It should not be redefined.
+\end{docCommand}
+
+
+\begin{docCommand}{@@assoccnt@@generatelistname}{\marg{driver counter name}}
+
+This macro generates a list from the driver counter name and the driver counter list suffix (see \refCom{@@assoccnt@@associatedcounterslistsuffix})
+
+\makeatletter
+\begin{dispExample}
+  \@@assoccnt@@generatelistname{page}
+\end{dispExample}
+\makeatother
+
+\end{docCommand}
+
+
+\clearpage
+
+\section{To-Do list}
+
+\begin{itemize}
+\item Better counter definition/copy counter routines \(\longrightarrow\) another package perhaps
+\item Check the existence of driver and associated counters
+\item Provide a better internal list organization
+\item Some macro names might be non-intuitive
+\item Improve documentation
+\item Allow for specific counter to be resumed from suspension instead of resuming all
+\item Allow for an associated counter to have multiple masters 
+\item Complete redesign and rewrite with \packagename{expl3} -- this will provide better list features
+\end{itemize}
+
+If you 
+
+\begin{itemize}
+  \item find bugs
+  \item errors in the documentation
+  \item have suggestions
+  \item have feature requests
+\end{itemize}
+
+don't hesitate and contact me via \makeatletter christian.hupfer@siebenfelsen.de\makeatother
+
+\clearpage
+
+\section{Acknowledgments}
+
+I would like to express my gratitudes to the developpers of fine \LaTeX{} packages and of course
+to the users at tex.stackexchange.com, especially to
+
+\begin{itemize}
+  \item Paulo Roberto Massa Cereda
+  \item Enrico Gregorio
+  \item Joseph Wright
+  \item David Carlisle
+  \item Werner 
+  \item Gonzalo Medina
+  \item Cosmo Huber (for providing the bug report with the \packagename{calc} package.)
+\end{itemize}
+
+for their invaluable help on many questions on macros.
+
+\vspace{2\baselineskip}
+A special gratitude goes to Prof. Dr. Dr. Thomas Sturm for providing the wonderful \MarkupPackageName{tcolorbox} package which was used to
+write this documentation.
+
+\clearpage
+
+\section{Version history}
+Note the pre - 0.6 - version history has to be reestablished 
+\begin{itemize}
+\item 0.8: A second bug fix for usage version 0.7 -- packagename{calc} and this package do not really work together. 
+\item 0.7: A second bug fix for usage with \packagename{calc} has been done. 
+\item 0.6: \begin{itemize}
+    \item A major bug fixed due to some error in usage together with \packagename{calc} when the driven counters are not stepped any longer. 
+      The culprit was in \PackageDocName that the counter reset list was not really disabled. 
+      
+      Thanks to this question \url{http://tex.stackexchange.com/questions/269731/calc-breaks-assoccnt} this bug was detected. 
+      \item The documentation was renamed from `assoccntdoc` to `\url{assoccnt_doc}`
+        \end{itemize}
+\end{itemize}
+
+
+\phantomsection
+\appendix\label{examplesappendix}
+
+
+
+\section[Total number of sections]{Example: Total number of sections}
+In this example, all sections of this document are counted, i.e. the current one as well as all following ones.
+\begin{dispExample}
+This document has \total{totalsections} section(s)%
+\end{dispExample}
+
+
+
+\section[Subsection with suspension]{Example: Total number of subsections with suspension}
+
+In this example, the subsections of this document are counted but later on, the associatedcounter is removed from the list, so it is frozen.
+
+%\DeclareAssociatedCounters{subsection}{totalsubsections}%
+
+%\renewcommand{\DeclareAssociatedCounters}[3]{\relax}%
+
+\begin{dispExample}
+\newtotcounter{totalsubsections}%
+\newtotcounter{othertotalsubsections}%
+\DeclareAssociatedCounters{subsection}{totalsubsections}%
+
+\subsection{First dummy subsection}
+SubSection counter: \thesubsection~-- \number\totvalue{totalsubsections}
+\subsection{Second dummy subsection}
+SubSection counter: \thesubsection~-- \number\totvalue{totalsubsections}
+
+\RemoveAssociatedCounter{subsection}{totalsubsections}%
+\subsection{Third dummy subsection after removing the associated counter}
+
+SubSection counter: \thesubsection~-- \number\totvalue{totalsubsections}
+
+\end{dispExample}
+
+\section[Total number of proofs]{Example: Total number of proofs}
+
+
+\begin{dispExample}
+% \usepackage{amsthm} is needed
+\newcounter{proof}%
+\newtotcounter{anotherproofcounter}%
+\newtheorem{Proof}[proof]{Proof}%
+\DeclareAssociatedCounters{proof}{totalproofs,anotherproofcounter}
+\begin{Proof}
+It's trivial.   
+\end{Proof}
+
+\begin{Proof}[On Brontosaurs]
+See excavations!
+\end{Proof}
+
+%%% Manipulate the counter
+\setcounter{proof}{17}
+
+\begin{Proof}[Yet another proof]
+\begin{align*}
+  E &= m c^2
+  \end{align*}
+\end{Proof}
+
+This document has \number\value{anotherproofcounter} proofs %
+Now let us manipulate the counter proof again:
+\setcounter[AssociatedCounters={totalproofs}]{proof}{200}
+
+This document has \number\totvalue{totalproofs} (manipulated counter) proofs where as the unmanipulated counter still shows \number\value{anotherproofcounter} proofs %
+\end{dispExample}
+
+This example shows, that the usage of the options to \cs{setcounter} should be used with care!
+
+
+\subsection{Suspension of a non-associated counter}
+This example will show the suspension of a non-associated counter
+
+
+\begin{dispExample}
+\setcounter{equation}{0}%
+\SuspendCounters{equation}%
+\begin{equation}
+E_{0} = mc^2
+\end{equation}
+
+\begin{equation}
+E^2 = \left({ pc}\right)^2 + E^{2}_{0}
+\end{equation}
+
+\begin{equation}
+  m(v) = \frac{m_{0}}{\sqrt{1-\frac{v^2}{c^2}}} 
+\end{equation}
+
+
+There are \number\value{equation}~equations in here!
+\end{dispExample}
+
+
+\clearpage
+
+%%%% Index of commands
+
+\printindex
+
+\end{document}

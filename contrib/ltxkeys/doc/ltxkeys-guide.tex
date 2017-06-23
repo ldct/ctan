@@ -1,0 +1,2753 @@
+\documentclass[
+  use-a4-paper,
+  use-10pt-font,
+  final-version,
+  use-UK-English,
+  fancy-section-headings,
+  frame-section-numbers,
+  para-abstract-style,
+  inputfile,
+  input-config-file,
+  no-hyperref-messages,
+  wrapquote,
+]{amltxdoc}
+
+\makeatletter
+
+\ltscomment
+% Include the use of the following commands in this manual:
+% \ifltxkeys@novalue
+% \ltxkeys@presetkeys
+% \ltxkeys@gpresetkeys
+% \ltxkeys@postsetkeys
+% \ltxkeys@gpostsetkeys
+% \ltxkeys@preposetkeys
+% \ltxkeys@gpreposetkeys
+
+
+\ltxkeysifinlistTF, \ltxkeysnormalizeset, \ltxkeysnormalizecsset
+\carmustykeys
+
+\ltscommentend
+
+\begin{document}
+
+\begin{frontmatter}
+\title{The \texttt{\color{blue}ltxkeys} Package\titleref{t1,t2}}
+\titlenotes[t1,t2]{%
+  The package is available at \url{\titleurltext}.\sep
+  This user manual corresponds to version~0.0.3 of the package.
+}
+\subtitle{A robust key parser for \latex}
+\titleurl{http://mirror.ctan.org/macros/latex/contrib/ltxkeys/}
+\author{Ahmed Musa\authorref{a1}}
+\authornotes[a1]{%
+  The University of Central Lancashire, Preston, UK. \email{amusa22@gmail.com}.
+}
+\end{frontmatter}
+
+\hrule
+\vskip 1ex plus 1pt minus 1pt
+\begingroup
+\def\contentsname{\centerline{\Large\sffamily\textcolor{blue}{Contents}}}
+\hypersetup{linkcolor=blue}
+\sffamily\tableofcontents
+\endgroup
+\hrule
+
+\ltsnewfootnote{1}{%
+  Because of the multitude of functions provided by the \pkg'{ltxkeys}, it may actually slow down when executing some tasks, depending on the task at hand. The package option \fx{tracingkeys}, for example, does slow down processing. And automatically initiating keys after definition, as done by the commands \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}, also affects processing speed; so does \quoted{launching keys}, which first presets absent keys with their default values before setting the current keys (\ie, keys whose values are provided by the user at the moment of setting keys that belong to a family). Then, as in the \pkg'{xkeyval}, there are the commands for presetting and post-setting keys.
+}
+\ltsnewfootnote{2}{%
+  Options are also keys, but (from the user's viewpoint) there might be a need to treat options separately when dealing with unknown keys.
+}
+
+
+\docsection(sec:intro){Introduction}
+
+\lletter{T}{he \pkg'{ltxkeys}} provides facilities for creating and managing keys in the manner of the \pkg'{keyval, xkeyval}, but it is intended to be more robust, faster, and provide more functionality than these earlier packages. Its robustness emanates from, inter alia, its ability to preserve braces in key values throughout parsing. The need to preserve braces in key values without expecting the user to double braces emerges often in parsing keys. This is the case in, \eg, the \pkg'{xwatermark}, but consider also the possibility of passing all the following options to a package at once, where \quotedtt{layout} is a package or class option or key\footnote{It should be noted that if a value of the demonstrative option \fx{layout} is expandable, then the option can't be passed by \hx{\documentclass} without preloading a robust options parser like \pkg{kvoptions-patch, xkvltxp, ltxtools}, or \pkg{ltxkeys} package. In fact, \latex's native options processor can't handle options with values. The \pkg'{ltxkeys}, unlike the \pkg'{xkeyval}, can be loaded before \hx{\documentclass}.}:
+
+%[Braced option values]
+\start'{example}
+\pkgoptions{%
+  opt1=val1,opt2=val2,
+  layout={left=3cm,right=3cm,top=2.5cm,bottom=2.5cm,include=true}
+}
+\finish{example}
+
+As a practical example, consider the command \fx{\loadModules} with the syntax
+
+\start'{example}[Braced key values]
+\loadModules{|A(base)}{|A(modules)}
+\finish{example}
+
+where \ang{modules} is a comma-separated \keyval list. Like the above \quotedtt{layout} option, each key of \fx{\loadModules} may have a value (representing module options) that is itself a comma-separated \keyval list.
+
+Well, the type of robustness described here isn't actually difficult to implement within the \pkg'{xkeyval}. This is indeed what the \pkg'{keyreader} does: it re-implements some of the commands of the \pkg'{xkeyval} to achieve this robustness. That said, we have to indicate that the \pkg'{ltxkeys} implements this robustness intrinsically and it has many more features than the \pkg{xkeyval} and \pkg{keyreader} packages.
+
+In some respects, depending on the task at hand, the \pkg'{ltxkeys} is faster\usefootnote{1} than the \pkg'{xkeyval} mainly because it avoids character-wise parsing of key values (which is called \quoted{selective sanitization} by the \pkg'{xkeyval}\footnote{See \ltshref{http://www.latex-project.org/cgi-bin/ltxbugs2html?pr=babel/3523}{here} for the problems of parsing key-value pairs within \pkg{babel}.}). Moreover, it is faster to normalize a comma-separated or \keyval list than trim leading and trailing spaces of each element of the list (as the  \pkg'{xkeyval} does), since not all the elements of the list will normally have leading and trailing spaces. In fact, the chances are that only less than 50~percent of the elements of the list will have such spaces. As another example of optimization, anyone familiar with the implementation of the \pkg'{xkeyval} would have noticed that the macro \hx{\XKV@srstate}, which (in order to allow \hx{\setkeys} to be re-entrant) pushes and pops the states of some important functions in the package, loops over all the functions both when pushing and popping. In the \pkg'{ltxkeys}, pushing and popping functions together involve looping over the functions only once. And, unlike in the \pkg'{xkeyval}, higher order functions are undefined as soon as they are no longer needed, to avoid clogging up the stack. No additional looping is required for this.
+
+In setting keys, the \pkg'{ltxkeys} loops over not only families, as in the \pkg'{xkeyval}, but also over key prefixes. The same strategy applies when the \pkg'{ltxkeys} tries to establish if a key is defined or not.
+
+Normally, in the \pkg'{keyval, xkeyval} it isn't directly possible to have key macros with delimited and/or multiple parameters. So you couldn't submit \quotedfx{x and y} as a key value and expect any of these packages to split this value into two arguments for the key macro and execute the key's callback. This could only be done indirectly by the key's author, within the key's callback. For example, the following isn't directly possible by those packages:
+
+\begin{syntax}
+\define@key[KV]{fam}{textsize}[5cm and 10cm]{%
+  \textwidth=#1 \textheight=#2
+}
+\setkeys[KV]{fam}{textsize=2.5cm and 8cm}
+\finish{syntax}
+
+The \pkg'{ltxkeys} can compactly define and set all types of key with delimited and multiple parameters for key macros. See \sref{sec:weirdargs}.
+
+While some user interfaces of the \pkg'{ltxkeys} are similar to those of the \pkg'{xkeyval}, there are important differences in several areas of syntax, semantics, and internal implementation. The \pkg'{ltxkeys} also provides additional facilities (beyond the \pkg'{xkeyval}) for defining and managing keys. Several types of key (including ordinary keys, command keys, style keys, choice keys, list keys, boolean and biboolean keys) can be efficiently created and managed. In the \pkg'{ltxkeys}, the notions of \quoted{pre-setting} and \quoted{post-setting} keys are similar to those of the \pkg'{xkeyval}. But the \pkg'{ltxkeys} introduces additional concepts in this respect: \quoted{initialized} and \quoted{launched} keys. The latter are special preset keys. The pointer system of the \pkg'{xkeyval}, which was available only at key-setting time, is now available also at key definition time. One more type of pointer (\fx{\needvalue}) has been introduced to require users of \quoted{need-value keys} to supply values for those keys.
+
+Rather than simply issue an error for undefined keys when setting keys, the \pkg'{ltxkeys} provides the \quoted{undefined keys} and \quoted{undefined options} handlers, which are user-customizable. Other new concepts include \quotedlist{definable keys, cross-family keys, option keys, non-option keys, handled keys, key commands, key environments}, accessing the saved value of a key outside \hx{\setkeys} or similar commands, and declaring multiple keys and options (of all genre) using only one command.
+
+\ltsnote
+It is not advisable to alias the commands of the \pkg'{xkeyval} to the commands of the \pkg'{ltxkeys}. There are many existing packages that rely on the \pkg'{xkeyval} and aliasing commands that are used by other packages can cause confusion\footnote{A user of version~0.0.1 of the \pkg'{ltxkeys} had sought to do this.}.
+
+
+\docsubsection{Motivation}
+
+What are the \emph{raison d'etre} and origins of the \pkg'{ltxkeys}? Well, I decided to write this package as I grabbled with some practical problems of key parsing while developing version~1.5.0 of the \pkg'{xwatermark}. The tasks proved more challenging than I had initially thought and, despite its commendable and widely deployed features, I found the \pkg'{xkeyval} inadequate in some respects. As mentioned earlier, all the functions of the \pkg'{ltxkeys} can be employed for general key management in \latex beyond the \pkg'{xwatermark}. Indeed, in many ways, the \pkg'{ltxkeys} now goes far beyond the needs of \pkg'{xwatermark}. Many concepts and user interfaces were introduced long after the requirements of the \pkg'{xwatermark} had been met. The \pkg'{ltxkeys} can be used as a more robust and versatile replacement for the \pkg'{xkeyval}, of course with modifications of names and some syntaxes. The \pkg'{xkeyval} has been frozen since August 2008. Users familiar with \pkg'{pgfkeys} may also wish to explore what \pkg'{ltxkeys} has to offer.
+
+
+\docsection(sec:packageoptions)<package options>{Package options}
+
+The package options are listed in \sref{tab:pkgoptions}. The package options can be passed via the commands \hx{\documentclass}\footnote{Passing \pkg'{ltxkeys} options via \hx{\documentclass} implies that the package is loaded after \hx{\documentclass}. As mentioned elsewhere, the \pkg'{ltxkeys} can be loaded before or after \hx{\documentclass}.}, \hx{\RequirePackage} or \hx{\usepackage} as follows:
+
+\start{example}[Package options]
+\documentclass[tracingkeys,keyparser={|nv}]{article}
+|orr
+\usepackage[tracingkeys,keyparser={|nv}]{ltxkeys}
+\finish{example}
+
+They can also be passed locally via the command \fx{\setltxkeysoptions}:
+
+\start{newmacro}[\setltxkeysoptions]
+\setltxkeysoptions{tracingkeys=false,keyparser={;}}
+\finish{newmacro}
+\fxim*{\setltxkeysoptions}
+
+\newltablenote{ltxkeys-1}{%
+  The speed of compilation may be affected by this option, but it is recommended at the pre-production stages of developing keys. The option provide some trace functionality and enables the user to, among other things, follow the progress of the \latex run and to see if a key has been defined and/or set/executed more than once in the current run. The \stform+ of the commands \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys} will always flag an error if a key is being defined twice, irrespective of the state of the package option \fx{tracingkeys}. The \textltxkey variants (unlike the \textnewkey variants) of key-defining commands don't have this facility, and it may be desirable to know if and when an existing key is being redefined.
+}
+\newltablenote{ltxkeys-2}{%
+  Wherever the \qsemicolon is indicated as a list parser in this guide, it can be replaced by any user-specified one character parser via the package option \fx{keyparser}. To avoid confusing the user-supplied parser with internal parsers, it is advisable to enclose the chosen character in curly braces when submitting it as a package option. The braces will be stripped off internally. Please note that some of the characters that may be passed as a list parser may indeed be active; be careful to make them innocent before using them as a list/key parser. My advice is that the user sticks with the \qsemicolon as the key parser: the chances of it being made active by any package is minimal. If you have the chosen parser as literals in the callbacks of your keys, they have to be enclosed in curly braces.
+}
+\newltablenote{ltxkeys-3}{%
+  The key-setting commands are \ffx'{\ltxkeyssetkeys,\ltxkeyssetrmkeys,\ltxkeyssetaliaskey}. If you must nest these commands beyond level~4, you have to raise the \fx{keydepthlimit} as a package option. The option \fx{keystacklimit} is an alias for \fx{keydepthlimit}.
+}
+\newltablenote{ltxkeys-4}{%
+  The use of an empty prefix will normally result from explicitly declaring the prefix as \fx{[]}, rather than leaving it undeclared. Undeclared prefixes assume the default value of \fx{KV}. An empty family will result from submitting the family as empty balanced curly braces \fx{{}}. If keys lack prefix and/or family, there is a strong risk of confusing key macros/functions. For example, without a prefix and/or family, a key named \fx{width} will have a key macro defined as \fx{\width}, which portents sufficient danger.
+}
+
+\begingroup
+\small
+%\trace*
+\begin{tabularx}{\linewidth}{|p{3cm}|p{2cm}|X|}
+\caption{Package options. All the package options can also be changed globally via \headhx{\documentclass} and locally through the control sequence \headfx{\setltxkeysoptions}.} \xwmlabel{tab:pkgoptions}
+\\\hline
+\rowcolor{pink}
+\bfseries Option&\bfseries Default&\bfseries Meaning\\\hline
+\endfirsthead
+\hline
+\multicolumn{3}{|l|}{\emph{Continued from last page}}\\\hline
+\bfseries Option&\bfseries Default&\bfseries Meaning\\\hline
+\endhead
+\multicolumn{3}{|r|}{\emph{Continued on next page}}\\\hline
+\endfoot
+\hline
+\endlastfoot
+\fx{tracingkeys} & \hx{false} & The global boolean switch that determines if information should be logged in the transcript file for some tasks in the package. \useltablenote[tab:pkgoptions:note1]{ltxkeys-1}\\\hline
+\fx{keyparser} & \texttt{;} & The most user-relevant of the list parsers (\ie, item separators) used by internal loops in defining keys---mainly in the macros \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}. \useltablenote[tab:pkgoptions:note2]{ltxkeys-2}\\\hline
+\fx{keydepthlimit} & \hx{4} & This is used to guard against erroneous infinite re-entrance of the package's key-setting commands. The default value of~4 means that neither of these commands can ordinarily be nested beyond level~4.\useltablenote[tab:pkgoptions:note3]{ltxkeys-3}\\\hline
+\fx{reservenopath} & \hx{false} & The \quoted{path} (or roots or bases) of a key is the combination of key prefix, key family and macro prefix. These can be reserved and unreserved by any user by the tools of \sref{sec:reservedpath}. Subsequent users can, at their own risk, override all previously reserved paths by enabling the package's boolean option \fx{reservenopath}.\\\hline
+\fx{allowemptypath} & \hx{false} & Allow the use of empty key prefix and family. This isn't advisable but some pre-existing packages might have used empty key prefixes and families. \useltablenote[tab:pkgoptions:note4]{ltxkeys-4}\\\hline
+\fx{endcallbackline} & \hx{false} & At key-definition time, while in the callback of a key, implicitly make  \hx{\endlinechar} equal to $-1$ (\ie, automatically insert comment sign at each end of line). If enabled, this option applies to all key-definition commands. The snag with this is that, when enabled, the user has to remember to manually provide explicit spaces that he/she might require at end of lines.
+\end{tabularx}
+\endgroup
+%\endtrace
+
+
+\docsection{Defining keys}
+
+\docsubsection(sec:definablekeys){Defining only definable keys}
+
+If the package option \fx{tracingkeys} is enabled (\ie, turned true), the user can see in the transcript file the existing keys that he has redefined with the \textltxkey variants of the key-defining commands, which redefine existing keys without any default warning or error. The log file messages being referred to here will be highlighted with the warning sign (\makered{!!}). This is always desirable in the preproduction stages of your project. However, instead of looking for these warning messages in the log file, the user can use the \textnewkey variants of the key-defining commands to bar himself from redefining existing keys.
+
+Subsequently we will mention the \textnewkey variants of key-defining commands without necessarily explaining what they mean, since their meaning is henceforth clear.
+
+In the following, syntactic quantities in square brackets (\eg, \fx{[yyy]}) and those in parenthesis (\eg, \fx{(yyy)}) are optional arguments.
+
+
+\docsubsection(sec:ordkeys)<ordinary keys (ord)>{Ordinary keys}
+\aidx*{key prefix,macro prefix,key macro}
+
+\start+{newmacro}[\ltxkeysordkey,\ltxkeysnewordkey]
+\ltxkeysordkey[|A(pref)]{|A(fam)}{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewordkey[|A(pref)]{|A(fam)}{|A(key)}[|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysordkey,\ltxkeysnewordkey}
+
+These define a macro of the form \preffamkey of one parameter that holds the key function/callback \ang{cbk}. The default value for the \quoted{key prefix} \ang{pref} is always \fx{KV}, as in the \pkg'{xkeyval}. When \ang{key} is used in a \fx{\ltxkeyssetkeys} command (see \sref{sec:settingkeys}) containing \keyval, the macro \preffamkey takes the value as its argument and is then executed. The given argument or key value can be accessed in the key's callback \ang{cbk} by using \fx{#1} inside the function. The optional default value \ang{dft}, if available, will be used by \preffamkey when the user hasn't provided a value for the key at \fx{\ltxkeyssetkeys}. If \ang{dft} was absent at key definition and the key user hasn't provided a value for the key, an error message is flagged\footnote{The commands \ffx'{\ltxkeys@key, \ltxkeys@newkey} aren't user commands.}.
+
+Run the following example and do \fx{\show\cmdb} and \fx{\show\cmdd}:
+
+\start{example}[\ltxkeysordkey]
+\ltxkeysordkey[KV]{fam}{keya}[\def\cmda#1{aa#1}]{\def\cmdb##1{#1bb##1}}
+\ltxkeysordkey[KV]{fam}{keyb}[\def\cmdc##1{cc##1}]{\def\cmdd##1{#1dd##1}}
+\ltxkeyssetkeys[KV]{fam}{keya,keyb}
+\finish{example}
+
+\docsubsubsection(sec:ordkeys-sameattributes)
+  {Ordinary keys that share the same attributes}
+
+The commands \ffx'{\ltxkeysordkey,\ltxkeysnewordkey} can be used to introduce ordinary keys \ang{keys} that share the same path\footnote{The key path is also called the key bases.} (key prefix, key family, and macro prefix) and callback \ang{cbk}. All that is needed is to replace \ang{key} in these commands with the comma-separated list \ang{keys}. Because some users might prefer to see these commands in their plural forms when defining several keys with the same callback, we have provided the following aliases. The internal coding remains the same and no efficiency has been lost in generalization.
+
+\start+{newmacro}[\ltxkeysordkeys,\ltxkeysnewordkeys]
+\ltxkeysordkeys[|A(pref)]{|A(fam)}{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewordkeys[|A(pref)]{|A(fam)}{|A(keys)}[|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysordkeys,\ltxkeysnewordkeys}
+
+
+\docsubsection(sec:lispkeys)<lispkeys>{List processor keys (lispkeys)}
+
+\start+{newmacro}[\ltxkeyslispkey,\ltxkeysnewlispkey, etc.]
+\ltxkeyslispkey[|A(pref)]{|A(fam)}{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewlispkey[|A(pref)]{|A(fam)}{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeyslispkeys[|A(pref)]{|A(fam)}{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewlispkeys[|A(pref)]{|A(fam)}{|A(keys)}[|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeyslispkey,\ltxkeysnewlispkey,\ltxkeyslispkeys,\ltxkeysnewlispkeys}
+
+List processor keys (or lisp keys) are ordinary keys that accept a parser-separated list as a user input and process each element of the list. The key's callback \ang{cbk} is then a list processor, but the key author doesn't have to design and suggest his own looping system. All he has to do is to pass the parameter \fx{#1}, representing the individual items of the list, to the key's callback. The key will internally do the loop and process the list (\ie, the user input).
+
+\Note In the lisp key's callback, the parameter character \fx{#1} represents not the entire user input (which is assumed to be a list) but the individual items of the list. Each item of the list will be processed by the key's callback.
+
+A lisp key does accept any arbitrary list separator. When the list separator differs from \qcomma, it has to be provided in the key's callback as the argument of the undefined command \fx{\listsep}. And at key-setting time, user inputs that are comma-separated should be enclosed in curly braces, otherwise they won't be parsed properly and errors will arise. An example follows. When setting the key, the user must then use the same list separator. \fx{\ltxkeyslispcount} gives the numerical order of each item in the list. The default value and user input of a lisp key should take cognizance of the list separator. Both the default value and the user input of a lisp key can be just one item, rather than a list; in which case the current input is assumed to have just one item. Spurious leading and trailing spaces (\ie, unprotected spaces) in the list are trimmed before the list is parsed by the key's callback. Reminder: \fx{#1} in the key's callback refers to the individual item of the list, and not the entire list itself.
+
+It is possible to call the command \fx{\ltxkeysbreakloop} in the key's callback \ang{cbk} to break out of the list processing prematurely. The unprocessed items will be handled by the command \fx{\ltxkeysdoremainder}, which can be redefined by the user. By default, it has the same meaning as the \latex kernel's \hx{\@gobble}, meaning that it simply throws away the list remainder.
+
+\start+{example}[\ltxkeyslispkey]
+\ltxkeyslispkey[KV]{fam}{keya}[aaa, bbb]{%
+  |com(`#1' here refers to the current item of the list:)
+  \ltscsdef{ww@\romannumeral\ltxkeyslispcount}{#1}%
+}
+|com(User inputs that are comma-separated should be wrapped in braces:)
+\ltxkeyssetkeys[KV]{fam}{keya={val1, val2, val3}}
+
+\ltxkeyslispkey[KV]{fam}{keyb}[aaa; bbb]{%
+  |R(\listsep){;}%
+  \ifnum\ltxkeyslispcount>2\relax
+    \ltxkeysbreakloop
+  \else
+    \ltscsdef{ww@\romannumeral\ltxkeyslispcount}{#1}%
+  \fi
+}
+\ltxkeyssetkeys[KV]{fam}{keyb=val1; val2; val3; val4}
+\ltxkeyssetkeys[KV]{fam}{keyb=val5}
+\finish{example}
+
+\start+{example}[\ltxkeyslispkey]
+\ltxkeyslispkey[KV]{fam}{keya,keyb}[default1,default2]{%
+  \begingroup
+  \color{blue}
+  \ifltxkeysnoval
+    \ifnum\ltxkeyslispcount=\@ne
+      \endgraf
+      Using default value of `\ltxkeystkey':
+    \fi
+  \else
+    \ifnum\ltxkeyslispcount=\@ne
+      \endgraf
+      Using user value of `\ltxkeystkey':
+    \fi
+  \fi
+  \endgroup
+  \endgraf
+  Doing item no. \ltxkeyslispcount: #1%
+}
+%\show\KV@fam@keya
+%\endtrace
+\let\ltxsetkeys\ltxkeyssetkeys
+\makeatother
+
+\begin{document}
+\parindent0pt
+%\trace*
+\ltxsetkeys[KV]{fam}{keya,keyb}
+%\endtrace
+
+\par\bigskip
+\ltxsetkeys[KV]{fam}{%
+  keya={item1A,item1B,item1C,item1D},
+  keyb={item2A,item2B,item2C,item2D}
+}
+%\endtrace
+\end{document}
+\finish{example}
+
+
+\docsubsection(sec:cmdkeys)<command keys (cmd)>{Command keys}
+
+\start+{newmacro}[\ltxkeyscmdkey,\ltxkeysnewcmdkey]
+\ltxkeyscmdkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewcmdkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeyscmdkey,\ltxkeysnewcmdkey}
+
+Here, the optional quantity \ang{mp} is the \quoted{macro prefix}. If \ang{mp} is given, the command \mpkey will hold the current user input at key setting time; otherwise (\ie, if \ang{mp} is absent) the user input will be available in the macro \ipreffamkey{cmd}. The command \preffamkey is the \quoted{key macro} and will hold the callback \ang{cbk}. This type of key is traditionally called \quoted{command key} (a name that most likely emanated from the \pkg'{xkeyval}) because it gives rise to the macro \mpkey, but in the \pkg'{ltxkeys} even boolean, style and choice keys are associated with this type of macro.
+
+
+\docsubsubsection(sec:cmdkeys-sameattributes)
+  {Command keys that share the same attributes}
+
+The commands \ffx'{\ltxkeyscmdkey,\ltxkeysnewcmdkey} can be used to introduce command keys \ang{keys} that share the same path or bases (key prefix, key family, and macro prefix) and callback \ang{cbk}. Simply replace \ang{key} in these commands with the comma-separated list \ang{keys}. Some users might prefer to see these commands in their plural forms when defining several keys with the same callback. We have therefore provided the following aliases:
+
+\start+{newmacro}[\ltxkeyscmdkeys,\ltxkeysnewcmdkeys]
+\ltxkeyscmdkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewcmdkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeyscmdkeys,\ltxkeysnewcmdkeys}
+
+
+\docsubsection(sec:stylekeys){Style keys}
+\aidx*{style keys (sty)}
+
+Style keys are keys with observers (\ie, keys that are processed when the subject/master key is set). They have the following syntaxes:
+
+\start+{newmacro}[\ltxkeysstylekey,\ltxkeysnewstylekey]
+\ltxkeysstylekey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysstylekey|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysnewstylekey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysnewstylekey|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysstylekey,\ltxkeysnewstylekey}
+
+The observers \ang{deps} have the syntax:
+
+\start'{macro}[Observer keys syntax]
+|(
+  |A(key1)=|A(value1),...,|A(key1)=|A(value1)
+|)
+\finish{macro}
+\aidxs*{observer keys}{style keys}
+
+The default value \ang{dft} and the callback \ang{cbk} can be absent in the syntax of style keys. \ang{keytype} can be \quoted{ord} (ordinary key), \quoted{cmd} (command key), \quoted{bool} (boolean key), or \quoted{choice} (choice key).
+
+Observer keys always share the same key prefix \ang{pref}, family \ang{fam}, and macro prefix \ang{mp} with the parent key.
+
+If \ang{mp} is given, the command \mpkey will hold the current user input for the parent key; otherwise the user input will be available in \ipreffamkey{style}. The macro \preffamkey will always hold the callback \ang{cbk}.
+
+If the \stform is used, all undefined observers will be defined and set on the fly as the parent is being set. If the \stform isn't used and undefined observers occur, then an error message will be flagged at the time the parent is being set.
+
+Most of the time it is possible to access the parent key's current value with \fx{\parentval}. Within \ang{dft} and \ang{cbk} of \ang{deps}, it is possible to refer to the parent key's callback with its full macro name (\ie, \preffamkey). \fx{\parentval} is always available for use as the default value of observer keys, but it may be lost in the callbacks of observer keys, because a observer key, once defined, may be set independent of, and long after, the parent key has been executed. It is, therefore, more reliable to refer to the macro \jpreffamkey{value}, which is recorded for only the parent key of style keys and which holds the current user input for the parent key. The macro \jpreffamkey{value} is recorded only if it appears at least once in the attributes or callbacks of observer keys. The macro \jpreffamkey{value} has a more unique name than \mpkey but they always contain the same value of a style key. As mentioned above, if \ang{mp} is not given, the user input for a style key will be available in the macro \ipreffamkey{style}, instead of \mpkey.
+
+\ltsnote
+The parameter \quotedfx{#1} in the callback of parent key refers to the current value of the parent key, while \quotedfx{#1} in the callback of any observer key refers to the current value of that observer key. Here is an example that defines and sets all undefined observers on the fly:
+
+\start+{example}[\ltxkeysstylekey]
+\ltxkeysstylekey|*[KV]{fam}[mp@]{keya}[{left}]|(%
+  |com(`#1' here refers to the value of the PARENT key at the time)
+  |com(it is being set:)
+  keyb=valueb,keyc=#1,keyd=2*#1
+|){%
+  |com(`#1' here refers to the value of the PARENT key at the time)
+  |com(it is being set:)
+  \def\x##1{##1xx#1xx}%
+  |com(Check the value of parent key:)
+  \ltxkeyscheckchoice+[,]|(\userinput\order|){#1}{left,right,center}{}{%
+    \@latex@error{Invalid input `#1'}\@ehd
+  }%
+}
+\finish{example}
+
+
+In this example, \fx{\userinput} corresponds to \fx{#1}, and \fx{\order} is the numerical order of the user input in the nominations \fnz*{left,right,center}. More about the commands \ffx'{\ltxkeyscheckchoice, \ltxkeyscheckuserinput} can be found in \sref{sec:checkchoice}.
+
+You can try setting \ttx{keya} as follows to see what happens to keys \ffx'{keyb,keyc,keyd}:
+
+\start{example}[\ltxkeyssetkeys]
+\ltxkeyssetkeys[KV]{fam}{keya=right}
+\finish{example}
+
+The following will flag an error because \fx{{right}} isn't in the list of nominations \fnz*{left,right,center}:
+
+\start{example}[\ltxkeyssetkeys]
+\ltxkeyssetkeys[KV]{fam}{keya={right}}
+\finish{example}
+
+The braces in the key values above are just to exemplify the fact that braces in key values are preserved throughout key parsing. As mentioned earlier, this is essential for some packages and class files.
+
+
+\docsubsubsection(sec:stylekeys-sameattributes)
+  {Style keys that share the same attributes}
+
+The commands \ffx'{\ltxkeysstylekey,\ltxkeysnewstylekey} can be used to introduce style keys \ang{keys} that share the same path or bases (key prefix, key family, and macro prefix) and callback \ang{cbk}. Just replace \ang{key} in these commands with the comma-separated list \ang{keys}. However, some users might prefer to see these commands in their plural forms when defining several keys with the same callback. Hence, we also provide the following aliases:
+
+\start+{newmacro}[\ltxkeysstylekeys,\ltxkeysnewstylekeys]
+\ltxkeysstylekeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysstylekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysnewstylekeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\ltxkeysnewstylekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]|(|A(deps)|){|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysstylekeys,\ltxkeysnewstylekeys}
+
+
+\docsubsection(sec:boolkeys)<boolean keys (bool)>{Boolean keys}
+
+\start+{newmacro}[\ltxkeysboolkey,\ltxkeysnewboolkey]
+\ltxkeysboolkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysboolkey|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewboolkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewboolkey|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysboolkey,\ltxkeysnewboolkey}
+
+In these commands, if \ang{mp} is given, the command \mpkey will hold the current user input for the key at key setting time; otherwise the user input will be available in \ipreffamkey{bool}\footnote{This differs from the system in the \pkg'{xkeyval}.}. If \ang{mp} is specified, a boolean of the form \ifmpkey will be created at key definition, which will be set by \fx{\ltxkeyssetkeys} according to the user input. If \ang{mp} is not specified, a boolean of the form \ipreffamkey{ifbool} will instead be created.
+
+The user input for boolean keys must be in the set \fnz*{true,false}. The callback \ang{cbk} is held in the command \preffamkey, which is executed if the user input is valid.
+
+The \plform of \ffx'{\ltxkeysboolkey,\ltxkeysnewboolkey} will execute \ang{fn} in place of \ang{cbk} if the user input isn't in \fnz*{true,false}; the plain form will issue an error in this case.
+
+
+\docsubsubsection(sec:boolkeys-sameattributes)
+  {Boolean keys that share the same attributes}
+
+The commands \ffx'{\ltxkeysboolkey,\ltxkeysnewboolkey} can be used to introduce boolean keys \ang{keys} that share the same path or bases (key prefix, key family, and macro prefix) and callback \ang{cbk}. Just replace \ang{key} in these commands with the comma-separated list \ang{keys}. Because some users might prefer to see these commands in their plural forms when defining several keys with the same callback, we have provided the following aliases:
+
+\start+{newmacro}[\ltxkeysboolkeys,\ltxkeysnewboolkeys]
+\ltxkeysboolkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysboolkeys|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewboolkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewboolkeys|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysboolkeys,\ltxkeysnewboolkeys}
+
+
+\docsubsubsection(sec:biboolkeys)<biboolean keys>{Biboolean keys}
+
+\start+{newmacro}[\ltxkeysbiboolkeys,\ltxkeysnewbiboolkeys]
+\ltxkeysbiboolkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(bl1),|A(bl2)}[|A(dft)]{|A(cbk1)}{|A(cbk2)}
+\ltxkeysbiboolkeys|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(bl1),|A(bl2)}[|A(dft)]{|A(cbk1)}{|A(cbk2)}{|A(fn)}
+\ltxkeysnewbiboolkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(bl1),|A(bl2)}[|A(dft)]{|A(cbk1)}{|A(cbk2)}
+\ltxkeysnewbiboolkeys|+
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(bl1),|A(bl2)}[|A(dft)]{|A(cbk1)}{|A(cbk2)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysbiboolkeys,\ltxkeysnewbiboolkeys}
+
+Biboolean keys always assume opposite states: when one is true, the other is automatically toggled to false; and vice versa. Think of the options \hx{draft} and \hx{final} in a document class, but note that traditional document classes don't currently use biboolean keys. The callback \ang{cbk1} belongs to the boolean key \ang{bl1}, while \ang{cbk2} is of \ang{bl2}.
+
+The \plform of \fx{\ltxkeysbiboolkeys} will execute \ang{fn} in place of \ang{cbk1} or \ang{cbk2} if the input is not in \fnz*{true,false}; the plain form will issue an error in this case.
+
+Biboolean keys have equal symmetry (\ie, they can call each other with equal propensity) and they won't bomb out in an infinite reentrance. They normally would know if and when they call each other, or if they're being called by some other keys.
+
+\start+{example}[\ltxkeysbiboolkeys]
+\ltxkeysbiboolkeys|+[KV]{fam}[mp@]{keya,keyb}[true]{%
+  \ifmp@keya\def\x##1{##1x#1x##1}\fi
+}{%
+  \ifmp@keyb\def\y##1{##1y#1y##1}\fi
+}{%
+  \@latex@error{Invalid value `#1' for key `\ltxkeyscurrentkey'}\@ehc
+}
+\finish{example}
+
+
+\docsubsection(sec:switchkeys)<switch keys (type: switch)>{Switch keys}
+
+Switch keys look like boolean keys and they expect the same value set as boolean keys, namely, \fnz*{true, false}, but they are cheaper. Internally the value set of a switch key is \fnz*{00,01}. So, while the user input for a switch key must lie in the set \fnz*{true, false}, the input is internally converted to \fnz*{00,01}. This allows the values of switch keys to be tested with \tex's \hx{\if}. While each new boolean results in the creation of three commands, every new switch requires only one command.
+
+\start+{newmacro}[\ltxkeysswitchkey,\ltxkeysnewswitchkey]
+\ltxkeysswitchkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysswitchkey|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewswitchkey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewswitchkey|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysswitchkey,\ltxkeysnewswitchkey}
+
+In these commands, if \ang{mp} is given, the command \mpkey will hold the current user input for the key at key setting time; otherwise the user input will be available in \ipreffamkey{switch}. If \ang{mp} is specified, a switch of the form \mpkey will be created at key definition, which will be set by \fx{\ltxkeyssetkeys} according to the user input. If \ang{mp} is not specified, a switch of the form \ipreffamkey{switch} will instead be created.
+
+The callback \ang{cbk} is held in the command \preffamkey, which is executed if the user input is valid, ie, in the set \fnz*{true,false}.
+
+The \plform of \ffx'{\ltxkeysswitchkey,\ltxkeysnewswitchkey} will execute \ang{fn} in place of \ang{cbk} if the user input isn't in \fnz*{true,false}; the plain form will issue an error in this case.
+
+\start{example}
+\ltxkeysswitchkey[KV]{fam}{keya}[true]{%
+  \if\switchKV@fam@keya
+    \def\x##1{##1*#1*##1}%
+  \fi
+}
+\ltxkeysswitchkey+[KV]{fam}[mp@]{keyb}[true]{%
+  \if\mp@keyb
+    \def\y##1{##1*#1*##1}%
+  \fi
+}{
+  \@latex@error{Invalid value `#1' for key `keyb'}\@ehc
+}
+\ltxkeyssetkeys[KV]{fam}{keya=true,keyb=false}
+\finish{example}
+
+
+\docsubsubsection(sec:switchkeys-sameattributes)
+  {Switch keys that share the same attributes}
+
+The commands \ffx'{\ltxkeysswitchkey,\ltxkeysnewswitchkey} can be used to introduce switch keys \ang{keys} that share the same meta (key prefix, key family, macro prefix, and callback \ang{cbk}). Just replace \ang{key} in these commands with the comma-separated list \ang{keys}. Because some users might prefer to see these commands in their plural forms when defining several keys with the same callback, we have provided the following aliases:
+
+\start+{newmacro}[\ltxkeysswitchkeys,\ltxkeysnewswitchkeys]
+\ltxkeysswitchkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysswitchkeys|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewswitchkeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewswitchkeys|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysswitchkeys,\ltxkeysnewswitchkeys}
+
+\start{example}
+\ltxkeysswitchkeys+[KV]{fam}[mp@]{keya,keyb,keyc}[true]{%
+  \if\@nameuse{mp@\ltxkeyscurrentkey}%
+    \def\x##1{value of key `\ltxkeyscurrentkey' = #1 *** arg = ##1}%
+  \fi
+}{
+  \@latex@error{Invalid value `#1' for key `\ltxkeyscurrentkey'}\@ehc
+}
+\ltxkeyssetkeys[KV]{fam}{keya=true,keyb=false,keyc=true}
+\finish{example}
+
+
+\docsubsection(sec:choicekeys)<choice keys (type: choice)>{Choice keys}
+
+The choice keys of the \pkg'{ltxkeys} differ from those of the \pkg'{xkeyval} in at least two respects; namely, the presence of the macro prefix for choice keys in the \pkg'{ltxkeys} and the introduction of the optional \quoted{\redclam} prefix.
+
+\start+{newmacro}[\ltxkeyschoicekey,\ltxkeysnewchoicekey]
+\ltxkeyschoicekey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeyschoicekey|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeyschoicekey|*|+[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeyschoicekey|*|+|![|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+
+\ltxkeysnewchoicekey[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewchoicekey|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewchoicekey|*|+
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewchoicekey|*|+|!
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(key)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeyschoicekey,\ltxkeysnewchoicekey}
+
+Choice keys check the user input against the nominations \ang{alt} suggested by the author of a key. The comma-separated list \ang{alt} is the list of admissible values of the key.  The \stform will convert user input to lowercase before checking it against the list of nominations in \ang{alt}. In all the above variants, if the input is valid, then the callback \ang{cbk} will be executed. If the user input isn't valid, the \unplform+ will flag an error, while the \plform+ will execute \ang{fn}. The \clform+ will fully expand the user input before checking it against the nominations in \ang{alt}. The \clform arises from the fact that sometimes macros are passed as the values of choice keys. If \ang{mp} is absent, then \fx{\ltxkeyschoicekey} uses \ipreffamkey{chc} to hold the user input.
+
+When \ang{alt} has no literal form \quotedfx{/.do} or forward slash \quotedfx{/} in it, then it is expected to be of the familiar \pkg'{xkeyval} syntax:
+
+\start'{macro}[Syntax of `nominations' for choice keys]
+{choice1,choice2,etc.}
+\finish{macro}
+
+If \ang{alt} has \quotedfx{/.do} or \quotedfx{/} in it, then it is expected to have one of the following syntaxes:
+
+\start'{macro}[Syntaxes of `nominations' for choice keys]
+{%
+  choice1|R(/.do=)callback1|R(|A(keyparser))
+  choice2|R(/.do=)callback2|R(|A(keyparser))
+  etc.
+}
+
+|R(or)
+
+{%
+  choice1|R(/)callback1|R(|A(keyparser))
+  choice2|R(/)callback2|R(|A(keyparser))
+  etc.
+}
+\finish{macro}
+\aiidxm*[\emph,choice keys]{nominations}
+\aidxm*{/.do}
+\aidxs*{.do}{/.do}
+
+If the parser is \qsemicolon, then we would have
+
+\start'{example}[Syntaxes of `nominations' for choice keys]
+{choice1|R(/.do=)callback1; choice2|R(/.do=)callback2; etc.}
+
+|R(or)
+
+{choice1|R(/)callback1; choice2|R(/)callback2; etc.}
+\finish{example}
+
+This means that if you have \quotedfx{/.do} or \quotedfx{/} in any of the callbacks, it has to be enclosed in curly braces! Please recall that the default value of \ang{keyparser} is \qsemicolon. \fx{keyparser} is a package option. This syntax also implies that if you have the \ang{keyparser} in \ang{defn}, it has to be wrapped in curly braces.
+
+\ltsnote
+The \ang{keyparser} in these syntaxes of \quoted{nominations} for choice keys could also be \qcomma, without the need to declare the package option \fx{keyparser} as \qcomma. Here is the rule for parsing the \ang{alt} list. First the package checks if the declared key parser (\ie, \ang{keyparser}) is in the \ang{alt} list. If the parser exists in \ang{alt}, then the list is parsed using this parser. Otherwise the list is parsed using \qcomma as the parser. Moreover, the package checks if \quotedfx{.do} separates \ang{choice} from the callback \ang{cbk}. If no \quotedfx{.do} is found, then \quotedfx{/} is assumed to be the separator. But note that when there is no \ang{cbk} for a nomination, then neither \quotedfx{.do} nor \quotedfx{/} is necessary.
+
+It is possible to refer to the current value of \ang{key} as \fx{#1} in \ang{alt}.
+
+The \stform of \fx{\ltxkeyschoicekey} will convert the user input to lowercase before checking \ang{alt} and executing the callbacks. The \plform will execute \ang{fn} in place of \ang{cbk} if the user input isn't in \ang{alt}.
+
+\ang{bin} has, \eg, the syntax \fx{[\userinput\order]}, where \fx{\userinput} will hold the user input (in lowercase if the \stform of \fx{\ltxkeyschoicekey} is called), and \fx{\order} will hold the serial number of the value in the list of nominations \ang{alt}, starting from 0. If the input isn't valid, \fx{\userinput} will still hold the user input, but \fx{\order} will be~$-1$.
+
+\start+{example}[\ltxkeyschoicekey nominations]
+\ltxkeyschoicekey[KV]{fam}{keya}{%
+  |com(There are no callbacks for these simple nominations:)
+  center,right,left,justified
+}[center]{|com( <- default value)
+  \def\x##1##2{==##1++#1++##2==}%
+}
+
+\ltxkeyschoicekey|*|+[KV]{fam}[mp@]{keya}[\userinput\order]{%
+  center,right,left,justified
+}[center]{%
+  \def\x##1##2{==##1++#1++##2==}%
+}{%
+  \@latex@error{Inadmissible value `\detokenize{#1}' for keya}\@ehc
+}
+
+\ltxkeyschoicekey|*|+[KV]{fam}[mp@]{keyb}[\userinput\order]{%
+  |com(There are callbacks for these nominations:)
+  land/.do=\def\x##1{*##1*#1*##1};
+  air/.do=\edef\z{\expandcsonce\ltxkeyscurrentvalue};
+  sea/.do=\edef\myinput{\ltstrimspaces{#1}};
+  space/.do=\letcsntocs{#1@earth}\relax
+}[center]{%
+  \def\z##1##2{==##1++#1++##2==}%
+}{%
+  \@latex@error{Inadmissible value `\detokenize{#1}' for keya}\@ehc
+}
+
+\ltxkeyschoicekey[KV]{fam}[mp@]{keyb}[\userinput\order]{%
+  |com(The callbacks can also take the following form:)
+  center/\ltxkeyscmdkey[KV]{fam}[mp@]{keyd}{\def\x####1{####1*##1*####1}},
+  right/\let\align\flushright,
+  left/\let\align\flushleft\edef\userinput{\ltstrimspaces{#1}},
+  justified/\let\align\relax
+}[center]{%
+  \def\z##1##2{==##1++#1++##2==}%
+}
+
+\ltxkeyschoicekeys[KV]{fam}[mp@]{keya,|R(\savevalue\needvalue){keyb}}%
+[\val\order]{%
+  center/\ltxkeyscmdkey[KV]{fam}[mp@]{keyd}[|R(\usevalue){keyb}]
+    {\def\x####1{####1*##1*####1}},
+  right/\def\y##1{##1++#1++##1},
+  left/\edef\userinput{\ltstrimspaces{#1}},
+  justified/\letcsntocs{#1@align}\relax
+}[center]{%
+  \def\z##1##2{==##1++#1++##2==}%
+}
+\ltxkeyssetkeys[KV]{fam}{keyb=center,keyd}
+\finish{example}
+
+The representations \ffx{\savevalue,\usevalue,\needvalue}, \etc are pointers (see \sref{sec:keypointers}).
+
+
+\docsubsubsection(sec:choicekeys-sameattributes)
+  {Choice keys that share the same attributes}
+
+The commands \ffx'{\ltxkeyschoicekey,\ltxkeysnewchoicekey} can be used to introduce choice keys \ang{keys} that share the same path or bases (key prefix, key family, and macro prefix) and callback \ang{cbk}. All the user has to do is to replace \ang{key} in these commands with the comma-separated list \ang{keys}. Some users might prefer to see these commands in their plural forms when defining several keys with the same attributes. We have therefore provided the following aliases without modifying the internal coding:
+
+\start+{newmacro}[\ltxkeyschoicekeys,\ltxkeysnewchoicekeys]
+\ltxkeyschoicekeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeyschoicekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeyschoicekeys|*|+
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeyschoicekeys|*|+|!
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewchoicekeys[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewchoicekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}
+\ltxkeysnewchoicekeys|*|+
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\ltxkeysnewchoicekeys|*|+|!
+  [|A(pref)]{|A(fam)}[|A(mp)]{|A(keys)}[|A(bin)]{|A(alt)}[|A(dft)]{|A(cbk)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeyschoicekeys,\ltxkeysnewchoicekeys}
+
+
+\docsection{Default values of keys}
+The code after \fx{.do=} will be executed whenever the default value of the key is used.
+
+% \ltxkeysordkey[KV]{fam}{keya}[\def\y#1{#1}.do=\def\x#1{#1}]{%
+%   \def\cmda##1{##1*#1*##1}
+% }
+
+\docsection(sec:everykeydefault){Every default value of a key}
+
+The command \fx{\ltxkeyseverykeydefault} can be used to take some action (such as writing to the log file the default values assigned to keys without values) at key-setting time. The command will be invoked only if it has been initialized by the user and if the current key has no user value. It is initialized by the following syntax:
+
+\start+{newmacro}[\ltxkeyseverykeydefault]
+\ltxkeyseverykeydefault[|A(prefs)]{|A(fams)}{#1#2#3#4}
+\finish{newmacro}
+\fxim*{\ltxkeyseverykeydefault}
+
+Here, \ang{prefs} and \ang{fams} are the key prefixes and families that will have the defined key-default handler. \ang{prefs} is optional; it has the default value of \fx{KV}. The parameters \fx{#1,#2,#3,#4} can be used by the caller to access the current key prefix, key family, key name, and key value, respectively.
+
+The following example defines key-default handler for two key prefixes and two families.
+
+\start{example}[\ltxkeyseverykeydefault]
+\ltxkeyseverykeydefault[KV1,KV2]{fam1,fam2}{%
+  \wlog{Prefix: #1/ Family: #2/ Key name: #3/ Default value: \unexpanded{#4}}%
+}
+\finish{example}
+
+
+\docsubsection(sec:declarekeys){Defining all types of key with one command}
+\aidx*{defining multiple keys}
+
+\start{newmacro}[\ltxkeysdeclarekeys]
+\ltxkeysdeclarekeys[|A(pref)]{|A(fam)}[|A(mp)]{%|label(mac:declarekeys)
+  |A(keytype)/|A(keyname)/|A(dft)/|A(cbk);
+  another set of key attributes;
+  etc.
+}
+\ltxkeysdeclarekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(keytype)/|A(keyname)/|A(dft)/|A(cbk);
+  another set of key attributes;
+  etc.
+}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclarekeys}
+\aidx*{style keys (sty*)}
+
+Here, the default value \ang{dft} and the callback \ang{cbk} can be absent in all cases. \ang{keytype} must be any one of \fnz{ord,cmd,sty,sty*,bool,choice,switch}. The star (\redstar) in \quoted{sty\Redstar} has the same meaning as in \fx{\ltxkeysstylekey} above, namely, undefined observers will be defined on the fly when the parent key is set. The optional quantity \ang{mp} is the macro prefix, as in, \eg, \sref{sec:cmdkeys,sec:definekeys}.
+
+Choice keys must have their names associated with their admissible \ang{alt} values in the format \keydotchoice{keyname}{alt} (see example below).
+
+The \stform of \fx{\ltxkeysdeclarekeys} can be used to define new keys (in the sense of \hx{\newcommand}).
+
+\ltsnote
+Keys defined by \fx{\ltxkeysdeclarekeys} are automatically set instantly with their default values, to provide default functions for immediate use. Boolean keys are always initialized in this sense with \quoted{false}, so that they aren't turned \quoted{true} prematurely. See \sref{nte:definekeys-1} for a potential snag and its solution when keys are automatically preset as done by the command \fx{\ltxkeysdeclarekeys}.
+
+\start+{example}[\ltxkeysdeclarekeys]
+\ltxkeysdeclarekeys|*[KV]{fam}[mp@]{%
+  |com(Ordinary key with callback:)
+  ord/keya/.1\paperwidth/\leftmargin=#1\relax;
+  |com(Command key with callback. `.do=' is allowed before callback:)
+  cmd/keyb/10mm/.do=\rightmargin=#1\def\x##1{##1*#1*##1};
+  |com(Boolean key without callback:)
+  bool/keyc/true;
+  |com(Boolean key with callback:)
+  bool/keyd/true/\ifmp@keyd\@tempswatrue\else\@tempswafalse\fi;
+  |com(Style key with callback but no observers:)
+  style/keye/aaa/\def\y##1{##1yyy#1};
+  |com(Style key with callback and observers `keyg' and `keyh':)
+  style/keyf|R(.){
+      keyg=valueg,keyh=valueh
+    }
+    /blue/\def\y##1{##1#1};
+  |com(Choice key with simple nominations and callback. The function)
+  |com(\order is generated internally:)
+  choice/keyi|R(.){left,right,center}/center/
+    \edef\shoot{\ifcase\order 0\or 1\or 2\fi};
+  |com(Choice key with complex nominations:)
+  choice/keyj|R(.){
+      center/.do=\def\mp@textalign{center},
+      left/.do=\def\mp@textalign{flushleft},
+      right/.do=\def\mp@textalign{flushright},
+      justified/.do=\let\mp@textalign\relax
+    }
+    /center/\def\yy##1{##1yy#1};
+  ord/keyk/\letcstocsn\func{as-defined-by-user};
+  switch/keyl/true/\if\mp@keyl\def\y##1{##1+#1+##1}\fi;
+  |com(#1 here means the value of the subject key:)
+  style/key1|R(.){
+      key1a=value1a,key1b=#1
+    }
+    /dft1/\def\y##1{##1*#1};
+}
+\finish{example}
+\aidx*{style keys}
+\aidx*{/.do}
+
+Notice the syntax \keydotchoice{keyi}{left,right,center} for the choice keys \ttx{keyi,keyj}. It says that the alternate admissible values for \quoted{keyi} are \quotedlist'{left,right, center, justified}; similarly for key \quoted{keyj}. For style keys, \keydotchoice{keyf}{keyg=valueg, keyh=valueh} means that \ttx{keyg,keyh} are observer keys of the subject \ttx{keyf}.
+
+
+\docsubsubsection(sec:sametypekeys)[Defining keys of common type]
+  {Defining keys of common type with \headfx{\ltxkeysdeclarekeys}}
+
+If you have to define keys of the same type with the command \fx{\ltxkeysdeclarekeys}, then the following syntax allows you to avoid entering the key types repeatedly:
+
+\start{macro}[\ltxkeysdeclarekeys]
+\ltxkeysdeclarekeys|(|A(keytype)|)[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(keyname)/|A(dft)/|A(cbk);
+  another set of key; etc.
+}
+\ltxkeysdeclarekeys|*|(|A(keytype)|)[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(keyname)/|A(dft)/|A(cbk);
+  another set of key; etc.
+}
+\finish{macro}
+\fxi*{\ltxkeysdeclarekeys}
+
+\start+{example}[\ltxkeysdeclarekeys]
+\ltxkeysdeclarekeys|(bool|)[KV]{fam}[mp@]{%
+  keya/true/\def\x##1{##1*#1*##1};
+  keyb/true;
+  keyc/true/\def\y##1{##1yyy#1}
+}
+\ltxkeysdeclarekeys|*|(sty|*|)[KV]{fam}[mp@]{%
+  keyd/xxx/\def\y##1{##1yyy#1};
+  |com(keyf is a observer of keye:)
+  keye/blue/\def\y##1{##1#1}/cmd>keyf>\parentval>\def\z####1{####1+##1+####1}
+}
+\finish{example}
+
+
+\docsubsection(sec:definekeys){Defining keys with one command}
+\aidx*{defining multiple keys}
+
+In my personal experience, boolean and command keys have been the most widely used types of key in the context of \pkg'{xkeyval}. More than one boolean and command keys can be defined simultaneously by the following command:
+
+\start{newmacro}[\ltxkeysdefinekeys]
+\ltxkeysdefinekeys[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(key)|R(=)|A(dft)/|A(cbk);
+  another set of key attributes; etc.
+}
+\ltxkeysdefinekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(key)|R(=)|A(dft)/|A(cbk);
+  another set of key attributes; etc.
+}
+\finish{newmacro}
+\fxim*{\ltxkeysdefinekeys}
+
+The default value \ang{dft} can be absent in the case of command keys, and the callback \ang{cbk} can be absent for the two types of key. Boolean keys must, however, have default values \fnz*{true,false}, to be distinguishable from command keys. The \eqsign that separates the key name from the default value can be replaced with forward slash (/). That is, the following syntax is also permitted:
+
+\start{newmacro}[\ltxkeysdefinekeys]
+\ltxkeysdefinekeys[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(key)|R(/)|A(dft)/|A(cbk);
+  another set of key attributes; etc.
+}
+\ltxkeysdefinekeys|*[|A(pref)]{|A(fam)}[|A(mp)]{%
+  |A(key)|R(/)|A(dft)/|A(cbk);
+  another set of key attributes; etc.
+}
+\finish{newmacro}
+\fxim*{\ltxkeysdefinekeys}
+
+You can use the command \fx{\ltxkeyscheckuserinput} in \ang{cbk} to indirectly introduce choice keys as command keys (see example below).
+
+Ordinary keys and conventional choice keys can't be introduced directly by this command (use the command \fx{\ltxkeysdeclarekeys} instead).
+
+The \stform of \fx{\ltxkeysdefinekeys} can be used to define non-existing boolean and command keys in the sense of \hx{\newcommand}.
+
+\begin{noteenv}*
+\label{nte:definekeys-1}
+Keys defined by \fx{\ltxkeysdefinekeys} are automatically set/initialized instantly, to provide default values for immediate use. Boolean keys are preset with value \quoted{false}, so that they aren't turned \quoted{true} prematurely. There is a potential problem with this manner of presetting keys. Consider the following example, in which \ttx{keya} builds a list:
+
+\start{example}[\ltxkeysdefinekeys]
+\def\alist{}
+\ltxkeysdefinekeys[pref]{fam}[mp]{%
+  keya/defaulta/\edef\alist{\ifx\alist\@empty\else\alist,\fi#1};
+  keyb/defaultb/\def\callback##1{##1*#1}%
+}
+\finish{example}
+
+If, as is done by the command \fx{\ltxkeysdefinekeys}, \ttx{keya} is automatically preset at definition, the building of the list \fx{\alist} would then have started, which is most likely not what the user of the key requires. The \pkg'{ltxkeys} therefore provides an internal boolean \fx{\ifltxkeysdec} that is set true within the commands \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys} and toggled false outside these commands. The boolean has other uses within these commands. It can be used as follows:
+
+\start{example}[\ltxkeysdefinekeys]
+\def\alist{}
+\ltxkeysdefinekeys[pref]{fam}[mp]{%
+  keya/defaulta/
+    \ifltxkeysdec\else
+      |com(Don't execute this when defining the key:)
+      \edef\alist{\ifx\alist\@empty\else\alist,\fi#1}%
+    \fi;
+  keyb/defaultb/\def\callback##1{##1*#1}%
+}
+\finish{example}
+
+So here the building of the list by \ttx{keya} wouldn't start until the key has been defined (\ie, outside \fx{\ltxkeysdefinekeys}).
+\end{noteenv}
+
+\ltsnote
+In \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}, if \fx{endcallbackline} is true, every line is assumed to end with a comment sign. This is to be specially noted if a space is desired at the end of line. You can insert such a space with a comment sign, or, if appropriate, use \hx{\space}.
+
+\start+{example}[\ltxkeysdefinekeys]
+|com(The |stform defines new keys:)
+\ltxkeysdefinekeys|*[KV]{fam}[mp@]{%
+  |com(Command key with callback:)
+  keya={keepbraced}/\def\x##1{##1*#1*##1};
+  |com(Boolean key:)
+  keyb=true/\def\y##1{##1yyy#1};
+  |com(Command key with no callback:)
+  keyc=xxx;
+  |com(Choice-like command key:)
+  keyd=center/\ltxkeyscheckuserinput{#1}{left,right,center}
+    \ifltxkeysinputvalid |label(mac:ifltxkeysinputvalid)
+      \edef\myval{\expandcsonce\userinput}
+      \edef\numberinlist{\number\order}
+      \edef\mychoices{\expandcsonce\nominations}
+    \else
+      \@latex@error{Input `#1' not valid}\@ehd
+    \fi;
+  |com(Boolean key with no callback:)
+  keye=false;
+}
+\finish{example}
+\fxim*{\ifltxkeysinputvalid,\ltxkeyscheckuserinput,\nominations,\userinput}
+\aiidxm*[\bs,choice keys]{nominations,ifltxkeysinputvalid}
+
+In this example, \fx{\userinput} corresponds to \fx{#1}; \fx{\order} is the numerical order of the user input in \fx{\nominations}; the list of valid values suggested at key definition time (\fnz*{left,right,center} in this example). The boolean \fx{ltxkeysinputvalid} is associated with the command \fx{\ltxkeyscheckuserinput} and is available to the user. It is set \hx{true} when the user input is valid, and \hx{false} otherwise. The command \fx{\ltxkeyscheckuserinput} expects two arguments: the user input and the list of nominations. It doesn't expect two branches (see \sref{sec:checkchoice}).
+
+
+\docsubsection(sec:needvalue)<need-value keys>{Need-value keys}
+
+Sometimes you may want to create keys for which the user must always supply his/her own values, even if the keys originally have default values. The default values of keys may not always be suitable. Take, for example, the height and width of a graphics image. For functions that are meant to handle generic images, it would certainly be inappropriate to relieve the user of the need to call picture height and width without corresponding values.
+
+To make a key a need-value key, simply attach the pointer \fx{\needvalue} to the key at definition time. This pointer can be used only when defining keys, and not when setting keys.
+
+\start'{example}[Need-value keys]
+\ltxkeyscmdkey[KV]{fam}[mp@]{\needvalue{keya}}[blue]{%
+  \def\x##1{##1x#1x##1}%
+}
+\ltxkeyssetkeys[KV]{fam}{keya}
+|com( -> Error: the author of `keya' designed it to require a user value.)
+\finish{example}
+
+See more about key pointers in \sref{sec:keypointers}.
+
+
+\docsubsection(sec:xfamilykeys)<xfamily keys>{Cross-family keys}
+\aidxs*{cross-family keys}{xfamily keys}
+
+There are times when it is required to use the same, or nearly the same, set of keys for different functions and purposes, and thus for different key families and prefixes. We call such keys \quoted{cross-family keys} or \quoted{xfamily keys}. Such keys bear the same names across key families and key prefixes. For example, the \pkg'{xwatermark} defines three functions (\ffx'{\xwmminipage,\xwmboxedminipage,\xwmcolorbox}) using nearly the same set of keys. In each of the three families, the keys bear the same or similar names and they have similar callbacks. The management of cross-family keys can be simplified by using the tools of this section. Even if not all the cross-family keys are needed in all the families to which they may belong, there are still advantages in using this type of keys when some of the keys cut across families.
+
+Cross-family keys are automatically initialized after being defined---as we saw in the case of the commands \ffx'{\ltxkeysdefinekeys,\ltxkeysdeclarekeys}.
+
+\start+{newmacro}[\ltxkeyssavexfamilykeys,\ltxkeysdefinexfamilykeys]
+\ltxkeyssavexfamilykeys<|A(id)>{|A(keylist)}
+\ltxkeyssavexfamilykeys|*<|A(id)>|A(keylistcmd)
+
+\ltxkeyssavexfamilykeys<|A(id)>|(|A(keytype)|){|A(keylist)}
+\ltxkeyssavexfamilykeys|*<|A(id)>|(|A(keytype)|)|A(keylistcmd)
+
+\ltxkeysdefinexfamilykeys<|A(id)>[|A(pref)]{|A(fam)}[|A(mp)]{|A(na)}
+\ltxkeysdefinexfamilykeys|*<|A(id)>[|A(pref)]{|A(fam)}[|A(mp)]{|A(na)}
+\finish{newmacro}
+\fxim*{\ltxkeyssavexfamilykeys,\ltxkeysdefinexfamilykeys}
+
+Here, \ang{id} is the mandatory identifier of the key list \ang{keylist}, \ang{pref} is the key prefix, \ang{fam} the key family, \ang{mp} is the macro prefix, and \ang{na} is the list of keys belonging to \ang{keylist} that shouldn't be presently defined and initialized. The \ang{na} can be empty, but it must always be there as a mandatory argument. \emph{So, where you put the key list in the commands \emfx{\ltxkeysdefinekeys} and \emfx{\ltxkeysdeclarekeys} is where you now have to locate \ang{na}}. For any use of the command \fx{\ltxkeysdefinexfamilykeys} we expect the \ang{na} to be far less than the remaining keys. The \stform of \fx{\ltxkeyssavexfamilykeys} will expand \ang{keylistcmd} once before saving the xfamily keys. The \stform of \fx{\ltxkeysdefinexfamilykeys} will define only definable keys, in the sense of \hx{\newcommand}.
+
+\ang{keylist} and \ang{keylistcmd} have the same syntax as the last arguments of \ffx'{\ltxkeysdefinekeys,\ltxkeysdeclarekeys}:
+
+\start'{newmacro}[Syntax of keylist]
+|A(keytype)/|A(keyname)/|A(dft)/|A(cbk);
+another set of key attributes;
+etc.
+\finish{newmacro}
+
+Here too \ang{keytype} must be a member of the set \fnz{ord,cmd,sty,sty*,bool,choice}, \ang{keyname} is obviously the name of the key, \ang{dft} is the default value of the key, and \ang{cbk} is the callback of the key. If the key is a style key, you can add the attributes of the observers after \ang{cbk} (see the syntaxes of the commands \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}).
+
+The mandatory identifier \ang{id} for each list must be unique, not withstanding the fact that the identifiers have their separate namespace.
+
+If the xfamily keys are all of the same type (\ie, only one of the types \fnz{ord,cmd,sty,sty*,bool,choice}), you can specify \ang{keytype} as an optional argument in parenthesis to the command \fx{\ltxkeyssavexfamilykeys}. The parenthesis can't appear with an empty content.
+
+\start+{example}[xfamily keys]
+\ltxkeyssavexfamilykeys<x1>{%
+  ord/keya/\paperwidth/\mylength=#1;
+  cmd/keyb/black/\def\y##1{##1};
+  choice/keyc.{left,right,center}/center/\def\z##1{##1};
+  bool/keyd/true
+}
+
+|com(Now define the keys previously stored with the id no. x1.)
+|com(For now don't define keys keyb and keyc:)
+\ltxkeysdefinexfamilykeys<x1>[KV]{fam}[mp@]{keyb,keyc}
+
+|com(Once defined the keys can be executed separately:)
+\ltxkeyssetkeys[KV]{fam}{keya=.5\hsize,keyd=false}
+\show\ifmp@keyd
+
+|com(Now define the keys previously stored with the id no. x1 for)
+|com(another family. This time we don't want to define key keyb:)
+\ltxkeysdefinexfamilykeys<x1>[KVA]{|R(fama)}[mpa@]{keyb}
+
+|com(You can save and define xfamily keys of only one key type,)
+|com(command keys in the following example:)
+\ltxkeyssavexfamilykeys<x1>|R(|(cmd|)){%
+  keya/\paperwidth;
+  keyb/blue/\def\x##1{#1x##1};
+}
+|com(Define the saved keys and ignore none of them:)
+\ltxkeysdefinexfamilykeys|*<x1>[KV]{fam}[mp@]{}
+\ltxkeyssetkeys[KV]{fam}{keya=.5\hsize,keyb=red}
+\finish{example}
+\fxi*{\ltxkeyssavexfamilykeys,\ltxkeysdefinexfamilykeys}
+
+\start+{example}[xfamily keys]
+|com(`keya' and `keyd' are starred style keys but `keyd' has no observers:)
+\ltxkeyssavexfamilykeys<a1>|(sty|*|){%
+  keya/center/.do=\def\xx##1{##1xx#1}/
+    ord>\needvalue{keyb}>\parentval>\edef\yy##1{##1yy\unexpanded{#1}},
+    |com(The braces around `center' |(the default value of `keyc'|))
+    |com(will be preserved in parsing:)
+    cmd>keyc>{center};
+  |com(The braces around the callback of `keyd' will be preserved:)
+  keyd/red/.do={\def\x{\color{#1}print aaa}};
+}
+|com(Ignore `keyd' in defining keys saved in `a1':)
+\ltxkeysdefinexfamilykeys*<a1>[KV]{fam}[mp@]{keyd}
+|com(On setting `keya', `keyb' and `keyc' will be defined and initialized:)
+\ltxkeyssetkeys[KV]{fam}{keya=left}
+\finish{example}
+\aidx*{/.do}
+
+Here is a real-life example that mimics some of the macros of the \pkg'{xwatermark}:
+
+\start+{example}[xfamily keys]
+\ltxkeyssavexfamilykeys<a1>{%
+  cmd/width/\textwidth;
+  cmd/textcolor/black;
+  cmd/framecolor/black;
+  cmd/framesep/3\p@;
+  cmd/framerule/0.4\p@;
+  choice/textalign|R(.){%
+      center/.do=\def\mp@textalign{center},
+      left/.do=\def\mp@textalign{flushleft},
+      right/.do=\def\mp@textalign{flushright}
+    }/center;
+  bool/framebox/true;
+  ord/junkkey/throwaway;
+}
+|com(Ignore keys `framebox' and `junkkey' when defining family `ltxframebox':)
+\ltxkeysdefinexfamilykeys*<a1>[KV]{ltxframebox}[mp@]{framebox,junkkey}
+|com(Ignore key `junkkey' when defining family `ltxminipage':)
+\ltxkeysdefinexfamilykeys<a1>[KV]{ltxminipage}[mp@]{junkkey}
+|com(No key is ignored when defining `junkfamily':)
+\ltxkeysdefinexfamilykeys<a1>[KVX]{junkfamily}[mp@]{}
+
+\newcommand*\ltxframebox[2][]{%
+  \ltxkeyssetkeys[KV]{ltxframebox}{#1}%
+  \begingroup
+  \fboxsep\mp@framesep\fboxrule\mp@framerule
+  \ltsdimdef\mp@boxwidth{\mp@width-2\fboxsep-2\fboxrule}%
+  \color{\mp@framecolor}%
+  \noindent
+  \fbox{%
+    \removelastskip
+    \parbox{\mp@boxwidth}{%
+      \begin\mp@textalign
+      \textcolor{\mp@textcolor}{#2}%
+      \end\mp@textalign
+    }%
+  }%
+  \endgroup
+}
+\newcommand*\ltxminipage[2][]{%
+  \ltxkeyssetkeys[KV]{ltxminipage}{#1}%
+  \begingroup
+  \fboxsep\mp@framesep
+  \fboxrule\ifmp@framebox\mp@framerule\else\z@\fi
+  \ltsdimdef\mp@boxwidth{\mp@width-2\fboxsep-2\fboxrule}%
+  \noindent\begin{lrbox}\@tempboxa
+  \begin{minipage}[c][\height][s]\mp@boxwidth
+  \@killglue
+  \begin\mp@textalign
+  \textcolor{\mp@textcolor}{#2}%
+  \end\mp@textalign
+  \end{minipage}%
+  \end{lrbox}%
+  \@killglue
+  \color{\mp@framecolor}%
+  \ifmp@framebox\fbox{\fi\usebox\@tempboxa\ifmp@framebox}\fi
+  \endgroup
+}
+
+\begin{document}
+\ltxframebox[
+  framecolor=blue,textcolor=purple,textalign=left
+]{%
+  Test text\endgraf ...\endgraf test text
+}
+\medskip
+\ltxminipage[
+  framecolor=blue,textcolor=purple,framebox=true,textalign=right
+]{%
+  Test text\endgraf ...\endgraf test text
+}
+\end{document}
+\finish{example}
+\fxi*{\ltxkeyssavexfamilykeys,\ltxkeysdefinexfamilykeys}
+
+
+\docsection(sec:settingkeys)<setting keys>{Setting keys}
+
+In the \pkg'{ltxkeys} there are many functions for setting keys. Keys can be set by the following utilities.
+
+
+\docsubsection{Setting defined keys}
+
+\start+{newmacro}[\ltxkeyssetkeys]
+\ltxkeyssetkeys[|A(pref)]{|A(fam)}[|A(na)]{|A(keyval)}
+\ltxkeyssetkeys|*[|A(pref)]{|A(fam)}[|A(na)]{|A(keyval)}
+\ltxkeyssetkeys|+[|A(prefs)]{|A(fams)}[|A(na)]{|A(keyval)}
+\ltxkeyssetkeys|*|+[|A(prefs)]{|A(fams)}[|A(na)]{|A(keyval)}
+\finish{newmacro}
+\fxim*{\ltxkeyssetkeys}
+
+Here, \ang{prefs}, \ang{fams} and \ang{keyval} are comma-separated list of key prefixes, families and \keyval pairs, respectively. Keys listed in the comma-separated list\footnote{Key values with unbraced commas in them will need to be enclosed in curly braces when they are submitted to \ftfx{\ltxkeyssetkeys}, whether or not the argument pattern is simple (only one argument) or weird (more than one argument and with delimiters).} \ang{na} are ignored. The \stform will save all undefined keys with prefix \ang{pref} and in family \ang{fam} in the macro \fnl*'\bs{pref,fam,rmkeys}, to be set later, perhaps with \fx{\ltxkeyssetrmkeys}. The \plform will search in all the prefixes in \ang{prefs} and all families in \ang{fams} for a key before logging the key in \fnl*'\bs{pref,fam,rmkeys} (if the \redstar\redplus* variant is used) or reporting it as undefined.
+
+To avoid infinite re-entrance of \fx{\ltxkeyssetkeys} and the consequent bombing out of the command, the package option \fxim{keydepthlimit} is introduced. Its default value is~4, meaning that \fx{\ltxkeyssetkeys} can't ordinarily be nested beyond level~4. If you must nest \fx{\ltxkeyssetkeys} beyond this level, an unlikely need, you can raise the \fx{keydepthlimit} as a package option via \hx{\usepackage} or, if \pkg'{ltxtools} is loaded before \hx{\documentclass}, via \hx{\documentclass}. For example,
+
+\start'{example}[Setting keydepthlimit]
+\usepackage[keydepthlimit=6]{ltxkeys}
+\finish{example}
+\fxim*{keydepthlimit}
+
+The more appropriate name \fxi{keystacklimit} is an alias for \fx{keydepthlimit}.
+
+
+\docsubsection(sec:rmkeys)<rmkeys,remaining keys>{Setting \headquoted{remaining} keys}
+
+The command \fx{\ltxkeyssetrmkeys}, which has both star (\redstar) and plus (\redplus) variants, is the counterpart of \fx{\setrmkeys} of the \pkg'{xkeyval}:
+
+\start{newmacro}[\ltxkeyssetrmkeys]
+\ltxkeyssetrmkeys[|A(pref)]{|A(fam)}[|A(na)]
+\ltxkeyssetrmkeys|*[|A(pref)]{|A(fam)}[|A(na)]
+\ltxkeyssetrmkeys|+[|A(prefs)]{|A(fams)}[|A(na)]
+\ltxkeyssetrmkeys|*|+[|A(prefs)]{|A(fams)}[|A(na)]
+\finish{newmacro}
+\fxim*{\ltxkeyssetrmkeys}
+
+The command \fx{\ltxkeyssetrmkeys} sets in the given prefixes and families the \quoted{remaining keys} saved when calling the \stform of \fx{\ltxkeyssetkeys} or \fx{\ltxkeyssetrmkeys}. \ang{na} is again the list of keys that should be ignored, \ie, not executed and not saved. The \unstform of \fx{\ltxkeyssetrmkeys} will report an error if a key is undefined. The \stform of the macro \fx{\ltxkeyssetrmkeys}, like the \stform of \fx{\ltxkeyssetkeys}, ignores keys that it cannot find and saves them on the list saved for a future call to \fx{\ltxkeyssetrmkeys}. Keys listed in \ang{na} will be ignored fully and will not be appended to the saved list of remaining keys.
+
+
+\docsubsection(sec:aliasedkeys)<aliased keys>{Setting aliased keys}
+
+Aliased keys differ from style keys of \sref{sec:stylekeys}. Two keys may be aliased to each other, such that when one is set, the alias is automatically set with the same or a different value. The concept is similar to, but not identical with, that of style keys. The two aliases must all be in the same family and have the same key and macro prefixes. Moreover, aliased keys must be called within the callbacks of each other, so that they can share metadata. Two aliased keys can't both call each other: only one can call the other; so the relationship isn't symmetrical. These restrictions not withstanding, aliased keys can be quite powerful in application\footnote{The restrictions have been deliberately imposed to shorten and simplify the use syntax of aliased keys. They could otherwise be easily lifted.}.
+
+\start{newmacro}[\ltxkeyssetaliaskey]
+\ltxkeyssetaliaskey{|A(key)}[|A(value)]
+\finish{newmacro}
+\fxim*{\ltxkeyssetaliaskey}
+
+Here, \ang{value} is optional; if it is not given, \ang{key} will be set with the current value of its alias.
+
+\start+{example}[\ltxkeyssetaliaskey]
+\ltxkeysdefinekeys|*[KV]{fam}[mp@]{%
+  printsign=true;
+  printmark=true/\ltxkeyssetaliaskey{printsign}[false];
+  keya=$+++$;
+  keyb=star/\ltxkeyssetaliaskey{keya}[$***$]
+}
+\ltxkeysdefinekeys|*[KV]{fam}[mp@]{%
+  keya=sun/\ltxkeyscheckuserinput{#1}{star,sun,moon}
+    \ifltxkeysinputvalid
+      \edef\givenval{\userinput}
+      \edef\found{\ifcase\order star@\or sun@\or moon@\fi}
+    \else
+      \@latex@error{Input `#1' not valid}\@ehd
+    \fi;
+  keyb=star/\ltxkeyssetaliaskey{keya};
+}
+\finish{example}
+
+The boolean \fx{\ifltxkeysinputvalid} associated with the command \fx{\ltxkeyscheckuserinput} is described in \sref{mac:ifltxkeysinputvalid} (see also \sref{sec:checkchoice}).
+
+The example involving \ttx{printsign,printmark} is similar, but not equivalent, to the notion of biboolean keys. Biboolean keys have equal symmetry (\ie, they can call each other with equal propensity) and they won't bomb out in an infinite reentrance. This is not the case with aliased keys: only slave/alias can set or call master/main key. If they both call each other, the user will be alerted to the fact that there is an infinite reentrance of keys. The notion of 'slave' and 'master' used in the \pkg'{ltxkeys} may be counterintuitive but in reality it is quite logical.
+
+Schemes like the following are disallowed, to avoid back-linking of \fx{\ltxkeyssetaliaskey}. The package will flag an error if something like the following occurs:
+
+\start+{example}[Illegal nested \ltxkeyssetaliaskey]
+\ltxkeysordkey[KV]{fam}{keya}[true]{\ltxkeyssetaliaskey{keyb}}
+\ltxkeysordkey[KV]{fam}{keyb}[true]{\ltxkeyssetaliaskey{keya}}
+\ltxkeyssetkeys[KV]{fam}{keya}
+\finish{example}
+\aidx*{no nested \headfx{\ltxkeyssetaliaskey}}
+
+
+\docsubsection(sec:keypointers){Using key pointers}
+\aidx*{key pointers}
+\aidxs*{pointers}{key pointers}
+
+The pointers \ffx'{\savevalue,\gsavevalue,\usevalue,\needvalue, \gneedvalue, \forbidvalue, \gforbidvalue} can all be used at key definition time, but only \ffx'{\savevalue,\gsavevalue,\usevalue} are available at key setting time. The pointer \fx{\usevalue} will be raise an error if used when defining keys. The presence of the pointer \fx{\needvalue} when setting keys prompts an error. Pointers beginning with the letter \quoted{g} have a global effect; those without \quoted{g} act only locally.
+
+The pointers \ffx'{\savevalue, \gsavevalue} will save the user-supplied value of the key. The pointer \fx{\gsavevalue} has the same meaning at key definition and key setting times, namely, to globally save the value of a key. The pointers \ffx'{\needvalue, \gneedvalue} can be used by any key author to prompt the user of the key to always supply a value for the key. The pointers \ffx'{\forbidvalue, \gforbidvalue} can be used to bar the user of the key from supplying a value for the key. The pointer \fx{\usevalue}, if required at key setting time, has to be explicitly indicated there.
+
+In key parsing, instead of saving the value of each key tagged with \fx{\savevalue} or \fx{\gsavevalue} in a separate macro, we save all such keys and their values in only one macro (for each combination of \ang{pref} and \ang{fam}) and use a fast search technique to find the values when they are later needed (by any key tagged with \fx{\usevalue}).
+
+Here is an interesting example and proof of concept of pointers:
+
+\start'{example}[Key pointers]
+\ltxkeysstylekeys|*[KV]{fam}{%
+  \needvalue{keya},\savevalue\needvalue{keyb},\gneedvalue\gsavevalue{keyc}
+}[{left}]|(%
+  |com(`#1' here refers to the value of the observer key at the)
+  |com(time it is being set.)
+  ord/\savevalue{keyb}/\parentval/\edef\y##1{##1xx\unexpanded{#1}};
+  cmd/keyc/{center}
+|){%
+  |com(`#1' here refers to the value of the parent key at the time)
+  |com(it is being set.)
+  \def\x##1{##1xx#1}
+}
+
+\ltxkeyssetkeys[KV]{fam}{%
+  \gsavevalue{keya}={\def\y##1{##1}},
+  \savevalue{keyb}=\usevalue{keya},
+  keyc=\usevalue{keyb}
+}
+\finish{example}
+\fxi*{\savevalue,\gsavevalue,\usevalue,\needvalue, \gneedvalue, \forbidvalue, \gforbidvalue}
+
+If you have to save the values of many keys, then the above scheme of placing \fx{\savevalue} or \fx{\gsavevalue} on keys at key setting time can be avoided by using the following commands:
+
+\start+{newmacro}[\ltxkeys@savevaluekeys,\ltxkeys@addsavevaluekeys, etc.]
+\ltxkeys@savevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgsavevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@addsavevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgaddsavevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@removesavevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgremovesavevaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@undefsavevaluekeys[|A(pref)]{|A(fam)}
+\ltxkeysgundefsavevaluekeys|![|A(pref)]{|A(fam)}
+\finish{newmacro}
+\fxim*{\ltxkeys@savevaluekeys,\ltxkeys@addsavevaluekeys,
+  \ltxkeys@removesavevaluekeys,\ltxkeys@undefsavevaluekeys}
+
+The command \fx{\ltxkeys@savevaluekeys} will create, for the given key family and prefix, a list of keys whose values should be saved at key-setting time, if those keys don't already exist in the list. The command \fx{\ltxkeys@addsavevaluekeys} will add to the list those keys that don't already exist in the list; \fx{\ltxkeys@removesavevaluekeys} remove those save-keys that it can find in the list; while the command \fx{\ltxkeys@undefsavevaluekeys} will undefine the entire list of save-keys of the given key family and prefix.
+
+\start+{example}[\ltxkeys@savevaluekeys]
+\ltxkeysdefinekeys[KV]{fam}[mp@]{%
+  ord/keya/2cm/\def\x##1{#1xx##1};
+  cmd/keyb/John;
+  bool/keyc/true/\ifmp@keyc\def\y##1{##1yy#1}\fi;
+  choice/keyd.{left,right,center}/
+    \ifcase\order
+      \def\shoot{0}%
+    \or
+      \def\shoot{1}%
+    \or
+      \def\shoot{2}%
+    \fi
+}
+
+\ltxkeys@savevaluekeys[KV]{fam}{keya,keyb,keyc}
+\ltxkeys@addsavevaluekeys[KV]{fam}{keyd}
+\ltxkeys@removesavevaluekeys[KV]{fam}{keya,keyb}
+\ltxkeys@undefsavevaluekeys[KV]{fam}
+
+\ltxkeyssetkeys[KV]{fam}{keya=\usevalue{keyc},keyb=\usevalue{keya}}
+\finish{example}
+
+The following commands are also available:
+
+\start+{newmacro}[\ltxkeys@needvaluekeys,\ltxkeys@addneedvaluekeys, etc.]
+\ltxkeys@needvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgneedvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@addneedvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgaddneedvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@removeneedvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgremoveneedvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@undefneedvaluekeys[|A(pref)]{|A(fam)}
+\ltxkeysgundefneedvaluekeys|![|A(pref)]{|A(fam)}
+
+\ltxkeys@forbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgforbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@addforbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgaddforbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@removeforbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeysgremoveforbidvaluekeys[|A(pref)]{|A(fam)}{|A(list)}
+\ltxkeys@undefforbidvaluekeys[|A(pref)]{|A(fam)}
+\ltxkeysgundefforbidvaluekeys|![|A(pref)]{|A(fam)}
+\finish{newmacro}
+\fxim*{\ltxkeys@needvaluekeys,\ltxkeys@addneedvaluekeys,
+  \ltxkeys@removeneedvaluekeys,\ltxkeys@undefneedvaluekeys,
+  \ltxkeys@forbidvaluekeys,\ltxkeys@addforbidvaluekeys,
+  \ltxkeys@removeforbidvaluekeys,\ltxkeys@undefforbidvaluekeys,
+}
+
+
+\docsubsection(sec:savedvalueofkey)
+  <saved value of key>{Accessing the saved value of a key}
+
+As mentioned earlier, the pointers \ffx'{\savevalue, \usevalue} are available for saving and using the values of keys within the command \fx{\ltxkeyssetkeys}. But suppose you have used \fx{\savevalue} within \fx{\ltxkeyssetkeys} to set the value of a key, how do you access that value outside of \fx{\ltxkeyssetkeys}? You can do this by using the following \fx{\ltxkeysstorevalue} command:
+
+\start{newmacro}[\ltxkeysstorevalue]
+\ltxkeysstorevalue[|A(pref)]{|A(fam)}{|A(key)}|A(cs)
+\ltxkeysstorevalue|+[|A(pref)]{|A(fam)}{|A(key)}|A(cs)|A(fallback)
+\finish{newmacro}
+\fxim*{\ltxkeysstorevalue}
+
+Here, \ang{cs} is the macro (defined or undefined) that will receive the saved value of \ang{key}. The plain variant of this command will raise an error message if the value of the key wasn't previously saved, while the \plform will resort to the user-supplied function \ang{fallback}. Only saved key values can be recovered by this command.
+
+\start+{example}[\ltxkeysstorevalue]
+\ltxkeyscmdkey[KV]{fam}{\needvalue{keya}}[{left}]{%
+  \def\x##1{##1xx#1}
+}
+\ltxkeyssetkeys[KV]{fam}{\savevalue{keya}={\def\y##1{##1}}}
+\ltxkeysstorevalue[KV]{fam}{keya}\tempa
+\ltxkeysstorevalue|+[KV]{fam}{keya}\tempb{%
+  \@latex@error{No value saved for key `keya'}\@ehc
+}
+\finish{example}
+
+
+\docsubsection(sec:presettingkeys){Pre-setting and post-setting keys}
+\aidxm*{presetting keys, post-setting keys}
+
+\start+{newmacro}[\ltxkeyspresetkeys,\ltxkeyspostsetkeys,etc.]
+\ltxkeyspresetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeyspresetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysaddpresetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysaddpresetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysremovepresetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysremovepresetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysundefpresetkeys[|A(pref)]{|A(fam)}
+\ltxkeysundefpresetkeys|![|A(pref)]{|A(fam)}
+
+\ltxkeyspostsetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeyspostsetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysaddpostsetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysaddpostsetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysremovepostsetkeys[|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysremovepostsetkeys|![|A(pref)]{|A(fam)}{|A(keyvals)}
+\ltxkeysundefpostsetkeys[|A(pref)]{|A(fam)}
+\ltxkeysundefpostsetkeys|![|A(pref)]{|A(fam)}
+\finish{newmacro}
+\fxim*{\ltxkeyspresetkeys,\ltxkeysaddpresetkeys,\ltxkeysremovepresetkeys,
+  \ltxkeysundefpresetkeys,\ltxkeyspostsetkeys,\ltxkeysaddpostsetkeys,
+  \ltxkeysremovepostsetkeys,\ltxkeysundefpostsetkeys}
+
+Here, \ang{keyvals} is a comma-separated list of \keyval pairs to be preset or postset in the given families. The optional exclamation mark \redclam here, as in many (but not all) instances in the \pkg'{ltxkeys}, means that the assignments would be done and the lists built globally rather than locally. \quoted{Presetting keys} means \quoted{these keys should be set before setting other keys in every run of the command \fx{\ltxkeyssetkeys} for the given key prefix and family}\footnote{Keys contained in the current user input to \fx{\ltxkeyssetkeys} will not be preset or postset, \ie, the current user values of keys will always take priority over preset and postset values.}. The command \fx{\ltxkeysaddpresetkeys} is an alias for \fx{\ltxkeyspresetkeys}, and this helps explain that \fx{\ltxkeyspresetkeys} is indeed a list merger. Neither the command \fx{\ltxkeyspresetkeys} nor \fx{\ltxkeyspostsetkeys} set keys itself, contrary to what the names might suggest.
+
+\quoted{Post-setting keys} means \quoted{these keys are to be set after setting other keys in every run of the command \fx{\ltxkeyssetkeys} for the given key prefix and family}. \fx{\ltxkeysaddpostsetkeys} is an alias for \fx{\ltxkeyspostsetkeys}. The commands
+
+\start+{macro}
+\ltxkeysremovepresetkeys|![|A(pref)]{|A(fam)}{|A(keys)}
+\ltxkeysremovepostsetkeys|![|A(pref)]{|A(fam)}{|A(keys)}
+\finish{macro}
+
+remove \ang{keys} from preset and post-set lists, respectively. The commands
+
+\start+{macro}
+\ltxkeysundefpresetkeys|![|A(pref)]{|A(fam)}
+\ltxkeysundefpostsetkeys|![|A(pref)]{|A(fam)}
+\finish{macro}
+
+respectively, undefine all preset and post-set keys in the given family.
+
+Logically, you can't enter the same key twice in either preset or post-set list in the same family and prefix.
+
+\start+{example}[\ltxkeyspresetkeys, \ltxkeyspostsetkeys, etc.]
+\ltxkeysdefinekeys|*[KV1]{fam1}[mp@]{%
+  keya/left/\def\x##1{#1x##1};
+  \needvalue{keyb}/right;
+  keyc/center;
+  keyd
+}
+\ltxkeyspresetkeys|![KV1]{fam1}{keya=\flushleft,keyb=\flushright}
+\ltxkeyspostsetkeys|![KV1]{fam1}{keyd=\flushleft}
+...
+|com(Eventually, only `keya' will be preset:)
+\ltxkeysremovepresetkeys|![KV1]{fam1}{keyb=\flushright}
+...
+|com(Because of the |redstar and |redplus signs on \ltxkeyssetkeys, all unknown)
+|com(keys |(those with prefix `KV2' and in family `fam2'|) will be saved in)
+|com(the list of remaining keys, and can be set later with \ltxkeyssetrmkeys:)
+\ltxkeyssetkeys|*|+[KV1,KV2]{fam1,fam2}[keyd]{keya=xxx,keyb=yyy,keyc}
+\finish{example}
+
+
+\docsubsection(sec:initializekeys)
+  <initializing keys>{Initializing keys}
+
+\start{newmacro}[\ltxkeysinitializekeys]
+\ltxkeysinitializekeys[|A(prefs)]{|A(fams)}[|A(na)]
+\finish{newmacro}
+\fxim*{\ltxkeysinitializekeys}
+
+This presets all the keys previously defined in families \ang{fams} with their default values; it ignores keys listed in \ang{na}. If \ang{na} is a list of \keyval pairs, the key names are extracted from the list before the family keys are initialized. Any \keyval pairs in \ang{na} are not set at all. All keys defined by \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys} are automatically instantly initialized, except slave/alias and observer keys. Alias and observer keys aren't initialized in this case in order to avoid cyclic re-entrance of \fx{\ltxkeyssetkeys}.
+
+The command \fx{\ltxkeysinitializekeys} can be used in place of \fx{\ltxkeysexecuteoptions}, since \fx{\ltxkeysexecuteoptions} (similar to \latex kernel's \hx{\ExecuteOptions}) fulfils the sole purpose of setting up default values of options. Keys defined via \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys} don't have to be initialized, since they're automatically initialized at  definition time. But if you have used the scheme of \sref{nte:definekeys-1}, then it might still be necessary to initialize keys outside \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}.
+
+\begin{noteenv}
+\label{nte:initializekeys}
+Keys that have been processed by \fx{\ltxkeysprocessoptions} (\ie, keys submitted by the user as package or class options via \hx{\documentclass} or \hx{\usepackage} can't be initialized or launched (see \sref{sec:launchingkeys} below for the meaning of \quoted{launched keys}). This is to avoid unwittingly setting keys to their default values after the user has submitted them as package or class options. This means that \quoted{option keys} (see \sref{sec:optionskeys}) can't be initialized or launched.
+\end{noteenv}
+
+
+\docsubsection(sec:launchingkeys)<launching keys>{Launching keys}
+
+\start{newmacro}[\ltxkeyslaunchkeys]
+\ltxkeyslaunchkeys[|A(prefs)]{|A(fams)}{|A(curr)}
+\ltxkeyslaunchkeys|*[|A(prefs)]{|A(fams)}{|A(curr)}
+\ltxkeyslaunchkeys|+[|A(prefs)]{|A(fams)}{|A(curr)}
+\ltxkeyslaunchkeys|*|+[|A(prefs)]{|A(fams)}{|A(curr)}
+\finish{newmacro}
+\fxim*{\ltxkeyslaunchkeys}
+
+This presets all keys defined in families \ang{fams} with their default values; it ignores keys listed in \ang{curr}. \ang{curr} may be the list of \keyval pairs that the user wants to use as current values of keys. Their keys are to be ignored when setting up defaults, \ie, when initializing the family keys. One major difference between \ffx'{\ltxkeyslaunchkeys, \ltxkeysinitializekeys} is that in \fx{\ltxkeyslaunchkeys} the \keyval pairs in \ang{curr} are immediately set after the absent family keys (\ie, those without current values) are reinitialized. Keys appearing in \ang{curr} in the command \fx{\ltxkeyslaunchkeys} will be the \ang{na} (ignored) keys for the command \fx{\ltxkeysinitializekeys}.
+
+Keys across multiple prefixes \ang{prefs} and families \ang{fams} can be launched at the same time, but the user has to know what is he doing: the keys might not have been defined across the given families, or some keys might have been disabled in some, and not all, families. The \redstar and \redplus variants of \fx{\ltxkeyslaunchkeys} have the same meaning as in \fx{\ltxkeyssetkeys} (\sref{sec:settingkeys}). The \stform will save all undefined keys with prefix \ang{pref} and in family \ang{fam} in the macro \fnl*'\bs{pref,fam,rmkeys}, to be set later, perhaps with the command \fx{\ltxkeyssetrmkeys}. The \plform will search in all the prefixes in \ang{prefs} and all families in \ang{fams} for a key before logging the key in \fnl*'\bs{pref,fam,rmkeys} (if the \redstar\redplus* variant is the one used) or reporting it as undefined.
+
+
+\docsubsubsection(sec:nonlaunchkeys)
+  <non-launch keys>{Noninitialize and non\-la\-unch keys}
+
+Listing all the keys that shouldn't be reinitialized by \fx{\ltxkeysinitializekeys} in the \ang{na} list every time \fx{\ltxkeysinitializekeys} is called can sometimes be inconvenient, especially when dealing with a large number of keys. Perhaps even more important is the fact that sometimes you don't want some of the keys in a family to be reinitialized even though they are absent keys (\ie, they aren't listed as current keys, meaning that they aren't in the current \keyval list submitted to \fx{\ltxkeyslaunchkeys}). This might be the case with package and class options. The command \fx{\ltxkeysnonlaunchkeys} provides a convenient means for listing the non-reinitializing keys once and for all. If there are keys in a family that shouldn't be reinitialized/launched with other keys in the same family during any call to \fx{\ltxkeyslaunchkeys} or \fx{\ltxkeysinitializekeys}, they can be listed in the \fx{\ltxkeysnonlaunchkeys} command:
+
+\start{newmacro}[\ltxkeysnonlaunchkeys]
+\ltxkeysnonlaunchkeys[|A(prefs)]{|A(fams)}{|A(keys)}
+\finish{newmacro}
+\fxim*{\ltxkeysnonlaunchkeys}
+
+Keys across multiple prefixes and families can be submitted to the \fx{\ltxkeysnonlaunchkeys} command: undefined keys are simply ignored by \fx{\ltxkeysnonlaunchkeys}.
+
+\ltsnote
+The command \fx{\ltxkeysnonlaunchkeys} doesn't mean that the keys in \ang{keys} can no longer be set via the command \fx{\ltxkeyssetkeys}; it simply implies that keys appearing in \fx{\ltxkeysnonlaunchkeys} will not be reinitialized to their default values when members of their class are being launched or reinitialized. The command \fx{\ltxkeysnoninitializekeys} is an alias for \fx{\ltxkeysnonlaunchkeys}.
+
+
+\docsubsection(sec:unknownkeyhandler)
+  <unknown key and option handlers>{Handling unknown keys and options}
+
+You can use the macro \fx{\ltxkeysunknownkeyhandler} to declare to \pkg'{ltxkeys} the course of action to take if, while setting keys, it discovers that a key is undefined or unknown. The command \fx{\ltxkeysunknownoptionhandler} applies to unknown options (see \sref{sec:declareoption})\usefootnote{2}. The syntax of these commands is
+
+\start+{newmacro}[\ltxkeysunknownkeyhandler,\ltxkeysunknownoptionhandler]
+\ltxkeysunknownkeyhandler[|A(prefs)]{|A(fams)}{|A(cbk)}
+\ltxkeysunknownoptionhandler[|A(prefs)]<|A(fams)>{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysunknownkeyhandler,\ltxkeysunknownoptionhandler}
+
+Here, \ang{prefs} are the optional prefixes and \ang{fams} is the mandatory families; both may contain one or more comma-separated elements. The default value of \ang{prefs} is \fx{KV}. The callback \ang{cbk} signifies the action to take when an unknown key or option is encountered. The default \ang{cbk} is to log the keys and, in each run, warn the user of the presence of unknown keys. The same \ang{cbk} can be used across key prefixes \ang{prefs} and families \ang{fams}. You can use \fx{#1} (or \fx{\ltxkeyscurrentprefix}) in \ang{cbk} to represent the current key prefix, \fx{#2} (or \fx{\ltxkeyscurrentfamily}) for the current family, \fx{#3} (or \fx{\ltxkeyscurrentkey}) for the current key name, and \fx{#4} (or \fx{\ltxkeyscurrentvalue}) for the value of the current key.
+
+If \fx{\ltxkeyscurrentvalue} contains undefined macros or active characters, then attempting to print it may cause problems. Therefore, when making entries in the transcript file, it will sometimes be preferable to use \fx{\ltxkeysinnocentvalue} instead of \fx{\ltxkeyscurrentvalue}. However, \fx{\ltxkeysinnocentvalue} detokenizes the current key value and gives only the first 20 characters of a key's value.
+
+The following example provides unknown option and key handlers. The unknown key handler is for two key prefixes (\ffx'{KVA, KVB}) and two key families (\ffx'{fam1,fam2}).
+
+\start+{example}[\ltxkeysunknownkeyhandler,\ltxkeysunknownoptionhandler]
+\ltxkeysunknownoptionhandler[KV]<fam1,fam2>{%
+  \wlog{Prefix: #1/ Family: #2/ Option name: #3/ Value: \unexpanded{#4}}%
+}
+
+\ltxkeysunknownkeyhandler[KVA,KVB]{fam1,fam2}{%
+  \@expandtwoargs\in@{,#3,}{,\myspecialkeys,}%
+  \ltsifboolTF{in@}{%
+    |com(The reader may want to investigate what the parameter texts)
+    |com(##1 and ####1 below stand for |(see |sref(nte:unknownkey) below|):)
+    \ltxkeysordkey[#1]{#2}{#3}[#4]{\def\x####1{####1xx##1}}%
+  }{%
+    \ltxmsg@warn{Unknown key `#3' with value `#4' in family `#2' ignored}\@ehd
+    |com(\ltxmsg@warn{Unknown key `\ltxkeyscurrentkey' with value)
+    |com(  `\ltxkeysinnocentvalue' in family `\ltxkeyscurrentfamily' ignored}\@ehd)
+  }%
+}
+\finish{example}
+
+The macro \fx{\myspecialkeys} in the above example doesn't actually exist; it is only meant for illustration here. But \quoted{handled keys} may be introduced by the user to serve this purpose. This will be the set of keys for which special actions may apply at key setting time (see \sref{sec:handledkeys}).
+
+\begin{noteenv}
+\label{nte:unknownkey}
+To see what the parameter texts \fx{##1} and \fx{####1} above stand for, run the following code on your own and note the outcome of \fx{\show\KV@fam@keyd}. The characters \fx{##1} will turn out to be the parameter text which can be used to access the current values of keys \ffx'{keyd,keye} after they have been defined on the fly. And \fx{####1} will be the parameter text of the arbitrary function \fx{\x}. If you do \fx{\show\KV@fam@keyd}, you'll notice that the parameter texts have been reduced by one level of nesting.
+
+\start+{example}[\ltxkeysunknownkeyhandler]
+\def\myspecialkeys{keyc,keyd,keye}
+\ltxkeysunknownkeyhandler[KV]{fam}{%
+  \@expandtwoargs\in@{,#3,}{,\myspecialkeys,}%
+  \ifin@
+    \ltxkeysordkey[#1]{#2}{#3}[#4]{\def\x####1{####1xx##1}}%
+  \else
+    \ltxmsg@warn{Unknown key `#3' with value `\ltxkeysinnocentvalue'
+      in family `#2' ignored}\@ehd
+  \fi
+}
+\ltxkeyssetkeys[KV]{fam}{keyd=aaa,keye=bbb}
+\show\KV@fam@keyd
+\finish{example}
+
+\end{noteenv}
+
+
+\docsection(sec:ifkeydef)<is key defined?>{Checking if a key is defined}
+
+\start+{newmacro}[\ltxkeysifkeydefTF,\ltxkeysifkeydefFT]
+\ltxkeysifkeydefTF[|A(prefs)]{|A(fams)}{|A(key)}{|A(true)}{|A(false)}
+\ltxkeysifkeydefFT[|A(prefs)]{|A(fams)}{|A(key)}{|A(false)}{|A(true)}
+\finish{newmacro}
+\fxim*{\ltxkeysifkeydefTF,\ltxkeysifkeydefFT}
+
+These check if \ang{key} is defined with a prefix in \ang{prefs} and in family in \ang{fams}. If the test proves that \ang{key} is defined, \ang{true} text will be executed; otherwise \ang{false} will be executed.
+
+
+\docsection(sec:disablingkeys)<disabling keys>{Disabling families and keys}
+
+\docsubsection{Disabling families}
+
+\start{newmacro}[\ltxkeysdisablefamilies,\ltxkeysgdisablefamilies]
+\ltxkeysdisablefamilies[|A(prefs)]{|A(fams)}[|A(nakeys)]
+\ltxkeysdisablefamilies|*[|A(prefs)]{|A(fams)}[|A(nakeys)]
+\ltxkeysgdisablefamilies[|A(prefs)]{|A(fams)}[|A(nakeys)]
+\ltxkeysgdisablefamilies|*[|A(prefs)]{|A(fams)}[|A(nakeys)]
+\finish{newmacro}
+\fxim*{\ltxkeysdisablefamilies,\ltxkeysgdisablefamilies}
+
+Here, \ang{prefs} and \ang{fams} are comma-separated lists of prefixes and families to be disabled. Keys listed in the comma-separated list \ang{nakeys} are ignored, \ie, they aren't disabled with their colleagues. The macros \ffx'{\ltxkeysdisablefamilies,\ltxkeysgdisablefamilies} disable keys and cause an error to be issued when a disabled family is submitted to \fx{\ltxkeyssetkeys} or invoked by the key caller. If the package option \fx{tracingkeys} is true, disabled families are highlighted in the transcript file. The command \fx{\ltxkeysdisablefamilies} acts locally, while \fx{\ltxkeysgdisablefamilies} has a global effect.
+
+The plain forms of \ffx'{\ltxkeysdisablefamilies,\ltxkeysgdisablefamilies} disable the given families instantly, while the \stform+ disable the families at \hx{\AtBeginDocument}. Authors can use these commands to bar users of their keys from calling those families after a certain point. Individual keys in a family can be disabled using the commands \ffx'{\ltxkeysdisablekeys, \ltxkeysgdisablekeys}.
+
+\start{example}[\ltxkeysdisablefamilies]
+\ltxkeys{%
+  |com(The commands \declare@keys, \set@keys and \set@rmkeys are available)
+  |com(only within \ltxkeys.)
+  \declare@keys*[KV1]{fam1}[mp@]{%
+    bool/key1/true/\def\xx##1{##1\\#1\\##1};
+    bool/key2/true/\def\yy##1{##1*#1*##1};
+    cmd/key3/aaa/;
+    cmd/key4/bbb/
+  }%
+  \\
+  \declare@keys*[KV2]{fam2}[mp@]{%
+    bool/key1/true;
+    bool/key2/true;
+    cmd/key3/yyy/;
+    cmd/key4/zzz/
+  }%
+  \\
+  \ltxkeysdisablefamilies[KV1,KV2]{fam1,fam2}[key3,key4]
+}
+\showcsn{KV1@fam2@disabledkeys}
+\finish{example}
+
+
+\docsubsection{Disabling keys}
+
+\start{newmacro}[\ltxkeysdisablekeys,\ltxkeysgdisablekeys]
+\ltxkeysdisablekeys[|A(prefs)]{|A(fams)}{|A(keys)}
+\ltxkeysgdisablekeys[|A(prefs)]{|A(fams)}{|A(keys)}
+\ltxkeysdisablekeys|*[|A(prefs)]{|A(fams)}{|A(keys)}
+\ltxkeysgdisablekeys|*[|A(prefs)]{|A(fams)}{|A(keys)}
+\finish{newmacro}
+\fxim*{\ltxkeysdisablekeys,\ltxkeysgdisablekeys}
+
+Here, \ang{prefs}, \ang{fams} and \ang{keys} are comma-separated lists of prefixes, families and associated keys to be disabled. The macro \fx{\ltxkeysdisablekeys} causes an error to be issued when a disabled key is invoked. If the package option \fx{tracingkeys} is true, undefined keys are highlighted by \fx{\ltxkeysdisablekeys} with a warning message. Because it is possible to mix prefixes and families in \fx{\ltxkeysdisablekeys}, undefined keys may readily be encountered when disabling keys. To see those undefined keys in the transcript file, enable the package option \fx{tracingkeys}. The macro \fx{\ltxkeysgdisablekeys} will disable the given keys globally.
+
+The \unstform+ of \fx{\ltxkeysdisablekeys} and \fx{\ltxkeysgdisablekeys} disable the given keys instantly, while the \stform disable the keys at \hx{\AtBeginDocument}. Authors can use this command to bar users of their keys from calling those keys after a certain point.
+
+For a given key prefix \ang{pref} and family \ang{fam}, you can recall the full list of disabled keys (set up earlier by \fx{\ltxkeysdisablekeys} and/or \fx{\ltxkeysgdisablekeys}) by the command
+
+\start'{macro}[Recalling list of disabled keys]
+\|A(pref)@|A(fam)@disabledkeys
+\finish{macro}
+\aidx*{recalling the list of disabled keys}
+
+
+\docsection(sec:optionskeys){Option and non-option keys}
+\aidxm*{option keys, non-option keys}
+
+Sometimes you want to create keys that can only appear in \hhx{\documentclass,\RequirePackage} or \hx{\usepackage}, and at other times you may not want the user to submit a certain set of keys via these commands. The \pkg'{xwatermark}, for example, uses this concept.
+
+\start+{newmacro}[\ltxkeysoptionkeys,\ltxkeysnonoptionkeys]
+\ltxkeysoptionkeys[|A(pref)]{|A(fam)}{|A(keys)}
+\ltxkeysoptionkeys|*[|A(pref)]{|A(fam)}{|A(keys)}
+\ltxkeysnonoptionkeys[|A(pref)]{|A(fam)}{|A(keys)}
+\finish{newmacro}
+\fxim*{\ltxkeysoptionkeys,\ltxkeysnonoptionkeys}
+
+Here, \ang{keys} is a comma-separated list of keys to be made option or non-option keys.
+Keys listed in \fx{\ltxkeysoptionkeys} can appear only in arguments of \hhx{\documentclass, \RequirePackage} or \hx{\usepackage}, while keys listed in \fx{\ltxkeysnonoptionkeys} can't appear in these macros. The \stform of \fx{\ltxkeysoptionkeys} is equivalent to \fx{\ltxkeysnonoptionkeys}. Only defined keys may appear in \ffx'{\ltxkeysoptionkeys, \ltxkeysnonoptionkeys}.
+
+\start{newmacro}[\ltxkeysmakeoptionkeys]
+\ltxkeysmakeoptionkeys[|A(pref)]{|A(fam)}
+\ltxkeysmakeoptionkeys|*[|A(pref)]{|A(fam)}
+\ltxkeysmakenonoptionkeys[|A(pref)]{|A(fam)}
+\finish{newmacro}
+\fxim*{\ltxkeysmakeoptionkeys}
+
+The command \fx{\ltxkeysmakeoptionkeys} makes all the keys with prefix \ang{pref} and in family \ang{fam} options keys. The command \fx{\ltxkeysmakenonoptionkeys} does the reverse, \ie, makes the keys non-option keys. The \stform of \fx{\ltxkeysmakeoptionkeys} is equivalent to \fx{\ltxkeysmakenonoptionkeys}.
+
+
+\docsection(sec:handledkeys)<handled keys>{Handled keys}
+
+As mentioned in \sref{sec:unknownkeyhandler}, handled keys are keys defined in a macro that is key-prefix and key-family dependent. They are defined as a list in a macro so that they can be used for future applications, such as deciding if a observer key of a style key should be defined or redefined on the fly. Handled keys should be defined, or added to, using key prefix, family and key names. You can define or add to handled keys by the following command:
+
+\start{newmacro}[\ltxkeyshandledkeys]
+\ltxkeyshandledkeys[|A(pref)]{|A(fam)}{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeyshandledkeys}
+
+where \ang{list} is a comma-separated list of key names. This command can be issued more than once for the same key prefix \ang{pref} and family \ang{fam}, since the content of \ang{list} is usually merged with the existing list rather than being merely added or overwritten. There is also
+
+\start{newmacro}[\ltxkeysaddhandledkeys]
+\ltxkeysaddhandledkeys[|A(pref)]{|A(fam)}{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysaddhandledkeys}
+
+which is just an alias for \fx{\ltxkeyshandledkeys}.
+
+\start{example}[\ltxkeyshandledkeys]
+\ltxkeyshandledkeys[KVA,KVB]{fam1,fam2}{keya,keyb,keyc}
+\finish{example}
+
+For a given key prefix \ang{pref} and family \ang{fam}, you can recall the full list of handled keys (set up earlier by \fx{\ltxkeyshandledkeys}) by the command
+
+\start'{macro}[Recalling list of handled keys]
+\|A(pref)@|A(fam)@handledkeys
+\finish{macro}
+\aidx*{recalling the list of handled keys}
+
+You can remove handled keys from a given list of handled keys (in a family) by the following command:
+
+\start{newmacro}[\ltxkeysremovehandledkeys]
+\ltxkeysremovehandledkeys[|A(pref)]{|A(fam)}{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysremovehandledkeys}
+
+Rather than remove individual handled keys from a list, you might prefer or need to simply undefine or \quoted{emptify} the entire list of handled keys in a family. You can do these with the following commands:
+
+\start+{newmacro}[\ltxkeysundefhandledkeys,\ltxkeysemptifyhandledkeys]
+\ltxkeysundefhandledkeys[|A(pref)]{|A(fam)}
+\ltxkeysemptifyhandledkeys[|A(pref)]{|A(fam)}
+\finish{newmacro}
+\fxim*{\ltxkeysundefhandledkeys,\ltxkeysemptifyhandledkeys}
+
+
+\docsection(sec:reservedpath){Reserving and unreserving key path or bases}
+\aidxm*{reserving key prefix, reserving key family}
+
+By \quoted{key path} we mean the key prefix (default is \fx{KV}), key family (generally no default), and macro prefix (default is dependent on the type of key). You can reserve key path or bases (\ie, bar future users from using the same path or bases) by the following commands. Once a key family or prefix name has been used, it might be useful barring further use of those names. For example, the \pkg'{ltxkeys} has barred users from defining keys with key family \fx{ltxkeys} and macro prefix \fx{ltxkeys}.
+
+\start+{newmacro}[\ltxkeysreservekeyprefix,\ltxkeysreservekeyfamily, etc.]
+\ltxkeysreservekeyprefix{|A(list)}
+\ltxkeysreservekeyprefix|*{|A(list)}
+\ltxkeysreservekeyfamily{|A(list)}
+\ltxkeysreservekeyfamily|*{|A(list)}
+\ltxkeysreservemacroprefix{|A(list)}
+\ltxkeysreservemacroprefix|*{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysreservekeyprefix,\ltxkeysreservekeyfamily,
+  \ltxkeysreservemacroprefix}
+
+Here, \ang{list} is a comma-separated list of bases. The \stform+ of these commands will defer reservation to the end of the current package or class, while the \unstform+ will effect the reservation immediately. As the package or class author you may want to defer the reservation to the end of your package or class.
+
+Users can, at their own risk, override reserved key bases simply by issuing the package boolean option \fx{reservenopath}. This can be issued in \hhx{\documentclass,\usepackage} or \fx{\setltxkeysoptions}. This might be too drastic for many users and uses. Therefore, the \pkg'{ltxkeys} also provides the following commands that can be used for selectively unreserving currently reserved key bases:
+
+\start+{newmacro}[\ltxkeysunreservekeyprefix,\ltxkeysunreservekeyfamily, etc.]
+\ltxkeysunreservekeyprefix{|A(list)}
+\ltxkeysunreservekeyprefix|*{|A(list)}
+\ltxkeysunreservekeyfamily{|A(list)}
+\ltxkeysunreservekeyfamily|*{|A(list)}
+\ltxkeysunreservemacroprefix{|A(list)}
+\ltxkeysunreservemacroprefix|*{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysunreservekeyprefix,\ltxkeysunreservekeyfamily,
+  \ltxkeysunreservemacroprefix}
+
+The \stform+ of these commands will defer action to the end of the current package or class, while the \unstform+ will undo the reservation immediately.
+
+
+\docsection(sec:badkeynames)<illegal key name>{Bad key names}
+
+Some key names are indeed inadmissible. The \pkg{ltxkeys} considers the literals in \sref{tab:badkeynames}, among others, as inadmissible for key names:
+
+\begingroup
+\settowidth\@tempdima{needvaluekeys}
+\edef\colwidth{\the\dimexpr\@tempdima+0mm}
+\small
+\begin{longtable}[c]{|*{5}{p{\colwidth}|}}
+\caption{Default bad key names\xwmlabel{tab:badkeynames}}
+\\\hline
+\endfirsthead
+\multicolumn{4}{|l|}{\emph{Continued from last page}}\\\hline
+\endhead
+\multicolumn{4}{|r|}{\emph{Continued on next page}}\\\hline
+\endfoot
+\hline
+\endlastfoot
+ord & cmd & sty & style & bool \\\hline
+choice & ordkey & cmdkey & stylekey & choicekey \\\hline
+boolkey & .do  &  .code  &  set & setkeys \\\hline
+execute & executekeys & executedkeys & handled & handledkeys \\\hline
+presetkeys & preset & postsetkeys & postset & rmkeys \\\hline
+ifdef & boolean & tog & toggle & switch \\\hline
+true & false & on & off & count \\\hline
+dimen & skip & toks & savevalue & savevaluekeys \\\hline
+xfamilykeys & needvalue & needvaluekeys & usevalue &  \\
+\end{longtable}
+\endgroup
+
+For reasons of efficiency, the \pkg'{ltxkeys} will attempt to catch bad key names only if the package option \fx{tracingkeys} is enabled.
+
+You can add to the list of invalid key names by the following command:
+
+\start+{newmacro}[\ltxkeysbadkeynames,\ltxkeysaddbadkeynames]
+\ltxkeysbadkeynames{|A(list)}
+\ltxkeysaddbadkeynames{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysbadkeynames,\ltxkeysaddbadkeynames}
+
+where \ang{list} is a comma-separated list of inadmissible names. The updating is done by merging, so that entries are not repeated in the internal list of bad key names.
+
+You can remove from the list of bad key names by using the following command:
+
+\start{newmacro}[\ltxkeysremovebadkeynames]
+\ltxkeysremovebadkeynames{|A(list)}
+\finish{newmacro}
+\fxim*{\ltxkeysremovebadkeynames}
+
+where, again, \ang{list} is comma-separated. It is not advisable to remove any member of the default bad key names.
+
+
+\docsection(sec:declareoption){Declaring options}
+\aidxm*{class options, package options}
+
+\start+{newmacro}[\ltxkeysdeclareoption,\ltxkeysunknownoptionhandler]
+\ltxkeysdeclareoption[|A(pref)]<|A(fam)>{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclareoption|*[|A(pref)]<|A(fam)>{|A(cbk)}
+\ltxkeysunknownoptionhandler[|A(pref)]<|A(fam)>{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclareoption,\ltxkeysunknownoptionhandler}
+
+The \unstform of \fx{\ltxkeysdeclareoption} is simply a form of \fx{\ltxkeysordkey}, with the difference that the key family \ang{fam} is now optional and, when specified, must be given in angled brackets. The default family name is \quotedhx{\@currname.\@currext}, \ie, the name of the class file or package and its file extension.
+
+The \stform of \fx{\ltxkeysdeclareoption} prescribes the default action to be taken when undefined options with prefix \ang{pref} and in family \ang{fam} are passed to class or package. You may use \fx{\ltxkeyscurrentkey} and \fx{\ltxkeyscurrentvalue} within this macro to pass the unknown option and its value to another class or package or to specify other actions. In fact, you can use \fx{#1} in this macro to represent the current key prefix, \fx{#2} for the current family, \fx{#3} for the current key name, and \fx{#4} for the value of the current key. The command \fx{\ltxkeysunknownoptionhandler} is equivalent to the \stform of \fx{\ltxkeysdeclareoption}.
+
+\ltsnote
+The \stform of \fx{\ltxkeysdeclareoption} differs from the starred form of \LaTeX's \hx{\DeclareOption} and the starred form of \pkg'{xkeyval}'s \hx{\DeclareOptionX}.
+
+\start+{example}[\ltxkeysdeclareoption]
+\ltxkeysdeclareoption|*[KV]<mypackage>{%
+  \PackageWarning{mypackage}{%
+    Unknown option `\ltxkeyscurrentkey' with value `\ltxkeysinnocentvalue' ignored}%
+}
+
+\ltxkeysdeclareoption|*{\PassOptionsToClass{#3}{article}}
+
+\ltxkeysunknownoptionhandler[KV]<mypackage>{%
+  \@expandtwoargs\in@{,#3,}{,\KV@mypackage@handledkeys,}%
+  \ifin@
+    |com(The reader may want to investigate what the parameter texts)
+    |com(##1 and ####1 below stand for:)
+    \ltxkeysordkey[#1]{#2}{#3}[#4]{\def\x####1{####1xx##1}}%
+  \else
+    \PassOptionsToClass{#3}{myclass}%
+  \fi
+}
+\finish{example}
+
+See note~\ref{nte:unknownkey} for the meaning of the parameter texts in this example. The contents of the macro \fx{\KV@mypackage@handledkeys} are handled keys for key prefix \fx{KV} and family \fx{fam}. See \sref{sec:handledkeys} for the meaning of handled keys.
+
+\start+{newmacro}[\ltxkeysdeclarecmdoption, \ltxkeysdeclarebooloption, etc]
+\ltxkeysdeclareordoption[|A(pref)]<|A(fam)>{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarecmdoption[|A(pref)]<|A(fam)>[|A(mp)]{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarebooloption[|A(pref)]<|A(fam)>[|A(mp)]{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarechoiceoption[|A(pref)]{|A(fam)}[|A(mp)]{|A(option)}[|A(bin)]{|A(alt)}
+  [|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclareordoption,\ltxkeysdeclarecmdoption,
+\ltxkeysdeclarebooloption,\ltxkeysdeclarechoiceoption}
+
+These are the equivalents of the macros \ffx'{\ltxkeysordkey,\ltxkeyscmdkey, \ltxkeysboolkey, \ltxkeyschoicekey}, respectively, but now the family \ang{fam} is optional (as is \ang{pref}) and, when specified, must be given in angled brackets. The default family name for these new commands is \quotedhx{\@currname.\@currext}, \ie, the current style or class filename and filename extension. \fx{\ltxkeysdeclareordoption} is equivalent to the \unstform of \fx{\ltxkeysdeclareoption}. See the choice keys in \sref{sec:choicekeys} for the meaning of \ang{bin} and \ang{alt} associated with the command \fx{\ltxkeysdeclarechoiceoption}.
+
+
+\docsubsection(sec:options-sameattributes)
+  {Options that share the same attributes}
+
+The commands
+
+\start+{macro}
+\ltxkeysdeclareordoption
+\ltxkeysdeclarecmdoption
+\ltxkeysdeclarebooloption
+\ltxkeysdeclarechoiceoption
+\finish{macro}
+
+can each be used to introduce several options that share the same path or bases (option prefix, option family, and macro prefix) and callback \ang{cbk}. All that is needed is to replace \ang{option} in these commands with the comma-separated list \ang{options}. Because some users might prefer to see these commands in their plural forms when defining several options with the same callback, we have provided the following aliases.
+
+\start+{newmacro}[\ltxkeysdeclarecmdoptions, \ltxkeysdeclarebooloptions, etc]
+\ltxkeysdeclareordoptions[|A(pref)]<|A(fam)>{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarecmdoptions[|A(pref)]<|A(fam)>[|A(mp)]{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarebooloptions[|A(pref)]<|A(fam)>[|A(mp)]{|A(option)}[|A(dft)]{|A(cbk)}
+\ltxkeysdeclarechoiceoptions[|A(pref)]{|A(fam)}[|A(mp)]{|A(option)}[|A(bin)]{|A(alt)}
+  [|A(dft)]{|A(cbk)}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclareordoptions,\ltxkeysdeclarecmdoptions,
+\ltxkeysdeclarebooloptions,\ltxkeysdeclarechoiceoptions}
+
+
+\docsubsection(sec:multitypeoptions){Declaring all types of option with one command}
+\aidx*{declaring multiple options}
+
+\start{newmacro}[\ltxkeysdeclaremultitypeoptions]
+\ltxkeysdeclaremultitypeoptions[|A(pref)]<|A(fam)>[|A(mp)]{%
+  |A(keytype)/|A(keyname)/|A(dft)/|A(cbk);
+  another set of key attributes;
+  etc.
+}
+\ltxkeysdeclaremultitypeoptions|*[|A(pref)]<|A(fam)>[|A(mp)]{%
+  |A(keytype)/|A(keyname)/|A(dft)/|A(cbk);
+  another set of key attributes;
+  etc.
+}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclaremultitypeoptions}
+
+Here, the key default value \ang{dft} and callback \ang{cbk} can be absent in all cases. \ang{keytype} may be any one of \fnz{ord,cmd,sty,sty*,bool,choice}. The star (\redstar) in \quoted{sty\Redstar} has the same meaning as in \fx{\ltxkeysstylekey} above, namely, undefined observers will be defined on the fly when the parent key is set. The optional quantity \ang{mp} is the macro prefix, as in, for example, \sref{sec:cmdkeys}. The syntax for the command \fx{\ltxkeysdeclaremultitypeoptions} is identical to that of \fx{\ltxkeysdeclarekeys} except for the following differences: For \fx{\ltxkeysdeclarekeys} the family is mandatory and must be given in curly braces, while for \fx{\ltxkeysdeclaremultitypeoptions} the family is optional, with the default value of \quotedhx{\@currname.\@currext}, \ie, the name of the class file or package and its file extension. For \fx{\ltxkeysdeclaremultitypeoptions}, the optional family is expected to be given in angled brackets. The \stform of the command \fx{\ltxkeysdeclaremultitypeoptions} defines only undefined options. An alias for the long command \fx{\ltxkeysdeclaremultitypeoptions} is \fx{\declaremultitypeoptions}.
+
+\start{example}[\ltxkeysdeclaremultitypeoptions]
+\declaremultitypeoptions*[KV]<fam>[mp@]{%
+  cmd/option1/xx/\def\x##1{##1xx#1};
+  bool/option2/true;
+}
+\finish{example}
+
+
+
+\docsection(sec:executeoption){Executing options}
+
+\start{newmacro}[\ltxkeysexecuteoptions]
+\ltxkeysexecuteoptions[|A(prefs)]<|A(fams)>[|A(na)]{|A(keyval)}
+\finish{newmacro}
+\fxim*{\ltxkeysexecuteoptions}
+
+This executes/sets the \keyval pairs given in \ang{keyval}. The optional \ang{na} specifies the list of keys (without values) to be ignored. \ang{prefs} is the list of prefixes for the keys; and the optional \ang{fams} signifies families in which the keys suggested in \keyval have been defined. The default value of \ang{fams} is \fx{\@currname.\@currext}. The command \fx{\ltxkeysexecuteoptions} can thus be used to process keys with different prefixes and from several families.
+
+
+\docsection(sec:processoption){Processing options}
+
+\start{newmacro}[\ltxkeysprocessoptions]
+\ltxkeysprocessoptions[|A(prefs)]<|A(fams)>[|A(na)]
+\ltxkeysprocessoptions|*[|A(prefs)]<|A(fams)>[|A(na)]
+\finish{newmacro}
+\fxim*{\ltxkeysprocessoptions}
+
+The command \fx{\ltxkeysprocessoptions} processes the \keyval pairs passed by the user to the class or package. The optional argument \ang{na} can be used to specify keys that should be ignored. The optional argument \ang{fams} can be used to specify the families that have been used to define the keys. The default value of \ang{fams} is \fx{\@currname.\@currext}. The package command \fx{\ltxkeysprocessoptions} doesn't protect expandable macros in the user inputs unless the \pkg'{ltxkeys} is loaded before \hx{\documentclass}, in which case it is also possible to use the command \hx{\XProcessOptions} of the \pkg'{ltxtools}. When used in a class file, the macro \fx{\ltxkeysprocessoptions} will ignore unknown keys or options. This allows the user to use global options in the \hx{\documentclass} command which can be inherinted by packages loaded afterwards.
+
+The \stform of \fx{\ltxkeysprocessoptions} works like the plain variant except that, if the \pkg'{ltxkeys} is loaded after \hx{\documentclass}, it also copies user input from the command \hx{\documentclass}. When the user specifies an option in the \hx{\documentclass} which also exists in the local family or families of the package issuing \fx{\ltxkeysprocessoptions}\Redstar, the local key too will be set. In this case, \fx{#1} in the command \fx{\ltxkeysdeclareoption} (or a similar command) will be the value entered in the \hx{\documentclass} command for this key. First the global options from \hx{\documentclass} will set local keys and afterwards the local options, specified via \hx{\usepackage}, \hx{\RequirePackage} or \hx{\LoadClass}, will set local keys, which could overwrite the previously set global options, depending on the way the options sections are constructed.
+
+
+\docsubsection(sec:afterprocessoptions)<before processoptions,after processoptions>
+{Hooks for `before' and `after' processing options}
+
+\start+{newmacro}[\ltxkeysbeforeprocessoptions,\ltxkeysafterprocessoptions]
+\ltxkeysbeforeprocessoptions{|A(code)}
+\ltxkeysafterprocessoptions{|A(code)}
+\finish{newmacro}
+\fxim*{\ltxkeysbeforeprocessoptions,\ltxkeysafterprocessoptions}
+
+The macros \ffx'{\ltxkeysbeforeprocessoptions,\ltxkeysafterprocessoptions} can be used to process an arbitrary code given in \ang{code} before and after \fx{\ltxkeysprocessoptions} has been executed. The command \fx{\ltxkeysafterprocessoptions} is particularly useful when it is required to optionally load a package, with the decision dependent on the state or outcome of an option in the current package. For obvious reasons, \latex's options parser doesn't permit the loading of packages in the options section. The command \fx{\ltxkeysafterprocessoptions} can be used to load packages after the current package's options have been processed. Here is an example for optionally loading some packages at the end of the options section:
+
+\start{example}[\ltxkeysafterprocessoptions]
+\ltxkeyscmdkey[KV]{fam}[mp@]{keya}[]{%
+  \iflacus#1\then\else
+    \ltxkeysafterprocessoptions{\RequirePackage[#1]{mypackage}}%
+  \fi
+}
+\finish{example}
+
+In this example, \fx{#1} refers (as usual) to the user input for key \ttx{keya}. Here, we assume that the values of \ttx{keya} will be the \keyval pairs for options of \texttt{mypackage}. The loading of \texttt{mypackage} will be determined by whether the user input for \ttx{keya} is empty or not. That is why \ttx{keya} has an empty default value. More complex application scenarios can, of course, be easily created\footnote{The command \ftfx{\iflacus}, whose argument is delimited by \ftfx{\then}, tests for emptiness of its argument.}.
+
+
+\docsection(sec:keycommands)<command keys, environment keys>
+{Key commands and key environments}
+
+Key commands and environments are commands and environments that expect \keyval pairs as input, in addition to any number of possible nine conventional arguments. Key commands and environments have already been introduced by the \pkg'{keycommand,skeycommand}, but the inherent robustness of the \pkg{ltxkeys} provides another opportunity to re-introduce these features here. The syntax here is also simpler and the new featureset has the following advantages over those in \pkg'{keycommand,skeycommand}:
+
+\begin{enum}
+\item The defined commands and environments can have up to nine conventional parameters, in addition to the \keyval pairs.
+\item Anyone or all of the nine command or environment parameters can be delimited.
+\item All the various types of key (command keys, boolean keys, \eetc) can be used as the keys for the new command or environment.
+\item With the prefixes \ffx'{\ltxkeysglobal,\ltxkeysprotected}\footnote{\ftfx{\ltxkeysrobust} is an alias for \ftfx{\ltxkeysprotected}.}, global and robust key commands and environments can be defined in a manner that simulates \tex's \hx{\global} and \etex's \hx{\protected}.
+\item The exit code for the key environment can have access to the arguments of the environment, unlike in \latex's environment.
+\item Simple commands are provided for accessing the current values (and, in the case of boolean keys, the current states) of keys.
+\end{enum}
+
+The specification of the mandatory arguments and any optional first argument for the key command and key environment has the same syntax as in \latex's \hhx'{\newcommand,\newenvironment}. The key command and key environment of the \pkg'{ltxkeys} have the syntaxes:
+
+\start+{newmacro}[\ltxkeyscommand,\ltxkeysenvironment, etc]
+|A(pref)\ltxkeyscommand|A(cs)[|A(narg)][|A(dft)]<|A(delim)>|(|A(keys)|){|A(defn)}
+|A(pref)\reltxkeyscommand|A(cs)[|A(narg)][|A(dft)]<|A(delim)>|(|A(keys)|){|A(defn)}
+|A(pref)\ltxkeysenvironment{|A(name)}[|A(narg)][|A(dft)]<|A(delim)>|(|A(keys)|){|A(begdefn)}{|A(enddefn)}
+|A(pref)\reltxkeysenvironment{|A(name)}[|A(narg)][|A(dft)]<|A(delim)>|(|A(keys)|){|A(begdefn)}{|A(enddefn)}
+\finish{newmacro}
+\fxim*{\ltxkeyscommand,\reltxkeyscommand,\ltxkeysenvironment,\reltxkeysenvironment,\ltxkeysglobal,
+\ltxkeysprotected,\ltxkeysrobust}
+
+Here, \ang{pref} is the optional command prefix, which may be either \fx{\ltxkeysglobal} (for global commands) or \fx{\ltxkeysprotected} (for \etex protected commands); \ang{cs} is the command; \ang{name} is the environment name; \ang{narg} is the number of parameters; \ang{dft} is the default value of the first argument; \ang{delim} are the parameter delimiters; \ang{keys} are the keys to be defined for the command or environment; \ang{defn} is the replacement text of the command; \ang{begdefn} is the environment entry text; and \ang{enddefn} is the code to execute while exiting the environment.
+
+The \ang{keys} have the same syntax as they do for the command \fx{\ltxkeysdeclarekeys} (\sref{sec:declarekeys}). The parameter delimiters \ang{delim}, given above in angled brackets, have the syntax:
+
+\start'{newmacro}[Parameter delimiters]
+1|A(delim1) 2|A(delim2) ... 9|A(delim9)
+\finish{newmacro}
+
+where \ang{delim1} and \ang{delim2} are the delimiters for the first and second parameters, respectively, etc. Only the parameters with delimiters are to be specified in \ang{delim}. Examples are provided later.
+
+In the \latex \hhx'{\newenvironment,\renewenvironment} commands, with the syntax
+
+\start+{macro}[\newenvironment,\renewenvironment]
+\newenvironment{|A(name)}[|A(narg)][|A(dft)]{|A(begdefn)}{|A(enddefn)}
+\renewenvironment{|A(name)}[|A(narg)][|A(dft)]{|A(begdefn)}{|A(enddefn)}
+\finish{macro}
+\hxim*{\newenvironment,\renewenvironment}
+
+the environment's parameters and/or arguments aren't accessible in \ang{enddefn}. If the environment user wants to access the parameters in \ang{enddefn}, he has to save them while still in \ang{begdefn}. This isn't the case with the commands \ffx'{\ltxkeysenvironment,\reltxkeysenvironment}, for which the user can access the environment parameters while in \ang{enddefn}. To do this, he should call the command \fxim{\envarg}, which expects as argument the corresponding numeral of the parameter text. For example, \ffx'{\envarg{1},\envarg{3}} refer to the first and third arguments of the environment, respectively. Examples are provided later. The current values of environment's keys can always be accessed in \ang{enddefn}.
+
+But how do we access the current values or states of keys while in \ang{begdefn} and \ang{enddefn}? To this end the commands \ffx'{\val,\ifval,\ifvalTF,\keyval,\ifkeyval,\ifkeyvalTF} are provided. They have the following syntaxes:
+
+\start+{newmacro}[\val,\ifval,\ifvalTF, etc]
+|com(The following commands don't first confirm that the key exists before)
+|com(attempting to obtain its current value or state. They are expandable:)
+\val{|A(key)}
+\ifval|A(boolkey)\then |A(true) \else |A(false) \fi
+\ifvalTF{|A(boolkey)}{|A(true)}{|A(false)}
+
+|com(The following commands first confirm that the key exists before attempting)
+|com(to obtain its current value or state. They are expandable if the key)
+|com(is defined:)
+\keyval{|A(key)}
+\ifkeyval|A(boolkey)\then |A(true) \else |A(false) \fi
+\ifkeyvalTF{|A(boolkey)}{|A(true)}{|A(false)}
+\finish{newmacro}
+\fxim*{\val,\ifval,\ifvalTF,\keyval,\ifkeyval,\ifkeyvalTF}
+
+The command \fx{\val} yields the current value of a command or environment key, irrespective of the type of key. Its argument should exclude the key-command name, key prefix, key family, and macro prefix. The command \fx{\ifval} expects as argument a boolean key name \ang{boolkey} (without the command name, key prefix, key family, and macro prefix) and yields either \hx{\iftrue} or \hx{\iffalse}. The command \fx{\ifvalTF} expects as argument a boolean key and yields one of two \latex branches, \ang{true} or \ang{false}.
+
+The commands \ffx'{\val,\ifval,\ifvalTF} can be used in expansion contexts (including in \hx{\csname...\endcsname}) but if their arguments aren't defined as keys, they will return an undefined command, either immediately or later. On the hand, their counterparts (namely, the commands \ffx'{\keyval,\ifkeyval,\ifkeyvalTF}) will first check that the key has been defined before attempting to obtain its current value or state. This affects their expandability when a key is undefined. My advice is that the user should always use \ffx'{\keyval,\ifkeyval,\ifkeyvalTF} instead of \ffx'{\val,\ifval,\ifvalTF}, unless he is sure he hasn't committed any mistakes in key's name; but he might be writing a package---that contains these commands---for the use of the \tex community. Also, here there is an advantage in using \hx{\protected@edef} in place of \hx{\edef}: some \latex commands are protected with \hx{\protect}.
+
+The commands \ffx'{\val,\ifval,\ifvalTF, \keyval,\ifkeyval,\ifkeyvalTF}, like the command and environment keys, are available in \ang{defn}, \ang{begdefn} and \ang{enddefn}. These commands (\ie, \ffx'{\val,\ifval,\ifvalTF, \keyval,\ifkeyval,\ifkeyvalTF}) are pushed on entry into \ang{defn} or \ang{begdefn}, and they are popped on exit of \ang{defn} or \ang{enddefn}. Unless they're defined elsewhere outside the \pkg'{ltxkeys}, they're undefined outside \ang{defn}, \ang{begdefn}, \ang{enddefn}, and the environment body.
+
+
+\docsubsection(sec:eoe){Final tokens of every environment}
+
+The user can add some tokens to the very end of every subsequent environment by declaring those tokens in the macro \fxim{\ltxkeyseveryeoe}, which by default contains only \latex's command \fxi{\ignorespacesafterend}. That is, the \pkg'{ltxkeys} automatically issues
+
+\start{example}[\ltxkeyseveryeoe]
+|makered(\ltxkeyseveryeoe){\ignorespacesafterend}
+\finish{example}
+
+It is important to note that new tokens are prepended (and not appended) to the internal hook that underlies \fx{\ltxkeyseveryeoe}, such that by default \fx{\ignorespacesafterend} always comes last in the list. You can empty the list \fx{\ltxkeyseveryeoe} by issuing \fx*{\ltxkeyseveryeoe{}} and rebuild it anew, still by prepending elements to it. \fx{\ltxkeyseveryeoe} isn't actually a token list register but it behaves like one\ltsfootnote{However, you can't do \ftfx{\ltxkeyseveryeoe\expandafter{\cmd}} because \ftfx{\ltxkeyseveryeoe} isn't a token list register.}. It is safe to issue \fx{\ltxkeyseveryeoe}\fnu{token} and/or \fx*{\ltxkeyseveryeoe{}} in the \ang{begdefn} part of the key environment. One of the examples in \sref{sec:keycommand-examples} illustrates this point.
+
+\ltsnote
+The pointer schemes of \sref{sec:keypointers} are applicable to key commands and key environments. The \fx{\needvalue} pointer is used in one of the examples in \sref{sec:keycommand-examples}.
+
+
+\docsubsection(sec:keycommand-hooks){Key command and environment hooks}
+
+The commands \ffx'{\ltxkeysinitializekeys, \ltxkeyslaunchkeys} can be used to re-initialize keys to their default values. This avoids creating local groups when setting keys, but these commands will not re-initialize \quoted{option keys} (\ie, keys that are instantiated package or class options). The \pkg'{ltxkeys} deals with this problem via the following hooks.
+
+
+\start+{newmacro}[\ltxkeysbeforekeycmdsetkeys, etc.]
+\ltxkeysbeforekeycmdsetkeys|A(keycmd){|A(code)}
+\ltxkeysafterkeycmdsetkeys|A(keycmd){|A(code)}
+\ltxkeysafterkeycmdsetkeys|A(keycmd){|A(code)}
+\ltxkeysafterkeycmdbody|A(keycmd){|A(code)}
+\ltxkeyssavecmdkeyvalues|A(keycmd){|A(keys)}
+\ltxkeysrestorecmdkeyvalues|A(keycmd)
+\ltxkeyssavelengths{|A(lengths)}
+\ltxkeysrestorelengths{|A(lengths)}
+\finish{newmacro}
+\fxim*{\ltxkeysbeforekeycmdsetkeys,\ltxkeysafterkeycmdsetkeys,
+  \ltxkeysafterkeycmdsetkeys,\ltxkeysafterkeycmdbody,\ltxkeyssavelengths,
+  \ltxkeysrestorelengths,\ltxkeyssavecmdkeyvalues,\ltxkeysrestorecmdkeyvalues
+}
+
+Here, \ang{code} will be executed at the right instance when \ang{keycmd} is being executed. The command \fx{\ltxkeyssavecmdkeyvalues} will save in a unique stack for the command \fx{keycmd} the current values of all the keys listed in the comma-separated list \ang{keys}. The saved values can be restituted via \fx{\ltxkeysrestorecmdkeyvalues}. This way, the values of the keys can be changed and reinstated without deploying local groups. The commands \ffx'{\ltxkeyssavelengths, \ltxkeysrestorelengths} will, respectively, simply save and reinstate the values of the given lengths (counters, dimensions, and skips).
+
+
+\docsubsection(sec:keycommand-examples){Examples of key command and environment}
+
+\start+{example}[Key command]
+|com(It is possible to use parameter delimiters, as the following)
+|com(\@nil and \@mil show:)
+|com(\ltxkeysglobal\ltxkeysrobust\ltxkeyscommand*\cmdframebox)
+|com(   [3][default]<2\@nil 3\@mil>|(|A(keys)|){|A(defn)})
+
+|com(No parameter delimiters for the following:)
+\ltxkeysglobal\ltxkeysrobust\ltxkeyscommand*\cmdframebox[3][default]|(%
+  cmd/width/\textwidth;
+  cmd/textcolor/black;
+  cmd/framecolor/red;
+  cmd/framerule/.4pt;
+  cmd/framesep/4pt;
+  bool/putframe/true;
+  bool/testbool/true;
+|){%
+  \ltxkeyssavelengths{\fboxrule,\fboxsep}%
+  \fboxrule\keyval{framerule}\relax
+  \fboxsep\keyval{framesep}\relax
+  \ifkeyval putframe\then
+    \fcolorbox{\keyval{framecolor}}{gray!25}{%
+  \fi
+  \parbox{\keyval{width}}{%
+    \color{\keyval{textcolor}}%
+    Arg-1: #1\\
+    Arg-2: #2\\
+    Arg-3: #3%
+  }%
+  \ifkeyval putframe\then}\fi
+  \ifkeyvalTF{testbool}{\def\x{T}}{\def\y{F}}%
+  \ltxkeysrestorelengths{\fboxrule,\fboxsep}%
+}
+
+\begin{document}
+\cmdframebox[Text-1]{Text-2\\ ...\\ text-3}{Text-4}|(%
+  width=.5\textwidth,
+  framecolor=cyan,
+  textcolor=purple,
+  framerule=1pt,
+  framesep=10pt,
+  putframe=true
+|)
+\end{document}
+\finish{example}
+
+\start{example}[Key environment]
+\ltxkeysenvironment*{testenv}[1][right]|(%
+  cmd/xwidth/2cm;
+  cmd/ywidth/1.5cm;
+  cmd/body;
+  cmd/|R(\needvalue){author}/\null;
+  bool/boola/false;
+|){%
+  \ltxkeysiffound{,#1,}\in{,right,left,}\then\else
+    \@latex@error{Unknown text alignment type `#1'}\@ehd
+  \fi
+  \centering
+  \fbox{\parbox{\keyval{xwidth}}{\usename{ragged#1}\keyval{body}}}%
+  \ifkeyval boola\then\color{red}\fi
+  \fbox{\parbox{\keyval{ywidth}}{\usename{ragged#1}\keyval{body}}}%
+  \normalcolor
+  |com(\val, \ifval, etc, are unavailable in \ltxkeyseveryeoe. Hence)
+  |com(we save the value of `author' here:)
+  \protected@edef\quoteauthor{\val{author}}%
+  |com(Re-initialize \ltxkeyseveryeoe:)
+  |R(\ltxkeyseveryeoe){}%
+  |R(\ltxkeyseveryeoe){\ignorespacesafterend}%
+  |R(\ltxkeyseveryeoe){\endgraf\vskip\baselineskip
+    \centerline{\itshape\quoteauthor}}
+  |com(Just to test parameter use inside \ltxkeysenvironment:)
+  \def\testmacroa##1{aaa##1}%
+}{%
+  \def\testmacrob##1{##1bbb}%
+}
+
+\begin{document}
+\begin{testenv}|(%
+  xwidth=5cm,
+  ywidth=4cm,
+  boola=true,
+  author={Cornelius Tacitus \textup{|(55--120~AD|)}},
+  body={Love of fame is the last thing even learned men can bear
+    to be parted from.}
+|)
+\end{testenv}
+\end{document}
+\finish{example}
+
+\start+{example}[Key environment]
+|com(The following line has parameter delimiters \@nil  and \@mil:)
+|com(\ltxkeysglobal\ltxkeysrobust\ltxkeysenvironment*{envframebox})
+|com(   [3][default]<2\@nil 3\@mil>|(|A(defn)|){})
+
+|com(No parameter delimiters for the following:)
+|R(\ltxkeysglobal\ltxkeysrobust)\ltxkeysenvironment*{envframebox}[3][default]|(%
+  cmd/width/\textwidth/\def\xx##1{##1};
+  cmd/textcolor/black;
+  cmd/framerule/.4pt;
+  ord/framecolor/brown;
+  bool/putframe/true;
+|){%
+  \begingroup
+  \fboxrule\val{framerule}\relax
+  \ifval putframe\then\fcolorbox{\val{framecolor}}{gray!25}{\fi
+  \parbox{\val{width}}{%
+    Arg-1: #1\\
+    Arg-2: \textcolor{\val{textcolor}}{#2}\\
+    Arg-3: #3%
+  }%
+  \ifval putframe\then}\fi
+  \endgroup
+}{%
+  \edef\firstarg{|R(\envarg){1}}%
+  \def\yy##1{##1}%
+}
+
+\begin{document}
+\begin{envframebox}[Text-1]{Text-2\\ ...\\ test text-2}{Text-3}|(%
+  width=.5\textwidth,
+  textcolor=purple,
+  framerule=1pt,
+  putframe=true
+|)
+\end{envframebox}
+\end{document}
+\finish{example}
+
+
+\start+{example}[Nested key environments]
+\def\testenv{}
+\reltxkeysenvironment{testenv}|(%
+  |com(The \y below is just a test:)
+  cmd/fraclen/0.1cm/\def\y##1{#1yyy##1};
+  cmd/framerule/.4pt;
+  cmd/framecolor/blue;
+  cmd/textcolor/black;
+  bool/putframe/true;
+|){%
+  \ltsdimdef\tempb{.5\textwidth-\val{fraclen}*\currentgrouplevel}%
+  \noindent
+  \endgraf\fboxrule=\val{framerule}\relax
+  \color{\val{framecolor}}%
+}{}
+
+\begin{document}
+\begin{testenv}|(%
+  fraclen=0.1cm,
+  framerule=1.5pt,
+  framecolor=red,
+  textcolor=magenta,
+  putframe=true
+|)%
+\ifval putframe\then\fbox{\fi
+\parbox\tempb{%
+  \color{\val{textcolor}}%
+  outer box\endgraf
+  ***aaa***
+  \vspace*{5mm}%
+  \begin{testenv}|(%
+    fraclen=0.1cm,
+    framerule=3pt,
+    framecolor=green,
+    textcolor=cyan,
+    putframe=true
+  |)%
+  \ifval putframe\then\fbox{\fi
+  \parbox\tempb{%
+    \color{\val{textcolor}}%
+    inner box\endgraf\vspace*{5mm}%
+    +++bbb+++
+  }%
+  \ifval putframe\then}\fi
+  \end{testenv}%
+}%
+\ifval putframe\then}\fi
+\end{testenv}
+\end{document}
+\finish{example}
+
+The following example shows that in place of the functions \ffx'{\val,\ifval,\ifvalTF, \keyval,\ifkeyval,\ifkeyvalTF} the user can access the values and states of keys by concatenating the command or environment name, the \quotedfx{@} sign and the name of the key. This, of course, requires that \quotedfx{@} has catcode~11.
+
+\start+{example}[Key command]
+\ltxkeyscommand\myframebox[2][default text]|(%
+  cmd/width/\textwidth;
+  cmd/textcolor/black;
+  cmd/framecolor/black;
+  cmd/framesep/3\p@;
+  cmd/framerule/0.4\p@;
+  |com(The following is choice key `textalign' with default value `center'.)
+  |com(The `.do=' in the admissible values is optional, but not the forward)
+  |com(slash `/':)
+  |R(choice/textalign.{%)
+      |R(center/.do=\def\ttextalign{center},)
+      |R(left/.do=\def\ttextalign{flushleft},)
+      |R(right/.do=\def\ttextalign{flushright})
+    |R(}/center);
+  bool/putframe/true
+|){%
+  \begingroup
+  \fboxsep\myframebox@framesep
+  \fboxrule\myframebox@framerule\relax
+  \ltsdimdef\myframebox@boxwidth
+    {\myframebox@width-2\fboxsep-2\fboxrule}%
+  \noindent\begin{lrbox}\@tempboxa
+  \begin{minipage}[c][\height][s]\myframebox@boxwidth
+  \@killglue
+  \begin\ttextalign
+  \textcolor{\myframebox@textcolor}{Arg-1: #1\endgraf Arg-2: #2}%
+  \end\ttextalign
+  \end{minipage}%
+  \end{lrbox}%
+  \@killglue
+  \color{\myframebox@framecolor}%
+  \ifmyframebox@putframe\fbox{\fi
+    \usebox\@tempboxa
+  \ifmyframebox@putframe}\fi
+  \endgroup
+}
+
+\begin{document}
+\myframebox[Text-1]{Test text-2\\ ...\\test text-2}
+  |(framerule=2pt,framecolor=blue,textcolor=purple,
+  putframe=true,textalign=right|)
+\end{document}
+\finish{example}
+
+
+\docsection(sec:declarevariables)<declarevariables>{Declaring variables}
+
+Sometimes keys are used simply to save values for later use. This can be achieved easily by using the command \fx{\ltxkeysdeclarevariables}.
+
+\start{newmacro}[\ltxkeysdeclarevariables,\ltxkeyssetvarvalues,\ltxkeysgetvarvalue]
+\ltxkeysdeclarevariables[|A(namespace)]{%
+  |A(key-1) = |A(dft-1) = |A(cbk-1), ..., |A(key-n) = |A(dft-n) = |A(cbk-n)
+}
+\ltxkeyssetvarvalues[|A(namespace)]{|keyval pairs}
+\ltxkeysgetvarvalue[|A(namespace)]{|A(key)}
+\finish{newmacro}
+\fxim*{\ltxkeysdeclarevariables,\ltxkeyssetvarvalues,\ltxkeysgetvarvalue}
+
+Here, \ang{key-i}, \ang{dft-i} and \ang{cbk-i} are key name, key default value, and key callback, respectively, for key \quotedfx{i}. The optional \ang{namespace} is the private namespace for the declared variables and is used to avoid clashes of control sequences.
+
+The key default value \ang{dft} and callback \ang{cbk} are optional and may be missing in the mandatory argument of \fx{\ltxkeysdeclarevariables}.
+
+\start{example}[\ltxkeysdeclarevariables]
+\ltxkeysdeclarevariables[mynamespace]{%
+  var1 = {default value1} = \def\userinput{#1}\def\cmd##1{##1},
+  |com(No callback:)
+  var2 = default value2,
+  |com(No default value and no callback:)
+  var3
+}
+\ltxkeyssetvarvalues[mynamespace]{var1=new value1, var2=new value2}
+\edef\x{\ltxkeysgetvarvalue[mynamespace]{var1}}
+
+\begin{document}
+\ltxkeysgetvarvalue[mynamespace]{var1}
+\end{document}
+\finish{example}
+
+The private namespace is optional but clashes of control sequences might occur:
+
+\start{example}[\ltxkeysdeclarevariables]
+\ltxkeysdeclarevariables{%
+  var1 = {default value1} = \def\userinput{#1}\def\cmd##1{##1},
+  |com(No callback:)
+  var2 = default value2,
+  |com(No default value and no callback:)
+  var3
+}
+\ltxkeyssetvarvalues{var1=new value1, var2=new value2}
+\edef\x{\ltxkeysgetvarvalue{var1}}
+
+\begin{document}
+\ltxkeysgetvarvalue{var1}
+\end{document}
+\finish{example}
+
+
+\docsection(sec:ltxkeys-command){The \headfx{\ltxkeys} command}
+
+\start{newmacro}[\ltxkeys]
+\ltxkeys|*|'{|A(code-1) \\ |A(code-2) ... \\ ... |A(code-n)}
+\finish{newmacro}
+\fxim*{\ltxkeys}
+
+The command \fx{\ltxkeys} simply provides an ungrouped\footnote{Meaning no local groups are created.} environment for using the short forms of the commands shown in \sref{tab:ltxkeys-cmdabbrv}. The abbreviated commands are pushed on entry into \fx{\ltxkeys}, they are then assigned the meaning of their longer counterparts, and then popped (to whatever their original meaning was before entry into \fx{\ltxkeys}) on exist of \fx{\ltxkeys}. The list parser within \fx{\ltxkeys} is invariably \quotedfx{\\}. The list is normalized\footnote{Normalization implies replacing double \quotedfx{\\} by single \quotedfx{\\} and removing spurious spaces around each \quotedfx{\\}.} and the given codes \ang{code-i}, $i=1,...,n$, executed on the consecutive loops. The commands \ffx{\ordkeys,\cmdkeys}, \etcc, can be used to define just one key or multiple keys in the same family and of the same callback. \sref{tab:ltxkeys-cmdabbrv} lists the other abbreviations available within \fx{\ltxkeys}.
+
+The \stform of \fx{\ltxkeys} will expand its argument once before commencing the loop and executing the codes \ang{code-i}, $i=1,...,n$. The \pmform is equivalent to invoking the package option \fx{endcallbackline} before calling \fx{\ltxkeys}. Using both \redstar and \redprime makes \hx{\endlinechar} $-1$ but the effect is not enforced, since in the \stform of \fx{\ltxkeys} the argument has already been read.
+
+\begingroup
+\small
+\begin{tabularx}{\linewidth}{|p{4.5cm}|p{5.5cm}|}
+\caption{Command abbreviations available within \headfx{\ltxkeys}
+  \xwmlabel{tab:ltxkeys-cmdabbrv}}\\\hline
+\rowcolor{pink}
+\bf Command & \bf Abbreviation \\\hline
+\endfirsthead
+\hline
+\multicolumn{2}{|l|}{\emph{Continued from last page}}\\\hline
+\bf Command & \bf Abbreviation \\\hline
+\endhead
+\multicolumn{2}{|r|}{\emph{Continued on next page}}\\\hline
+\endfoot
+\hline
+\endlastfoot
+\fx{\ordkey} & \fx{\ltxkeysordkey} \\\hline
+\fx{\ordkeys} & \fx{\ltxkeysordkeys} \\\hline
+\fx{\listkey} & \fx{\ltxkeyslistkey} \\\hline
+\fx{\listkeys} & \fx{\ltxkeyslistkeys} \\\hline
+\fx{\cmdkey} & \fx{\ltxkeyscmdkey} \\\hline
+\fx{\cmdkeys} & \fx{\ltxkeyscmdkeys} \\\hline
+\fx{\boolkey} & \fx{\ltxkeysboolkey} \\\hline
+\fx{\boolkeys} & \fx{\ltxkeysboolkeys} \\\hline
+\fx{\switchkey} & \fx{\ltxkeysswitchkey} \\\hline
+\fx{\switchkeys} & \fx{\ltxkeysswitchkeys} \\\hline
+\fx{\choicekey} & \fx{\ltxkeyschoicekey} \\\hline
+\fx{\choicekeys} & \fx{\ltxkeyschoicekeys} \\\hline
+\fx{\stylekey} & \fx{\ltxkeysstylekey} \\\hline
+\fx{\stylekeys} & \fx{\ltxkeysstylekeys} \\\hline
+\fx{\definekeys} & \fx{\ltxkeysdefinekeys} \\\hline
+\fx{\declarekeys} & \fx{\ltxkeysdeclarekeys} \\\hline
+\fx{\declareoptions} & \fx{\ltxkeysdeclaremultitypeoptions} \\\hline
+\fx{\ifdeclaringkeys}\fx{\then} & \fx{\ifltxkeysdec} \\\hline
+\fx{\setkeys} & \fx{\ltxkeyssetkeys}\\\hline
+\fx{\setrmkeys} & \fx{\ltxkeyssetrmkeys}\\\hline
+\end{tabularx}
+\endgroup
+
+\start{example}[\ltxkeys]
+\ltxkeys|'{
+  \switchkeys|+[KV]{fam}[mp@]{keya,keyb}[true]{
+    \if\@nameuse{mp@\ltxkeyscurrentkey}
+      \def\xx##1{##1*#1*##1}
+    \fi
+  }{%
+    \keyvalueerror
+  }
+  \declarekeys*[KV]{fam}[mp@]{
+    bool/keyc/true/\def\x##1{##1\\#1\\##1};
+    cmd/keyd/keyd-default/\def\currval{#1};
+  }%
+  \\
+  |com(Arbitrary code to be executed on its own:)
+  \def\x##1{x ##1 x}
+  \\
+  \setkeys*[KV]{fam}[keyb,keyc]{keya=false,keyb,keyc=false,keyd=yy}
+  \setrmkeys|*[KV]{fam}[keyc]
+}
+\finish{example}
+
+
+
+\docsection(sec:weirdargs){Keys with argument patterns}
+
+\quoted{Argument pattern} simply means the structure of the arguments that a key's macro expects in order to execute the key's callback. In \pkg'{ltxkeys} it is possible to specify the nature of the parameter pattern for the key macro, but this makes sense only in the case of ordinary (\fx{ord}), command (\fx{cmd}) and style (\fx{sty} or \fx{sty}\Redstar) keys. Boolean and choice keys can't have weird (\ie, multiple or delimited) arguments, since their expected values are restricted: boolean keys must have a value of either \hx{true} or \hx{false}, and choice keys must have \quoted{nominations}, \ie, admissible or alternate  values. Therefore, the concept introduced in this section applies only to the following key-definition commands:
+
+\start+{macro}[Key-definition commands that can have argument pattern]
+\ltxkeysordkey         \ltxkeysnewordkey
+\ltxkeysordkeys        \ltxkeysnewordkeys
+\ltxkeyscmdkey         \ltxkeysnewcmdkey
+\ltxkeyscmdkeys        \ltxkeysnewcmdkeys
+\ltxkeysstylekey       \ltxkeysnewstylekey
+\ltxkeysstylekeys      \ltxkeysnewstylekeys
+\ltxkeysdefinekeys     (only when defining cmd keys)
+\ltxkeysdeclarekeys    (only when defining ord, cmd, sty keys)
+\finish{macro}
+\fxi*{\ltxkeysordkey,\ltxkeysnewordkey,\ltxkeysordkeys,\ltxkeysnewordkeys,
+\ltxkeyscmdkey,\ltxkeysnewcmdkey,\ltxkeyscmdkeys,\ltxkeysnewcmdkeys,
+\ltxkeysstylekey,\ltxkeysnewstylekey,\ltxkeysstylekeys,\ltxkeysnewstylekeys,
+\ltxkeysdefinekeys,\ltxkeysdeclarekeys}
+
+When using the \pkg'{xkeyval} it is indirectly possible to submit multiple arguments to a key's macro. Suppose we wish to set the text size, then we can define an ordinary key called \texttt{textsize} as follows:
+
+\start{example}[Key callback with multiple arguments]
+\ltxkeysordkey[KV]{fam}{textsize}[{2cm,8cm}]{%
+  |com(Since `ltxkeys' package preserves outer braces in values of keys,)
+  |com(first strip any possible outer braces from the key's value:)
+  \ltsstripallouterbraces{#1}\reserved@a
+  |com(Test if the key's value contains comma:)
+  \oifinsetTF{,}{\reserved@a}{%
+    \def\do##1,##2\@nil{%
+      \textwidth=##1
+      \textheight=##2
+    }%
+    \expandafter\do\reserved@a\@nil
+  }{%
+    \@latex@error{Bad argument for key `textsize'}
+      {No comma in value of key `textsize'}%
+  }%
+}
+\ltxkeyssetkeys[KV]{fam}{textsize={4cm,10cm}}
+\finish{example}
+
+With the \pkg'{ltxkeys} this can be achieved directly as follows:
+
+\start{example}[Key callback with multiple arguments]
+\ltxkeysordkey[KV]{fam}{textsize}[{2cm,8cm}]{%
+  |R(\argpattern){#1,#2} \textwidth=#1 \textheight=#2\relax
+}
+\ltxkeyssetkeys[KV]{fam}{textsize={4cm,10cm}}
+\finish{example}
+
+The argument pattern for the key's macro should be specified within the key's callback as the argument of the undefined command \fx{\argpattern}. The token \argpat can be positioned anywhere within the key's callback, provided it isn't enclosed in curly braces. There is no need to delimit the last argument: an internal delimiter is used.
+
+The same principles apply when using the macros \ffx'{\ltxkeysdefinekeys, \ltxkeysdeclarekeys}: simply put \argpat anywhere within the key's callback, but note that it doesn't apply in the case of boolean and choice keys.
+
+\start+{example}[Key callback with multiple arguments]
+\ltxkeyscmdkey[KV]{fam}[mp@]{keya}[{default1 and default2}]{%
+  |R(\argpattern){#1 and #2}\def\z##1{#1xx##1xx#2}
+}
+\ltxkeyssetkeys[KV]{fam}{keya={arg1 and arg2}}
+
+\ltxkeysdeclarekeys[KV]{fam}[mp@]{%
+  cmd/keya/{left/right}/|R(\argpattern){#1/#2}\def\xa##1{#1/##1/#2};
+  bool/keyb/true/\ifmp@keyb\def\xb##1{#1xx##1}\fi;
+  ord/keye/{x y z w}/|R(\argpattern){#1 #2 #3 #4}\def\xe{#1 #2 #3 #4};
+}
+\ltxkeyssetkeys[KV]{fam}{keya={value1/value2}, keyc={value1+value2+value3}}
+\finish{example}
+
+Caution should be exercised when using \argpat for the observer key of a style key in the case in which the value of the parent key is used as the default for the observer key. The following gives an error because, although \ttx{keya} has two arguments, the macros \ffx'{\parentval, \KV@fam@keya@value} will not be expanded before the callbacks of \ttx{keyb,keyc} are called. Errors will be flagged when initializing (or setting without values) \ttx{keyb,keyc}. Remember that the \stform of \fx{\ltxkeysstylekeys} will define and initialize observer keys on the fly.
+
+\start+{example}[Style key callback with multiple arguments]
+\ltxkeysstylekeys|*[KV]{fam}[mp@]{keya}[{left right center}]|(%
+  ord/keyb/\parentval/|R(\argpattern){#1,#2}\edef\y{\expandcsonce{#1}#2};
+  ord/keyc/\KV@fam@keya@value/|R(\argpattern){#1,#2}\def\y##1{#1xx##1xx#2};
+  cmd/keyd/{center}
+|){%
+  |R(\argpattern){#1 #2 #3 #4 #5}\def\x##1{#1xx##1xx#2#3#4#5}
+}
+\ltxkeyssetkeys[KV]{fam}{keya={arg1 arg2 arg3}}
+\finish{example}
+
+
+\docsection(sec:misc-commands){Some miscellaneous commands}
+
+Some of the macros used internally by the \pkg'{ltxkeys} are available to the user. A few of them are described below.
+
+
+\docsubsection(sec:trimspaces){Trimming leading and trailing spaces}
+
+\start+{newmacro}[\ltxkeyshardtrimspaces,\ltxkeyssimpletrimspaces, etc.]
+\ltxkeyssimpletrimspaces{|A(token)}|A(cs)
+\ltxkeyshardtrimspaces{|A(token)}|A(cs)
+\ltxkeyscurrtrimspaces{|A(token)}|A(cs)
+\ltxkeysusesimpletrimspaces
+\ltxkeysusehardtrimspaces
+\ltxkeystrimspacesincs|A(cs)
+\ltxkeystrimspacesset
+\ltxkeystrimspacesincsset
+\finish{newmacro}
+\fxim*{\ltxkeyshardtrimspaces,\ltxkeyssimpletrimspaces,
+  \ltxkeyscurrtrimspaces,\ltxkeystrimspacesincs,\ltxkeysusesimpletrimspaces,
+  \ltxkeysusehardtrimspaces,\ltxkeystrimspacesset,\ltxkeystrimspacesincsset}
+
+The command \fx{\ltxkeyshardtrimspaces} trims (\ie, removes) all the leading and trailing spaces around \ang{token} and returns the result in the macro \ang{cs}. Forced (\ie, explicit) leading and trailing spaces around \ang{token} are removed unless they are enclosed in braces. This command comes with a small price: it mildly slows down processing, especially when tracing commands. The command \fx{\ltxkeyssimpletrimspaces} trims only one leading and one trailing space; it doesn't iterate. Forced spaces are rare, but for fear of the unknown, the default space-trimming function is \fx{\ltxkeyshardtrimspaces}. The commands \ffx'{\ltxkeysusesimpletrimspaces, \ltxkeysusehardtrimspaces} allow the user to toggle \fx{\ltxkeyscurrtrimspaces} between \quoted{hard} and \quoted{simple}.
+
+The command \fx{\ltxkeystrimspacesincs} trims the leading and trailing spaces around the token in the macro \ang{cs} and returns the result in \ang{cs}. It calls \fx{\ltxkeyscurrtrimspaces}.
+
+
+\docsubsection(sec:checkchoice){Checking user inputs}
+
+\start+{newmacro}[\ltxkeyscheckchoice,\ltxkeyscheckinput,\ltxkeyscheckuserinput]
+\ltxkeyscheckchoice[|A(parser)]|(|A(val)|A(order)|){|A(input)}{|A(nomin)}{|A(true)}
+\ltxkeyscheckchoice|*[|A(parser)]|(|A(val)|A(order)|){|A(input)}{|A(nomin)}{|A(true)}
+\ltxkeyscheckchoice|+[|A(parser)]|(|A(val)|A(order)|){|A(input)}{|A(nomin)}{|A(true)}{|A(false)}
+\ltxkeyscheckchoice|*|+[|A(parser)]|(|A(val)|A(order)|){|A(input)}{|A(nomin)}{|A(true)}{|A(false)}
+\ltxkeyscheckinput{|A(input)}{|A(nomin)}{|A(true)}{|A(false)}
+\ltxkeyscheckuserinput{|A(input)}{|A(nomin)}
+\finish{newmacro}
+\fxim*{\ltxkeyscheckchoice,\ltxkeyscheckinput,\ltxkeyscheckuserinput,
+  \ltxkeyscommacheckchoice}
+
+The command \fx{\ltxkeyscheckchoice} is a re-implementation of \pkg'{xkeyval}'s command \fx{\XKV@checkchoice} so as to accept arbitrary list parser \ang{parser} and for more robustness. It checks the user input \ang{input} against the list of nominations \ang{nomin}. If the input is valid, the user input is returned in \ang{val} and the numerical order (starting from zero) of the input in the nominations is returned in \ang{order}\footnote{The functions \ang{val} and \ang{order} are user-supplied macros.}. If the input isn't valid, the user input is still returned in \ang{val}, but $-1$ is returned in \ang{order}. \ang{parser} is the list parser. The \stform of \fx{\ltxkeyscheckchoice} will convert \ang{input} into lowercase before checking it against the nominations. The \plform of \fx{\ltxkeyscheckchoice} expects two branches (\ang{true} and \ang{false}) of callback at the end of the test. The \unplform expects only one branch (\ang{true}) and will return error if the input is invalid\footnote{There is also \ftfx{\ltxkeyscommacheckchoice}, whose parser is implicitly \qcomma and does not need to be given by the user.}.
+
+The commands \ffx'{\ltxkeyscheckinput,\ltxkeyscheckuserinput} apply to comma-separated lists of nominations \ang{nomin} and they always convert \ang{input} to lowercase before checking it against the nominations \ang{nomin}. The macro \fx{\ltxkeyscheckinput} expects two branches of callback, while \fx{\ltxkeyscheckuserinput} expects no callback. Instead, \fx{\ltxkeyscheckuserinput} will toggle the internal boolean \fx{\ifltxkeysinputvalid} to \hx{true} if the input is valid, and to \hx{false} otherwise. The internal boolean \fx{\ifltxkeysinputvalid} could then be called by the user after the test.
+
+
+\docsubsection(sec:ifinset){Does a test string exist in a string?}
+
+\start+{newmacro}[\ltxkeysin,\ltxkeysiffound]
+\ltxkeysin{|A(teststr)}{|A(str)}
+\ltxkeysin|*{|A(teststr)}{|A(str)}{|A(true)}{|A(false)}
+\ltxkeysiffound|A(teststr)|R(\in)|A(str)|R(\then) |A(true) \else |A(false) \fi
+\finish{newmacro}
+\fxim*{\ltxkeysin,\ltxkeysiffound}
+
+The \unstform of the command \fx{\ltxkeysin} is identical with \usecsn{latex2e} kernel's (2011/06/27) \hx{\in@}. The command \hx{\in@} tests for the presence of \ang{teststr} in \ang{str} and returns the boolean \hx{\ifin@} as \hx{\iftrue} or \hx{\iffalse}. The \stform of \fx{\ltxkeysin} returns two \latex branches \ang{true} and \ang{false}. On the other hand, the command \fx{\ltxkeysiffound} requires the first argument to be delimited by \fx{\in} and the second argument by \fx{\then}.
+
+\start{example}[\ltxkeysiffound]
+\ltxkeysiffound xx\in aax\then \def\x{T}\else \def\x{F}\fi
+\finish{example}
+
+\ltsnote
+The command \fx{\ltxkeysiffound} trims leading and trailing spaces around the tokens \ang{teststr} and \ang{str} before the test! The commands \ffx'{\ltxkeysin,\ltxkeysiffound} aren't expandable.
+
+
+\docsubsection(sec:ifpattern){Does a given pattern exist in the meaning of a macro?}
+
+\start{newmacro}[\ltxkeysifpattern]
+\ltxkeysifpattern{|A(teststr)}|A(cmd){|A(true)}{|A(false)}
+\finish{newmacro}
+\fxim*{\ltxkeysifpattern}
+
+The command \fx{\ltxkeysifpattern} simply determines if the meaning of \ang{cmd} contains \ang{teststr}. It returns \ang{true} if \ang{teststr} is found in the meaning of \ang{cmd}, and \ang{false} otherwise.
+
+
+\docsubsection(sec:ltxkeysifcase)
+  {\ltsneverexpand{\ttcl{texcolor}{\bs ifcase}} for arbitrary strings}
+
+\start+{newmacro}[\ltxkeysifcase,\ltxkeysfindmatch]
+\ltxkeysifcase{|A(teststr)}{%
+  |A(case-1):|A(cbk-1),...,|A(case-n):|A(cbk-n)}{|A(true)}{|A(false)}
+
+\ltxkeysfindmatch{|A(teststr)}{|A(case-1):|A(cbk-1),...,|A(case-n):|A(cbk-n)}{|A(fn)}
+\finish{newmacro}
+\fxim*{\ltxkeysifcase,\ltxkeysfindmatch}
+
+The command \fx{\ltxkeysifcase} tests \ang{teststr} against \ang{case-i}. If a match is found, the \ang{case-i}'s callback \ang{cbk-i} is returned in the macro \fx{\currmatch} and \ang{true} is executed. If at the end of the loop no match is found, \fx{\ltxkeysifcase} returns empty \fx{\currmatch} and executes \ang{false}.
+
+The command \fx{\ltxkeysfindmatch} works like \fx{\ltxkeysifcase} but executes the fallback \ang{fn} (instead of \ang{true} or \ang{false}) when no match is found.
+
+Because of the need to return \fx{\currmatch}, the macros \ffx'{\ltxkeysfindmatch,\ltxkeysifcase} are not expandable. The expandable variant of these commands is \fx{\ltxkeysifcasse}, which can be used to test with an arbitrary boolean (\quoted{true-or-false outcome}) operator \ang{testoper}.
+
+\start{newmacro}[\ltxkeysifcasse]
+\ltxkeysifcasse|A(testoper){|A(teststr)}
+  {|A(case-1)}\do{|A(cbk-1)}
+  ...
+  |A(case-n)\do{|A(cbk-n)}
+\ifnone
+  \do{|A(nomatch)}
+\endif
+\finish{newmacro}
+\fxim*{\ltxkeysifcasse}
+
+Here, \ang{nomatch} is returned when the test fails in all cases. For the sake of speed optimization, there is a restriction in the use of the command \fx{\ltxkeysifcasse}. When testing with numbers or dimensions, the braces around the test tokens are vital, and the tokens \fx{\ifnone\do{}\endif} must always be present, irrespective of the type of test. In this regard, the commands \ffx'{\ltsifcasse,\ltsdocasse} of the \pkg'{ltxtools} are more versatile, if somewhat less fast.
+
+\start{example}[\ltxkeysifcasse]
+\edef\x{%
+   \ltxkeysifcasse\ifcassedimcmpTF{1pt+2pt+3pt}
+     {=2pt}\do{equal to 2pt}
+     {<3pt}\do{less than 3pt}
+     {>4pt}\do{greater than 4pt}
+   \ifnone
+     \do{no match}
+   \endif
+}
+\edef\x{%
+   \ltxkeysifcasse\ifcassenumcmpTF{1+2+3}
+     {=2}\do{equal to 2}
+     {<3}\do{less than 3}
+   \ifnone
+     \do{no match}
+   \endif
+}
+\edef\x{%
+  \ltxkeysifcasse\ifstrcmpTF{x}
+    {a}\do{\def\y{a}}
+    {b}\do{\def\y{b}}
+    {c}\do{\def\y{c}}
+  \ifnone
+    |com(The \do must always be there, even when the |A(nomatch) is empty:)
+    \do{}
+  \endif
+}
+
+\begin{document}
+\ltxkeysifcasse\ifstrcmpTF{x}
+  {a}\do{\def\y{a}}
+  {b}\do{\def\y{b}}
+  {c}\do{\def\y{c}}
+\ifnone
+  \do{\def\y{no match}}
+\endif
+\end{document}
+\finish{example}
+
+
+\docsubsection(sec:ifincsvlist){Is the number of elements from a sublist found in a csv list $\ge n$?}
+
+\start{newmacro}[\ltxkeysifincsvlistTF]
+\ltxkeysifincsvlistTF[A(parser)]|(|A(nr)|){|A(sub)}{|A(main)}{|A(true)}{|A(false)}
+\ltxkeysifincsvlistTF|*[A(parser)]|(|A(nr)|){|A(sub)}{|A(main)}{|A(true)}{|A(false)}
+\finish{newmacro}
+\fxim*{\ltxkeysifincsvlistTF}
+
+The command \fx{\ltxkeysifincsvlistTF} checks if the number of elements of \ang{parser}-separated (csv) list \ang{sub} found in \ang{main} is equal or greater than \ang{nr}. The argument \ang{main} is the main list and \ang{sub} is the sublist of test strings. Normally, \ang{sub} will be a user input and \ang{main} the list of nominations. Neither \ang{main} nor \ang{sub} is expanded in the test. If the test is true, \fx{\ltxkeysitemspresent} returns all the elements found, \fx{\ltxkeysnritems} returns the number of elements found, and \ang{true} is executed. If the test fails, \fx{\ltxkeysitemspresent} returns empty, \fx{\ltxkeysnritems} returns $-1$, and \ang{false} is executed. The \stform of \fx{\ltxkeysifincsvlistTF} will turn both input and nominations to lowercase before the test. The default values of the optional list \ang{parser} and the optional number of elements to find \ang{nr} are \qcomma and $1$, respectively.
+
+
+\docsubsection(sec:ifintsvlist){Is the number of elements from a sublist found in a tsv list $\ge n$?}
+
+\start{newmacro}[\ltxkeysifintsvlistTF]
+\ltxkeysifintsvlistTF|(|A(nr)|){|A(sub)}{|A(main)}{|A(true)}{|A(false)}
+\ltxkeysifintsvlistTF|*|(|A(nr)|){|A(sub)}{|A(main)}{|A(true)}{|A(false)}
+\finish{newmacro}
+\fxim*{\ltxkeysifintsvlistTF}
+
+The command \fx{\ltxkeysifintsvlistTF} checks if the number of elements of nonparser-separated (tsv) list \ang{sub} found in \ang{main} is equal or greater than \ang{nr}. The argument \ang{main} is the main list and \ang{sub} is the sublist of test strings. Normally, \ang{sub} will be a user input and \ang{main} the list of nominations. Neither \ang{main} nor \ang{sub} is expanded in the test. If the test is true, \fx{\ltxkeysitemspresent} returns all the elements found, \fx{\ltxkeysnritems} returns the number of elements found, and \ang{true} is executed. If the test fails, \fx{\ltxkeysitemspresent} returns empty, \fx{\ltxkeysnritems} returns $-1$, and \ang{false} is executed. The \stform of \fx{\ltxkeysifintsvlistTF} will turn both input and nominations to lowercase before the test.
+
+Normally, tsv-matching requires that the test strings in \ang{sub} are unique in the nominations \ang{main}. Some caution is, therefore, necessary when dealing with tsv lists.
+
+
+\docsubsection(sec:ifeltcount)
+  {Is the number of elements in a csv list $\ge n$ or $\le n$?}
+
+\start{newmacro}[\ltxkeysifeltcountTF]
+\ltxkeysifeltcountTF[|A(parser)]|(|A(rel)|){|A(nr)}{|A(list)}{|A(true)}{|A(false)}
+\ltxkeysifeltcountTF|*[|A(parser)]|(|A(rel)|){|A(nr)}{|A(listcmd)}{|A(true)}{|A(false)}
+\finish{newmacro}
+\fxim*{\ltxkeysifeltcountTF}
+
+The command \fx{\ltxkeysifeltcountTF} checks if the number of elements in \ang{parser}-separated list \ang{list} has relation \ang{rel} ($>=<$) with number \ang{nr}. If the test is true, \ang{true} is executed, otherwise \ang{false} is executed. The \stform of \fx{\ltxkeysifeltcountTF} will expand \ang{listcmd} once before the test. Double parsers and empty entries in \ang{list} are ignored. The default values of the optional list \ang{parser} and the optional relational type \ang{rel} are \qcomma and \quoted{$=$}, respectively. The number \ang{nr} is a mandatory argument.
+
+The following example returns \ang{false} (\ie, \fx{\meaning\x -> F}).
+
+\start{example}[\ltxkeysifeltcountTF]
+\ltxkeysifeltcountTF[;]|(<|){2}{a;b;c}{\def\x{T}}{\def\x{F}}
+\finish{example}
+
+
+\docsubsection(sec:getorder){What is the numerical order of an element in a csv list?}
+
+\start{newmacro}[\ltxkeysgetorder]
+\ltxkeysgetorder[|A(parser)]{|A(elt)}{|A(list)}
+\ltxkeysgetorder|*[|A(parser)]{|A(elt)}{|A(listcmd)}
+\finish{newmacro}
+\fxim*{\ltxkeysgetorder,\ltxkeysorder}
+
+The command \fx{\ltxkeysgetorder} returns in \fx{\ltxkeysorder} the numerical order of \ang{elt} in \ang{parser}-separated \ang{list} or \ang{listcmd}. The value of \fx{\ltxkeysorder} is the numerical order of the first match found. The count starts from zero ($0$). The \stform will expand \ang{listcmd} once before commencing the search for \ang{elt}. If no match is found, \fx{\ltxkeysorder} returns $-1$, which can be used for taking further decisions.
+
+
+\docsubsection(sec:list-normalization){List normalization}
+
+\start+{newmacro}[\ltxkeyscommanormalize,\ltxkeyskvnormalize]
+\ltxkeyscommanormalize{|A(list)}|A(cmd)
+\ltxkeyscommanormalizeset{{|A(list-1)}|A(cmd-1),...,{|A(list-n)}|A(cmd-n)}
+\ltxkeyskvnormalize{|A(list)}|A(cmd)
+\ltxkeyskvnormalizeset{{|A(list-1)}|A(cmd-1),...,{|A(list-n)}|A(cmd-n)}
+\finish{newmacro}
+\fxim*{\ltxkeyscommanormalize,\ltxkeyscommanormalizeset,
+  \ltxkeyskvnormalize,\ltxkeyskvnormalizeset}
+
+These commands will normalize the comma-separated \ang{list} (or \ang{list-i}) and return the result in \ang{cmd} (or \ang{cmd-i}). For the command \fx{\ltxkeyskvnormalize}, \ang{list} is assumed to be a list of  \keyval pairs.  Normalization implies changing the category codes of all the active commas to their standard values, as well as trimming leading and trailing spaces around the elements of the list and removing consecutive multiple commas. Thus empty entries that are not enforced by curly braces are removed. Besides dealing with multiple commas and the spaces between entries, the command \fx{\ltxkeyskvnormalize} removes spaces between keys and the equality sign, and multiple equality signs are made only one. Further, the category codes of comma and the equality sign are made normal throughout the list.
+
+
+\docsubsection(sec:listparse){Parsing arbitrary csv or kv list}
+
+\start{newmacro}[\ltxkeysdocsvlist,\ltxkeysdokvlist, etc.]
+\ltxkeysdocsvlist[|A(parser)]{|A(list)}
+\ltxkeysdocsvlist|*[|A(parser)]{|A(listcmd)}
+\ltxkeysparsecsvlist[|A(parser)]{|A(list)}
+\ltxkeysparsecsvlist|*[|A(parser)]{|A(listcmd)}
+\ltxkeysdokvlist[|A(parser)]{|A(list)}
+\ltxkeysdokvlist|*[|A(parser)]{|A(listcmd)}
+\ltxkeysparsekvlist[|A(parser)]{|A(list)}
+\ltxkeysparsekvlist|*[|A(parser)]{|A(listcmd)}
+\finish{newmacro}
+\fxim*{\ltxkeysdocsvlist,\ltxkeysparsecsvlist,\ltxkeysdokvlist,\ltxkeysparsekvlist}
+
+The unexpandable command \fx{\ltxkeysdocsvlist} is the list processor for the \pkg'{ltxkeys}. It can process both arbitrary \ang{parser}-separated lists and \keyval pairs. It can also be nested to any level, and it keeps each nesting-level independent. The default value of the optional list-item separators \ang{parser} is \qcomma. The list normalizer for \fx{\ltxkeysdocsvlist} is \pkg'{ltxtools}'s \fx{\csv@@normalize}, which can deal with arbitrary list parsers/separators. The \ang{flag}, which must lie in the range $(0,3)$, determines the type of processing that is required. The admissible values of \ang{flag} and their meaning are given in \sref{tab:parser-flags}. The macro \fx{\ltxkeysdocsvlist} loops over the given \ang{parser}-separated \ang{list} and execute the user-defined, one-parameter command \fx{\ltxkeysdo} for every item in the list, passing the item as an argument and preserving outer braces. The default value of \ang{parser} is \qcomma. The \stform of \fx{\ltxkeysdocsvlist} will expand \ang{listcmd} once before commencing the loop.
+
+Here are some points to note about the list processor \fx{\ltxkeysdocsvlist}:
+\begin{enum}
+\item If an item contains \ang{parser}, it must be wrapped in curly braces when calling the command \fx{\ltxkeysdocsvlist}, otherwise the elements may be mixed up during parsing. The braces will persist thereafter, but will of course be removed during printing (if the items are printed).
+\item White spaces before and after the list separator are always ignored by the normalizer called by \fx{\ltxkeysdocsvlist}. If an item contains \ang{parser} or starts with a space, it must, therefore, be wrapped in curly braces before calling \fx{\ltxkeysdocsvlist}.
+\item Since when \ang{flag} is $0$ or $2$ the command \fx{\ltxkeysdocsvlist} doesn't call the normalizer, in this case it does preserve outer/surrounding spaces in the entries. Empty entries in \ang{list} or \ang{listcmd} will be processed by \fx{\ltxkeysdocsvlist} if the boolean \fx{\ifltxkeysuseempty} is true. You may thus issue \fx{\ltxkeysuseemptytrue} before calling \fx{\ltxkeysdocsvlist}. The ability to parse empty entries is required by packages that use empty key prefixes, and/or families\footnote{The use of empty key prefixes, families and paths is, in general, not advisable.}. \fx{\ifltxkeysuseempty} is false by default, and its state is nesting-level observer.
+\item The command \fx{\ltxkeysdocsvlist} can be nested to any level and can be mixed with other looping macros.
+\item In the command \fx{\ltxkeysdocsvlist}, it is always possible to break out of the loop prematurely at any level of nesting, simply by issuing the command \fx{\ltxkeysbreakloop}\footnote{The command \fx{\ltxkeysbreakloop} may be called within the loop to terminate the loop prematurely. The unprocessed items of the list will be handled by the command \fx{\ltxkeysdoremainder}, which can be redefined by the user. By default, it is defined as the \latex kernel's \hx{\@gobble}, meaning that it simply throws away the list remainder. The command \fx{\ltxkeyslistbreak} may also be inserted as a list item to break out of the loop prematurely. The commands \ffx'{\ltxkeysbreakloop, \ltxkeyslistbreak} have different syntax and semantics.}. Breaking an inner loop doesn't affect the continuation of the outer loop, and vice versa: loop break is nesting-level observer.
+\item The argument of the one-parameter command \fx{\ltxkeysdo} can be passed to a multi-parameter command, or to a command that expects delimited arguments.
+\end{enum}
+
+
+\docsubsection(sec:sisolist){Parsing nsv/tsv list}
+
+\start{newmacro}[\ltxkeysdosisolist]
+\ltxkeysdosisolist[|A(parser)]{|A(list)}
+\ltxkeysdosisolist|*[|A(parser)]{|A(listcmd)}
+\finish{newmacro}
+\fxim*{\ltxkeysdosisolist}
+
+
+
+\docsubsection(sec:removeelements){Remove one or all occurrences of elements from a csv list}
+
+\start{newmacro}[\ltxkeysremoveelements]
+\ltxkeysremoveelements[|A(parser)]|(|A(nr)|)|A(listcmd){|A(sublist)}{|A(fd)}{|A(nf)}
+\ltxkeysremoveelements|*[|A(parser)]|(|A(nr)|)|A(listcmd){|A(sublist)}{|A(fd)}{|A(nf)}
+\finish{newmacro}
+\fxim*{\ltxkeysremoveelements}
+
+The command \fx{\ltxkeysremoveelements} removes \ang{nr} number of each element of \ang{sublist} from \ang{listcmd}. The default values of the optional list \ang{parser} and the optional maximum number of elements to remove \ang{nr} are \qcomma and $1$, respectively. If at least one member of \ang{sublist} is found and removed from \ang{listcmd}, then the callback \ang{fd} is returned and executed, otherwise \ang{nf} is returned. Both \ang{fd} and \ang{nf} provide some fallback following the execution of \fx{\ltxkeysremoveelements}. The challenge to the user is to remember that the command \fx{\ltxkeysremoveelements} requires these callbacks, which may both be empty. The \stform of \fx{\ltxkeysremoveelements} will remove from \ang{listcmd} all the members of \ang{sublist} found irrespective of the value of \ang{nr}. The optional \ang{nr} is therefore redundant when the \stform of \fx{\ltxkeysremoveelements} is called. Here, \ang{sublist} is simply \ang{parser}-separated.
+
+\start{example}[\ltxkeysremoveelements]
+\def\xx{a;b;c;d;d;e;f;c;d}
+|com(Remove at most 2 occurrences of `c' and `d' from \xx:)
+\ltxkeysremoveelements[;]|(2|)\xx{c;d}{\def\x{done}}{\def\x{nil found}}
+|com(Remove all occurrences of `c' and `d' from \xx:)
+\ltxkeysremoveelements|*[;]\xx{c;d}{\def\x{done}}{\def\x{nil found}}
+\finish{example}
+
+
+\docsubsection(sec:replaceelements){Replace one or all occurrences of elements in a csv list}
+
+\start{newmacro}[\ltxkeysreplaceelements]
+\ltxkeysreplaceelements[|A(parser)]|(|A(nr)|)|A(listcmd){|A(sublist)}{|A(fd)}{|A(nf)}
+\ltxkeysreplaceelements|*[|A(parser)]|(|A(nr)|)|A(listcmd){|A(sublist)}{|A(fd)}{|A(nf)}
+\finish{newmacro}
+\fxim*{\ltxkeysreplaceelements}
+
+The command \fx{\ltxkeysreplaceelements} replaces \ang{nr} number of each element of \ang{sublist} in \ang{listcmd}. The default values of the optional list \ang{parser} and the optional maximum number of elements to replace \ang{nr} are \qcomma and $1$, respectively. If at least one member of \ang{sublist} is found and replaced in \ang{listcmd}, then the callback \ang{fd} is returned and executed, otherwise \ang{nf} is returned. Both \ang{fd} and \ang{nf} provide some fallback following the execution of \fx{\ltxkeysreplaceelements}. The challenge to the user is to remember that the command  \fx{\ltxkeysreplaceelements} requires these callbacks, which may both be empty. The \stform of \fx{\ltxkeysreplaceelements} will replace in \ang{listcmd} all the members of \ang{sublist} found irrespective of the value of \ang{nr}. The optional \ang{nr} is therefore redundant when the \stform of \fx{\ltxkeysreplaceelements} is used. Here, the syntax of \ang{sublist} is as follows:
+
+\start'{macro}[Sublist for \ltxkeysreplaceelements]
+{{|A(old-1)}{|A(new-1)}|A(parser)...|A(parser){|A(old-n)}{|A(new-n)}}
+\finish{macro}
+
+where \ang{old-i} is the element to be replaced and \ang{new-i} is its replacement.
+
+\start{example}[\ltxkeysreplaceelements]
+\def\xx{a;b;c;d;d;e;f;c;d}
+|com(Replace at most 2 occurrences of `c' and `d' in \xx with `s' and `t',)
+|com(respectively:)
+\ltxkeysreplaceelements[;]|(2|)\xx{c{s};d{t}}{\def\x{done}}{\def\x{nil found}}
+|com(Replace all occurrences of `c' and `d' in \xx with `s' and `t':)
+\ltxkeysreplaceelements|*[;]\xx{c{s};d{t}}{\def\x{done}}{\def\x{nil found}}
+\finish{example}
+
+
+\docsubsection(sec:stripbraces){Stripping outer braces}
+
+The list and key parsers of the \pkg'{ltxkeys} preserve outer braces, but sometimes it is needed to rid a token of one or more of its outer braces. This can be achieved by the following commands:
+
+\start+{newmacro}[\ltxkeysstripNouterbraces, \ltxkeysstripallouterbraces, etc.]
+\ltxkeysstripNouterbraces|A(nr){|A(token)}
+\ltxkeysstripallouterbraces{|A(token)}
+\ltxkeysstripallouterbracesincs{|A(cmd)}
+\finish{newmacro}
+\fxim*{\ltxkeysstripNouterbraces,
+  \ltxkeysstripallouterbraces,\ltxkeysstripallouterbracesincs}
+
+The command \fx{\ltxkeysstripNouterbraces} strips \ang{nr} number of outer braces from \ang{token}. The command \fx{\ltxkeysstripallouterbraces} strips all outer braces from \ang{token}. The command \fx{\ltxkeysstripallouterbracesincs} strips all the outer braces in the top content of the command \ang{cmd}. All these commands are expandable. Normally, \ang{token} wouldn't be expanded by these commands in the process of stripping off outer braces.
+
+\start+{example}[\ltxkeysstripNouterbraces,\ltxkeysstripallouterbraces, etc.]
+\toks@\expandafter\expandafter\expandafter
+  {\ltxkeysstripNouterbraces{2}{{{\y}}}}
+\edef\x{\unexpanded\expandafter\expandafter\expandafter
+  {\ltxkeysstripNouterbraces\@m{{{\y}}}}}
+\edef\x{\ltxkeysstripallouterbraces{{{{\y}}}}}
+\finish{example}
+
+
+\docsection(sec:addkeycode){Adding to key macros}
+
+
+
+\docsection(sec:todo){To-do list}
+
+This section details additional package features that may become available in the foreseeable future. User views are being solicited in regard of the following proposals.
+
+
+\docsubsection(sec:changeobserverkeys){Modifying the observer keys of an existing style key}
+
+\start+{newmacro}[\ltxkeysadddepkeys,etc]
+\ltxkeysadddepkeys[|A(pref)]{|A(fam)}{|A(paren)}{|A(deps)}
+\ltxkeysremovedepkeys[pref]{fam}{|A(paren)}{|A(deps)}
+\ltxkeysreplacedepkeys[pref]{fam}{|A(paren)}{|A(olddeps)}{|A(newdeps)}
+\finish{newmacro}
+\fxim*{\ltxkeysadddepkeys,\ltxkeysremovedepkeys,\ltxkeysreplacedepkeys}
+
+Here, \ang{paren} is the parent key of observers keys; \ang{deps} is the full specification of new or existing observer keys (as in \sref{sec:stylekeys}), with their default values and callbacks; \ang{olddeps} are the old observers to replace with \ang{newdeps}. This would require patching macros of the form \jpreffamkey{observers}, which might have nested parametered-commands.
+
+
+
+\docsubsection(sec:togglekeys){Toggle keys}
+
+Introduce toggle keys. The package already contains switch keys (\sref{sec:switchkeys}). Toggles and switches, found in, \eg, the \pkg'{ltxtools}, are more efficient than conventional booleans in the sense that each of them introduces and requires only one command, while each native boolean defines and requires up to three commands.
+
+
+\docsection(sec:version-hist){Version history}
+
+The following change history highlights significant changes that affect user utilities and interfaces; changes of technical nature are not documented in this section. The \stsign on the right-hand side of the following lists means the subject features in the package but is not reflected anywhere in this user guide.
+
+\begin{versionhist}
+  \begin{version}{0.0.3c}{2012/11/17}
+  \item \fx{\ltxkeys@liskeys} changed to \fx{\ltxkeys@listkeys}\vsecref{sec:listkeys}
+  \end{version}
+  \begin{version}{0.0.3a-b}{2012/10/14}
+  \item Miscellaneous bug fixes\vsecref*
+  \end{version}
+  \begin{version}{0.0.3}{2011/12/17}
+  \item More flags (\ffx{preset, postset, setrm}, \eetc) have been introduced for pathkeys \vsecref{sec:pathkeys}
+  \end{version}
+  \begin{version}{0.0.2}{2011/09/01}
+  \item Pathkeys introduced\vsecref{sec:pathkeys}
+  \item User guide completed.\vsecref*
+  \end{version}
+  \begin{version}{0.0.1}{2011/07/30}
+  \item First public release.\vsecref*
+  \end{version}
+\end{versionhist}
+
+\newpage
+\ltsindexpreamble{Index numbers refer to page numbers.}
+\ltsindexpreambleformat{\centering}
+\ltsindexcolumns=2
+\printindex
+
+\end{document}

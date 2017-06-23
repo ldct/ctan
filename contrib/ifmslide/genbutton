@@ -1,0 +1,90 @@
+eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q'
+  if 0;
+use strict;
+
+#
+# That was one of my first perl-scripts, so excuse the style...
+#   Thomas Emmel <emmel@mechanik.tu-darmstadt.de> 7/2000
+#
+#
+
+my $usage = <<"EOFUSE";
+Syntax:  genbutton [options] <eps file>
+Options:
+  --proto=<file>:   prototype for the output file
+  --output=<file>:  output file
+  --scolor=xxx,xxx,xxx: Start with Color RGB 0-255
+  --ecolor=xxx,xxx,xxx: End with Color RGB 0-255
+EOFUSE
+
+# options
+$::opt_proto="";
+
+use Getopt::Long;
+GetOptions (
+  "proto=s",
+  "output=s",
+  "scolor=s",
+  "ecolor=s",
+) or die $usage;
+
+my $proto = $::opt_proto;
+my $output = $::opt_output;
+my $scolor = $::opt_scolor;
+my $ecolor = $::opt_ecolor;
+
+my @srgblist = split(/,/,$scolor);
+my @ergblist = split(/,/,$ecolor);
+
+# count lines with field number 4 is "rg" in proto
+
+print STDOUT "p=$proto, o=$output, s=@srgblist, e=@ergblist \n";
+
+open(PROTO,$proto) || die "Cannot open $proto for reading!";
+open(OUT,">$output") || die "Cannot open $output for writing!";
+
+my $numoflevels = 0;
+
+while (<PROTO>) {
+    chomp;      # strip record separator
+    my @Fld = split(' ', $_, 5);
+    my $fldlength = @Fld;
+    if ($Fld[3] eq 'rg' ){      # && $fldlength == 4) {
+        $numoflevels++;
+#        print $Fld[1] . ' ' . $Fld[1] . ' ' . $Fld[1] . '  rg';
+#        print " $fldlength \n";
+    }
+}                        
+
+print "$numoflevels\n" ;
+
+my @diffcolors = (0,0,0);
+my $i;
+
+for ($i=0;$i<=2;$i++)
+  { $diffcolors[$i]= ($ergblist[$i]-$srgblist[$i])/($numoflevels-1)/255;
+    $srgblist[$i]*=1/255; }
+
+# and again...
+open(PROTO,$proto);
+
+while (<PROTO>) {
+    chomp;      # strip record separator
+    my @Fld = split(' ', $_, 5);
+    my $fldlength = @Fld;
+    if ($Fld[3] eq 'rg' ){   # && $fldlength == 4) {
+        print OUT $srgblist[0] . ' ' . $srgblist[1] . ' ' . $srgblist[2] . ' rg';
+        print OUT " \n";
+        $srgblist[0]+=$diffcolors[0];
+        $srgblist[1]+=$diffcolors[1];
+        $srgblist[2]+=$diffcolors[2];
+    } else
+      { print OUT "$_\n"; }
+}                  
+ 
+
+print "@diffcolors \n";
+
+
+#input=$1
+#cat $input | awk '{if ($4 == "rg") print $1" "$1" "$1"  rg"; else print $0 }'

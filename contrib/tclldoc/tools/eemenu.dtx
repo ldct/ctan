@@ -1,0 +1,4477 @@
+% 
+% \iffalse
+%<*driver>
+\documentclass[a4paper]{tclldoc}
+
+\newcommand{\eemenu}{\textsf{EE} menu}
+\DeclareRobustCommand\Alpha{\textit{Alpha}}
+\DeclareRobustCommand\AlphaEight{\textit{Alpha\,8}}
+\DeclareRobustCommand\AlphaTk{\textit{Alphatk}}
+\DeclareRobustCommand\AlphaTcl{\textit{Alpha\Tcllogo}}
+\DeclareRobustCommand\TclAE{\Tcllogo\AE}
+\DeclareRobustCommand\package[1]{\textsf{#1}}
+
+\providecommand{\href}[2]{#2}
+
+\usepackage{xdoc2}
+\newenvironment{details}[1]{%
+   \description
+   \def\commandmethod{#1}%
+}{\enddescription}
+\makeatletter
+\newcommand{\detailitem}{%
+  \XD@grab@arguments{\@detailitem}{\XD@grab@harmless\relax}%
+}
+\def\@detailitem#1{%
+   \item[\texttt{#1}%
+      \IndexEntry{\LevelSame{\commandmethod\ method}%
+        \LevelSorted{#1}{\texttt{#1} detail}%
+      }{main}{\TheXDIndexNumber}%
+   ]%
+}
+\makeatother
+
+% \addtolength{\marginparwidth}{0.7cm}
+
+\CodelineIndex
+\setcounter{IndexColumns}{2}
+
+\begin{document}
+\DocInput{eemenu.dtx}
+\PrintIndex
+\end{document}
+%</driver>
+% \fi
+% 
+% \title{The \eemenu}
+% \author{Lars Hellstr\"om}
+% \date{17 July 2003}
+% \maketitle
+% 
+% 
+% \begin{abstract}
+%   The \eemenu\ package for the \Alpha\ family of text editors provides 
+%   commands for sending small pieces of code from a source file window 
+%   to various interpreters. It can handle multiple languages and 
+%   multiple source file formats.
+% \end{abstract}
+% 
+% \tableofcontents
+% 
+% 
+% \section{Introduction}
+% 
+% When writing code for an interpreted language, it is a great 
+% convenience to be able to test arbitrary pieces of code by sending 
+% them to a relevant interpreter and examining the results. Many of 
+% \Alpha's modes provide such functionality, but not always with the 
+% full generality one would need. Furthermore these features are usually 
+% tied to the specific mode and thus become much less convenient if code 
+% in several different languages are mixed in the same file. The 
+% \eemenu\ provides a general mechanism for constructing new commands 
+% of this kind, thereby making it possible to better tailor them for the 
+% case at hand.
+% 
+% 
+% \subsection{Using an \eemenu\ command}
+% 
+% The basic usage is straightforward: you select a piece of text and 
+% invoke one of the \eemenu\ commands. This will \emph{extract} 
+% the part of that selection which is code and send it to the relevant 
+% interpreter, where it will be \emph{evaluated}. (Indeed, the \textsf{EE} 
+% in \eemenu\ is for ``extract and evaluate''.) You will also get 
+% a \emph{report} (by default a message on the status line) about the 
+% result of the command. This is all quite similar to how the 
+% \textsf{Evaluate} command in the \Tcllogo\ menu works, but it is much 
+% more general.
+% 
+% Two very natural questions at this point are of course ``How does it 
+% know what part of the selection is `code'?'' and ``How does it know 
+% which the `relevant interpreter' is?''. The answer to both these 
+% questions is that this information is built into the particular command 
+% you invoke. Just as the standard \textsf{Evaluate} command has its 
+% definition of what `code' is (the entire selection is code) and which 
+% the `relevant interpreter' is (\Alpha's internal \Tcllogo\ 
+% interpreter), each \eemenu\ command has built-in definitions of 
+% these things. The difference is that with \textsf{Evaluate} you would 
+% have to do some programming to change these things, whereas with the 
+% \eemenu\ commands you don't, since there is a multitude of ways in 
+% which each part of the exatract-and-evaluate process can be configured.
+% 
+% To begin with, each \eemenu\ command consists of four pieces which 
+% are quite independent of each other. When the \emph{extract} piece is 
+% called it looks at the selection and returns the next line of code in 
+% it, or says that there are no more code lines that can be extracted. 
+% What happens to the extracted lines of code is of no concern to the 
+% extractor. The \emph{evaluate} piece takes a list of lines and sends 
+% them to an interpreter (internal or external). It also compiles a 
+% sort of report on the result of the evaluation, based on the reply 
+% (if there was any) that it recieves from the interpreter. This is 
+% then given to the \emph{reporter}, which displays the report (or more 
+% often, for brevity, the central part of the report) to the user. The 
+% fourth piece is called the \emph{completeness test} and determines 
+% whether a list of code lines constitute a unit that can be evaluated. 
+% 
+% The way it goes is that lines are extracted until the completeness 
+% test says OK, then the lines are sent for evaluation and the report on 
+% evaluation is sent to the reporter, after which the whole thing starts 
+% again and lines are extracted until the form a new complete unit, 
+% which is then evaluated, and so on. The \eemenu\ command doesn't stop 
+% until all code lines in the selection have been extracted or evaluation 
+% reports an error. 
+% If there is an error in evaluation then the report will say so, and 
+% futhermore the cursor will be moved to the beginning of the first 
+% line in the code unit that failed to evaluate correctly. Furthermore 
+% the pin will be moved to the end of the selection, so that a simple 
+% \textsf{Hilite} will reselect the part of the original selection that 
+% still has not been successfully evaluated. If there wasn't any 
+% selection to start with then the extractor behaves as if the entire 
+% file was selected.
+% 
+% 
+% \subsection{Editing and invoking \eemenu\ commands}
+% 
+% Each of the four pieces of what a command does are handled by a 
+% \emph{method}. There are extraction methods, completeness test 
+% methods, evaluation methods, and report methods, all of which can be 
+% combined arbitrarily to make up a new \eemenu\ command. This is done 
+% in the \textsf{Edit Commands} dialog, which is brought up by 
+% choosing that item in the \textsf{EE} menu.
+% 
+% The \textsf{Edit Commands} dialog has one page for each \eemenu\ 
+% command that is defined. At the bottom of the dialog there is a row 
+% of four buttons \textsf{New}, \textsf{Duplicate}, \textsf{Rename}, and 
+% \textsf{Delete} which add, remove, or rename \eemenu\ commands. Above 
+% those are four pop-up menus, in which one chooses which four methods 
+% the command should consist of. Above these are four other items which 
+% control how the command is invoked. 
+% 
+% There are two ways of invoking an \eemenu\ command. One possibility 
+% is to choose it directly in the \textsf{EE} menu, although it is not 
+% necessarily the case that all commands are available there. Whether a 
+% command is available is controlled through the \textsf{Put in menu} 
+% item on the \textsf{Edit Commands} dialog page of that command. The 
+% other possibility of invoking a command is through a key binding, and 
+% that is controlled through the three remaining items \textsf{Active}, 
+% \textsf{Command keybinding}, and \textsf{Binding mode} in the 
+% \textsf{Edit Commands} dialog. The \textsf{Command keybinding} item 
+% controls which key binding one should use for a command. The 
+% \textsf{Binding mode} item is used to specify a mode for this 
+% binding; a binding without mode will be global. Finally, a command is 
+% said to be \emph{active} if there is a key binding to it. The 
+% \textsf{Active} item controls whether the command should be active by 
+% default (at startup).
+% 
+% For temporary activation and deactivation of commands, one should 
+% instead use the \textsf{Active Commands} submenu of the \textsf{EE} 
+% menu. This submenu lists all \eemenu\ commands. Those that are 
+% currently active have a check mark next to them, and selecting an item 
+% in this menu toggles activation state of that command. If two commands  
+% have the same binding then activating one will deactivate the other.
+% 
+% Besides the items mentioned above, the \textsf{Edit Commands} dialog 
+% also has a \textsf{Details} button in the lower left corner. This 
+% button is very important, since it brings up a subdialog that shows 
+% all the method-specific settings. The methods and their details are 
+% described below, but it should be observed here that it is to a large 
+% extent these detail settings that decide, amogst other things, what 
+% text should count as extractable code and which interpreter should 
+% evaluate the code. To get back from the details subdialog to the main 
+% \textsf{Edit Commands} dialog, one presses the \textsf{Back} button. 
+% The details subdialog is logically a part (which is normally hidden) 
+% of the main \textsf{Edit Commands} dialog. Changes to items in the 
+% dialog, whether those appear in the main dialog or in the subdialog, 
+% are kept if one presses \textsf{OK} in the main dialog and forgotten 
+% if one presses the \textsf{Cancel} button.
+% 
+% 
+% \subsection{Extraction methods and their details}
+% 
+% The default extraction method is the \textsf{Raw} method. It 
+% considers the entire selection to be extractable code and has no 
+% detail settings.
+% 
+% The \textsf{Regexp} extraction method uses line-oriented regular 
+% expressions to decide what is extractable code. This extraction 
+% process works in two steps. First the lines in the selection are 
+% tested against a filter, and those lines that passes are considered to 
+% contain code. The filter works in one of three modes: \texttt{off} 
+% (all lines pass), \texttt{grep} (only those lines that match a 
+% specific regular expression passes), and \texttt{anti-grep} (only 
+% those lines that \emph{don't} match a specific regular expression 
+% passes). The filter mode and the regular expression used in the 
+% filter are the two detail settings that affect the filter. 
+% The second step in \textsf{Regexp} extraction is to feed each line 
+% that passes the filter through |regsub|. This can be used to remove 
+% from the lines some piece of text that is markup rather than part of 
+% the code. Both the search and the replace regular expressions in this 
+% step are detail settings of the \textsf{Regexp} extraction method.
+% 
+% The \textsf{Docstrip} extraction method, finally, emulates what the 
+% \textsf{docstrip} program\footnote{\textsf{docstrip} is part of the 
+% standard \LaTeX\ distribution.} would do with the selection. It 
+% recognises all kinds of guards and processes them correctly, but it 
+% does not attempt to evaluate the guard expressions---instead it will 
+% ask the user whether modules guarded by a given expression should be 
+% included whenever it needs to know this. The values assigned to the 
+% guard expressions will be forgotten each time the entire selection 
+% is evaluated without error. Unlike \textsf{docstrip} the program, 
+% \textsf{Docstrip} the extraction method will not include lines 
+% beginning with |%%| in what is extracted, since those anyway only 
+% contains comments.
+% 
+% Besides the filtering that \textsf{docstrip} the program would do, 
+% \textsf{Docstrip} the extraction method has two extra filtering 
+% mechanisms that are designed mainly to prevent user errors. The first 
+% is that extraction will only take place if the file name matches one 
+% listed in the \textsf{File patterns} detail. The default pattern is 
+% \texttt{*.dtx} which is usually what one wants, but changing it to 
+% \texttt{*} will let anything through. The second mechanism, which is 
+% off by default, sees to that code lines will only be considered for 
+% extraction if they appear to be in an environment for code lines 
+% (such as \texttt{macrocode}). This is useful if you in places tend to 
+% leave a few lines of documentation not commented out during 
+% development. To activate this mechanism, check the \textsf{Filter by 
+% environments} detail. The \textsf{Source environments} detail is the 
+% list of environments that are OK to extract from.
+% 
+% As an example of how this works, consider a file that looks as 
+% follows:
+% \DontCheckModules\iffalse
+%<*example>
+%<<EXAMPLE
+% \fi\begin{macrocode}
+% Text text text text text
+% \begin{tcl}
+set a A
+%<*andB>
+append a B
+%</andB>
+append a C
+%<*andD>
+append a D
+%</andB>
+expr $a
+string length $a
+% \end{tcl}
+% text text text.
+%    \end{macrocode}\iffalse
+%EXAMPLE
+%</example>
+% \fi \CheckModules
+% If lines 1--7 above are selected and the \textsf{dtx -\textgreater\  
+% internal Tcl} command is invoked (the \eemenu\ by default binds this 
+% to \textsf{Cmd--L}), then three messages will flash by on the 
+% status line, the last (and therefore the lasting) of which is the 
+% message \texttt{Tcl eval OK: ABC}. If using instead a command that 
+% uses the \textsf{Log Window} report method, then in addition to this 
+% one would have the following lines added to the log window:
+% \begin{trivlist}\item\small
+%   |% set a A|\\
+%   |A|\\[\smallskipamount]
+%   |% append a B|\\
+%   |AB|\\[\smallskipamount]
+%   |% append a C|\\
+%   |ABC|
+% \end{trivlist}
+% The |%| lines show the commands that were evaluated and the 
+% lines after these contain the respective results of these commands. 
+% Before the |append a B| command is evaluated, \Alpha\ will stop and 
+% ask
+% \begin{quote}
+%   \textsf{Should \textless andB\textgreater\ modules be included?}
+% \end{quote}
+% In the case above the answer given was `Yes'; if it had been `No' then 
+% the |append a B| command would neither be logged nor evaluated, and 
+% the result of the |append a C| command would have been |AC|.
+% 
+% If one continues by selecting lines 9--12 and invokes the same 
+% command again then the status line will settle for the message 
+% ``\texttt{Tcl\ eval\ error:\ syntax\ error\ in\ expression\ "ABCD"}'',  
+% the insertion point will be moved to the beginning of line 11, and 
+% the following information will be found in the log:
+% \begin{trivlist}\item\small
+%   |% append a D|\\
+%   |ABCD|\\[\smallskipamount]
+%   |% expr $a|\\
+%   |Error: syntax error in expression "ABCD"|\\
+%   |Error info:|\\
+%   |syntax error in expression "ABCD"|\\
+%   |    while executing|\\
+%   |"expr $a"|
+% \end{trivlist}
+% If then line 11 is changed to |expr {$a}|, lines 11--12 are again 
+% selected (e.g. using \textsf{Mark Hilite}), and the command is invoked 
+% then logged material will be:
+% \begin{trivlist}\item\small
+%   |% expr {$a}|\\
+%   |ABCD|\\[\smallskipamount]
+%   |% string length $a|\\
+%   |4|
+% \end{trivlist}
+% 
+% Finally, if lines 3--12 are selected and the command is invoked then 
+% the user will be asked the following questions:
+% \begin{itemize}
+%   \item \textsf{Should \textless andB\textgreater\ modules be included?}
+%     (Possible answers are `Yes' and `No'.)
+%   \item \textsf{Should \textless andD\textgreater\ modules be included?}
+%     (Possible answers are `Yes' and `No'.)
+%   \item \textsf{Module nesting error: \textless*andD\textgreater\ 
+%          module ended by \textless/andB\textgreater. For which 
+%          guards should the positions be pushed?}
+%     (Possible answers are `None', `Start', `End', and `Both'.)
+% \end{itemize}
+% In the last case, the extraction method has noticed that the guard 
+% expressions that began (\textsf{andD}) and ended (\textsf{andB}) a 
+% module are not equal (which is an error). Answering `Both' here will 
+% push the positions of (the beginning of) both guard lines (8 and 10) onto 
+% the bookmark stack so that they can easily be jumped to and corrected 
+% later. After this, the \eemenu\ command will continue as if nothing had 
+% happened.
+% 
+% 
+% \subsection{Completeness tests}
+% 
+% The three completeness tests that come with \eemenu\ are 
+% \textsf{\Tcllogo\ Info Complete}, \textsf{Entire Selection}, and 
+% \textsf{Every Line}. The first of these uses the |info complete| 
+% command in \Alpha's built-in \Tcllogo\ interpreter test whether the 
+% list of lines extracted so far constitute a complete \Tcllogo\ 
+% script. \textsf{Entire Selection} and \textsf{Every Line} don't look 
+% at the extracted lines at all however; instead the \textsf{Entire 
+% Selection} test waits until the entire selection has been extracted 
+% before it says it does constitute a complete unit, whereas 
+% \textsf{Every Line} thinks every line is a complete unit. None of 
+% these methods have any details.
+% 
+% 
+% \subsection{Evaluation methods}
+% 
+% The list of available evaluation methods depends very much on the 
+% current platform. The basic \eemenu\ package contains code for four 
+% methods named \textsf{Internal Tcl}, \textsf{Do Script AE}, \textsf{Tk 
+% Send}, and \textsf{Windoze DDE}, but only those for which the 
+% underlying command can be found in the interpreter are actually 
+% defined. The effect is usually that only two methods are available: 
+% the \textsf{Internal Tcl} method and one method which depends on the 
+% platform.
+% 
+% The \textsf{Internal Tcl} method joins the lines of code with 
+% linefeeds and passes the resulting string to \Alpha's internal 
+% \Tcllogo\ interpreter for evaluation (at the global level). Errors 
+% are caught and reported with a complete |errorInfo|. There are no 
+% details for this method.
+% 
+% The \textsf{Do Script AE} method sends a \texttt{dosc} AppleEvent with 
+% the code to evaluate; hence it is only available on Mac~OS. The target 
+% application for this event is one of the detail settings. The `Wait 
+% for reply' detail setting controls whether the AppleEvent requests a 
+% reply (not all target applications will provide one). If no reply is 
+% requested then the report will only tell how many lines were sent. 
+% If a reply is requested then that reply will be the report. Finally, 
+% there are three detail settings that control how the list of lines 
+% are converted to the string put in the \texttt{dosc} AppleEvent. The 
+% lines can be joined using either of the following four strings: line 
+% feed, carriage return, carriage return plus line feed, or just a 
+% single space. It is also possible to specify a prefix and a suffix, 
+% which are strings put before and after the extracted code that should 
+% be evaluated.
+% 
+% The \textsf{Tk Send} method uses the Tk |send| command to communicate 
+% with the target interpreter; hence it is probably only useful with 
+% \AlphaTk\ in an X-windows environment (typically on some Unix platform). 
+% Most of the details work as for the \textsf{Do Script AE} method, but 
+% there is a difference in how the target is identified. One detail 
+% setting is the string used for identifying the target, but since the 
+% names of targets for |send| are made unique on each server, there is 
+% a chance that the intended target has not got the expected name. In 
+% that case, a mechanism called `aliasing' will be invoked. It usually 
+% displays a list of the available targets (which includes the option to 
+% start a new Wish process) for the user to choose from, and the target 
+% detail setting will then be considered to be an \emph{alias} for the 
+% actual name of that target. If the alias behaviour is to ``Ask once'' 
+% then this choice will be remembered as long as \Alpha\ is running, but 
+% if it is to ``Ask each time'' then it will only work for this invocation 
+% of the \eemenu\ command. The behaviour can also be to fail, in which 
+% case the command stops as for an error without presenting the user with 
+% a list of available targets.
+% 
+% The \textsf{Windoze DDE} method uses Dynamic Data Exchange to communicate 
+% with the target interpreter; hence it is probably only useful with 
+% \AlphaTk\ on the Windows platform. Most of the details work as for the 
+% \textsf{Tk Send} method, but there are a few extra details that have 
+% to do with how the target is identified. The target is identified with 
+% two details called \textsf{Service} and \textsf{Target}. For sending 
+% commands to a \Tcllogo\ interpreter it seems like the \textsf{Service} 
+% should be \texttt{TclEval} and the \textsf{Target} is assigned as the 
+% \textsf{Target} for the \textsf{Tk Send} method, but the \Tcllogo\ 
+% manual seems to suggest that the normal case is that the 
+% \textsf{Service} is the name of an application and the 
+% \textsf{Target} the name of a document open in that application (I 
+% haven't had any chance to try it out in practice). Aliasing works as 
+% for the \textsf{Tk Send} method, but since the target isn't 
+% necessarily a \Tcllogo sh or Wish in this case, the actual command for 
+% launching the new target must be configurable as well. This is the 
+% purpose of the \textsf{Launch command} detail, whose value is a piece 
+% of \Tcllogo\ code that \Alpha\ evaluates at the global level whenever 
+% the user requests that a new target is launched. It is typically an 
+% |exec| command.
+% 
+% I am well aware that there are interpreters for which neither of these 
+% methods may be appropriate. The method concept has however deliberately 
+% been designed so that separate \AlphaTcl\ extensions can define new 
+% methods that are just as easily available as the built-in ones. I 
+% recommend that anyone who finds the available methods insufficient 
+% tries to work out how one might otherwise communicate with the target 
+% interpreter, so that the capabilities of \eemenu\ can be extended. One 
+% particular possibility that should be explored is to (on Unix) hook up 
+% interpreters as `slaves' of \Alpha\ (seizing control of 
+% \texttt{stdin}, \texttt{stdout}, and \texttt{stderr}), so that the 
+% target interpreter thinks it is getting text typed at an interactive 
+% prompt. Since one would typically not want to start a new such `slave' 
+% for each time an \eemenu\ command is invoked, it would probably be 
+% necessary to add some functionality for managing slaves to the 
+% \eemenu.
+% 
+% 
+% \subsection{Report methods}
+% 
+% The default report method is \textsf{Status Line}, which shows the 
+% most recent evaluation result on the status line. This is often 
+% sufficient when all you're interested in is whether there was an 
+% error or not.
+% 
+% The \textsf{Log Window} report method creates a detailed log of the 
+% commands evaluated and the results returned. This can be useful for 
+% example when one is trying to debug a complex mathematical calculation 
+% with several intermediate results. The first two details of this 
+% method---\textsf{Window name} and \textsf{Window mode}---refer to the 
+% window used to log the results. The logged text is inserted at the 
+% end of this window. If no window with the specified name exists, then 
+% a new one with mode \textsf{Window mode} and the shell flag set is 
+% opened. The other details---\textsf{Prompt} and 
+% \textsf{Antiprompt}---are text strings that are prepended to the 
+% lines inserted into the log window. The \textsf{Prompt} is prepended 
+% to extracted code lines, whereas the \textsf{Antiprompt} is prepended 
+% to result lines.
+% 
+% 
+% \subsection{Writing new methods}
+% 
+% A method consists of a couple of procedures which reside in a child 
+% namespace of the \texttt{eemenu} namespace. Declaring a new method 
+% simply amounts to writing these procedures and defining the detail 
+% settings for the method. The general relation between method names and 
+% namespace names is explained in Subsection~\ref{Ssec:Namespaces}. It 
+% is suggested that one uses the \texttt{eemenu}\namespaceseparator
+% \texttt{define\_detail} command of Subsection~\ref{Ssec:CmdDialogs} 
+% for defining detail settings. Different kinds of methods need to 
+% provide different procedures for the main executive to call. The 
+% interfaces used are described in the beginnings of 
+% Sections~\ref{Sec:Extraction}--\ref{Sec:Report}.
+% 
+% 
+% 
+% 
+% \section{Main menu functionality}
+% 
+% The rest of this paper describes the implementation of \eemenu\ and 
+% its methods. The information here is useful mainly for those who want 
+% to extend \eemenu\ by writing additional methods for it or otherwise 
+% modify the code, but it could of course be of interest also for 
+% advanced users.
+% 
+% 
+% \subsection{Initialization}
+% 
+% \changes{v\,0.1}{2001/12/15}{Renamed package from \textsf{Eval~Menu} 
+%    to \textsf{EE~Menu}. (LH)}
+% \changes{v\,0.3}{2003/04/02}{Updated code for \AlphaTcl\,8. (LH)}
+% \changes{v\,0.3.1}{2003/07/19}{Added help. (LH)}
+% 
+% \begin{tcl}
+%<*pkg>
+alpha::menu eeMenu 0.3.1 global "EE" {
+   auto_load eemenu::main
+} {
+   eemenu::init_bindings
+   eemenu::build_menu
+} {
+   eval eemenu::deactivate [array names eemenu::cmdA]
+} requirements {
+%<atcl7>   alpha::package require AlphaTcl 7.5b1
+%<!atcl7>   alpha::package require AlphaTcl 8.0d1
+} uninstall {this-file} help {
+   The EE menu provides commands for sending small pieces of code 
+   from a source file window to various interpreters. It can handle 
+   multiple languages and multiple source file formats. 
+   
+   The commands are built by combining four simple pieces called
+   methods. The choice of methods and parameters for methods to 
+   use in a command is completely configurable through a dialog. 
+   It is also possible to write extensions that define additional
+   methods and provide these through the same easy interface.
+   
+   See the file eemenu.dtx for the full documentation.
+} maintainer\
+%<atcl7>  [list "Lars Hellstr[text::Ascii 154 1]m" Lars.Hellstrom@math.umu.se]
+%<!atcl7>  [list "Lars Hellstr\u00f6m" Lars.Hellstrom@math.umu.se]
+namespace eval eemenu {}
+% \end{tcl}
+% \setnamespace{eemenu}
+% 
+% 
+% \subsection{Methods and namespaces}
+% \label{Ssec:Namespaces}
+% 
+% Each method for doing something is put in its own namespace, which 
+% must be a child of the |eemenu| namespace.
+% 
+% \begin{proc}{Prettify}
+% \begin{proc}{Unprettify}
+%   In dialogs and preferences, method names are kept in ``prettified'' 
+%   form, similar to that used in most of \Alpha's menus. Since the 
+%   preference values must be restored to ``unpretty'' form before they 
+%   can be used, \eemenu\ has two procedures of its own that handle 
+%   these conversions, although the conversion is almost always the same 
+%   as the conversion that the standard |quote::Prettify| procedure 
+%   would make. The syntaxes are
+%   \begin{quote}
+%     |eemenu::Prettify| \word{unpretty string}\\
+%     |eemenu::Unprettify| \word{pretty string}
+%   \end{quote}
+%   \begin{tcl}
+proc eemenu::Prettify str {
+   set a [string toupper [string index $str 0]]
+   regsub -all {([^A-Z])([A-Z])} [string range $str 1 end] {\1 \2} b
+   regsub -all {((La|Bib|Oz|CMac) )?Te X} $a$b {\2TeX } a
+   return $a
+}
+proc eemenu::Unprettify str {
+   regsub -all { } $str {} a
+   return "[string tolower [string index $a 0]][string range $a 1 end]"
+}
+%   \end{tcl}
+%   For these procedures to be inverses of each other, unpretty strings 
+%   must begin with a lower case letter and not contain any spaces.
+% \end{proc}\end{proc}
+% 
+% \begin{arrayvar}{extract}[method]
+% \begin{arrayvar}{complete}[method]
+% \begin{arrayvar}{evaluate}[method]
+% \begin{arrayvar}{report}[method]
+%   A method declares itself by setting its entry in the |extract|, 
+%   |complete|, |evaluate|, or |report| respectively array. The 
+%   entries in these arrays are lists of dialog item names, more 
+%   precisely the names of those setting details that are relevant for 
+%   the method in question. The indices into these arrays are unpretty 
+%   method names.
+% \end{arrayvar}\end{arrayvar}\end{arrayvar}\end{arrayvar}
+% 
+% Most method types employ a model with distinct ``begin'', ``iterate'', 
+% and ``end'' procedures that the main executive calls. For each command 
+% and method, the ``begin'' is called first once, then the ``iterate'' 
+% may be called any number of times, and last the ``end'' is called once. 
+% The details to use for the method are only provided in the call to 
+% ``begin'' as that procedure is expected to store the relevant data 
+% into variables private to the method (residing in its namespace). In 
+% most cases, the actual code being evaluated is only handled by the 
+% ``iterate'' procedure, and only the ``end'' procedure gets to know 
+% how it all turned out.
+% 
+% In many methods, some of these procedures do nothing at all. This is 
+% then because there is nothing that needs to be done for that particular 
+% method.
+% 
+% \begin{proc}{multiupvar}
+%   The |multiupvar| procedure does |upvar #0| for a number of 
+%   variables, prepending the namespace of the caller to each of the 
+%   \word{other-var} arguments of |upvar|. The syntax is
+%   \begin{quote}
+%     |eemenu::multiupvar| \word{my-var}\regplus
+%   \end{quote}
+%   \changes{v\,0.2}{2002/12/26}{Corrected a minor bug: one must look 
+%     at the first element in the list that info level returns. (LH)}
+%   \begin{tcl}
+%<*!atcl7>
+proc eemenu::multiupvar {args} {
+   foreach var $args {uplevel 1 [list variable $var]}
+}
+%</!atcl7>
+%<*atcl7>
+proc eemenu::multiupvar {args} {
+   if {[info level]>1} then {
+      set ns [lindex [info level -1] 0]
+      set t [string last :: $ns]
+      if {$t<0} then {set ns {}} else {
+          set ns [string range $ns 0 [expr {$t+1}]]
+      }
+   } else {set ns {}}
+   set t 1
+   set call [list upvar #0]
+   foreach var $args {lappend call ${ns}${var} $var}
+   uplevel 1 $call
+}
+%</atcl7>
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{The main executive}
+% 
+% \begin{arrayvar}{cmdA}[command name]
+%   The |cmdA| array stores all definitions of \eemenu\ commands. The 
+%   indices into the array are the command names. The entries are 
+%   key--value lists which contain the settings for the command.
+%   
+%   The \describestring[key]{active}|active|, 
+%   \describestring[key]{binding}|binding|, and 
+%   \describestring[key]{mode}|mode| keys have to do with the key 
+%   binding for this command. If |active| is |1| then the binding should 
+%   be made upon startup. |binding| is the actual binding to use. |mode| 
+%   is the mode for which the binding should be made; if this is 
+%   |<none>| then the binding should be global.
+%   
+%   The \describestring[key]{in_menu}|in_menu| key controls whether 
+%   this command should appear as a command in the main \textsf{EE} 
+%   menu.
+%   
+%   The \describestring[key]{extractor}|extractor|, 
+%   \describestring[key]{complete}|complete|, 
+%   \describestring[key]{evaluator}|evaluator|, and 
+%   \describestring[key]{reporter}|reporter| keys store the particular 
+%   methods that are used by the command. The values are prettified 
+%   method names. For each of these keys there is also an \dots|_extra| 
+%   key whose value is the key--value list of detail settings for that 
+%   method. The exact names are \describestring[key]{extract_extra}
+%   |extract_extra|, \describestring[key]{complete_extra}
+%   |complete_extra|, \describestring[key]{eval_extra}|eval_extra|, and 
+%   \describestring[key]{report_extra}|report_extra|.
+%   
+%   If the |cmdA| array isn't set then it will be initialised in 
+%   Section~\ref{Sec:DefCmdA}. 
+% \end{arrayvar}
+% 
+% 
+% 
+% \begin{proc}{main}
+%   The |main| procedure is meant to be called from key binding scripts 
+%   and menu procs to actually carry out an \eemenu\ command. The 
+%   syntax is
+%   \begin{quote}
+%     |eemenu::main| \word{command name} \meta{selection-args}
+%   \end{quote}
+%   The \word{command name} is the name of the \eemenu\ command. The 
+%   \meta{selection-args} can be used to specify what the command 
+%   should extract from; they are passed straight on to the extraction 
+%   method |start| procedure.
+%   
+%   If there was an error during the execution of the command then |main| 
+%   terminates with an error. There is no particular result from this 
+%   procedure.
+%   
+%   The first part of |main| calls the begin procedures of the methods 
+%   used.
+%   \begin{tcl}
+proc eemenu::main {command args} {
+   global eemenu::cmdA
+   if {![info exists eemenu::cmdA($command)]} then {
+      error "Command '$command' undefined."
+   }
+   array set CMD [set eemenu::cmdA($command)]
+% \smallskip
+   set extract [eemenu::Unprettify $CMD(extractor)]
+   set cmpl [eemenu::Unprettify $CMD(complete)]
+   set eval [eemenu::Unprettify $CMD(evaluator)]
+   set report [eemenu::Unprettify $CMD(reporter)]
+% \smallskip
+   set win\
+     [eval [list eemenu::${extract}::start $CMD(extract_extra)] $args]
+   upvar #0 eemenu::${cmpl}::complete complete
+   eemenu::${report}::log_open $CMD(report_extra) $win
+%   \end{tcl}
+%   The main part of |main| is the following loop over extracted lines. 
+%   The |res| variable stores the last result returned by the evaluation 
+%   method. The |safe| variable is a boolean for whether the current 
+%   position should be considered safe. The |lines| variable contains 
+%   the lines extracted but not yet evaluated. The |at_end| variable is 
+%   |0| until the end of the extractable portion of the code has been 
+%   encountered.
+%   \begin{tcl}
+   set res [eemenu::${eval}::begin $CMD(eval_extra) $win]
+   eval [list eemenu::${report}::log_result] $res
+   set lines [list]
+   set safe 1
+   while {![lindex $res 0]} {
+%   \end{tcl}
+%   First extract the next line of code and append it to |lines|.
+%   \begin{tcl}
+      set at_end [catch {eemenu::${extract}::next $safe} line]
+      if {$at_end == 1} then {
+         global errorInfo
+         return -code error -errorinfo $errorInfo
+      } elseif {$at_end == 0} then {
+         lappend lines $line
+      } elseif {![llength $lines]} then {break}
+%   \end{tcl}
+%   Secondly check if there is a complete block of code in |lines|.
+%   \begin{tcl}
+      set safe [expr $complete]
+      if {$at_end && !$safe} then {
+         set safe [expr {![dialog::yesno -y No -n Yes\
+           "The last [llength $lines] lines do not appear to be a\
+           complete block of code. Evaluate anyway?"]}]
+         if {!$safe} then {
+            set res [list 1 "" ""]
+            break
+         }
+      }
+%   \end{tcl}
+%   Finally log code, evaluate it, and log the result. This should 
+%   happen when |lines| contains a complete block of code. If there is 
+%   no error in evaluating the code then the current position will be 
+%   safe at the next iteration of the loop, and if there is an error 
+%   then the loop will not be iterated anyway. Hence the use of |safe| 
+%   is correct.
+%   \begin{tcl}
+      if {$safe} then {
+         eemenu::${report}::log_code $lines
+         set res [eemenu::${eval}::item $lines]
+         eval [list eemenu::${report}::log_result] $res
+         set lines [list]
+      }
+   }
+%   \end{tcl}
+%   If an error has already been detected then it doesn't matter if 
+%   |end| evaluates without error, but it could also be that no error 
+%   results are returned before |end|.
+%   \begin{tcl}
+   if {[lindex $res 0]} then {
+      eval [list eemenu::${report}::log_result] [eemenu::${eval}::end]
+   } else {
+      set res [eemenu::${eval}::end]
+      eval [list eemenu::${report}::log_result] $res
+   }
+   eemenu::${extract}::finish [lindex $res 0]
+   eemenu::${report}::log_close
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{The key bindings}
+% 
+% There is a small system for managing the \eemenu\ key bindings. There 
+% are two reasons for this: deactivating a command should only unbind a 
+% binding if that binding is really currently used for that command, 
+% and the \textsf{Active~Commands} submenu should match the actual 
+% bindings.
+% 
+% \begin{proc}{binding_index}
+%   The |binding_index| procedure makes an index into the |binding| array. 
+%   The syntax is
+%   \begin{quote}
+%     |eemenu::binding_index| \word{mode} \word{binding}
+%   \end{quote}
+%   Both an empty string and |<none>| as \word{mode} are interpreted as 
+%   ``global''.
+%   \begin{tcl}
+proc eemenu::binding_index {mode binding} {
+   if {"<none>"==$mode} then {set mode ""}
+   set mode [string range "[string trim $mode]    " 0 3]
+   return "$mode$binding"
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{arrayvar}{binding}
+%   The |binding| array is used to keep track of which command is 
+%   currently using a particular binding. The entries in this array are 
+%   command names. The indices have the form
+%   \begin{quote}
+%     \meta{mode}\meta{binding}
+%   \end{quote}
+%   where \meta{mode} is the mode and \meta{binding} is the menu-style 
+%   code for the binding. \meta{mode} is padded on the right with 
+%   spaces to exactly four characters. The \meta{mode} for global 
+%   bindings is four spaces.
+% \end{arrayvar}
+% 
+% \begin{proc}{init_bindings}
+%   The |init_bindings| procedure initialises the |binding| array and 
+%   the actual key bindings to match the data in the |cmdA| array. It 
+%   should be called when the menu is activated, but before the menu 
+%   itself is built.
+%   \begin{tcl}
+proc eemenu::init_bindings {} {
+   eemenu::multiupvar cmdA binding
+   foreach cmd [array names cmdA] {
+%   \end{tcl}
+%   Only commands that are active needs to be considered.
+%   \begin{tcl}
+      array set A $cmdA($cmd)
+      if {!$A(active)} then {continue}
+%   \end{tcl}
+%   The state of the binding must also be determined. It could be that 
+%   some other \textsf{EE~Menu} command is using the same binding, in 
+%   which case the user should be informed of this.
+%   \begin{tcl}
+      set idx [eemenu::binding_index $A(mode) $A(binding)]
+      if {[info exists binding($idx)] &&\
+        ![dialog::yesno "To activate '$cmd', I must first deativate\
+           '$binding($idx)'. Proceed?"]}\
+%
+      then {continue}
+%   \end{tcl}
+%   Now the binding can be made for the command.
+%   \begin{tcl}
+      set binding($idx) $cmd
+      set call [keys::bindKey $A(binding)]
+      lappend call [list eemenu::main $cmd]
+      if {[string compare "<none>" $A(mode)]} then {lappend call $A(mode)}
+      eval $call
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{deactivate}
+%   The |deactivate| procedure has the syntax
+%   \begin{quote}
+%     |eemenu::deactivate| \word{\eemenu\ command}\regplus
+%   \end{quote}
+%   It deactivates the bindings for all commands listed as arguments 
+%   and updates the \textsf{Active Commands} submenu accordingly.
+%   \begin{tcl}
+proc eemenu::deactivate {args} {
+   eemenu::multiupvar binding cmdA
+   foreach cmd $args {
+%   \end{tcl}
+%   First make sure the binding is actually active.
+%   \begin{tcl}
+      array set A $cmdA($cmd)
+      set idx [eemenu::binding_index $A(mode) $A(binding)]
+      if {![info exists binding($idx)] ||\
+        [string compare $binding($idx) $cmd]} then {continue}
+%   \end{tcl}
+%   Then unset everything that has to do with it.
+%   \begin{tcl}
+      unset binding($idx)
+      set call [keys::unbindKey $A(binding)]
+      lappend call ""
+      if {[string compare "<none>" $A(mode)]} then {lappend call $A(mode)}
+      eval $call
+      markMenuItem -m "Active Commands" $cmd off
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{activate}
+%   The |activate| procedure activates the bindings for the \eemenu\ 
+%   commands listed as arguments. It has the syntax
+%   \begin{quote}
+%     |eemenu::activate| \word{noisy} \word{\eemenu\ command}\regplus
+%   \end{quote}
+%   The procedure notices and handles the case that the binding for an 
+%   already active command coincides with that of some command to 
+%   activate, usually by deactivating the active command. The \word{noisy} 
+%   argument controls how it will behave in this. If \word{noisy} is |0| 
+%   then it will merely show a list of deactivations on the status bar, 
+%   but if it is |1| then it will put up a dialog and ask first.
+%   \begin{tcl}
+proc eemenu::activate {noisy args} {
+   eemenu::multiupvar binding cmdA
+   set deactiveL [list]
+   foreach cmd $args {
+%   \end{tcl}
+%   First determine the state of the binding.
+%   \begin{tcl}
+      array set A $cmdA($cmd)
+      set idx [eemenu::binding_index $A(mode) $A(binding)]
+      if {[info exists binding($idx)]} then {
+         if {![string compare $binding($idx) $cmd]} then {continue}
+%   \end{tcl}
+%   In this case the binding is being used by some other command. 
+%   Should that be deactivated?
+%   \begin{tcl}
+         if {$noisy && ![dialog::yesno "To activate '$cmd', I must\
+           first deativate '$binding($idx)'. Proceed?"]} then {continue}
+%   \end{tcl}
+%   Here we know it should. Deactivation can be simplified since the 
+%   binding will anyway be overwritten later.
+%   \begin{tcl}
+         lappend deactiveL $binding($idx)
+         markMenuItem -m "Active Commands" $binding($idx) off
+      }
+%   \end{tcl}
+%   Now activate the binding, as was the original intention.
+%   \begin{tcl}
+      set binding($idx) $cmd
+      set call [keys::bindKey $A(binding)]
+      lappend call [list eemenu::main $cmd]
+      if {[string compare "<none>" $A(mode)]} then {lappend call $A(mode)}
+      eval $call
+      markMenuItem -m "Active Commands" $binding($idx) on\
+           [text::Ascii 18 1]
+   }
+   if {!$noisy && [llength $deactiveL]} then {
+      status::msg "Deactivated commands: [join $deactiveL ", "]"
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Building and handling the menu}
+% 
+% \begin{proc}{build_menu}
+%   The |build_menu| procedure builds the menu. It is called when the 
+%   menu is initially created and whenever some command settings have 
+%   been edited.
+%   \begin{tcl}
+proc eemenu::build_menu {} {
+   eemenu::multiupvar cmdA binding
+   set items [list "Edit Commands[text::Ascii 201 1]"]
+   if {[array size cmdA] > 0} then {
+%<atcl7>      set cmdL [lsort -ignore [array names cmdA]]
+%<!atcl7>      set cmdL [lsort -dictionary [array names cmdA]]
+      lappend items [list Menu -n "Active Commands" -m\
+        -p eemenu::menu_proc $cmdL]
+      lappend items "(-)"
+      foreach cmd $cmdL {
+         array set A $cmdA($cmd)
+         if {$A(in_menu)} then {lappend items $cmd}
+      }
+   }
+   global eeMenu
+   Menu -n $eeMenu -m -p eemenu::menu_proc $items
+   if {[array size cmdA]} then {
+      foreach idx [array names binding] {
+         markMenuItem -m "Active Commands" $binding($idx) on\
+           [text::Ascii 18 1]
+      }
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{menu_proc}
+%   The |menu_proc| handles selection of items in the \emph{EE} menu and 
+%   its submenu. The syntax is the standard
+%   \begin{quote}
+%     |eemenu::menu_proc| \word{menu} \word{item}
+%   \end{quote}
+%   \begin{tcl}
+proc eemenu::menu_proc {menu item} {
+   global eeMenu
+   eemenu::multiupvar cmdA binding
+   switch -- $menu $eeMenu {
+      switch -- $item "Edit Commands" {
+         eemenu::edit_commands
+      } default {
+         eemenu::main $item
+      }
+   } "Active Commands" {
+      array set A $cmdA($item)
+      set idx [eemenu::binding_index $A(mode) $A(binding)]
+      if {[info exists binding($idx)] &&\
+        ![string compare $binding($idx) $item]} then {
+         eemenu::deactivate $item
+      } else {
+         eemenu::activate 1 $item
+      }
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{The command dialogs}
+% \label{Ssec:CmdDialogs}
+% 
+% The dialog for editing command settings has two levels. On the top 
+% level, the dialog has one page per command. This dialog allows one to 
+% select methods, but does not show any detail settings for the methods. 
+% The other level has one page for each method type (or less) and shows 
+% only the detail settings for that method.
+% 
+% \begin{arrayvar}{detail_typeA}
+% \begin{arrayvar}{detail_helpA}
+% \begin{arrayvar}{detail_keyA}
+%   The |detail_typeA| and |detail_helpA| arrays define the items in the 
+%   setting details dialog. They are sent as arguments to 
+%   |dialog::handle|, and thus the indices have the form 
+%   \meta{page}|,|\meta{name}. The \meta{page} is either |Extract| 
+%   for the extraction method page, |Complete| for the completion 
+%   method page, |Evaluate| for the evaulation method page, or |Report| 
+%   for the report method page. The |detail_keyA| array gives the keys 
+%   associated with the items.
+% \end{arrayvar}\end{arrayvar}\end{arrayvar}
+% 
+% \begin{arrayvar}{detail_defaultA}
+%   The |detail_defaultA| array is indexed by the name of a detail page 
+%   (|Extract|, |Complete|, |Evaluate|, or |Report|). The entries are 
+%   key--value lists that constitute suggested defaults for the 
+%   \dots|_extra| items in the main dialog.
+%   \begin{tcl}
+array set eemenu::detail_defaultA\
+  {Extract {} Complete {} Evaluate {} Report {}}
+%   \end{tcl}
+% \end{arrayvar}
+% 
+% \begin{proc}{define_detail}
+%   The |define_detail| procedure is a helper to simplify the definition 
+%   of items in the detail dialogs by handling internally all the odd 
+%   variable names that are involved. The syntax is
+%   \begin{quote}
+%     |eemenu::define_detail| \word{page} \word{name} \word{key}
+%     \word{type} \word{value}\regopt\ \word{help}\regopt
+%   \end{quote}
+%   \word{page} and \word{name} specify the item. \word{key}, 
+%   \word{type}, \word{value}, and \word{help} are what will be stored 
+%   into the arrays. The return value is precisely \word{name}, so that 
+%   one can put that in the |extract|, |complete|, |evaluate|, or 
+%   |report| array in the same command as the item is defined.
+%   
+%   It is OK to define the same item several times, provided that the 
+%   definitions are equal (or different only in the \word{value}s or 
+%   in that one has a \word{help} and the other doesn't), but it is an 
+%   error if they are different.
+%   \begin{tcl}
+proc eemenu::define_detail {page name key type {val ""} {help ""}} {
+   upvar #0 eemenu::detail_typeA typeA eemenu::detail_helpA helpA\
+     eemenu::detail_keyA keyA eemenu::detail_defaultA valA
+   set error ""
+   set idx "$page,$name"
+   if {![info exists keyA($idx)]} then {
+      set keyA($idx) $key
+   } elseif {"$key" != "$keyA($idx)"} then {
+      append error " Different keys: '$keyA($idx)' and '$key'."
+   }
+   if {![info exists typeA($idx)]} then {
+      set typeA($idx) $type
+   } elseif {"$type" != "$typeA($idx)"} then {
+      append error " Different types: '$typeA($idx)' and '$type'."
+   }
+   if {[string length $val]} then {
+      if {[info exists valA($page)]} then {array set A $valA($page)}
+      if {![info exists A($key)] || ![string length $A($key)]} then {
+         set A($key) $val
+         set valA($page) [array get A]
+      }
+   }
+   if {[string length $help]} then {
+      if {![info exists helpA($idx)]} then {
+         set helpA($idx) $help
+      } elseif {"$help" != "$helpA($idx)"} then {
+         append error " Different help texts: '$helpA($idx)' and '$help'."
+      }
+   }
+   if {[string length $error]} then {
+      dialog::alert "The detail setting '$name' for '$page' methods\
+        has conficting definitions.$error This is an error that should 
+        be fixed; for now, the second definition will be ignored."
+   }
+   return $name
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}{edit_commands}
+%   The |edit_commands| procedure puts up a dialog that lets the user 
+%   edit the command settings. It takes no arguments and returns nothing.
+%   \begin{tcl}
+proc eemenu::edit_commands {} {
+   global eemenu::extract eemenu::complete eemenu::evaluate\
+     eemenu::report
+%   \end{tcl}
+%   The first thing to do is to determine the layout for command pages.
+%   \begin{tcl}
+   set layout [list]
+   lappend layout [list active flag Active "Is the binding active?"]
+   lappend layout [list binding binding "Command keybinding"]
+   lappend layout [list mode mode "Binding mode"]
+   lappend layout [list in_menu flag "Put in menu"]
+% \smallskip
+%<*atcl7>
+   set M [list]
+   foreach method [lsort -ignore [array names eemenu::extract]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list extractor [list menu $M] "Extraction method"]
+   lappend layout [list extract_extra [list hidden keyval] extract_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -ignore [array names eemenu::complete]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list complete [list menu $M] "Completion test"]
+   lappend layout [list complete_extra [list hidden keyval] complete_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -ignore [array names eemenu::evaluate]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list evaluator [list menu $M] "Evaluation method"]
+   lappend layout [list eval_extra [list hidden keyval] eval_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -ignore [array names eemenu::report]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list reporter [list menu $M] "Report method"]
+   lappend layout [list report_extra [list hidden keyval] report_extra]
+%</atcl7>
+%<*!atcl7>
+   set M [list]
+   foreach method [lsort -dictionary [array names eemenu::extract]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list extractor [list menu $M] "Extraction method"]
+   lappend layout [list extract_extra [list hidden keyval] extract_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -dictionary [array names eemenu::complete]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list complete [list menu $M] "Completion test"]
+   lappend layout [list complete_extra [list hidden keyval] complete_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -dictionary [array names eemenu::evaluate]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list evaluator [list menu $M] "Evaluation method"]
+   lappend layout [list eval_extra [list hidden keyval] eval_extra]
+% \smallskip
+   set M [list]
+   foreach method [lsort -dictionary [array names eemenu::report]] {
+      lappend M [eemenu::Prettify $method]
+   }
+   lappend layout [list reporter [list menu $M] "Report method"]
+   lappend layout [list report_extra [list hidden keyval] report_extra]
+%</!atcl7>
+%   \end{tcl}
+%   Then the call to |dialog::make_paged| can be constructed (in the 
+%   |call| variable), but as it is convenient to do that in order, the 
+%   page arguments (which are the easiest) will be constructed last.
+%   \begin{tcl}
+   global dialog::ellipsis
+   if {![info exists dialog::ellipsis]} then {auto_load dialog::make_paged}
+   set call [list dialog::make_paged]
+   set buttons [list]
+   lappend buttons "New${dialog::ellipsis}" "Add new command"\
+     {eemenu::add_command ""}
+   lappend buttons "Duplicate${dialog::ellipsis}"\
+     "Duplicate this command" {eemenu::add_command $currentpage}
+   lappend buttons "Rename${dialog::ellipsis}"\
+     "Rename this command" {eemenu::rename_command}
+   lappend buttons "Delete${dialog::ellipsis}"\
+     "Delete this command" {
+        if {[dialog::yesno "Are you sure you want to\
+          delete '$currentpage'?"]} {
+            set pages [dialog::delete_pages $pages\
+              [list $currentpage] delta_pages]
+        }
+     }
+   lappend buttons "Details${dialog::ellipsis}"\
+     "Setting details for this command" {
+        eemenu::command_details $dial $currentpage
+     }
+   lappend call -addbuttons $buttons -changeditems mods\
+     -alpha7pagelimit 2
+%   \end{tcl}
+%   Finally the page arguments to |dialog::make_paged| can be appended 
+%   and the actuall call made.
+%   \begin{tcl}
+   global eemenu::cmdA
+%<atcl7>   foreach cmd [lsort -ignore [array names eemenu::cmdA]] {
+%<!atcl7>   foreach cmd [lsort -dictionary [array names eemenu::cmdA]] {
+     lappend call [list $cmd [set eemenu::cmdA($cmd)] $layout]
+   }
+   set res [eval $call]
+%   \end{tcl}
+%   If |make_paged| terminates with an error (the user pressed 
+%   \textsf{Cancel}) then processing of this procedure should stop here. 
+%   Thus the |eval| above is quite in order.
+%   
+%   After that, the settings should be updated. The first step is to 
+%   deactivate those commands whose activation state, binding, or mode 
+%   has changed, since that has to be done before the old settings 
+%   are cleared.
+%   \begin{tcl}
+   set call [list eemenu::deactivate]
+   newforeach {cmd keys} $mods {
+      if {[lsearch -regexp $keys {^(active|binding|mode)$}]>=0 &&\
+        [info exists eemenu::cmdA($cmd)]} then {
+         lappend call $cmd
+      }
+   }
+   if {[llength $call]>1} then {eval $call}
+%   \end{tcl}
+%   Now the new settings can replace the old.
+%   \begin{tcl}
+   unset eemenu::cmdA
+   array set eemenu::cmdA $res
+%   \end{tcl}
+%   Then what remains is (i) to inform \Alpha\ that the changed command 
+%   settings need to be saved, (ii) to make bindings for those commands 
+%   that are active, and (iii) to add or remove items from the menu.
+%   \begin{tcl}
+   set call [list eemenu::activate 0]
+   set build_menu 0
+%<atcl7>   newforeach {cmd keys} $mods {
+%<!atcl7>   foreach {cmd keys} $mods {
+      prefs::modified eemenu::cmdA($cmd)
+      if {![info exists eemenu::cmdA($cmd)]}\
+      then {set build_menu 1; continue}
+      array set A [set eemenu::cmdA($cmd)]
+      if {$A(active) &&\
+        [lsearch -regexp $keys {^(active|binding|mode)$}]>=0}\
+      then {lappend call $cmd}
+      if {[lsearch -exact $keys in_menu]>=0} then {set build_menu 1}
+   }
+   if {[llength $call]>2} then {eval $call}
+   if {$build_menu} then {eemenu::build_menu}
+}
+%   \end{tcl}
+%   The conditions used above rely to some extent on the fact that 
+%   \emph{all} items on a dialog page that is added or deleted count as 
+%   having been changed.
+% \end{proc}
+% 
+% \begin{proc}{add_command}
+%   The |add_command| procedure is called by a button script to add a 
+%   new command page to the dialog. The syntax is
+%   \begin{quote}
+%     |eemenu::add_command| \word{template}
+%   \end{quote}
+%   where \word{template} is the name of a command whose settings should 
+%   be copied, or an empty string if the default settings should be used.
+%   \begin{tcl}
+proc eemenu::add_command {templ} {
+   set name [getline "Name of new command"]
+   if {![string length $name]} then {return}
+%<atcl7>   newforeach {page items} [uplevel 1 {set pages}] {
+%<!atcl7>   foreach {page items} [uplevel 1 {set pages}] {
+      if {![string compare $page $name]} then {
+         alternote "That name is already in use!"
+         return
+      }
+   }
+%   \end{tcl}
+%   By default, make new commands inactive and don't put them in the 
+%   menu. This is to avoid silly errors in case the user wants to do 
+%   a ``backup'' of a command.
+%   \begin{tcl}
+   set keyvals [list active 0 in_menu 0]
+   if {[string length $templ]} then {
+      set dial [uplevel 1 {set dial}]
+      set cpage [uplevel 1 {set currentpage}]
+%<atcl7>      newforeach {key item}\
+%<!atcl7>      foreach {key item}\
+       {binding {Command keybinding}  mode {Binding mode}
+        extractor {Extraction method} extract_extra extract_extra
+        complete {Completion test}    complete_extra complete_extra
+        evaluator {Evaluation method} eval_extra eval_extra
+        reporter {Report method}      report_extra report_extra} {
+         lappend keyvals $key [dialog::valGet $dial "${cpage},${item}"]
+      }
+   } else {
+      lappend keyvals binding "" mode "" extractor "Raw"
+      upvar #0 eemenu::detail_defaultA defaultA
+      lappend keyvals extract_extra $defaultA(Extract)
+      lappend keyvals complete "Entire Selection" complete_extra\
+        $defaultA(Complete)
+      lappend keyvals evaluator "Internal Tcl" eval_extra\
+        $defaultA(Evaluate)
+      lappend keyvals reporter "Status Line" report_extra $defaultA(Report)
+   }
+   uplevel 1 [list dialog::add_page $name $keyvals [uplevel 2 set layout]]
+   uplevel 1 [list set currentpage $name]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{rename_command}
+%   The |rename_command| procedure is called by a button script to rename 
+%   an existing command. There are no arguments.
+%   \begin{tcl}
+proc eemenu::rename_command {} {
+   upvar 1 currentpage cpage dial dial
+   set name [getline "New name for command '$cpage'"]
+   if {![string length $name]} then {return}
+%<atcl7>   newforeach {page items} [uplevel 1 {set pages}] {
+%<!atcl7>   foreach {page items} [uplevel 1 {set pages}] {
+      if {![string compare $page $name]} then {
+         alternote "That name is already in use!"
+         return
+      }
+   }
+%   \end{tcl}
+%   Technically, the page with the old name is deleted and a new page 
+%   with the new name is added. The keyvals have to saved to a list in 
+%   between.
+%   \begin{tcl}
+   set keyvals [list]
+%<atcl7>   newforeach {key item} {active Active in_menu {Put in menu}\
+%<!atcl7>   foreach {key item} {active Active in_menu {Put in menu}\
+     binding {Command keybinding} mode {Binding mode}\
+     extractor {Extraction method} extract_extra extract_extra\
+     complete {Completion test} complete_extra complete_extra\
+     evaluator {Evaluation method} eval_extra eval_extra\
+     reporter {Report method} report_extra report_extra} {
+      lappend keyvals $key [dialog::valGet $dial "${cpage},${item}"]
+   }
+   uplevel 1 {
+     set pages [dialog::delete_pages $pages [list $currentpage]\
+       delta_pages]
+   }
+   uplevel 1 [list dialog::add_page $name $keyvals [uplevel 2 set layout]]
+   set cpage $name
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{command_details}
+%   The |command_details| procedure is called by a button script to let 
+%   the user see and edit the details of a command. The syntax is
+%   \begin{quote}
+%     |eemenu::command_details| \word{dialog ref.} \word{command}
+%   \end{quote}
+%   The \word{dialog ref.} is the reference to pass on to 
+%   |dialog::valGet| and the like, as that is the only way to access the 
+%   data that should be shown in the dialog. The \word{command} is the 
+%   name of the command whose details should be shown, which is also the 
+%   \meta{page} part of the array index that |dialog::valGet| needs.
+%   
+%   Most of this procedure consists of moving data from the data 
+%   structures of one dialog to those of another, and back again. More 
+%   precisely, data is taken from the \dots|_extra| items in the main 
+%   dialog and put (using |array set|) into the local arrays |A1|, |A2|, 
+%   |A3|, and |A4|. Then those entries in these arrays which correspond 
+%   to details for the current set of methods are stored as dialog item 
+%   values for |dial2|. At the end, those |dial2| items values that were 
+%   changed are copied back to the corresponding |A| array, and then 
+%   these arrays are put back (using |array get|) into the corresponding 
+%   \dots|_extra| items in the main dialog.
+%   
+%   At the same time as the data are copied from the main dialog to the 
+%   details dialog, the list of pages and items in the latter is being 
+%   built. The information about this is taken from the |extract|, 
+%   |complete|, |evaluate|, and |report| arrays.
+%   \begin{tcl}
+proc eemenu::command_details {dial command} {
+   global eemenu::detail_typeA eemenu::detail_helpA\
+     eemenu::detail_keyA eemenu::extract eemenu::complete\
+     eemenu::evaluate eemenu::report
+   set pages [list]
+   set dial2 [dialog::create]
+%   \end{tcl}
+%   Exactly the same processing is done for all four pages of the 
+%   details dialog, but since the location of the source data varies a 
+%   bit irregularly between the pages, it is easiest to make a table of 
+%   which variables and indices should be used. There is one line per 
+%   page in the |newforeach| below.
+%   \begin{tcl}
+%<atcl7>   newforeach {which page layoutarr data arr} {
+%<!atcl7>   foreach {which page layoutarr data arr} {
+      {Extraction method} Extract eemenu::extract extract_extra  A1
+      {Completion test} Complete eemenu::complete complete_extra A2
+      {Evaluation method} Evaluate eemenu::evaluate eval_extra   A3
+      {Report method}     Report   eemenu::report   report_extra A4
+   } {
+      set method [eemenu::Unprettify\
+        [dialog::valGet $dial ${command},${which}]]
+      set L [set ${layoutarr}($method)]
+      if {[llength $L]} then {
+         lappend pages $page $L
+         array set $arr [dialog::valGet $dial ${command},${data}]
+         foreach l $L {
+            set v [set eemenu::detail_keyA($page,$l)]
+            if {[info exists ${arr}($v)]} then {
+               dialog::valSet $dial2 "$page,$l" [set ${arr}($v)]
+            } else {
+%   \end{tcl}
+%   It turns out \AlphaEight\ doesn't like an empty string as value for 
+%   a checkbox, so the value is explicitly set to |0| for flags.
+%   \changes{v\,0.3}{2003/04/11}{Added special default for flag items.
+%      A similar fix should be put in the dialogs code. (LH)}
+%   \begin{tcl}
+               switch -- [set eemenu::detail_typeA($page,$l)] flag {
+                  dialog::valSet $dial2 "$page,$l" 0
+               } default {
+                  dialog::valSet $dial2 "$page,$l" ""
+               }
+            }
+         }
+      }
+   }
+% \smallskip
+   if {![llength $pages]} then {
+      dialog::alert "There are no details for these methods."
+      dialog::cleanup $dial2
+      return
+   }
+   dialog::handle $pages eemenu::detail_typeA $dial2\
+     eemenu::detail_helpA page [list]\
+     [list [list "Back" "Return to overall dialog" ""] right first]
+% \smallskip
+   set L [dialog::changed_items $dial2]
+   foreach item $L {
+      switch -glob $item {
+        Extract,* {set arr A1} 
+        Complete,* {set arr A2}
+        Evaluate,* {set arr A3}
+        Report,* {set arr A4}
+      }
+      set ${arr}([set eemenu::detail_keyA($item)])\
+        [dialog::valGet $dial2 $item]
+   }
+%<atcl7>   newforeach {page data arr} {
+%<!atcl7>   foreach {page data arr} {
+      Extract  extract_extra  A1
+      Complete complete_extra A2
+      Evaluate eval_extra     A3
+      Report   report_extra   A4
+   } {
+      if {[lsearch -glob $L "${page},*"] >= 0} then {
+         dialog::valChanged $dial "${command},${data}" [array get $arr]
+      }
+   }
+   dialog::cleanup $dial2
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{\texttt{dialogsNew} patch}
+% 
+% In the testing stage, I discovered that the |edit_commands| procedure 
+% managed to overstress \Alpha7's |dialog| command almost without 
+% trying. It is probably the large number of popup menus that is causing 
+% trouble, but regardless of the cause, I found that I couldn't use this 
+% dialog if it tried to show more than two commands.
+% 
+% The \textsf{Edit Filesets} command faces a similar limitation and to 
+% work around that there is a separate \textsf{Edit A Fileset} command. 
+% As I didn't feel that much like reconstructing the \textsf{Edit 
+% Commands} dialog however, I instead redesigned |dialog::make_paged| 
+% so that \emph{it} automatically splits the dialog when there are too 
+% many pages in it. The redesigned |make_paged| will however probably 
+% not make it into Alpha\Tcllogo\ before v\,7.6d3 and at the moment 
+% that seems like a bit restrictive to me. Hence \emph{EE~Menu} will 
+% patch the \texttt{dialogsNew} code if this change hasn't already 
+% been incorporated.
+% 
+% \begin{tcl}
+%<*dialogspatch&atcl7>
+if {![llength [info commands dialog::make_paged]]} then {
+   auto_load dialog::make_paged
+}
+if {![regexp -- -alpha7pagelimit [info body dialog::make_paged]]} then {
+% \end{tcl}
+% The following is copied from \texttt{dialogsNew.dtx} v\,1.4.
+% 
+% \setnamespace{dialog}
+% 
+% \begin{proc}{make_paged}
+%   The |make_paged| procedure is similar to the |make| procedure, but 
+%   its argument argument structure is slightly different, its return 
+%   value is very different, and it does have a couple of features that 
+%   |make| doesn't (such as adding or removing pages or items in a 
+%   dialog). The basic syntax is the same
+%   \begin{quote}
+%     |dialog::make_paged| \meta{option}\regstar\ \word{page}\regplus
+%   \end{quote}
+%   but here each \word{page} is a list with the structure
+%   \begin{quote}
+%     \word{page name} \word{key--value list} \word{item list}
+%   \end{quote}
+%   and each \word{item list} in turn is a list of items, each of with 
+%   are themselves lists and have the structure
+%   \begin{quote}
+%     \word{key} \word{type} \word{name} \word{help}\regopt
+%   \end{quote}
+%   The return value is a list with the structure
+%   \begin{quote}
+%     \begin{regexp}[\regplus]\word{page name} 
+%     \word{key--value list}\end{regexp}
+%   \end{quote}
+%   and in both cases the \word{key--value list} has the format of a 
+%   list returned by |array get|, i.e.,
+%   \begin{quote}
+%     \begin{regexp}[\regstar]\word{key} \word{value}\end{regexp}
+%   \end{quote}
+%   
+%   Rather than (as with |make|) including the value of an item in its 
+%   \word{item} list, that list contains a \word{key} which references 
+%   a value stored in the \word{key--value list} of that page. The idea 
+%   with this is that the input and output formats for values should be 
+%   the same, so that the caller has little overhead in converting from 
+%   one data format to another. The \word{key--value list} format is 
+%   furthermore flexible in that is completely insensitive to changes 
+%   that add, remove, or rearrange items within a page. Extra 
+%   key--value pairs in the input are ignored and an empty string is 
+%   substituted as value for pairs that are missing.
+%   
+%   The \meta{option}s understood by |make_paged| are
+%   \begin{quote}
+%     |-ok| \word{OK button title}\\
+%     |-cancel| \word{cancel button title}\\
+%     |-title| \word{dialog window title}\\
+%     |-defaultpage| \word{name of default page}\\
+%     |-addbuttons| \word{button list}\\
+%     |-width| \word{dialog window width}\\
+%     |-alpha7pagelimit| \word{maximal number of pages}\\
+%     |-debug| \word{debug level}\\
+%     |-changedpages| \word{var-name}\\
+%     |-changeditems| \word{var-name}
+%   \end{quote}
+%   Those that are common with |make| work exactly the same. The 
+%   |-changedpages| option specifies that the caller wants to know on 
+%   which pages something was changed. The \word{var-name} is the name 
+%   of a variable in the caller's local context which will be set to 
+%   the list of (names of) pages where some item value was changed. The 
+%   |-changeditems| option is similar, but here the variable will be set 
+%   to a list with the structure
+%   \begin{quote}
+%     \begin{regexp}[\regstar]\word{page name} 
+%     \word{key list}\end{regexp}
+%   \end{quote}
+%   where the \word{key list}s are lists of the \emph{keys} of items on 
+%   that page whose values were changed.
+%   
+%   \begin{tcl}
+proc dialog::make_paged {args} {
+%   \end{tcl}
+%   
+%   |make_paged| largely has the same local variables as |make|, but 
+%   there are some additions. The major arrays are
+%   \begin{description}
+%     \item[\texttt{pageA}]
+%       The index into this array is the name of a page. An entry 
+%       contains the list of names of items on that page.
+%     \item[\texttt{typeA}]
+%       The index into this array has the form 
+%       \meta{page}|,|\meta{item}, where \meta{page} is the name of a 
+%       page and \meta{item} is the name of an item on that page. An 
+%       entry contains the type of that item.
+%     \item[\texttt{keyA}]
+%       The index has the same form as in the |typeA| array. An entry 
+%       contains the \word{key} for that item.
+%     \item[\texttt{helpA}]
+%       The index has the same form as in the |typeA| array. An entry 
+%       contains the help text for that entry, but an item needs not 
+%       have an entry in this array (it can be left unset).
+%   \end{description}
+%   There are a couple of additional scalar variables that are of 
+%   interest.
+%   \begin{description}
+%     \item[\texttt{retCode}, \texttt{retVal}]
+%       When the |retCode| variable is set, the dialog is logically 
+%       closed and the procedure returns. If the variable is set to |0| 
+%       then |make| executes a normal return and the returned value will 
+%       be the list of item values. If the variable is set to anything 
+%       else then that will used for the |-code| option of |return| and
+%       the returned value will be taken from the |retVal| variable, 
+%       which must then be initalised.
+%     \item[\texttt{dial}]
+%       This contains the reference string to use with |valGet|, 
+%       |valSet|, and friends when accessing the values of items in 
+%       the dialog.
+%     \item[\texttt{currentpage}]
+%       This contains the name of the current page in the dialog.
+%     \item[\texttt{delta\_pages}]
+%       This is the list of all pages which have been added to or 
+%       deleted from the dialog since it was called. The |add_page| and 
+%       |delete_page| procedures both directly access this list. It is 
+%       needed to get the information for the |-changedpages| and 
+%       |-changeditems| correct.
+%     \item[\texttt{pages}]
+%       This is a list of pages and items to show in the dialog. It is 
+%       similar to the result of |array get pageA|, but the order of 
+%       pages is as specified in the call and hidden pages are not 
+%       included.
+%     \item[\texttt{opts(-addbuttons)}]
+%       This is \word{button list} specified by the caller. Button 
+%       scripts can modify this list to change the text on their button.
+%     \item[\texttt{state}]
+%       This is initialized to |0| before the first time the dialog is 
+%       shown and then the procedure leaves it alone. Button scripts may 
+%       change it to keep track of what ``state'' (mostly: which 
+%       items\slash pages are currently hidden) the dialog is in.
+%     \item[\texttt{splitstate}]
+%       This is the dialog splitting state and works as for 
+%       |dialog::make|.
+%     \item[\texttt{optionL}] 
+%       The list of additional options to pass to |dialog::handle|.
+%   \end{description}
+%   
+%   The first part of |dialog::make_paged| processes the arguments.
+%   \begin{tcl}
+   set opts(-ok) OK
+   set opts(-cancel) Cancel
+   set opts(-title) ""
+   set opts(-width) 400
+   set opts(-debug) 0
+   getOpts {-title -defaultpage -ok -cancel -addbuttons -width -debug\
+     -alpha7pagelimit -changedpages -changeditems}
+   set dial [dialog::create]
+%   \end{tcl}
+%   The page arguments are interpreted by the |add_page| procedure. 
+%   Since these pages aren't new in the sense that is relevant for the 
+%   |delta_pages| list, that variable is reset afterwards. The 
+%   |splitstate| variable is implicitly updated by |add_page|.
+%   \begin{tcl}
+   set pages [list]
+   set delta_pages [list]
+   if {[info exists opts(-alpha7pagelimit)] && [info tclversion]<8.0}\
+   then {
+      set splitstate below
+   } else {
+      set splitstate off
+   }
+   foreach pagearg $args {
+      eval [list dialog::add_page] $pagearg
+   }
+   set delta_pages [list]
+   if {$splitstate=="page"} then {set splitstate menu}
+   if {[info exists opts(-defaultpage)]} then {
+      set currentpage $opts(-defaultpage)
+   } else {
+      set currentpage [lindex $pages 0]
+   }
+   set optionL [list -width $opts(-width) -title $opts(-title)]
+   set main_buttons [list\
+%
+     [list $opts(-ok) "Click here to use the current settings."\
+       {set retCode 0}\
+%
+       $opts(-cancel) "Click here to discard any\
+       changes you've made to the settings."\
+       {set retCode 1; set retVal "cancel"}]\
+%
+     first right]
+   set view_button [list [list {View dialog page}\
+     {Click here to see the items on this page.}\
+     {set splitstate page}]]
+   set back_button [list [list "Back"\
+     {Click here to go back to the pages menu.}\
+     {set splitstate menu}] first right]
+%   \end{tcl}
+%   
+%   The second part is the loop which lets the user edit the settings. 
+%   \begin{tcl}
+   set state 0
+   while {![info exists retCode]} {
+      switch -exact -- $splitstate off - below {
+         if {[info exists opts(-addbuttons)]} then {
+            set script [dialog::handle $pages typeA $dial helpA\
+              currentpage $optionL [list $opts(-addbuttons)]\
+              $main_buttons]
+         } else {
+            set script [dialog::handle $pages typeA $dial helpA\
+              currentpage $optionL $main_buttons]
+         }
+      } menu {
+         set altpages [list]
+         set n 1
+         foreach item $pages {
+            if {$n} then {
+               lappend altpages $item
+               set n 0
+            } else {
+               lappend altpages {}
+               set n 1
+            }
+         }
+         set script [dialog::handle $altpages typeA $dial helpA\
+             currentpage $optionL $view_button $main_buttons]
+      } page {
+%   \end{tcl}
+%   This is a small test to make sure that the value of |currentpage| 
+%   is valid. If it isn't then one should return to the |menu| state.
+%   \begin{tcl}
+         if {![info exists pageA($currentpage)]} then {
+            set splitstate menu
+            continue
+         }
+         set altpages [list $currentpage $pageA($currentpage)]
+         if {[info exists opts(-addbuttons)]} then {
+            set script [dialog::handle $altpages typeA $dial helpA\
+              currentpage $optionL [list $opts(-addbuttons)]\
+              $back_button]
+         } else {
+            set script [dialog::handle $altpages typeA $dial helpA\
+              currentpage $optionL $back_button]
+         }
+      }
+      if {[catch $script err]} then {
+%   \end{tcl}
+%   The rest of this loop is simply for gracefully handling errors that 
+%   occur when button scripts are evaluated.
+%   \begin{tcl}
+         global errorInfo
+         set errinfo $errorInfo
+         if {$opts(-debug)} then {
+            tclLog "Error in button script '$script'"
+            tclLog $err
+         }
+         dialog::cleanup $dial
+         return -code 1 -errorinfo $errinfo\
+           "Error '$err' when evaluating button script."
+      }
+   }
+%   \end{tcl}
+%   
+%   The third part is as in |make| responsible for constructing the result 
+%   to return (at normal returns). Unlike the case with |make|, the 
+%   return value covers only the items currently in |pages|. This 
+%   part is also responsible for constructing the lists of changed 
+%   pages and items. Two important variables in this are |cS| and |cA|. 
+%   |cS| is an array which is used to test whether a certain item has 
+%   been changed (via |valChanged|), but the only thing that matters is 
+%   whether an entry has been set or not. |cA| is an array indexed by 
+%   page name, whereas the entries are lists of keys of items on that 
+%   page which have been changed.
+%   \begin{tcl}
+   if {$retCode==0} then {
+      set retVal [list]
+      global dialog::mute_types
+      foreach page $delta_pages {
+         foreach name $pageA($page) {
+            lappend cA($page) $keyA($page,$name)
+         }
+      }
+      foreach item [dialog::changed_items $dial] {set cS($item) ""}
+      newforeach {page items} $pages {
+         set res [list]
+         foreach name $items {
+            set T "$page,$name"
+            if {[lsearch -exact ${dialog::mute_types}\
+                 [lindex $typeA($T) 0]] < 0} then {
+               lappend res $keyA($T) [dialog::valGet $dial $T]
+               if {[info exists cS($T)]} then {
+                  lunion cA($page) $keyA($T)
+               }
+            }
+         }
+         lappend retVal $page $res
+      }
+      if {[info exists opts(-changedpages)]} then {
+         upvar 1 $opts(-changedpages) cp
+         set cp [array names cA]
+      }
+      if {[info exists opts(-changeditems)]} then {
+         upvar 1 $opts(-changeditems) ci
+         set ci [array get cA]
+      }
+   }
+   dialog::cleanup $dial
+   return -code $retCode $retVal
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{add_page}
+%   The |add_page| procedure can be called from within the |make_paged| 
+%   procedure to add a new page to the dialog. The syntax is
+%   \begin{quote}
+%     |dialog::add_page| \word{page name} \word{key--value list}
+%       \word{item list} \word{position}\regopt
+%   \end{quote}
+%   Here the \word{page name}, \word{key--value list}, and \word{item 
+%   list} coincide with those parts of a \word{page} argument of 
+%   |make_paged|.
+%   
+%   |add_page| works by modifying the arrays |typeA|, |keyA|, |helpA|, 
+%   and |pageA|, the lists |pages| and |delta_pages|, and the variable 
+%   |splitstate| in the caller's local context. It also uses the value 
+%   in the |dial| variable there as an argument to |valSet| and the 
+%   |opts| array to access the |-alpha7pagelimit| value. All of these 
+%   variables are assumed to function as they do in the |make_paged| 
+%   procedure.
+%   
+%   The \word{position} argument can be used to specify where in the 
+%   |pages| list that the new page should be inserted. It defaults to 
+%   |end|, which puts the new page last. Otherwise the argument should 
+%   be numeric: |0| means put first, |1| means put second, |2| means put 
+%   third, etc.
+%   
+%   If |splitstate| is |below| and the number of pages equals (or is 
+%   greater than) the |-alpha7pagelimit| then the |splitstate| is 
+%   changed to |page|. If |splitstate| is |menu| then it is also 
+%   changed to |page|.
+%   \begin{tcl}
+proc dialog::add_page {page keyvalL itemsL {pos end}} {
+   upvar pageA pageA typeA typeA helpA helpA keyA keyA\
+      dial dial pages pages delta_pages delta_pages\
+      splitstate splitstate opts opts
+   array set local $keyvalL
+   set pageA($page) [list]
+   lunion delta_pages $page
+   foreach item $itemsL {
+      set key [lindex $item 0]
+      set name [lindex $item 2]
+      set keyA($page,$name) $key
+      if {[info exists local($key)]} then {
+         dialog::valSet $dial $page,$name $local($key)
+      } else {
+         dialog::valSet $dial $page,$name ""
+      }
+      set typeA($page,$name) [lindex $item 1]
+      if {[llength $item]>3} then {
+         set helpA($page,$name) [lindex $item 3]
+      }
+      lappend pageA($page) $name
+   }
+   if {$pos!="end"} then {
+      set pages [linsert $pages [expr {2*$pos}] $page $pageA($page)]
+   } else {
+      lappend pages $page $pageA($page)
+   }
+   if {$splitstate=="menu" || ($splitstate=="below" &&\
+       [llength $pages]>2*$opts(-alpha7pagelimit))} then {
+      set splitstate page
+   }
+}
+%   \end{tcl}
+% \end{proc} 
+% 
+% \begin{proc}{delete_pages}
+%   In one sense, this procedure does the opposite of |add_page|, but 
+%   it can be used to achieve different effects as well. Basically it 
+%   takes a list of page names and items, in the format for the first 
+%   argument of |handle|, and returns the same list with some pages 
+%   removed. The syntax is
+%   \begin{quote}
+%     |dialog::delete_pages| \word{pages} \word{delete-list} 
+%     \word{deleted-var}\regopt
+%   \end{quote}
+%   where the \word{delete-list} is the list of names of pages to 
+%   remove. \word{deleted-var} is, if it is given, the name of a 
+%   variable in the caller's local context containing a list of page 
+%   names. The deleted pages are then unioned with this list. The most 
+%   common value for \word{deleted-var} is |delta_pages|.
+%   
+%   If there is a \word{deleted-var} argument then this procedure might 
+%   also modify the |splitstate| variable in the caller's local 
+%   context. A value of |page| is changed to |menu| or |below| depending 
+%   on how meny pages are returned and the value of 
+%   |opts(-alpha7pagelimit)| in the caller's local context. (Both these 
+%   variables must exist if |delete_pages| is called with a 
+%   \word{deleted-var} argument.)
+%   \begin{tcl}
+proc dialog::delete_pages {pages deleteL {deletedvar {}}} {
+   set res [list]
+   if {[string length $deletedvar]} then {upvar 1 $deletedvar diffL}
+   newforeach {page items} $pages {
+      if {[lsearch -exact $deleteL $page] == -1} then {
+         lappend res $page $items
+      } else {
+         lunion diffL $page
+      }
+   }
+   if {[string length $deletedvar]} then {
+      upvar splitstate state opts(-alpha7pagelimit) limit
+      switch -exact -- $state page - menu {
+         if {[llength $res]<=2*$limit} then {
+            set state below
+         } else {
+            set state menu
+         }
+      }
+   }
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{tcl}
+}
+%</dialogspatch&atcl7>
+% \end{tcl}
+% \setnamespace{eemenu}
+% 
+% 
+% \section{Extraction methods}
+% \label{Sec:Extraction}
+% 
+% The extraction method is mainly a source of input for an \eemenu\ 
+% command, but it is also responsible for providing some feedback to the 
+% user in the event that an error occurs. This feedback should take the 
+% simple form of positioning the cursor at the beginning of the first 
+% piece of code that could not be evaluated successfully. Extraction 
+% methods are therefore expected to constantly keep track of the 
+% position where the cursor should be put if an error occurs: this is 
+% called the \emph{safe} position. As no other part of an \eemenu\ 
+% cares about positions, these are regarded as internal matters for 
+% the extraction mathod. The feedback from the main executive is 
+% restricted to answers to the simple questions ``Is the current position 
+% safe?'' and ``Did an error occur?''
+% 
+% Extractions are begun by a call to the 
+% \describestring[proc][eemenu::\meta{method}]{start}|start| 
+% procedure, which has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::start| \word{settings} 
+%   \word{window}\regopt\ 
+%   \begin{regexp}[\regopt]\word{start} \word{end}\end{regexp}
+% \end{quote}
+% The \word{settings} is the |extract_extra| list of the command, and 
+% contain the settings that should be used until the next call to 
+% |start|. This list may contain key--value pairs for details not used 
+% by the current method (but which presumably are used by others), and 
+% it needs not contain key--value pairs for every detail that the 
+% current method uses. Therefore the method should provide defaults 
+% when necessary.
+% 
+% The \word{window} is the name of the window from which code should be 
+% extracted. If this is omitted then the extraction should default to 
+% using the current window. The \word{start} and \word{end} are 
+% positions of the beginning and end respectively of the interval from 
+% which code should be extracted, but they are normally not used. When 
+% these are omitted then the method may do whatever seems reasonable, 
+% but the following algorith is recommended:
+% \begin{itemize}
+%   \item If there is a selection in the window, then substitute the 
+%     position of its beginning for \word{start} and the position of its 
+%     end for \word{end}.
+%   \item Otherwise do the entire window, i.e., let \word{start} be the 
+%     |minPos| and \word{end} be the |maxPos|.
+% \end{itemize}
+% The main reason that \word{start} and \word{end} at all exist as 
+% arguments is that this simplifies testing and debugging, but it also 
+% enables virtual methods to make their own decisions about from where 
+% the code should be extracted.
+% 
+% The |start| procedure returns the file name (complete path, no count) 
+% of the source window. This is passed on to the begin procedures of 
+% other methods, but most of them ignore it anyway. If something is 
+% wrong with the arguments supplied to it then |start| terminates with 
+% an error.
+% 
+% To actually extract a line, the main executive calls the 
+% \describestring[proc][eemenu::\meta{method}]{next}|next| procedure, 
+% which has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::next| \word{is safe} 
+% \end{quote}
+% This procedure returns the next extractable code line, or terminates 
+% with return code 9 if there is no more line. 
+% \changes{v\,0.2}{2002/12/26}{Throwing abort instead of error, since
+%   it otherwise catches too many real errors. (LH)}
+% The \word{is safe} argument is |1| if the current position should be 
+% considered safe and |0| otherwise.
+% 
+% Extraction is terminated by a call to the
+% \describestring[proc][eemenu::\meta{method}]{finish}|finish| 
+% procedure. This has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::finish| \word{error?} 
+% \end{quote}
+% where the \word{error?} argument is |1| if there was an error in 
+% evaluation and |0| otherwise. This procedure does not return any data.
+% 
+% 
+% \subsection{Some position utilities}
+% 
+% \textit{\textbf{Note:} The procedures in this subsection were probably 
+% not a good idea to start with, so they are no longer included by 
+% default.} For the historically interested reader, it may be remarked 
+% that the code below predates the addition in \AlphaTcl\,7.6 of |-w| 
+% options to most standard position procedures.
+% 
+% Extraction procedures should generally not assume that the window from 
+% which code is being extracted is the current window. The reason for 
+% this is that if \Alpha\ is evaulating internally then the extracted 
+% code may bring some other window to front or, more commonly, create a 
+% new window (which will by default go on top of all others). This is 
+% kind of tricky since many of \Alpha's commands for working with 
+% positions implicitly assume that the positions are in the current 
+% window, but it can be delt with by storing positions are a pair 
+% |{|\word{row} \word{column}|}| instead, as the |rowColToPos| command 
+% which converts this to a standard position does accept a window 
+% argument.
+% 
+% Handling explicitly such positions is however more work that it 
+% should be, so here follows some generic utility procs to deal with 
+% positions specified as lists with the structure
+% \begin{quote}
+%   \word{window} \word{row} \word{column} \word{standard pos}\regopt
+% \end{quote}
+% Here, \word{window} is a full window name (as returned by the 
+% |win::Current| procedure), whereas \word{row} and \word{column} 
+% are integers. The optional \word{standard pos} element is the standard 
+% position (that which should be used in calls to \Alpha\ primitives) if 
+% it has been computed by a call to |rowColToPos|. If it has not been 
+% computed then this element should not be present in the list.
+% 
+% For \AlphaTk, there isn't much point in a distinction between the 
+% ``standard'' and row--column position formats as standard 
+% positions there are composed from a row and a column anyway.
+% 
+% These procedures are put in the 
+% \describestring[namespace]{pos}|pos| namespace, as there is nothing 
+% in them that is specific to \eemenu.
+% \begin{tcl}
+%<*rowcol>
+namespace eval pos {}
+% \end{tcl}
+% \setnamespace{pos}
+% 
+% \begin{proc}{incr_row}
+% \begin{proc}{incr_col}
+%   The |incr_row| and |incr_col| procedures increment the row and 
+%   column respectively component of a position list. Their syntaxes are
+%   \begin{quote}
+%     |pos::incr_row| \word{pos-var} \word{row increment}\\
+%     |pos::incr_col| \word{pos-var} \word{column increment}
+%   \end{quote}
+%   Incrementing the column can not cause the row to be incremented. 
+%   Incrementing the row sets the column to |0|. The minimal column 
+%   value is |0| and the minimal row value is |1|. There are no 
+%   maximums in either.
+%   \begin{tcl}
+proc pos::incr_row {var diff} {
+   upvar 1 $var V
+   set t [expr {[lindex $V 1] + $diff}]
+   if {$t<1} then {
+      set V [list [lindex $V 0] 1 0]
+   } else {
+      set V [list [lindex $V 0] $t 0]
+   }
+}
+proc pos::incr_col {var diff} {
+   upvar 1 $var V
+   set t [expr {[lindex $V 2] + $diff}]
+   set V [lrange $V 0 1]
+   if {$t<0} then {lappend V 0} else {lappend V $t}
+}
+%   \end{tcl}
+% \end{proc}\end{proc}
+% 
+% \begin{proc}{get_standard}
+%   The |get_standard| procedure returns the standard position 
+%   corresponding the row--column position stored in a variable. It has 
+%   the syntax
+%   \begin{quote}
+%     |pos::get_standard| \word{pos-var}
+%   \end{quote}
+%   \begin{tcl}
+proc pos::get_standard {var} {
+   upvar 1 $var V
+   if {[llength $V]<4} then {
+      lappend V [eval [list rowColToPos -w] $V]
+   }
+   return [lindex $V 3]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{polyset}
+%   The |polyset| procedure is used to convert a list of standard 
+%   positions in a certain window to row--column form and store those 
+%   in variables, also given as a list. The syntax is
+%   \begin{quote}
+%     |pos::polyset| \word{window} \word{var-list} \word{pos-list}
+%   \end{quote}
+%   If there are more elements in the \word{var-list} than in the 
+%   \word{pos-list} then the remaining elements will not be set.
+%   
+%   The reason this procedure works on lists is that \Alpha\ cannot 
+%   (or at least will not) determine the row and column for a position 
+%   unless that is in the current window. Therefore this procedure might 
+%   have to temporarily bring some other window to front to do its stuff.
+%   \begin{tcl}
+proc pos::polyset {win varL posL} {
+   if {$win != [win::Current]} then {
+      set top [win::Current]
+      bringToFront $win
+   }
+   set N [llength $varL]
+   if {$N > [llength $posL]} then {set N [llength $posL]}
+   for {set n 0} {$n < $N} {incr n} {
+      upvar 1 [lindex $varL $n] V
+      set V [concat [list $win]\
+        [posToRowCol [lindex $posL $n]] [lindex $posL $n]]
+   }
+   if {[info exists top]} then {bringToFront $top}
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{RC_compare}
+%   The |RC_compare| procedure can be used to compare two row--column 
+%   positions. The syntax is
+%   \begin{quote}
+%     |pos::RC_compare| \word{first pos} \word{second pos}
+%   \end{quote}
+%   and the result is as for |string compare|. It is an error if the 
+%   \word{window} elements of the two arguments are different.
+%   \begin{tcl}
+proc pos::RC_compare {a b} {
+   if {"[lindex $a 0]" != "[lindex $b 0]"} then {
+      error "Not the same <window>."
+   }
+   if {[lindex $a 1] < [lindex $b 1]} then {
+      return -1
+   } elseif {[lindex $a 1] > [lindex $b 1]} then {
+      return 1
+   } elseif {[lindex $a 2] < [lindex $b 2]} then {
+      return -1
+   } elseif {[lindex $a 2] > [lindex $b 2]} then {
+      return 1
+   } else {
+      return 0
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}[eemenu]{get_extract_positions}
+%   The |get_extract_positions| procedure interprets the three optional 
+%   arguments for a |start| procedure and sets two specified variables 
+%   in the caller's local context to the row--column positions 
+%   corresponding to the beginning and the end respectively of interval 
+%   from which code should be extracted. The syntax is
+%   \begin{quote}
+%     |eemenu::get_extract_positions| \word{start-var} \word{end-var} 
+%     \word{window}\regopt\ 
+%     \begin{regexp}[\regopt]\word{start} \word{end}\end{regexp}
+%   \end{quote}
+%   This procedure returns the complete window name (including count).
+%   \begin{tcl}
+proc eemenu::get_extract_positions {startvar endvar {win ""}\
+  {startpos ""} {endpos ""}} {
+   if {![string length $win]} then {set win [win::Current]}
+   if {![string length $startpos]} then {
+      set startpos [getPos -w $win]
+      set endpos [selEnd -w $win]
+      if {[pos::compare $startpos == $endpos]} then {
+         set startpos [minPos]
+         set endpos [maxPos -w $win]
+      }
+   }
+   uplevel 1 [list pos::polyset $win [list $startvar $endvar]\
+     [list $startpos $endpos]]
+   return $win
+}
+%   \end{tcl}
+% \end{proc}
+%
+% \begin{proc}[eemenu]{get_text}
+%   The |get_text| procedure is mainly a wrapper around the |getText| 
+%   command. The syntax is
+%   \begin{quote}
+%     |eemenu::get_text| \word{start-var} \word{end-var}
+%   \end{quote}
+%   where \word{start-var} and \word{end-var} are names of variables 
+%   in the caller's local context of row--column positions. The return 
+%   value is the text between those positions.
+%   \begin{tcl}
+proc eemenu::get_text {startvar endvar} {
+   upvar 1 $startvar S $endvar E
+   if {"[lindex $S 0]" != "[lindex $E 0]"} then {
+      error "Not the same <window>."
+   }
+   getText -w [lindex $S 0] [pos::get_standard S] [pos::get_standard E]
+}
+%</rowcol>
+%   \end{tcl}
+% \end{proc}
+%
+% 
+% 
+% 
+% \subsection{Raw extraction}
+% 
+% \begin{arrayentry}[eemenu]{extract}{raw}
+%   Raw extraction has no details.
+%   \begin{tcl}
+set eemenu::extract(raw) [list]
+namespace eval eemenu::raw {}
+%   \end{tcl}
+% \end{arrayentry}
+% \setnamespace{eemenu::raw}
+% 
+% \subsubsection{Row--column based extraction}
+% 
+% This was my original implementation of raw extraction. Unfortunately 
+% it seems that |rowColToPos| is rather slow in \AlphaEight. Hence 
+% there is an alternative implementation below.
+% 
+% \begin{proc}{start}
+% \begin{variable}{cur_pos}
+% \begin{variable}{safe_pos}
+% \begin{variable}{end_pos}
+%   As this |start| procedure has no details to deal with, it only 
+%   has to initialize the three position variables |cur_pos| (current 
+%   position), |safe_pos| (most recent safe position), and |end_pos| 
+%   (the end position).
+%   \begin{tcl}
+%<*rowcol>
+proc eemenu::raw::start {details args} {
+   eemenu::multiupvar cur_pos safe_pos end_pos
+   set win\
+     [eval [list eemenu::get_extract_positions cur_pos end_pos] $args]
+   set safe_pos $cur_pos
+   return [win::StripCount $win]
+}
+%   \end{tcl}
+% \end{variable}\end{variable}\end{variable}\end{proc}
+% 
+% 
+% \begin{proc}{next}
+%   The |next| procedure is also as simple as it can possibly be. The 
+%   only nontrivial thing about it is that it removes carriage returns 
+%   and linefeeds at the end of the text returned by 
+%   |eemenu::get_text|.
+%   \begin{tcl}
+proc eemenu::raw::next {at_safe} {
+   eemenu::multiupvar cur_pos safe_pos end_pos
+   if {[pos::RC_compare $cur_pos $end_pos]>=0} then {return -code 9 "Done"}
+   set this $cur_pos
+   if {$at_safe} then {set safe_pos $this}
+   pos::incr_row cur_pos 1
+   if {[pos::RC_compare $cur_pos $end_pos]>0} then {
+      set cur_pos $end_pos
+   }
+   string trimright [eemenu::get_text this cur_pos] "\n\r"
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{finish}
+%   The |finish| procedure is slightly trickier that it has to be. 
+%   Rather than doing a |goto| to the safe position, it does a |select| 
+%   followed by a |markHilite|, with the end position as end, so that 
+%   the mark will be at the end.
+%   \begin{tcl}
+proc eemenu::raw::finish {was_error} {
+   if {!$was_error} then {return}
+   eemenu::multiupvar safe_pos end_pos
+   bringToFront [lindex $safe_pos 0]
+   select [pos::get_standard safe_pos] [pos::get_standard end_pos]
+   markHilite
+}
+%</rowcol>
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsubsection{Queued extraction}
+% 
+% This alternative implementation of the \textsf{raw} method is based on 
+% extracting a bit more than one would usually need and store the 
+% surplus in a queue of lines that haven't been extracted yet.
+% 
+% \begin{variable}{line_queue}
+% \begin{variable}{window}
+% \begin{variable}{cur_pos}
+% \begin{variable}{from_pos}
+% \begin{variable}{safe_pos}
+% \begin{variable}{end_pos}
+%   The |window| variable holds the name of the window from which text 
+%   is being extracted. 
+%   The |line_queue| variable is the text that has been gotten from the 
+%   window but not yet been properly extracted, split into lines. The 
+%   last line is incomplete and thus text must be added to the queue 
+%   whenever it has length less than two. 
+%   
+%   The |cur_pos| variable is the standard position of the beginning of 
+%   the first line in |line_queue|. The |from_pos| variable is the 
+%   first position after the last piece of data in |line_queue|. The 
+%   |safe_pos| is the last position reported to be safe and the |end_pos| 
+%   is the position at which extraction should stop.
+% \end{variable}\end{variable}\end{variable}\end{variable}\end{variable}
+% \end{variable}
+% 
+% \begin{proc}{start}
+%   As this |start| procedure has no details to deal with, it only 
+%   has to initialize the six above variables.
+%   \changes{v\,0.3}{2003/05/28}{Storing the tail of the file name, not 
+%     the whole path. This avoids unnecessary file system accesses. (LH)
+%     Cf. bug 919.}
+%   \changes{v\,0.3.1}{2003/07/19}{Using complete paths in \AlphaTk, due 
+%     to bug~1026. (LH)}
+%   \begin{tcl}
+%<*!rowcol>
+proc eemenu::raw::start {details {win ""} {startpos ""} {endpos ""}} {
+   eemenu::multiupvar line_queue window cur_pos from_pos safe_pos end_pos
+   global alpha::platform
+   if {![string length $win]} then {set win [win::Current]}
+   switch -- ${alpha::platform} alpha {
+      set win_tail [file tail $win]
+   } default {
+      set win_tail $win
+   }
+   if {![string length $startpos]} then {
+      set startpos [getPos -w $win_tail]
+      set endpos [selEnd -w $win_tail]
+      if {[pos::compare $startpos == $endpos]} then {
+         set startpos [minPos]
+         set endpos [maxPos -w $win_tail]
+      }
+   }
+   set line_queue [list ""]
+   set window $win_tail
+   set cur_pos $startpos
+   set from_pos $startpos
+   set safe_pos $startpos
+   set end_pos $endpos
+   return [win::StripCount $win]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}{next}
+%   The |next| procedure first retrieves data from the window (if 
+%   necessary) and then it extracts the first line from the queue. Data 
+%   beyond the |end_pos| are never read into the queue.
+%   
+%   There are two versions of this procedure to account for the new 
+%   addition of a |-w| option to |pos::compare| and |pos::math|.
+%   \changes{v\,0.1.2}{2002/12/26}{Fixed a bug concerning pos::compare, 
+%     where string compare syntax was used. (LH, who is sure he has 
+%     fixed this bug before.)}
+%   \begin{tcl}
+%<*atcl7>
+if {[alpha::package vsatisfies -loose\
+  [alpha::package versions AlphaTcl] 7.6d2]} then {
+%</atcl7>
+   proc eemenu::raw::next {at_safe} {
+      eemenu::multiupvar line_queue window cur_pos from_pos safe_pos\
+        end_pos
+      if {[llength $line_queue] < 2} then {
+         if {[pos::compare -w $window $cur_pos >= $end_pos]} then {
+            return -code 9 "Done"
+         }
+         set next_pos [pos::math -w $window $from_pos + 1024]
+         if {[pos::compare -w $window $next_pos >= $end_pos]} then {
+            set next_pos $end_pos
+         }
+         set text [lindex $line_queue end]
+         append text [getText -w $window $from_pos $next_pos]
+         set line_queue [split $text "\n\r"]
+         set from_pos $next_pos
+      }
+      if {$at_safe} then {set safe_pos $cur_pos}
+      set line [lindex $line_queue 0]
+      set line_queue [lreplace $line_queue 0 0]
+      set cur_pos\
+        [pos::math -w $window $cur_pos + [expr {[string length $line]+1}]]
+      set line
+   }
+%<*atcl7>
+} else {
+   proc eemenu::raw::next {at_safe} {
+      eemenu::multiupvar line_queue window cur_pos from_pos safe_pos end_pos
+      if {[llength $line_queue] < 2} then {
+         if {[pos::compare $cur_pos >= $end_pos]} then {
+            return -code 9 "Done"
+         }
+         set next_pos [pos::math $from_pos + 1024]
+         if {[pos::compare $next_pos >= $end_pos]} then {
+            set next_pos $end_pos
+         }
+         set text [lindex $line_queue end]
+         append text [getText -w $window $from_pos $next_pos]
+         set line_queue [split $text "\n\r"]
+         set from_pos $next_pos
+      }
+      if {$at_safe} then {set safe_pos $cur_pos}
+      set line [lindex $line_queue 0]
+      set line_queue [lreplace $line_queue 0 0]
+      set cur_pos [pos::math $cur_pos + [expr {[string length $line]+1}]]
+      set line
+   }
+}
+%</atcl7>
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{finish}
+%   This |finish| procedure clears the |line_queue|. It should usually 
+%   be empty already, but better safe than sorry!
+%   \begin{tcl}
+proc eemenu::raw::finish {was_error} {
+   eemenu::multiupvar line_queue window safe_pos end_pos
+   set line_queue [list]
+   if {!$was_error} then {return}
+   bringToFront $window
+   select $safe_pos $end_pos
+   markHilite
+}
+%</!rowcol>
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Regexp extraction}
+% 
+% Regular expression extraction adds two features to what the raw 
+% extraction does. One is the filter---only lines meeting a certain 
+% condition are extracted, the others are skipped---and the other is the 
+% substitution---each line returned is first fed through a |regsub|. 
+% It would of course be possible to implement this from scratch, but it 
+% is more instructive (and slightly shorter) to base it on the |raw| 
+% method.
+% 
+% \begin{arrayentry}[eemenu]{extract}{regexp}
+%   Regular expression extraction has four detail settings.
+%   \begin{tcl}
+set eemenu::extract(regexp) [list\
+%   \end{tcl}
+%   The first 
+%   two are used in a ``filter'' that selects which lines will be 
+%   extracted:
+%   \begin{details}{Extraction}
+%     \detailitem{filter_mode}
+%       This is the mode of operation for the filter. There are three 
+%       possible values: |off| (no filtering, all lines are extracted), 
+%       |grep| (only lines matching the |filterRE| regular expression 
+%       are extracted), and |anti-grep| (only lines \emph{not} matching 
+%       the |filterRE| regular expression are extracted).
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Filter mode"\
+    filter_mode [list menu [list off grep anti-grep]] off]\
+%       \end{tcl}
+%     \detailitem{filterRE}
+%       This is the regular expression for the filter
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Filter regular expression"\
+    filterRE var]\
+%       \end{tcl}
+%   \end{details}
+%   The last two are used in a straightforward |regsub| that is applied 
+%   to each extracted line before it is returned to the main executive.
+%   \begin{details}{Extraction}
+%     \detailitem{searchRE}
+%       This is the regular expression searched for in the line.
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Search (regexp):" searchRE var]\
+%       \end{tcl}
+%     \detailitem{replaceRE}
+%       This is the regular expression for the replacement.
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Replace (regexp):" replaceRE var]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::regexp {}
+% \end{tcl}
+% \setnamespace{eemenu::regexp}
+% 
+% \begin{proc}{start}
+% \begin{arrayvar}{detA}
+%   This |start| procedure stores its details in the |D| array and calls 
+%   the |evalmemu::raw::start| procedure to handle everything else. 
+%   Note how it provides defaults for the detail settings it 
+%   unconditionally uses, in case these are not present in the 
+%   \word{details}.
+%   \begin{tcl}
+proc eemenu::regexp::start {details args} {
+   global eemenu::regexp::detA
+   array set eemenu::regexp::detA\
+     {filter_mode off searchRE {} replaceRE {}}
+   array set eemenu::regexp::detA $details
+   eval [list eemenu::raw::start $details] $args
+}
+%   \end{tcl}
+% \end{arrayvar}\end{proc}
+% 
+% \begin{proc}{next}
+%   The |next| procedure starts with a loop that continues until it 
+%   finds a line that passes the filter. 
+%   \begin{tcl}
+proc eemenu::regexp::next {at_safe} {
+   upvar #0 eemenu::regexp::detA D
+   while {1} {
+      set line [eemenu::raw::next $at_safe]
+      switch -- $D(filter_mode) {
+        off {break}
+        grep {if {[regexp -- $D(filterRE) $line]} then {break}}
+        anti-grep {
+           if {![regexp -- $D(filterRE) $line]} then {break}
+        }
+      }
+   }
+%   \end{tcl}
+%   Then it applies the |regsub| to the line.
+%   \begin{tcl}
+   regsub -all -- $D(searchRE) $line $D(replaceRE) line
+   return $line
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{finish}
+%   The |finish| procedure simply calls its equivalent for the |raw| 
+%   method.
+%   \begin{tcl}
+proc eemenu::regexp::finish {err} {eemenu::raw::finish $err}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% 
+% \subsection{Docstrip extraction}
+% 
+% Docstrip extraction is a descendant of the extraction mechanisms from 
+% the \textsf{dtxload} package. 
+% 
+% 
+% \begin{arrayentry}[eemenu]{extract}{docstrip}
+%   There are three detail settings for |docstrip| extraction.
+%   \begin{tcl}
+set eemenu::extract(docstrip) [list\
+%   \end{tcl}
+%   \begin{details}{Extraction}
+%     \detailitem{filePatL}
+%       This is a list of file patterns that the file name is tested 
+%       against using |string match|. If none of them fits then 
+%       extraction is stopped before is begins.
+%       \begin{tcl}
+  [eemenu::define_detail Extract "File patterns" filePatL var\
+    "*.dtx" "List of glob-style file patterns the window must match"]\
+%       \end{tcl}
+%     \detailitem{lookAtEnvs}
+%       If this is checked then extraction will be further conditioned 
+%       by that the code line is in one of the environements listed in 
+%       the next setting. I find this very convenient, since I often 
+%       forget to comment out some lines here and there in the file.
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Filter by environments"\
+    lookAtEnvs flag 0]\
+%       \end{tcl}
+%     \detailitem{sourceEnvsL}
+%       The list of environments from which code may be extracted.
+%       \begin{tcl}
+  [eemenu::define_detail Extract "Source environments"\
+    sourceEnvsL var {tcl tcl*}]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::docstrip {}
+% \end{tcl}
+% \setnamespace{eemenu::docstrip}
+% 
+% \begin{variable}{cur_pos}
+% \begin{variable}{safe_pos}
+% \begin{variable}{end_pos}
+%   The |cur_pos|, |safe_pos|, and |end_pos| variables are as for the 
+%   |raw| mathod. A special case is however that |safe_pos| will never 
+%   be inside a verbatim section, even if it is safe there, since the 
+%   extraction wouldn't remember that is was inside a verbatim section 
+%   if it was restarted. Therefore the \word{is safe} argument to |next| 
+%   will be ignored in verbatim sections.
+%   
+%   These variables are only used by the \Module{rowcol} variant.
+% \end{variable}\end{variable}\end{variable}
+% 
+% \begin{variable}{module_included}
+% \begin{variable}{in_code_env}
+% \begin{variable}{in_verbatim}
+%   The |module_included| variable keeps track of whether the current 
+%   position is in an included module. It is |1| if the current 
+%   position should be included and |0| if it shouldn't. 
+%   The |in_code_env| variable is used for keeping track of the markup 
+%   context of the currently considered line in the file when the 
+%   |lookAtEnvs| setting is on. |in_code_env| is set to |1| when a 
+%   |\begin{|\meta{env}|}| for an \meta{env} in the |sourceEnvsL| is 
+%   scanned, and set to |0| when an |\end{|\meta{env}|}| is scanned.
+%   The |in_verbatim| variable is |1| when the current position is in 
+%   a \textsf{docstrip} verbatim module and |0| (which is the normal 
+%   case) otherwise.
+% \end{variable}\end{variable}\end{variable}
+% 
+% \begin{variable}{module_stack}
+% \begin{variable}{next_module_idx}
+%   The |module_stack| variable is keeps track of how modules 
+%   are nested around the currently considered line. The variable is a 
+%   stack implemented as a list in which the last element corresponds to 
+%   the innermost module. Each element in this list is itself a list 
+%   with the structure
+%   \begin{quote}
+%     \word{expression} \word{start pos.} \word{previous}\regopt
+%   \end{quote}
+%   The \word{expression} is the guard expression, as a string. The 
+%   \word{start pos.} is the (row--column) position in the file where 
+%   the module started. 
+%   Finally, the \word{previous} is a boolean value which 
+%   records the inclusion status (value of |module_included|) 
+%   that was in force before the module was entered.
+%   
+%   The |next_module_idx| variable holds the index in the 
+%   |module_stack| list of the next module whose expression has not yet 
+%   been evaluated; it is equal to |llength ${module_stack}| if all 
+%   module expressions have been evaluated. Those elements in the 
+%   |module_stack| list which have index $\geq$ |next_module_idx| do 
+%   not have a \word{previous} element.
+% \end{variable}\end{variable}
+% 
+% 
+% \begin{proc}{start}
+%   The |docstrip| extraction |start| procedure is by far the most 
+%   complicated, due to the many mechanisms it must initialize.
+%   \begin{tcl}
+proc eemenu::docstrip::start {details args} {
+   eemenu::multiupvar detA module_included module_stack\
+     next_module_idx in_code_env in_verbatim 
+%   \end{tcl}
+%   First there are the position variables
+%   \begin{tcl}
+%<*rowcol>
+   eemenu::multiupvar cur_pos safe_pos end_pos
+   set win [win::StripCount\
+     [eval [list eemenu::get_extract_positions cur_pos end_pos] $args]]
+   set safe_pos $cur_pos
+%</rowcol>
+%<*!rowcol>
+   set win [eval [list eemenu::raw::start $details] $args]
+%</!rowcol>
+%   \end{tcl}
+%   and secondly the setting details
+%   \begin{tcl}
+   array set detA {filePatL *.dtx lookAtEnvs 0}
+   array set detA $details
+%   \end{tcl}
+%   Then the method must check whether the detail setting permit 
+%   extracting from this window. If not, the procedure raises an error 
+%   (which isn't caught by |eemenu::main|).
+%   \begin{tcl}
+   set ok 0
+   foreach pat $detA(filePatL) {
+      if {[string match $pat $win]} then {set ok 1; break}
+   }
+   if {!$ok} then {
+      status::msg "Can't extract from that window. Must be\
+        [join $detA(filePatL) " or "]."
+      return -code 9 "Bad window name"
+   }
+%   \end{tcl}
+%   Now that it has been established that extraction will take place, 
+%   the various variables defining the ``state of \textsf{dostrip}'' 
+%   must be initialised. Four of them have standard values at start and 
+%   present no problem.
+%   \begin{tcl}
+   set module_included 1
+   set in_verbatim 0
+   set module_stack [list]
+   set next_module_idx 0
+%   \end{tcl}
+%   The |in_code_env| variable is however another matter, as the 
+%   reasonable value for it depends very much on what characters follow 
+%   the start position. The special value |-1| for |in_code_env| means 
+%   ``change to |0| or |1| as appropriate when you get the first line''.
+%   \begin{tcl}
+   if {!$detA(lookAtEnvs)} then {
+      set in_code_env 1
+   } else {
+%<*rowcol>
+      set t_pos $cur_pos
+      pos::incr_col t_pos 2
+      switch -regexp -- [eemenu::get_text cur_pos t_pos] {
+         ^%< {set in_code_env 1}
+         ^%  {set in_code_env 0}
+         default {set in_code_env 1}
+      }
+%</rowcol>
+%<!rowcol>      set in_code_env -1
+      set detA(envsRE) {\\(begin|end) *\{(}
+      foreach env $detA(sourceEnvsL) {
+         append detA(envsRE) [quote::Regfind $env] "|"
+      }
+      append detA(envsRE) ")\}(.*)\$"
+   }
+   return $win
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{arrayentry}{detA}{envsRE}
+%   The |envsRE| entry in the |detA| array is used for storing the 
+%   regular expression that is used when searching for code environment 
+%   markup in comment lines.
+% \end{arrayentry}
+% 
+% Next comes a couple of utility procs that are called from the |next| 
+% procedure.
+% 
+% \begin{arrayvar}{known}[expression]
+%   The |known| array records the values of all known expressions, 
+%   i.e., those expressions about whose values the user has been 
+%   inquired. The entries are either |0| (for ``don't include'') or 
+%   |1| (for ``include''). Note that this array is not initialised by 
+%   the |start| procedure---instead is cleared by the |finish| 
+%   procedure if no error occurred.
+% \end{arrayvar}
+% 
+% \begin{proc}{eval_guard}
+%   The |eval_guard| procedure takes the string that is a guard 
+%   expression as argument. It returns |1| if the expression evaluates 
+%   to true and |0| if it evaluates to false.
+%   
+%   If the expression has an entry in the |known| array then the 
+%   |eval_guard| procedure returns that value, and if it does not the 
+%   user is inquired for the value.
+%   \begin{tcl}
+proc eemenu::docstrip::eval_guard {e} {
+   global eemenu::docstrip::known
+   if {![info exists eemenu::docstrip::known($e)]} then {
+      set eemenu::docstrip::known($e)\
+        [dialog::yesno "Should <$e> modules be included?"]
+   }
+   set eemenu::docstrip::known($e)
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}{push_module}
+%   The |push_module| procedure pushes a block module onto the 
+%   module stack, but it does not modify the value of 
+%   |module_included|. The syntax is
+%   \begin{quote}
+%     |eemenu::docstrip::push_module| \word{expression} \word{position}
+%   \end{quote}
+%   where \word{expression} is the expression string and 
+%   \word{position} is the position (row--column or standard, depending 
+%   on which kind of positions are being used) where the guard begins.
+%   \begin{tcl}
+proc eemenu::docstrip::push_module {e p} {
+   global eemenu::docstrip::module_stack
+   lappend eemenu::docstrip::module_stack [list $e $p]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{pop_module}
+%   The |pop_module| procedure pops a block module off the module 
+%   stack and checks that the modules are properly nested. Its 
+%   syntax is
+%   \begin{quote}
+%     |eemenu::docstrip::pop_module| \word{expression} \word{position}
+%   \end{quote}
+%   where \word{expression} is the expression string of the module to 
+%   pop and \word{position} is the position (row--column or standard, 
+%   depending on which kind of positions are being used) where the 
+%   end of module guard begins.
+%   
+%   If the module nesting is incorrect then the user is presented with 
+%   a dialog with buttons for pushing the positions of the incorrect 
+%   modules. It is not an error if the module stack is empty, since it 
+%   is perfectly reasonable that the beginning of the code to evaluate 
+%   is in the middle of a module.
+% 
+%   \changes{ \textsf{dtxload} v\,1.11}{2001/05/11}{Corrected ugly bug 
+%      which messed up the value of \texttt{next\_module\_idx}. (LH)}
+%   \begin{tcl}
+proc eemenu::docstrip::pop_module {e p} {
+   eemenu::multiupvar module_stack module_included next_module_idx
+   set len [llength $module_stack]
+   if {$len==0} then {return}
+   set L [lindex $module_stack [expr {$len-1}]]
+   if {[lindex $L 0] != $e} then {
+      switch [buttonAlert "Module nesting error: <*[lindex $L 0]>\
+         module ended by </$e>. For which guards should the positions\
+         be pushed?" None Start End Both]\
+      {
+         Start {eemenu::docstrip::push_bookmarks [lindex $L 1]}
+         End {eemenu::docstrip::push_bookmarks $p}
+         Both {eemenu::docstrip::push_bookmarks [lindex $L 1] $p}
+      }
+   }
+   set module_stack [lreplace $module_stack end end]
+   if {$len<=$next_module_idx} then {
+      set next_module_idx [llength $module_stack]
+   }
+   if {[llength $L]>2} then {
+      set module_included [lindex $L 2]
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{push_bookmarks}
+%   The |push_bookmarks| procedure pushes one or several positions 
+%   (row--column or standard, depending on which kind of positions are 
+%   being used) onto the bookmarks stack. The arguments are the 
+%   positions to push.
+%   \changes{v\,0.3}{2003/05/28}{Changed some \texttt{win::Current} to 
+%     \texttt{win::CurrentTail}. This avoids unnecessary file system 
+%     accesses. (LH) Cf. bug 919.}
+%   \begin{tcl}
+proc eemenu::docstrip::push_bookmarks {args} {
+   global markStack markName
+%<!rowcol>   upvar #0 eemenu::raw::window win
+   set topWin [win::CurrentTail]
+   foreach pos $args {
+      set name mark$markName
+      incr markName
+%<*rowcol>
+      set win [lindex $pos 0]
+      if {"[win::CurrentTail]" != "$win"} then {bringToFront $win}
+      createTMark $name [pos::get_standard pos]
+      set fileName [win::Current]
+      set markStack [linsert $markStack 0\
+        [list $fileName $name [pos::get_standard pos]]]
+%</rowcol>
+%<*!rowcol>
+      if {[string compare [win::CurrentTail] $win]}\
+      then {bringToFront $win}
+      createTMark $name $pos
+      set fileName [win::Current]
+      set markStack [linsert $markStack 0 [list $fileName $name $pos]]
+%</!rowcol>
+   }
+   if {[string compare [win::CurrentTail] $topWin]}\
+   then {bringToFront $topWin}
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{update_included}
+%   Simply pushing a module onto the module stack does not update the 
+%   |module_included| variable; that is instead done by the 
+%   |update_included| procedure, which should be called right before the 
+%   value of |module_included| is used. The reason for this arrangement 
+%   is that it avoids evaluating guard expressions whose values do not 
+%   matter.
+%   
+%   |update_included| has no arguments.
+%   \begin{tcl}
+proc eemenu::docstrip::update_included {} {
+   eemenu::multiupvar module_stack module_included next_module_idx
+   while {$module_included && $next_module_idx<[llength $module_stack]} {
+      set L [lindex $module_stack $next_module_idx]
+      lappend L $module_included
+      set module_stack\
+        [lreplace $module_stack $next_module_idx $next_module_idx $L]
+      incr next_module_idx
+      set module_included [eemenu::docstrip::eval_guard [lindex $L 0]]
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{variable}{end_verb_line}
+%   The |end_verb_line| variable stores the line which terminates 
+%   verbatim mode. It is only initialised when verbatim mode is begun.
+% \end{variable}
+% 
+% \begin{proc}{next}
+%   The overall structure of the |next| procedure is that of an endless 
+%   loop, from which the code |break|s out when it has found an 
+%   extractable line. Should this loop run into the |end_pos| it 
+%   terminates instead with a |return -code 9|. The local variable 
+%   |next_pos| stores the position of the beginning of the next line.
+%   \begin{tcl}
+proc eemenu::docstrip::next {is_safe} {
+   eemenu::multiupvar detA module_included in_code_env\
+     in_verbatim module_stack next_module_idx end_verb_line
+%<*rowcol>
+   eemenu::multiupvar cur_pos safe_pos end_pos 
+   set next_pos $cur_pos
+%</rowcol>
+%<!rowcol>   upvar #0 eemenu::raw::cur_pos raw_cur_pos
+   while {1} {
+%<*rowcol>
+      pos::incr_row next_pos 1
+      if {[pos::RC_compare $next_pos $end_pos]>0} then {
+         set next_pos $end_pos
+      }
+      if {[pos::RC_compare $cur_pos $next_pos]>=0} then {
+         return -code 9 "Done"
+      }
+%   \end{tcl}
+%   No matter what state the extraction process is in, it will need to 
+%   look at the current line, so it is extracted and put in the |line| 
+%   variable. Spaces at end of the line are ignored for compatibility 
+%   with the \TeX\ \package{docstrip} (\TeX\ throws away spaces at the 
+%   end of a line as part of the reading process, so \package{docstrip} 
+%   cannot see them).
+%   \begin{tcl}
+      set line [string trimright [eemenu::get_text cur_pos next_pos]\
+        "\r\n "]
+%</rowcol>
+%   \end{tcl}
+%   In the standard positions implementation, getting text from the 
+%   window is instead done by calling |eemenu::raw::next|. The position 
+%   at the beginning of the line (the value of |eemenu::raw::cur_pos| 
+%   before the call to |eemenu::raw::next|) is saved since it might be 
+%   needed for making bookmarks later.
+%   \begin{tcl}
+%<*!rowcol>
+      set cur_pos $raw_cur_pos
+      set line [eemenu::raw::next [expr {$is_safe && !$in_verbatim}]]
+      set line [string trimright $line "\r\n "]
+      if {$in_code_env<0} then {
+         switch -glob -- $line {
+           %<* {set in_code_env 1} 
+           %*  {set in_code_env 0} 
+           default {set in_code_env 1}
+         }
+      }
+%</!rowcol>
+%   \end{tcl}
+%   Verbatim mode is pretty simple. Either a line is an extractable 
+%   code line or it is the end of verbatim mode guard.
+%   \begin{tcl}
+      if {$in_verbatim} then {
+         if {![string compare $line $end_verb_line]} then {
+            set in_verbatim 0
+         } elseif {$module_included && $in_code_env} then {
+            break
+         }
+      } else {
+%   \end{tcl}
+%   In non-verbatim mode, lines are classified based on the first few 
+%   characters of the line.
+%   \begin{tcl}
+         switch -glob -- $line {
+%   \end{tcl}
+%   Lines that begin with |%<<| are \package{docstrip} guard lines that 
+%   start verbatim mode. The part of the guard line which comes after 
+%   the |%<<| is called an end-tag. Verbatim mode ends with the next line 
+%   which consists of a percent character followed by this end-tag
+%   \begin{tcl}
+            %<<* {
+               eemenu::docstrip::update_included
+%<*rowcol>
+               if {$module_included && $in_code_env && $is_safe} then {
+                  set safe_pos $cur_pos
+               }
+%</rowcol>
+               set in_verbatim 1
+               set end_verb_line "%[string range $line 3 end]"
+            }
+%   \end{tcl}
+%   Lines that begin with |%<*| or |%</| are \package{docstrip} guard 
+%   lines that delimit block modules, but they do not contain any code 
+%   themselves. The module is pushed onto or popped off the module stack 
+%   when the guard line is encountered, but evaluating the guard 
+%   expression is deferred until its value is needed.
+%   \begin{tcl}
+            %<[*/]* {
+               if {![regexp {^%<(\*|/)([^>]+)>} $line foo modifier\
+                  expression]}\
+               then {
+                  if {[dialog::yesno "Malformed guard line '$line'\
+                     encountered. Push position?"]}\
+%
+                  then {eemenu::docstrip::push_bookmarks $cur_pos}
+               } elseif {$modifier=="*"} then {
+                  eemenu::docstrip::push_module $expression $cur_pos
+               } else {
+                  eemenu::docstrip::pop_module $expression $cur_pos
+               }
+            }
+%   \end{tcl}
+%   Other lines that begin with |%<| are also \package{docstrip} 
+%   guard lines, but in these cases the guard is followed by some code 
+%   and the guard only affects the code on that particular line. There 
+%   must be a |>| somewhere on the line, and the part of the line after 
+%   the |>| is code that \package{docstrip} can extract.
+%   \begin{tcl}
+            %<* {
+               if {![regexp {^%<(-|\+|)([^>]+)>(.*)$} $line\
+                  foo modifier expression code]}\
+               then {
+                  if {[dialog::yesno "Malformed guard line '$line'\
+                     encountered. Push position?"]}\
+                  then {eemenu::docstrip::push_bookmarks $cur_pos}
+               } elseif {$in_code_env} then {
+                  eemenu::docstrip::update_included
+                  if {$module_included &&\
+                    [eemenu::docstrip::eval_guard $expression] !=\
+                      ($modifier=="-")} then {
+                     set line $code
+                     break 
+                  }
+               }
+            }
+%   \end{tcl}
+%   Remaining lines that begin with |%| are considered comment lines, 
+%   but they could technically be metacomment lines (begin with |%%|). 
+%   In that case \package{docstrip} would copy the line, but as there 
+%   is little point in using this \package{docstrip} features for 
+%   lines that the \Tcllogo\ interpreter would be interested in, 
+%   the |docstrip| extraction method ignores that subtlety. Comment 
+%   lines are ignored unless the |lookAtEnvs| details is |1|, in which 
+%   case they are scanned for code environment markup.
+%   \begin{tcl}
+            %* {
+               while {$detA(lookAtEnvs) &&\
+                 [regexp -- $detA(envsRE) $line foo type env line]} {
+                  set in_code_env [expr {"$type"=="begin"}]
+               }
+            }
+%   \end{tcl}
+%   Finally, all lines that do not begin with a |%| are code lines.
+%   \begin{tcl}
+            default {
+               if {$in_code_env} then {
+                  eemenu::docstrip::update_included
+                  if {$module_included} then {break}
+               }
+            }
+         }
+      }
+%   \end{tcl}
+%   That ends the large |switch| command and the large |if|. Now all 
+%   that remains in the loop is to update |cur_pos|.
+%   \begin{tcl}
+%<rowcol>      set cur_pos $next_pos
+   }
+%   \end{tcl}
+%   Whenever the procedure gets past the loop, the line that has been 
+%   extracted is in |line| and the only thing that remains is to update 
+%   the positions.
+%   \begin{tcl}
+%<*rowcol>
+   if {$is_safe && !$in_verbatim} then {set safe_pos $cur_pos}
+   set cur_pos $next_pos
+%</rowcol>
+   return $line
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{finish}
+%   In addition to the |raw| method |finish| procedure, this |finish| 
+%   also unsets the |known| array when there wasn't an error.
+%   \begin{tcl}
+proc eemenu::docstrip::finish {was_error} {
+%<!rowcol>   eemenu::raw::finish $was_error
+   if {$was_error} then {
+%<*rowcol>
+      eemenu::multiupvar safe_pos end_pos
+      bringToFront [lindex $safe_pos 0]
+      select [pos::get_standard safe_pos] [pos::get_standard end_pos]
+      markHilite
+%</rowcol>
+   } else {
+      global eemenu::docstrip::known
+      catch {unset eemenu::docstrip::known}
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \section{Completeness tests}
+% 
+% \setnamespace{eemenu}
+% 
+% Unlike the other method types, completion methods are not implemented 
+% as procedures that can be called, but as an expression string stored 
+% in a global variable. The string in question is called 
+% \describestring[var.][eemenu::\meta{method}]{complete}|complete| 
+% and it will be evaluated as an \emph{expression} in the local context 
+% of the |main| procedure. The reason for this different set-up is that 
+% these methods are usually much simpler to handle that way.
+% 
+% Completion methods are expected to get their data from the following 
+% variables:
+% \begin{description}
+%   \item[\texttt{lines}]
+%     A list of the lines that have been extracted by not yet evaluated. 
+%     This is (at least in theory) what the completion method is testing 
+%     for being complete.
+%   \item[\texttt{at\_end}]
+%     A boolean. It is |0| if the extraction has not yet reached the 
+%     end, and then it is set to |1|.
+%   \item[\texttt{CMD(complete\_extra)}]
+%     The key--value list of detail settings for completion methods. 
+%     None of the methods currently implemented have any detail settings.
+% \end{description}
+% 
+% \begin{arrayentry}{complete}{entireSelection}
+% \setnamespace{eemenu::entireSelection}
+% \begin{variable}{complete}
+%   The |entireSelection| method says `No' until the entire selection 
+%   has been extracted, then `Yes'. It has no detail settings.
+%   \begin{tcl}
+set eemenu::complete(entireSelection) [list]
+namespace eval eemenu::entireSelection {}
+set eemenu::entireSelection::complete {$at_end}
+%   \end{tcl}
+% \end{variable}\end{arrayentry}
+% 
+% \begin{arrayentry}{complete}{everyLine}
+% \setnamespace{eemenu::everyLine}
+% \begin{variable}{complete}
+%   The |everyLine| method says `Yes' after every line.
+%   \begin{tcl}
+set eemenu::complete(everyLine) [list]
+namespace eval eemenu::everyLine {}
+set eemenu::everyLine::complete {1}
+%   \end{tcl}
+% \end{variable}\end{arrayentry}
+% 
+% \begin{arrayentry}{complete}{tclInfoComplete}
+% \setnamespace{eemenu::tclInfoComplete}
+% \begin{variable}{complete}
+%   The |tclInfoComplete| method is the only one (defined so far) which 
+%   actually cares to look at what has been extracted. It calls the 
+%   |info complete| of \Alpha's \Tcllogo\ interpreter.
+%   \begin{tcl}
+set eemenu::complete(tclInfoComplete) [list]
+namespace eval eemenu::tclInfoComplete {}
+set eemenu::tclInfoComplete::complete\
+  {[info complete [join $lines \n]\n]}
+%   \end{tcl}
+% \end{variable}\end{arrayentry}
+% 
+% 
+% \section{Evaluation methods}
+% 
+% The evaluation\slash execution method is what actually does anything 
+% (all the other methods just move data around). From an input\slash 
+% output perspective it takes the input from the extraction method and 
+% generates the output that the report method should handle. Like 
+% extraction methods, evaluation methods must declare three procedures 
+% for |main| to call. These are: |begin|, |item|, and |end|. All of 
+% these procedures return a \emph{result list}, which has the structure
+% \begin{quote}
+%   \word{error?} \word{passing} \word{permanent}
+% \end{quote}
+% \word{error?} is a boolean that the main executive interprets to see 
+% if there was an error. It is |0| when there wasn't an error. 
+% \word{passing} and \word{permanent} are result strings. \word{passing} 
+% should be suitable for output channels where new results replace old, 
+% whereas \word{permanent} should be suitable for output channels where 
+% the results are appended to each other. If the \word{passing} string 
+% is empty then there is no reason to have it replace a previous 
+% \word{passing} string. If the \word{permanent} string is nonempty 
+% then it must end with a newline character.
+% 
+% The \describestring[proc][eemenu::\meta{method}]{begin}|begin| 
+% procedure is called to initialize the evaluation process. It has the 
+% syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::begin| \word{details} \word{source}
+% \end{quote}
+% where the \word{details} is the key--value list of setting details 
+% and \word{source} is the source window name as returned by the 
+% extraction method |start| procedure. If the result of |begin| has a 
+% nonzero \word{error?} then the corresponding |end| procedure will not 
+% be called.
+% 
+% The \describestring[proc][eemenu::\meta{method}]{item}|item| 
+% procedure recieves a bunch of code to evaluate. It has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::item| \word{lines}
+% \end{quote}
+% where \word{lines} is the list of lines of code to evaluate. The 
+% \describestring[proc][eemenu::\meta{method}]{end}|end| procedure is 
+% called when no more lines of code will be sent for evaluation. |end| 
+% takes no arguments.
+% 
+% It is not necessarily in the call to |item| that the code gets 
+% evaluated. The obvious alternative is that |item| simply stores the 
+% code somewhere, for example by writing it to a temporary file, and 
+% that it is the call to |end| that actually causes the code to be 
+% evaluated. This is an important reason why all the procedures have the 
+% same format for returned data.
+% 
+% 
+% 
+% \subsection{Internal evaluation}
+% 
+% The |internalTcl| evaluation method sends the code to \Alpha's internal 
+% \Tcllogo\ interpreter and evaluates it there.
+% 
+% \begin{arrayentry}[eemenu]{evaluate}{internalTcl}
+%   There are no details for this method.
+%   \begin{tcl}
+set eemenu::evaluate(internalTcl) [list]
+%   \end{tcl}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::internalTcl {}
+% \end{tcl}
+% \setnamespace{eemenu::internalTcl}
+% 
+% \begin{proc}{begin}
+% \begin{proc}{end}
+%   Neither the |begin| nor the |end| procedure does anything.
+%   \begin{tcl}
+proc eemenu::internalTcl::begin {details source} {
+   list 0 "" ""
+}
+proc eemenu::internalTcl::end {} {list 0 "" ""}
+%   \end{tcl}
+% \end{proc}\end{proc}
+% 
+% \begin{proc}{item}
+%   The |item| procedure actually evaluates the code and suitably 
+%   formats the result.
+%   \begin{tcl}
+proc eemenu::internalTcl::item {lines} {
+   set code [catch [list uplevel #0 [join $lines \n]] res]
+   if {$code == 1} then {
+%   \end{tcl}
+%   If there was an error, the last part of the value of |errorInfo| 
+%   will be due to the |uplevel| command. As that command was not 
+%   requested by the user, it would be confusing and it is therefore 
+%   best to remove it.
+%   \begin{tcl}
+      global errorInfo
+      set L [split $errorInfo \n]
+      set L [lrange $L 0 [expr {[llength $L] - 4}]]
+      list 1 "Tcl eval error: $res"\
+        "Error: $res\nError info:\n[join $L \n]\n"
+%   \end{tcl}
+%   When there wasn't an error, a distinction is made between the case 
+%   of an empty string result (very common, e.g.\ from |proc|) and that 
+%   of a nonempty string result. This might seem inconsistent, but in 
+%   practice it looks much better.
+%   \begin{tcl}
+   } elseif {[string length $res]} then {
+      list 0 "Tcl eval OK: $res" "$res\n"
+   } else {
+      list 0 "Tcl eval OK." ""
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% 
+% \subsection{DoScript AppleEvent evaluation}
+% 
+% The |doScriptAE| evaluation method sends a |dosc| AppleEvent to some 
+% external application, to have the script evaluated that way. Of 
+% course, this only works if \TclAE\ is available, so this method is 
+% only defined if that is the case.
+% \begin{tcl}
+%<atcl7>if {[llength [info commands tclAE::send]]} then {
+%<!atcl7>if {![catch {package require tclAE}]} then {
+% \end{tcl}
+% 
+% \begin{arrayentry}[eemenu]{evaluate}{doScriptAE}
+%   The details for the |doScriptAE| method roughly fall into three 
+%   categories: what is the target application, how should the 
+%   extracted lines be combined to a script, and what about a reply?
+%   \begin{tcl}
+set eemenu::evaluate(doScriptAE) [list\
+%   \end{tcl}
+%   \begin{details}{Evaluate}
+%     \detailitem{targetApp}
+%       This is the appspec of the target application.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Target application"\
+    targetApp appspec]\
+%       \end{tcl}
+%     \detailitem{joinString}
+%       The extracted lines is a list, but the script to send should be 
+%       a string, so they will have to be joined somehow. This item 
+%       offers a choice between some common forms of whitespace.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Join lines using"\
+    joinString [list menuindex [list Lf Cr CrLf Space]] 1]\
+%       \end{tcl}
+%     \detailitem{prefix}
+%       This will be prepended to the script sent. It can for example be 
+%       used to add some command that takes care of the result.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Prefix" prefix var]\
+%       \end{tcl}
+%     \detailitem{suffix}
+%       This will be appended to the script sent.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Suffix" suffix var]\
+%       \end{tcl}
+%     \detailitem{replyQ}
+%       This flag controls whether the method should request a reply to 
+%       the AE sent.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Wait for reply" replyQ flag]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::doScriptAE {}
+% \end{tcl}
+% \setnamespace{eemenu::doScriptAE}
+% 
+% 
+% \begin{arrayvar}{A}
+%   The |doScriptAE| method keeps its detail settings, and some derived 
+%   quantities, in the |A| array. Those are all the global variables it 
+%   has.
+% \end{arrayvar}
+% 
+% 
+% \begin{proc}{begin}
+%   The main task of this |begin| procedure is to make sure that the 
+%   target application is running.
+%   \begin{tcl}
+proc eemenu::doScriptAE::begin {details source} {
+   upvar #0 eemenu::doScriptAE::A A
+   array set A {prefix {} suffix {} joinString 1 targetApp {} replyQ 0}
+   array set A $details
+%   \end{tcl}
+%   The |targetApp| is either a quoted application signature or a full 
+%   path name. Exactly what will have to be done gets affected by this.
+%   \begin{tcl}
+   if {[regexp {'(....)'} $A(targetApp) foo sig]} then {
+      set err [catch {app::ensureRunning $sig} passing]
+      if {$err == 1} then {set permanent $passing} else {
+         set permanent ""
+         set A(app) $A(targetApp)
+      }
+   } else {
+      set tail [file tail $A(targetApp)]
+%<*atcl7>
+      if {[info tclversion]<8.0} then {
+         set running\
+           [regexp "\{\"[quote::Regfind $tail]\" \"" [processes]]
+      } else {
+%</atcl7>
+         set running 0
+         foreach pr [processes] {
+            if {![string compare $tail [lindex $pr 0]]} then {
+               set running 1
+               break
+            }
+         }
+%<atcl7>      }
+      set err 0
+      set permanent ""
+      set A(app) $tail
+      if {$running} then {
+         set passing "App is running."
+      } elseif {![catch {launch $A(targetApp)} passing]} then {
+         set passing "Launched '$A(targetApp)'"
+      } else {
+         set err 1
+         if {![file exists $A(targetApp)]} then {
+            set passing "File '$A(targetApp)' not found."
+         }
+         set permanent $passing
+         unset A(app)
+      }
+   }
+%   \end{tcl}
+%   The |joinString| is also decoded.
+%   \begin{tcl}
+   set A(joinString) [lindex [list \n \r \r\n " "] $A(joinString)]
+   return [list $err $passing $permanent]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{item}
+%   The |item| procedure is mainly about formatting data on its way 
+%   back and forth.
+%   \begin{tcl}
+proc eemenu::doScriptAE::item {lines} {
+   upvar #0 eemenu::doScriptAE::A A
+   set script "$A(prefix)[join $lines $A(joinString)]$A(suffix)"
+   if {$A(replyQ)} then {
+      if {[catch {tclAE::build::resultData -t 30000 $A(app) misc dosc\
+            ---- [tclAE::build::TEXT $script]} res]} then {
+         list 1 "Error: $res" "Error: $res\n"
+      } elseif {[string length $res]} then {
+         list 0 $res "$res\n"
+      } else {
+         list 0 "Eval OK." ""
+      }
+   } else {
+      tclAE::send $A(app) misc dosc ---- [tclAE::build::TEXT $script]
+      list 0 "Sent [llength $lines] lines." ""
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{end}
+%   The |end| procedure does nothing
+%   \begin{tcl}
+proc eemenu::doScriptAE::end {} {list 0 "" ""}
+%   \end{tcl}
+% \end{proc}
+% 
+% This ends the |if| begun at the top of this subsection.
+% \begin{tcl}
+}
+% \end{tcl}
+% 
+% 
+% \subsection{\texttt{send} evaluation}
+% 
+% The \texttt{send} command can be used to communicate with other Tk 
+% applications via an X-windows server. This is a bit restrictive, but 
+% it is anyway what \AlphaTk\ uses for remote execution of \Tcllogo\ 
+% code, so I suppose it is what we've got. Right now this method is 
+% defined whenever the |send| command exists, but it is not uncommon 
+% that the definition of |send| merely provides communication between 
+% different interpreters in the same application.
+% \begin{tcl}
+if {[llength [info commands send]] && [info tclversion]>=8.0} then {
+% \end{tcl}
+% 
+% \begin{arrayentry}[eemenu]{evaluate}{tkSend}
+%   Many details for the |doScriptAE| method have natural counterparts 
+%   for the |tkSend| method, the main difference lies in the 
+%   identification of the target. Whereas \TclAE\ uses static 
+%   information (creator code or file name) to identify the target, the 
+%   name used by the |send| command is in principle dynamic. The 
+%   relevant identifier may change between different times that an 
+%   \textsf{EE~menu} command is used. This is handled by providing a 
+%   fallback for unknown targets.
+%   \begin{tcl}
+set eemenu::evaluate(tkSend) [list\
+%   \end{tcl}
+%   \begin{details}{Evaluate}
+%     \detailitem{target}
+%       This is a string that identifies the target.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Target" target var]\
+%       \end{tcl}
+%     \detailitem{aliasing}
+%       This detail controls how the |tkSend| method should behave when 
+%       |begin| is called but the specified target isn't available. 
+%       ``Ask each time'' means present the user with a list of available 
+%       targets each time |begin| is called, and use what the user 
+%       selected there. ``Ask once'' is similar, but the choice will be 
+%       remembered as an \emph{alias} for the specified target (until 
+%       \Alpha\ is quited or the alias target no longer is available). 
+%       ``Fail'' means fail immediately.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Alias behaviour"\
+    aliasing [list menu [list "Ask once" "Ask each time" "Fail"]]\
+    "Ask once" "The thing to do when the target is unavailable."]\
+%       \end{tcl}
+%     \detailitem{joinString}
+%       The extracted lines is a list, but the script to send should be 
+%       a string, so they will have to be joined somehow. This item 
+%       offers a choice between some common forms of whitespace.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Join lines using"\
+    joinString [list menuindex [list Lf Cr CrLf Space]] 0]\
+%       \end{tcl}
+%     \detailitem{prefix}
+%       This will be prepended to the script sent. It can for example be 
+%       used to add some command that takes care of the result.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Prefix" prefix var]\
+%       \end{tcl}
+%     \detailitem{suffix}
+%       This will be appended to the script sent.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Suffix" suffix var]\
+%       \end{tcl}
+%     \detailitem{replyQ}
+%       This flag controls whether the method should wait for the 
+%       remote shell to return a result.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Wait for reply" replyQ flag 1]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::tkSend {}
+% \end{tcl}
+% \setnamespace{eemenu::tkSend}
+% 
+% \begin{arrayvar}{alias}
+%   The |alias| array is used to keep track of which targets are treated 
+%   as aliases for other targets. The index is a value of the 
+%   \texttt{target} detail, the entry value is what it should be 
+%   replaced by.
+% \end{arrayvar}
+% 
+% \begin{variable}{last_target}
+%   The |last_target| variable contains the name of the most recently 
+%   selected target. This is so that the relevant |listpick| dialog 
+%   can ``remember'' the user's preference in this respect.
+%   \begin{tcl}
+set eemenu::tkSend::last_target {}
+%   \end{tcl}
+% \end{variable}
+% 
+% \begin{arrayvar}{A}
+%   The |tkSend| method keeps its detail settings, and some derived 
+%   quantities, in the |A| array for convenience of access.
+% \end{arrayvar}
+% 
+% 
+% \begin{proc}{begin}
+%   The main task of this |begin| procedure is to verify that the target 
+%   is available.
+%   \begin{tcl}
+proc eemenu::tkSend::begin {details source} {
+   eemenu::multiupvar A alias last_target
+   array set A {prefix {} suffix {} joinString 1 target {} replyQ 1\
+     aliasing "Ask once"}
+   array set A $details
+%   \end{tcl}
+%   The treatment of aliases depend on the |aliasing| setting. If it is 
+%   \texttt{Ask once} then an alias will be used even if a target with 
+%   the given name is available. The rationale for this is that the user 
+%   has specified that the commands should be sent to that application.
+%   \begin{tcl}
+   set T [lsort -dictionary [winfo interps]]
+   switch -- $A(aliasing) "Ask each time" {
+      if {[lsearch -exact $T $A(target)]>=0} then {
+         set target $A(target)
+      }
+   } "Fail" {
+      if {[lsearch -exact $T $A(target)]>=0} then {
+         set target $A(target)
+      } else {
+         set passing "Target '$A(target)' unavailable."
+         return [list 1 $passing $passing]
+      }
+   } default {
+      set target $A(target)
+      if {[info exists alias($target)]} then {
+         set target $alias($target)
+      }
+      if {[lsearch -exact $T $target]<0} then {unset target}
+   }
+%   \end{tcl}
+%   If the local |target| variable is not set at this point then it is 
+%   time to ask the user.
+%   \begin{tcl}
+   if {![info exists target]} then {
+      if {[catch {listpick -p "Target '$A(target)' unavailable.\
+            Please pick a new one." -L [list $last_target]\
+            [linsert $T end "------------------" "Launch new shell"]}\
+          target]} then {
+         return [list 1 "Canceled" ""]
+      }
+      switch -exact -- $target\
+        "------------------" - "Launch new shell" {
+         set before [clock seconds]
+         app::launchElseTryThese [uplevel #0 {set tclshSigs}] tclshSig\
+           {Please locate the remote Tcl application}
+         while {![string compare $T\
+             [lsort -dictionary [winfo interps]]] &&\
+           [clock seconds] - $before < 60} {update}
+         set T2 [lsort -dictionary [winfo interps]]
+         if {![string compare $T $T2]} then {
+            return [list 1 {Timed out; no new shell started within\
+              60 seconds.} ""]
+         }
+         foreach target $T2 t $T {
+            if {[string compare $target $t]} then {break}
+         }
+         set passing "Launched new shell '$target'."
+      } default {
+         set passing "Sending code to '$target'."
+      }
+%   \end{tcl}
+%   The last |foreach| above locates the first |target| in |$T2| which 
+%   is not in |$T|. This |foreach| is the reason this code requires 
+%   \Tcllogo\,8.
+%   
+%   Now the target should be stored in the necessary variables.
+%   \begin{tcl}
+      set last_target $target
+      if {![string compare $A(aliasing) "Ask once"]} then {
+         set alias($A(target)) $target
+      }
+   } else {
+      set passing "Sending code to '$target'."
+   }
+   set A(target) $target
+%   \end{tcl}
+%   The |joinString| is also decoded.
+%   \begin{tcl}
+   set A(joinString) [lindex [list \n \r \r\n " "] $A(joinString)]
+   return [list 0 $passing ""]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{item}
+%   The |item| procedure is mainly about formatting data on its way 
+%   back and forth.
+%   \begin{tcl}
+proc eemenu::tkSend::item {lines} {
+   upvar #0 eemenu::tkSend::A A
+   set script "$A(prefix)[join $lines $A(joinString)]$A(suffix)"
+   if {$A(replyQ)} then {
+      if {[catch {send $A(target) $script} res]} then {
+         list 1 "Error: $res" "Error: $res\n"
+      } elseif {[string length $res]} then {
+         list 0 "Eval OK: $res" "$res\n"
+      } else {
+         list 0 "Eval OK." ""
+      }
+   } else {
+      send -async $A(target) $script
+      list 0 "Sent [llength $lines] lines." ""
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{end}
+%   The |end| procedure does nothing
+%   \begin{tcl}
+proc eemenu::tkSend::end {} {list 0 "" ""}
+%   \end{tcl}
+% \end{proc}
+% 
+% This ends the |if| begun at the top of this subsection.
+% \begin{tcl}
+}
+% \end{tcl}
+% 
+% \subsubsection*{Test code}
+% 
+% The code below fakes definitions of |send| and |winfo interps| using 
+% \Tcllogo\AE\ and |processes| for the purpose of testing the above code.
+% \begin{tcl}
+%<*sendtest>
+proc send {target cmd args} {
+   set sync 1
+   if {![string compare $target -async]} then {
+      set sync 0
+      set target $cmd
+      set cmd [lindex $args 0]
+   }
+   set cmd [tclAE::build::TEXT $cmd]
+   if {$sync} then {
+      tclAE::build::resultData -t 30000 $target misc dosc ---- $cmd
+   } else {
+      tclAE::send $target misc dosc ---- $cmd
+   }
+}
+proc winfo {subcmd args} {
+   if {[string compare $subcmd "interps"]} then {
+      error "Unimplemented winfo subcommand: $subcmd"
+   }
+   set res [list]
+   global tclshSigs
+   foreach pr [processes] {
+      if {[lsearch -exact $tclshSigs [lindex $pr 1]]>=0} then {
+         lappend res [file tail [lindex $pr 0]]
+      }
+   }
+   return $res
+}
+%</sendtest>
+% \end{tcl}
+% 
+% 
+% \subsection{\texttt{dde} evaluation}
+% 
+% Dynamic Data Exchange (\texttt{dde}) is, as I understand it, the 
+% Windoze equivalent of AppleEvents, although the events sent have much 
+% less structure. The machinery needed here is quite similar to that 
+% for \texttt{send} evaluation, but there are a few extra details that 
+% can be set.
+% \changes{v\,0.1.1}{2002/07/21}{Renamed the \textsf{Dde} method to 
+%    \textsf{Windoze DDE}. (LH)}
+% 
+% \begin{tcl}
+if {[llength [info commands dde]] && [info tclversion]>=8.0} then {
+% \end{tcl}
+% 
+% \begin{arrayentry}[eemenu]{evaluate}{windozeDDE}
+%   The details for the |windozeDDE| method constitute a superset of those for 
+%   the |tkSend| method.
+%   \begin{tcl}
+set eemenu::evaluate(windozeDDE) [list\
+%   \end{tcl}
+%   \begin{details}{Evaluate}
+%     \detailitem{service}
+%       This is a string that specifies the service to use.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Service" service var "TclEval"]\
+%       \end{tcl}
+%     \detailitem{target}
+%       This is a string that identifies the target application, or as 
+%       it appears to be called, the ``topic''.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Target" target var]\
+%       \end{tcl}
+%     \detailitem{aliasing}
+%       This detail controls how the |windozeDDE| method should behave when 
+%       |begin| is called but the specified target isn't available. 
+%       ``Ask each time'' means present the user with a list of available 
+%       targets each time |begin| is called, and use what the user 
+%       selected there. ``Ask once'' is similar, but the choice will be 
+%       remembered as an \emph{alias} for the specified target (until 
+%       \Alpha\ is quited or the alias target no longer is available). 
+%       ``Fail'' means fail immediately.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Alias behaviour"\
+    aliasing [list menu [list "Ask once" "Ask each time" "Fail"]]\
+    "Ask once" "The thing to do when the target is unavailable."]\
+%       \end{tcl}
+%     \detailitem{launchCmd}
+%       This is a \Tcllogo\ command which, when executed by \Alpha, 
+%       should launch an application that provides a new target for 
+%       the given service. The command is evaluated at a global level. 
+%       If it is an empty string, then no option for launching will be 
+%       presented in the target selection dialog.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Launch command" launchCmd var2]\
+%       \end{tcl}
+%     \detailitem{joinString}
+%       The extracted lines is a list, but the script to send should be 
+%       a string, so they will have to be joined somehow. This item 
+%       offers a choice between some common forms of whitespace.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Join lines using"\
+    joinString [list menuindex [list Lf Cr CrLf Space]] 2]\
+%       \end{tcl}
+%     \detailitem{prefix}
+%       This will be prepended to the script sent. It can for example be 
+%       used to add some command that takes care of the result.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Prefix" prefix var]\
+%       \end{tcl}
+%     \detailitem{suffix}
+%       This will be appended to the script sent.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Suffix" suffix var]\
+%       \end{tcl}
+%     \detailitem{request}
+%       This is the name of the item to request as result from the 
+%       evaluation. If it is an empty string then no request is made.
+%       \begin{tcl}
+  [eemenu::define_detail Evaluate "Requested data" request var]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::windozeDDE {}
+% \end{tcl}
+% \setnamespace{eemenu::windozeDDE}
+% 
+% \begin{arrayvar}{alias}
+%   The |alias| array is used to keep track of which targets are treated 
+%   as aliases for other targets. The index is a value of the 
+%   \texttt{target} detail, the entry value is what it should be 
+%   replaced by.
+% \end{arrayvar}
+% 
+% \begin{variable}{last_target}
+%   The |last_target| variable contains the name of the most recently 
+%   selected target. This is so that the relevant |listpick| dialog 
+%   can ``remember'' the user's preference in this respect.
+%   \begin{tcl}
+set eemenu::windozeDDE::last_target {}
+%   \end{tcl}
+% \end{variable}
+% 
+% \begin{arrayvar}{A}
+%   The |windozeDDE| method keeps its detail settings, and some derived 
+%   quantities, in the |A| array for convenience of access.
+% \end{arrayvar}
+% 
+% 
+% \begin{proc}{begin}
+%   The main task of this |begin| procedure is to verify that the target 
+%   is available.
+%   \begin{tcl}
+proc eemenu::windozeDDE::begin {details source} {
+   eemenu::multiupvar A alias last_target
+   array set A {service {} target {} aliasing "Ask once" launchCmd {}\
+     prefix {} suffix {} joinString 2 request {}}
+   array set A $details
+   if {![string length $A(service)]} then {
+      return [list 1 "No service has been specified." ""]
+   }
+%   \end{tcl}
+%   The treatment of aliases depend on the |aliasing| setting. If it is 
+%   \texttt{Ask once} then an alias will be used even if a target with 
+%   the given name is available. The rationale for this is that the user 
+%   has specified that the commands should be sent to that application.
+%   \begin{tcl}
+   set T [list]
+   foreach st [dde services $A(service) {}] {lappend T [lindex $st 1]}
+   set T [lsort -dictionary $T]
+   switch -- $A(aliasing) "Ask each time" {
+      if {[lsearch -exact $T $A(target)]>=0} then {
+         set target $A(target)
+      }
+   } "Fail" {
+      if {[lsearch -exact $T $A(target)]>=0} then {
+         set target $A(target)
+      } else {
+         set passing "Target '$A(target)' unavailable."
+         return [list 1 $passing $passing]
+      }
+   } default {
+      set target $A(target)
+      if {[info exists alias($target)]} then {
+         set target $alias($target)
+      }
+      if {[lsearch -exact $T $target]<0} then {unset target}
+   }
+%   \end{tcl}
+%   If the local |target| variable is not set at this point then it is 
+%   time to ask the user.
+%   \begin{tcl}
+   if {![info exists target]} then {
+      set T2 $T
+      if {[string length $A(launchCmd)]} then {
+         if {[llength $T2]} then {lappend T2 "------------------"}
+         lappend T2 "Launch another"
+      }
+      if {![llength $T2]} then {
+         return [list 1 "No '$A(service)' targets are, or could be\
+           made, available." ""]
+      }
+      if {[catch {listpick -p "Target '$A(target)' unavailable.\
+            Please pick a new one." -L [list $last_target] $T2}\
+          target]} then {
+         return [list 1 "Canceled" ""]
+      }
+      switch -exact -- $target\
+        "------------------" - "Launch another" {
+         set before [clock seconds]
+         uplevel #0 $A(launchCmd)
+         set target {}
+         while {[clock seconds] - $before < 60 &&\
+           ![string length $target]} {
+            foreach st [dde services $A(service) {}] {
+               if {[lsearch -exact $T [lindex $st 1]]<0} then {
+                  set target [lindex $st 1]
+                  break
+               }
+            }
+            update
+         }
+         if {![string length $target]} then {
+            return [list 1 {Timed out; no new target launched within\
+              60 seconds.} ""]
+         }
+         set passing "Launched new shell '$target'."
+      } default {
+         set passing "Sending code to '$target'."
+      }
+%   \end{tcl}
+%   The last |foreach| above locates the first |target| in |$T2| which 
+%   is not in |$T|. This |foreach| is the reason this code requires 
+%   \Tcllogo\,8.
+%   
+%   Now the target should be stored in the necessary variables.
+%   \begin{tcl}
+      set last_target $target
+      if {![string compare $A(aliasing) "Ask once"]} then {
+         set alias($A(target)) $target
+      }
+   } else {
+      set passing "Sending code to '$target'."
+   }
+   set A(target) $target
+%   \end{tcl}
+%   The |joinString| is also decoded.
+%   \begin{tcl}
+   set A(joinString) [lindex [list \n \r \r\n " "] $A(joinString)]
+   return [list 0 $passing ""]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{item}
+%   The |item| procedure is mainly about formatting data on its way 
+%   back and forth.
+%   \begin{tcl}
+proc eemenu::windozeDDE::item {lines} {
+   upvar #0 eemenu::windozeDDE::A A
+   set script "$A(prefix)[join $lines $A(joinString)]$A(suffix)"
+   if {[catch {dde execute $A(service) $A(target) $script} res]} then {
+      list 1 "dde error: $res" "$res\n"
+   } elseif {![string length $A(request)]} then {
+      list 0 "Sent [llength $lines] lines." ""
+   } else {
+      if {[catch {dde request $A(service) $A(target) $A(request)} res]}\
+      then {
+         list 1 "dde error: $res" "dde error: $res\n"
+      } elseif {[string length $res]} then {
+         list 0 $res "$res\n"
+      } else {
+         list 0 "Eval OK." ""
+      }
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{end}
+%   The |end| procedure does nothing
+%   \begin{tcl}
+proc eemenu::windozeDDE::end {} {list 0 "" ""}
+%   \end{tcl}
+% \end{proc}
+% 
+% This ends the |if| begun at the top of this subsection.
+% \begin{tcl}
+}
+% \end{tcl}
+% 
+% \subsubsection*{Test code}
+% 
+% The code below fakes a definition of |dde| using |interp|.
+% \begin{tcl}
+%<*ddetest>
+proc dde {subcmd args} {
+   switch -- $subcmd servername {
+      error "dde servername is not implemented."
+   } execute {
+      if {[llength $args] != 3} then {
+         error "Wrong number of arguments for dde execute."
+      }
+      if {"TclEval" != [lindex $args 0]} then {
+         error "Unknown servername: [lindex $args 0]"
+      }
+      interp eval [lindex $args 1] [lindex $args 2]
+   } poke {
+      if {[llength $args] != 4} then {
+         error "Wrong number of arguments for dde poke."
+      }
+      if {"TclEval" != [lindex $args 0]} then {
+         error "Unknown servername: [lindex $args 0]"
+      }
+      interp eval [lindex $args 1]\
+        [list set [lindex $args 2] [lindex $args 3]]
+   } request {
+      if {[llength $args] != 3} then {
+         error "Wrong number of arguments for dde request."
+      }
+      if {"TclEval" != [lindex $args 0]} then {
+         error "Unknown servername: [lindex $args 0]"
+      }
+      interp eval [lindex $args 1] [list set [lindex $args 2]]
+   } services {
+      if {[llength $args] != 2} then {
+         error "Wrong number of arguments for dde services."
+      }
+      set server [lindex $args 0]
+      if {[string length $server] && $server != "TclEval"} then {
+         return ""
+      }
+      set topic [lindex $args 1]
+      if {![string length $topic]} then {
+         set res [list]
+         foreach slave [interp slaves] {
+            lappend res [list TclEval $slave]
+         }
+         return $res
+      } elseif {[interp exists $topic]} then {
+         return [list [list TclEval $topic]]
+      } else {
+         return ""
+      }
+   } default {
+      error "Unimplemented subcommand: $subcmd"
+   }
+}
+%</ddetest>
+% \end{tcl}
+% 
+% 
+% \section{Report methods}
+% \label{Sec:Report}
+% 
+% The report method takes care of sending output to the user. Like 
+% extraction and evaluation methods there is one `begin' procedure 
+% |log_open| and one `end' procedure |log_close| for each method, but 
+% there are actually two `iterate' procedures. This is because the 
+% extracted code is logged using |log_code| \emph{before} it is 
+% evaluated, whereas the result is only known after the code has been 
+% evaluated and is then logged using |log_result|.
+% 
+% The \describestring[proc][eemenu::\meta{method}]{log_open}|log_open| 
+% procedure has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::log_open| \word{details} \word{source}
+% \end{quote}
+% where the \word{details} is the key--value list of setting details 
+% and \word{source} is the source window name as returned by the 
+% extraction method |start| procedure. There is no result from this 
+% procedure, but if there is something wrong with its argument then it 
+% may stop the \eemenu\ command by returning with an error.
+% 
+% The reason the \word{source} argument is provided is that some report 
+% methods might want to make some aspect of their output, such as for 
+% example a window title or log file name, dependent on the input source. 
+% Neither the |statusLine| nor the |logWindow| method do this, though.
+% 
+% The \describestring[proc][eemenu::\meta{method}]{log_code}|log_code| 
+% procedure has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::log_code| \word{lines}
+% \end{quote}
+% where \word{lines} is the list of lines that will be sent to the 
+% evaluation method. The 
+% \describestring[proc][eemenu::\meta{method}]{log_result}|log_result| 
+% procedure has the syntax
+% \begin{quote}
+%   |eemenu::|\meta{method}|::log_result|  \word{error?} 
+%   \word{passing result} \word{permanent result}
+% \end{quote}
+% where the \word{error?} is |1| if there was an evaluation error and 
+% |0| otherwise. The \word{passing result} is a result string that 
+% describes the current state of the evaluation process; it is meant 
+% to be replaced by the next \word{passing result} the next time 
+% |log_result| is called. By constrast the \word{permanent result} is 
+% meant to be accumulated for each call to |log_result|. Whether a 
+% report method uses one or the other (or both) depends on which makes 
+% most sense for the output channels it employs. If the \word{passing 
+% result} string is empty then it should not replace a previous 
+% \word{passing result} string. If the \word{permanent} string is 
+% nonempty then it must end with a newline character.
+% 
+% The \describestring[proc][eemenu::\meta{method}]{log_close}|log_close| 
+% procedure is responsible for cleaning up after the method, but only 
+% to the extent that this is necessary. If |log_open| opened a file then 
+% |log_close| should close it, but if |log_open| merely opened a window 
+% then |log_close| should most likely not close it since the user will 
+% want to see what is written in that window. The syntax is simply
+% \begin{quote}
+%   |eemenu::|\meta{method}|::log_close|
+% \end{quote}
+% and there is no result from the procedure.
+% 
+% 
+% 
+% \subsection{Status line reports}
+% 
+% The |statusLine| method shows the \word{passing result}s on the 
+% status line, but does nothing else.
+% 
+% \setnamespace{eemenu::statusLine}
+% \begin{arrayentry}[eemenu]{report}{statusLine}
+%   There are no details settings for this method.
+%   \begin{tcl}
+namespace eval eemenu::statusLine {}
+set eemenu::report(statusLine) [list]
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% \begin{proc}{log_open}
+% \begin{proc}{log_close}
+% \begin{proc}{log_code}
+% \begin{proc}{log_result}
+%   Only the |log_result| procedure needs to do anything.
+%   \begin{tcl}
+proc eemenu::statusLine::log_open {details source} {}
+proc eemenu::statusLine::log_close {} {}
+proc eemenu::statusLine::log_code {lines} {}
+proc eemenu::statusLine::log_result {was_err passing permanent} {
+   if {[string length $passing]} then {status::msg $passing}
+}
+%   \end{tcl}
+% \end{proc}\end{proc}\end{proc}\end{proc}
+% 
+% 
+% \subsection{Log window reports}
+% 
+% The |logWindow| method opens a particular window and inserts 
+% everything that is logged there.
+% 
+% \begin{arrayentry}[eemenu]{report}{logWindow}
+%   There are three detail settings for |logWindow| reports.
+%   \begin{tcl}
+set eemenu::report(logWindow) [list\
+%   \end{tcl}
+%   \begin{details}{Report}
+%     \detailitem{winName}
+%       This is the name of the log window.
+%       \begin{tcl}
+  [eemenu::define_detail Report "Window name" winName var "Log"]\
+%       \end{tcl}
+%     \detailitem{winMode}
+%       This is the mode to use for the log window.
+%       \begin{tcl}
+  [eemenu::define_detail Report "Window mode" winMode mode "Text"]\
+%       \end{tcl}
+%     \detailitem{prompt}
+%       This is a ``prompt'' string that will be put at the beginning of 
+%       each code line.
+%       \begin{tcl}
+  [eemenu::define_detail Report "Prompt" prompt var\
+    "[text::Ascii 200 1] "]\
+%       \end{tcl}
+%     \detailitem{antiprompt}
+%       This is a string that will be put at the beginning of each line 
+%       that is not a code line.
+%       \begin{tcl}
+  [eemenu::define_detail Report "Antiprompt" antiprompt var ""]]
+%       \end{tcl}
+%   \end{details}
+% \end{arrayentry}
+% \begin{tcl}
+namespace eval eemenu::logWindow {}
+% \end{tcl}
+% \setnamespace{eemenu::logWindow}
+% 
+% \begin{arrayvar}{A}
+%   The |logWindow| method keeps its detail settings in the |A| 
+%   array. Those are all the global variables it has.
+% \end{arrayvar}
+% 
+% \begin{proc}{log_open}
+%   This procedure opens the log window (if it isn't open already)
+%   and positions the cursor at the end of the window. This is 
+%   assumed to be at the beginning of a line.
+%   \begin{tcl}
+proc eemenu::logWindow::log_open {details source} {
+   upvar #0 eemenu::logWindow::A A
+   array set A {winName {Log window} prompt {} antiprompt {}}
+   array set A $details
+   set win $A(winName)
+   if {[lsearch -exact [winNames] $win] == -1} then {
+      set call [list new -n $win -shell 1]
+      if {[mode::exists $A(winMode)]} then {lappend call -m $A(winMode)}
+      eval $call
+   }
+   set t [maxPos -w $win]
+   select -w $win $t $t
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{log_code}
+%   The |log_code| procedure inserts the lines at the current position 
+%   in the file. This will be at the end of the file, unless the 
+%   evaluation modifies this.
+%   \begin{tcl}
+proc eemenu::logWindow::log_code {lines} {
+   upvar #0 eemenu::logWindow::A A
+   insertText -w $A(winName) "$A(prompt)[join $lines "\n$A(prompt)"]\n"
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{log_result}
+%   The |log_result| procedure inserts the \word{permanent result} at 
+%   the current position in the file. If the |antiprompt| is 
+%   nonempty then the result is first broken into lines and then 
+%   reassembled, however. It also displays the \word{passing result} on 
+%   the status line (this has to be done last, since |insertText| 
+%   clears the status line).
+%   \begin{tcl}
+proc eemenu::logWindow::log_result {was_err passing permanent} {
+   if {[string length $permanent]} then {
+      upvar #0 eemenu::logWindow::A A
+      if {[string length $A(antiprompt)]} then {
+         set L [lreplace [split $permanent \n\r] end end]
+         set permanent "[join $L "\n$A(antiprompt)"]\n"
+      }
+      insertText -w $A(winName) "$A(antiprompt)$permanent"
+   }
+   if {[string length $passing]} then {status::msg $passing}
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{log_close}
+%   This procedure does nothing.
+%   \begin{tcl}
+proc eemenu::logWindow::log_close {} {}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \section{Default command definitions}
+% \label{Sec:DefCmdA}
+% 
+% This section contains some examples of \eemenu\ commands and 
+% it also provides defaults for the |cmdA| array.
+% 
+% \setnamespace{eemenu}
+% 
+% \begin{arrayvar}{cmdA}
+%   If this array is already set then there is no need to source the 
+%   rest of the file.
+%   \begin{tcl}
+if {[info exists eemenu::cmdA]} then {return}
+%   \end{tcl}
+% \end{arrayvar}
+% 
+% 
+% \begin{arrayentry}{cmdA}{dtx -> internal Tcl}
+%   This is the command that corresponds most closely to that provided 
+%   by the old \textsf{dtxload} package.
+%   \begin{tcl}
+set {eemenu::cmdA(dtx -> internal Tcl)} [list\
+%   \end{tcl}
+%   By default the command is active and bound to \textsf{Cmd--L} in 
+%   \TeX\ mode, but it is not put in the menu.
+%   \begin{tcl}
+  active 1 binding /L<O mode TeX\
+  in_menu 0\
+%   \end{tcl}
+%   The extraction method is docstripping. Only code in \texttt{.dtx} 
+%   files that is furthermore in a \texttt{tcl} or \texttt{tcl*} 
+%   environment is kept. Again, these are the defaults in the 
+%   \textsf{dtxload} package.
+%   \begin{tcl}
+  extractor Docstrip extract_extra [list\
+    filePatL *.dtx sourceEnvsL {tcl tcl*} lookAtEnvs 1\
+  ]\
+%   \end{tcl}
+%   The command uses |info complete| to test if it has got a complete 
+%   command, sends the extracted code to \Alpha's internal \Tcllogo\ 
+%   interpreter, and logs the result on the status line.
+%   \begin{tcl}
+  complete "Tcl Info Complete" complete_extra {}\
+%   
+  evaluator "Internal Tcl" eval_extra {}\
+%   
+  reporter "Status Line" report_extra {}\
+%   
+]
+%   \end{tcl}
+%   Of course, this default setting needs to be saved.
+%   \begin{tcl}
+prefs::modified {eemenu::cmdA(dtx -> internal Tcl)}
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% 
+% \begin{arrayentry}{cmdA}{dtx -> remote Tcl}
+%   This is a command that I have lately found to be increasingly useful. 
+%   The functionality was provided in the \textsf{dtxload} package, but 
+%   it was always slightly awkward as it was not a distinct command. 
+%   Instead the |evaluateRemotely| variable was used as a selector 
+%   between this and the previous command.
+%   
+%   Since these two commands are anyway quite similar, I'll copy 
+%   settings from the above, only changing those that are different.
+%   \begin{tcl}
+catch {unset A}
+array set A [set {eemenu::cmdA(dtx -> internal Tcl)}]
+%   \end{tcl}
+%   Since keys combinations are sort of in short supply, this command 
+%   is by default inactive but has the same binding and mode as its 
+%   \textsf{internal~Tcl} counterpart. This means that if one of these 
+%   commands is activated then the other is automatically deactivated 
+%   and so it is anyway easy to switch between them. I also put this 
+%   remote \Tcllogo\ command in the menu.
+%   \begin{tcl}
+set A(active) 0
+set A(in_menu) 1
+%   \end{tcl}
+%   
+%   Communication with remote interpreters is a messy business, due to 
+%   the many technical details one has do deal with. It is also very 
+%   platform-dependent. The Mac\,OS settings are however not too 
+%   complicated, much thanks to \TclAE.
+%   \changes{v\,0.3}{2003/06/01}{Corrected condition used for selecting 
+%     remote evaluation method. (LH)}
+%   \begin{tcl}
+if {[info exists eemenu::evaluate(doScriptAE)]} then {
+   set A(evaluator) "Do Script AE"
+   set A(eval_extra)\
+     [list targetApp '${tclshSig}' joinString 0 replyQ 1]
+} \
+%   \end{tcl}
+%   
+%   The Windoze settings are the most complicated. One reason for this 
+%   is that |dde execute| does not return the result of the script, so 
+%   that a separate call is needed for this.
+%   \begin{tcl}
+elseif {[info exists eemenu::evaluate(windozeDDE)]} then {
+   set A(evaluator) "Windoze DDE"
+   set A(eval_extra) [list\
+%
+     service TclEval target Tcl_1 launchCmd\
+       {exec $tclshSig [file join $HOME Tools winRemoteShell.tcl] &}\
+%
+     joinString 0 prefix "catch \{" suffix "\} alpha_result"\
+     request alpha_result]
+} \
+%   \end{tcl}
+%   
+%   Finally, there are the settings for |send|, which are used on all 
+%   other platforms.
+%   \begin{tcl}
+else {
+   set A(evaluator) "Tk Send"
+   set A(eval_extra) [list target wish joinString 0 replyQ 1]
+}
+%   \end{tcl}
+%   Then all that remains is to store the settings into the |cmdA| array.
+%   \begin{tcl}
+set {eemenu::cmdA(dtx -> remote Tcl)} [array get A]
+prefs::modified {eemenu::cmdA(dtx -> remote Tcl)}
+unset A
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% \begin{arrayentry}{cmdA}{Tcl example in AIDA}
+%   AIDA probably isn't that well known, but in brief it is an 
+%   experimental source format for \Alpha\ documentation, which can 
+%   be converted to plain text, \LaTeX, HTML, and some other formats too. 
+%   Verbatim text lines (as needed for code examples) can of course be 
+%   included expressed in AIDA; the required markup is mainly that each 
+%   such line begins with the two characters \verb"(|". Such code can 
+%   easily be extracted using the regexp extractor.
+%   
+%   This code is no longer included, since AIDA isn't much used anymore.
+%   \begin{tcl}
+%<*aidacode>
+set {eemenu::cmdA(Tcl example in AIDA)} [list\
+%
+  extractor Regexp extract_extra [list\
+%   \end{tcl}
+%   The filter should get the lines matching the expression, i.e., it 
+%   should work in \texttt{grep} mode, and the characters that are 
+%   matched should be removed.
+%   \begin{tcl}
+    filter_mode grep filterRE {^\(\|} searchRE {^\(\|} replaceRE {}]\
+%   \end{tcl}
+%   Evaluation is internally in \Alpha, and the completion test can use 
+%   |info complete|.
+%   \begin{tcl}
+  complete "Tcl Info Complete" complete_extra {}\
+%   
+  evaluator "Internal Tcl" eval_extra {}\
+%   \end{tcl}
+%   Then there's the matter of how to report the result. Since that 
+%   hasn't been used yet, it seems a good idea to try to use a log 
+%   window here.
+%   \begin{tcl}
+  reporter "Log Window" report_extra {winName {AIDA example log}\
+    winMode Tcl prompt {% } antiprompt {}}\
+%   \end{tcl}
+%   Finally there's the matter of the binding and the menu. There isn't 
+%   anything new here, except that the binding is only made active if 
+%   \texttt{AIDA} mode is installed (since modes not installed will 
+%   sometimes be interpreted as |<none>|, i.e., global).
+%   \begin{tcl}
+  active [mode::exists AIDA] binding /L<O mode AIDA in_menu 1]
+prefs::modified {eemenu::cmdA(Tcl example in AIDA)}
+%</aidacode>
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% \begin{arrayentry}{cmdA}{Tcl Wiki}
+%   When editing a page on the \Tcllogo'ers Wiki~\cite{TclWiki} or the 
+%   \AlphaTcl\ Wiki~\cite{AlphaTclWiki}, one occasionally finds the need 
+%   to test some piece of \Tcllogo\ code on that page. This is down to a 
+%   single keypress with the following command, that extracts lines of 
+%   verbatim text from a Wiki page and feeds them to the internal 
+%   interpreter.
+%   
+%   The syntax of verbatim lines on the \Tcllogo'ers Wiki is 
+%   basically ``any line that starts with a space'', but unfortunately 
+%   there are a few exceptions. The equivalents of \LaTeX\ \verb|\item|s 
+%   for \texttt{itemize} or \texttt{enumerate} are coded as lines that 
+%   begin with three spaces, a \texttt{*} or \meta{digit}\texttt{.} 
+%   respectively, and another space. The equivalents of \LaTeX\ 
+%   \verb|\item|s for \texttt{description} are coded as lines that 
+%   begin with \emph{at least} three spaces, some other characters, a 
+%   colon, and another three spaces (exactly). It is possible to write a 
+%   regular expression to filter out such lines.
+%   \begin{tcl}
+set {eemenu::cmdA(Tcl Wiki)} [list\
+%
+  extractor Regexp extract_extra [list\
+%   \end{tcl}
+%   The filter works in \texttt{anti-grep} mode, and has to filter out 
+%   four different types of non-code lines. There is however no need 
+%   for further substitutions on the code lines.
+%   \begin{tcl}
+    filter_mode anti-grep searchRE {} replaceRE {}\
+    filterRE {^[^ ]|^    (\*|[0-9]\.) |^   .+:   [^ ]} ]\
+%   \end{tcl}
+%   Evaluation is internally in \Alpha, and the completion test can use 
+%   |info complete|.
+%   \begin{tcl}
+  complete "Tcl Info Complete" complete_extra {}\
+%   
+  evaluator "Internal Tcl" eval_extra {}\
+%   \end{tcl}
+%   Then there's the matter of how to report the result. Since that 
+%   hasn't been used yet, it seems a good idea to try to use a log 
+%   window here.
+%   \begin{tcl}
+  reporter "Log Window" report_extra {winName {Wiki code log}\
+    winMode Tcl prompt {% } antiprompt {}}\
+%   \end{tcl}
+%   Finally there's the matter of the binding and the menu. There isn't 
+%   anything new here, except that the binding is only made active if 
+%   \texttt{Wiki} mode is installed (since modes not installed will 
+%   sometimes be interpreted as |<none>|, i.e., global).
+%   \begin{tcl}
+  mode Wiki active [mode::exists Wiki] binding /L<O in_menu 1]
+prefs::modified {eemenu::cmdA(Tcl Wiki)}
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% Finally, let's try something which isn't \Tcllogo.
+% 
+% \begin{arrayentry}{cmdA}{Mathematica}
+%   It is a fairly small modification to make a command which sends 
+%   DoScript AEs to Mathematica instead of Wish. There's probably a way 
+%   to do this using |dde| too, but I don't know what that could be.
+%   
+%   Since Mathematica code presumably concerns rather mathematical 
+%   problems, the comments to the code is likely to contain fairly 
+%   advanced mathematical formulae. This makes the \texttt{.dtx} 
+%   format an interesting choice for source format, and hence I choose 
+%   to use docstripping as extraction method. As there is no special 
+%   environment for Mathematica code, the source environments are the 
+%   generic \texttt{macrocode} and \texttt{macrocode*}.
+%   \begin{tcl}
+set eemenu::cmdA(Mathematica) [list\
+%
+  extractor Docstrip extract_extra [list\
+    filePatL *.dtx sourceEnvsL {macrocode macrocode*} lookAtEnvs 1\
+  ]\
+%   \end{tcl}
+%   The extracted code is sent in a DoScript AppleEvent to the 
+%   Mathematica kernel. Unfortunately the kernel doesn't seem to 
+%   produce any result, so we'll have to leave it at that. Since there 
+%   is no convenient way of testing whether something is a complete 
+%   command in this case, all code from the entire selection is sent in 
+%   one event. 
+%   \begin{tcl}
+  evaluator "Do Script AE" eval_extra\
+     [list targetApp 'Math' joinString 1 replyQ 0]\
+%   
+  complete "Entire Selection" complete_extra {}\
+%   
+  reporter "Status Line" report_extra {}\
+%   \end{tcl}
+%   The binding and menu settings are the same as for the remote 
+%   \Tcllogo\ command.
+%   \begin{tcl}
+  active 0 binding /L<O mode TeX in_menu 0]
+%   \end{tcl}
+%   Of course, this default setting needs to be saved.
+%   \begin{tcl}
+prefs::modified {eemenu::cmdA(Mathematica)}
+%   \end{tcl}
+% \end{arrayentry}
+% 
+% 
+% \begin{thebibliography}{9}
+% \bibitem{TclWiki}
+%   The \Tcllogo'ers Wiki,
+%   \href{http://purl.org/tcl/wiki/}{\textsc{http:}/\slash 
+%   \texttt{purl.org}\slash \texttt{tcl}\slash \texttt{wiki}/}
+% \bibitem{AlphaTclWiki}
+%   \AlphaTcl\ Wiki,  \href{http://alphatcl.sourceforge.net/wikit/}
+%   {\textsc{http:}/\slash \texttt{alphatcl.sourceforge.net}\slash 
+%   \texttt{wikit}/}
+% \end{thebibliography}
+% 
+% 
+\endinput

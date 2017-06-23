@@ -1,0 +1,341 @@
+\input preamble.tex
+
+\Defdim(\a,0)
+\Defdim(\d,0)
+\Defdim(\x,0)
+\Defdim(\y,0)
+
+\def\Ncirc(#1){\Rad(#1,\a)
+ \Cos(\Np\a,\x) \Add(\x,\x)
+ \Sin(\Np\a,\y) \Add(\y,\y)
+ \Circle(64)(\Np\x,\Np\y,2) \Stroke}
+
+\def\ctitle#1{{\huge\bf{#1}}}
+
+\title{\Huge \bf{Drawing Circles \\
+       with \\
+       Rational Quadratic Bezier Curves}}
+\author{Detlef Reimers, detlefreimers@gmx.de}
+\date{\today}
+
+% ---------------------------------------------------------------------------
+\begin{document}
+\maketitle
+
+\begin{center}
+\begin{lapdf}(8, 10)(-4,-5)
+ \Whiledim{\d<360}{\Nextcol(0,23) \Ncirc(\Np\d) \Dadd(\d,15)}
+\end{lapdf}
+
+\ctitle{Description}
+\end{center}
+This document explains, how to calculate the bezier points for
+complete circles. These can be drawn with the \texttt{Rcurve}
+commmand from the \texttt{lapdf.sty}. If the weight of the point
+$P_1$ is $w=\cos(\alpha)$, where $\alpha$ ist the angle between
+$P_{0}P_{1}$ and $P_{1}P_{2}$, then the conic will be a circular
+arc, if also both length $P_{0}P_{1}$ and $P_{1}P_{2}$ are equal.
+
+We have to smothly join several of these arcs together, to get
+a full circle. Only in the case of two segments, we have have to
+use one negative weight. In all other cases we only have positive
+weights. In all of the following calculations and drawings we assume,
+that the center of the circle lies at the origin.
+
+\pagebreak
+\parskip0.3cm
+
+\begin{center}
+\ctitle{General calculation scheme}
+
+\begin{lapdf}(14,13.5)(-7,-6.5)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+0.00,-5.00)
+ (+3.63,-5.00)(+4.76,-1.55)
+ (+5.88,+1.91)(+2.94,+4.05)
+ (+0.00,+6.18)(-2.94,+4.05)
+ (-5.88,+1.91)(-4.76,-1.55)
+ (-3.63,-5.00)(+0.00,-5.00) \Stroke
+ \Line(+0.00,+0.00)(+0.00,-5.00) \Stroke
+ \Line(+0.00,+0.00)(+3.63,-5.00) \Stroke
+ \Line(+0.00,+0.00)(+4.76,-1.55) \Stroke
+ \Line(+0.00,+0.00)(+5.88,+1.91) \Stroke
+ \Line(+0.00,+0.00)(+2.94,+4.05) \Stroke
+ \Line(+0.00,+0.00)(+0.00,+6.18) \Stroke
+ \Line(+0.00,+0.00)(-2.94,+4.05) \Stroke
+ \Line(+0.00,+0.00)(-5.88,+1.91) \Stroke
+ \Line(+0.00,+0.00)(-4.76,-1.55) \Stroke
+ \Line(+0.00,+0.00)(-3.63,-5.00) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Blue
+ \Circle(96)(0,0,6.18) \Stroke
+ \Red
+ \Circle(96)(0,0,5) \Stroke
+ \Black
+ \Rcurve(64)(+0.00,-1.30,1)(+0.42,-1.30,0.5)(0.76,-1.05,1) \Stroke
+ \Point(1)(+3.63,-5.00)
+ \Point(1)(+4.76,-1.55)
+ \Point(1)(+5.88,+1.91)
+ \Point(1)(+2.94,+4.05)
+ \Point(1)(+0.00,+6.18)
+ \Point(1)(-2.94,+4.05)
+ \Point(1)(-5.88,+1.91)
+ \Point(1)(-4.76,-1.55)
+ \Point(1)(-3.63,-5.00)
+ \Point(1)(+0.00,-5.00)
+ \Text(+3.63,-5.10,tl){$P_1$}
+ \Text(+4.86,-1.55,tl){$P_2$}
+ \Text(+5.98,+2.01,cl){$P_3$}
+ \Text(+3.04,+4.15,bl){$P_4$}
+ \Text(+0.00,+6.38,bc){$P_5$}
+ \Text(-3.04,+4.15,br){$P_6$}
+ \Text(-5.98,+2.01,cr){$P_7$}
+ \Text(-4.86,-1.55,tr){$P_8$}
+ \Text(-3.63,-5.10,tr){$P_9$}
+ \Text(+0.00,-5.10,tc){$P_0=P_{10}$}
+ \Text(0.10,-2.90,cl){$r$}
+ \Text(0.10,+3.10,cl){$R$}
+ \Text(0.25,-0.80,cc){$\alpha$}
+\end{lapdf}
+\end{center}
+We always put $P_0$ at the bottom of the circle and all other points
+follow counterclockwise.
+This is the general procedure for circle construction with rational
+quadratic bezier curves (see picture):
+\begin{enumerate}
+\item Set the radius $r$.
+\item Set the number of bezier segments $n$.
+\item Calculate $\alpha = \displaystyle {360^\circ \over 2n}$.
+\item Calculate outer radius $R=\displaystyle {r \over \cos(\alpha)}$.
+\item Calculate all even bezier points
+ $P_{2i} = \displaystyle {+r \cdot \sin(2i\cdot\alpha)
+           \choose -r \cdot \cos(2i\cdot\alpha)}$ for $i=0 \dots n$.
+\item Calculate odd bezier points
+ $P_{2i+1} = \displaystyle {+R \cdot \sin((2i+1)\cdot\alpha)
+             \choose -R \cdot \cos((2i+1)\cdot\alpha)}$ for $i=0 \dots n-1$.
+\end{enumerate}
+You can control your calculations, if you check your endpoint $P_{2n}$.
+This point is equal with $P_0$. All curves are drawn with the
+{\tt Rmoveto()} and {\tt Rcurveto()} combination.
+
+\pagebreak
+
+\parskip1cm
+\begin{center}
+\ctitle{2 Segments}
+
+\begin{lapdf}(6,7.5)(-3,-3)
+ \Lingrid(5)(0,1)(-3,3)(-3,5)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+2.165,+1.25)
+ (+0.00,+5.0)(-2.165,+1.25) \Stroke
+ \Dash(0)
+ \Red
+ \Setwidth(0.02)
+ \Rmoveto(+2.165,+1.25,1)
+ \Rcurveto(64)(+0.00,+5.0,+0.5)(-2.165,+1.25,1)
+ \Rcurveto(64)(+0.00,+5.0,-0.5)(+2.165,+1.25,1) \Stroke
+ \Black
+ \Point(1)(+2.165,+1.25)
+ \Point(1)(+0.000,+5.00)
+ \Point(1)(-2.165,+1.25)
+\end{lapdf}
+
+Circle with $2n+1=5$ points ($w_{2n}=1$ and $w_{2n+1} = \pm \cos(60^\circ) = \pm 0.5$).
+\end{center}
+\begin{center}
+\ctitle{3 Segments}
+
+\begin{lapdf}(6,7.5)(-3,-3)
+ \Lingrid(5)(0,1)(-5,5)(-3,5)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+0.00,-2.50)
+ (+4.333,-2.50)(+2.165,+1.25)
+ (+0.000,+5.00)(-2.165,+1.25)
+ (-4.333,-2.50)(+0.000,-2.50) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Red
+ \Rmoveto(+0.000,-2.50,1)
+ \Rcurveto(64)(+4.33,-2.50,0.5)(+2.165,+1.25,1)
+ \Rcurveto(64)(+0.00,+5.00,0.5)(-2.165,+1.25,1)
+ \Rcurveto(64)(-4.33,-2.50,0.5)(+0.000,-2.50,1) \Stroke
+ \Black
+ \Point(1)(+0.000,-2.50)
+ \Point(1)(+4.333,-2.50)
+ \Point(1)(+2.165,+1.25)
+ \Point(1)(+0.000,+5.00)
+ \Point(1)(-2.165,+1.25)
+ \Point(1)(-4.333,-2.50)
+\end{lapdf}
+
+Circle with $2n+1=7$ points ($w_{2n}=1$ and $w_{2n+1} = \cos(60^\circ) = 0.5$).
+\end{center}
+
+\pagebreak
+
+\begin{center}
+\ctitle{4 Segments}
+
+\begin{lapdf}(6,6)(-3,-3)
+ \Lingrid(5)(0,1)(-3,3)(-3,3)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+2.50,+0.00)
+ (+2.50,+2.50)(+0.00,+2.50)
+ (-2.50,+2.50)(-2.50,+0.00)
+ (-2.50,-2.50)(+0.00,-2.50)
+ (+2.50,-2.50)(+2.50,+0.00) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Red
+ \Rmoveto(+2.50,+0.00,1)
+ \Rcurveto(64)(+2.50,+2.50,0.707)(+0.00,+2.50,1)
+ \Rcurveto(64)(-2.50,+2.50,0.707)(-2.50,+0.00,1)
+ \Rcurveto(64)(-2.50,-2.50,0.707)(+0.00,-2.50,1)
+ \Rcurveto(64)(+2.50,-2.50,0.707)(+2.50,+0.00,1) \Stroke
+ \Black
+ \Point(1)(+2.50,+0.00)
+ \Point(1)(+2.50,+2.50)
+ \Point(1)(+0.00,+2.50)
+ \Point(1)(-2.50,+2.50)
+ \Point(1)(-2.50,+0.00)
+ \Point(1)(-2.50,-2.50)
+ \Point(1)(+0.00,-2.50)
+ \Point(1)(+2.50,-2.50)
+\end{lapdf}
+
+Circle with $2n+1=9$ points ($w_{2n}=1$ and $w_{2n+1} = \cos(45^\circ) = 0.707$).
+\end{center}
+\begin{center}
+\ctitle{5 Segments}
+
+\begin{lapdf}(6,6)(-3,-3)
+ \Lingrid(5)(0,1)(-3,3)(-3,3)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+0.00,-2.50)
+ (+1.815,-2.500)(+2.38,-0.775)
+ (+2.940,+0.905)(+1.47,+2.025)
+ (+0.000,+3.090)(-1.47,+2.025)
+ (-2.940,+0.905)(-2.38,-0.775)
+ (-1.815,-2.500)(+0.00,-2.500) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Red
+ \Rmoveto(+0.00,-2.500,1)
+ \Rcurveto(64)(+1.815,-2.500,0.809)(+2.380,-0.775,1)
+ \Rcurveto(64)(+2.940,+0.905,0.809)(+1.470,+2.025,1)
+ \Rcurveto(64)(+0.000,+3.090,0.809)(-1.470,+2.025,1)
+ \Rcurveto(64)(-2.940,+0.905,0.809)(-2.380,-0.775,1)
+ \Rcurveto(64)(-1.815,-2.500,0.809)(+0.000,-2.500,1) \Stroke
+ \Black
+ \Point(1)(+1.815,-2.500)
+ \Point(1)(+2.380,-0.775)
+ \Point(1)(+2.940,+0.905)
+ \Point(1)(+1.470,+2.025)
+ \Point(1)(+0.000,+3.090)
+ \Point(1)(-1.470,+2.025)
+ \Point(1)(-2.940,+0.905)
+ \Point(1)(-2.380,-0.775)
+ \Point(1)(-1.815,-2.500)
+ \Point(1)(+0.000,-2.500)
+\end{lapdf}
+
+Circle with $2n+1=11$ points ($w_{2n}=1$ and $w_{2n+1} = \cos(36^\circ) = 0.809$).
+\end{center}
+
+\pagebreak
+
+\begin{center}
+\ctitle{6 Segments}
+
+\begin{lapdf}(6,6)(-3,-3)
+ \Lingrid(5)(0,1)(-3,3)(-3,3)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+2.50,+0.00)
+ (+2.50,+1.445)(+1.25,+2.165)
+ (+0.00,+2.885)(-1.25,+2.165)
+ (-2.50,+1.445)(-2.50,+0.000)
+ (-2.50,-1.445)(-1.25,-2.165)
+ (+0.00,-2.885)(+1.25,-2.165)
+ (+2.50,-1.445)(+2.50,+0.000) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Red
+ \Rmoveto(+2.50,+0.000,1)
+ \Rcurveto(64)(+2.50,+1.445,0.866)(+1.25,+2.165,1)
+ \Rcurveto(64)(+0.00,+2.885,0.866)(-1.25,+2.165,1)
+ \Rcurveto(64)(-2.50,+1.445,0.866)(-2.50,+0.000,1)
+ \Rcurveto(64)(-2.50,-1.445,0.866)(-1.25,-2.165,1)
+ \Rcurveto(64)(+0.00,-2.885,0.866)(+1.25,-2.165,1)
+ \Rcurveto(64)(+2.50,-1.445,0.866)(+2.50,+0.000,1) \Stroke
+ \Black
+ \Point(1)(+2.50,+0.000)
+ \Point(1)(+2.50,+1.445)
+ \Point(1)(+1.25,+2.165)
+ \Point(1)(+0.00,+2.885)
+ \Point(1)(-1.25,+2.165)
+ \Point(1)(-2.50,+1.445)
+ \Point(1)(-2.50,+0.000)
+ \Point(1)(-2.50,-1.445)
+ \Point(1)(-1.25,-2.165)
+ \Point(1)(+0.00,-2.885)
+ \Point(1)(+1.25,-2.165)
+ \Point(1)(+2.50,-1.445)
+\end{lapdf}
+
+Circle with $2n+1=13$ points ($w_{2n}=1$ and $w_{2n+1} = \cos(30^\circ) = 0.866$).
+\end{center}
+
+\begin{center}
+\ctitle{7 Segments}
+
+\begin{lapdf}(6,6)(-3,-3)
+ \Lingrid(5)(0,1)(-3,3)(-3,3)
+ \Dash(1)
+ \Setwidth(0.01)
+ \Polygon(+0.00,-2.50)
+ (+1.205,-2.50)(+1.955,-1.560)
+ (+2.705,-0.62)(+2.440,+0.555)
+ (+2.170,+1.73)(+1.085,+2.255)
+ (+0.000,+2.78)(-1.085,+2.255)
+ (-2.170,+1.73)(-2.440,+0.555)
+ (-2.705,-0.62)(-1.955,-1.560)
+ (-1.205,-2.50)(+0.000,-2.500) \Stroke
+ \Dash(0)
+ \Setwidth(0.02)
+ \Red
+ \Rmoveto(+0.000,-2.500,1)
+ \Rcurveto(64)(+1.205,-2.50,0.901)(+1.905,-1.560,1)
+ \Rcurveto(64)(+2.705,-0.62,0.901)(+2.440,+0.555,1)
+ \Rcurveto(64)(+2.170,+1.73,0.901)(+1.085,+2.255,1)
+ \Rcurveto(64)(+0.000,+2.78,0.901)(-1.085,+2.255,1)
+ \Rcurveto(64)(-2.170,+1.73,0.901)(-2.440,+0.555,1)
+ \Rcurveto(64)(-2.705,-0.62,0.901)(-1.905,-1.560,1)
+ \Rcurveto(64)(-1.205,-2.50,0.901)(+0.000,-2.500,1) \Stroke
+ \Black
+ \Point(1)(+0.000,-2.500)
+ \Point(1)(+1.205,-2.500)
+ \Point(1)(+1.905,-1.560)
+ \Point(1)(+2.705,-0.620)
+ \Point(1)(+2.440,+0.555)
+ \Point(1)(+2.170,+1.730)
+ \Point(1)(+1.085,+2.255)
+ \Point(1)(+0.000,+2.780)
+ \Point(1)(-1.085,+2.255)
+ \Point(1)(-2.170,+1.730)
+ \Point(1)(-2.440,+0.555)
+ \Point(1)(-2.705,-0.620)
+ \Point(1)(-1.905,-1.560)
+ \Point(1)(-1.205,-2.500)
+\end{lapdf}
+
+Circle with $2n+1=15$ points ($w_{2n}=1$ and $w_{2n+1} = \cos(25.71^\circ) = 0.901$).
+\end{center}
+\end{document}

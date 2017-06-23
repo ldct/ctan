@@ -1,0 +1,399 @@
+
+%% natded package version 0.1
+%% Copyright 2014 Mohammad M. Ajallooeian
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Mohammad M. Ajallooeian, m.ajallooeian@gmail.com.
+%
+% This work consists of the files natded.sty, natded.tex and extended_doc.tex
+% and complied files natded.pdf and extended_doc.pdf.
+
+\documentclass[11pt]{article}
+
+\usepackage{latexsym, amssymb,amsmath,amsthm,wasysym}
+\usepackage{bm}  % Define \bm{} to use bold math fonts
+\usepackage[normalem]{ulem}
+\usepackage{listings}
+\usepackage{paralist}
+
+\usepackage{bussproofs} %Sam Buss's package for making Gentzen-like proof trees
+\usepackage{fitch} % johan Klwer's sty file for making Fitch proofs
+\usepackage{natded} %Mohammad Ajallooeian's sty file for making \Jas and \KM proofs.
+
+\newcommand{\Jas}{Ja\'skowski }
+\newcommand{\JasA}{Ja\'skowski}
+\newcommand{\Jass}{Ja\'skowski's }
+\newcommand{\JassA}{Ja\'skowski's}
+\newcommand{\Gen}{Gentzen }
+\newcommand{\GenA}{Gentzen}
+\newcommand{\GensA}{Gentzen's}
+\newcommand{\Gens}{Gentzen's }
+\newcommand{\ND}{natural deduction }
+\newcommand{\NDA}{natural deduction}
+\newcommand{\KM}{Kalish-Montague }
+\newcommand{\KMA}{Kalish-Montague}
+
+\newcommand{\bx}{\square}
+\newcommand{\dia}{\diamondsuit}
+
+\title{Kalish/Montague and Ja{\'s}kowski Natural Deduction}
+\author{Mohammad M. Ajallooeian\\ University of Alberta \and Francis Jeffry Pelletier \\
+University of Alberta}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\noindent The Latex style file natded.sty will produce representations of natural deduction proofs in either \Jass original style or the modification of that style by \KMA.  But before describing some of the details of the use of the natded.sty (including the use of ``guards''), we pause for some relevant historical information. 
+
+The history of the formal approach to natural deduction dates from 1934, when two papers appeared simultaneously in different journals written by authors who had no interaction of any type with one another.  Stanis{\l}aw Ja{\'s}kowski (``On the Rules of Suppositions in Formal Logic'', \emph{Studia Logica}, v. 1) and Gerhard Gentzen (``Untersuchungen \"uber das logische Schlie\ss en'' [``Investigations into Logical Deduction''], \emph{Mathematische Zeitschrift} v. 39) worked on the same problem -- of trying to formally mimic the reasoning of ``ordinary mathematicians'' who would ``make assumptions and see where they lead'' and only later conclude with something that was not dependent on those assumptions.
+
+Although they had essentially the same motivation, and arrived at similar but not quite identical conclusions, their methods of representing this sort of reasoning were quite different.  Gentzen used a tree format, which can be mimicked using Sam Buss's bussproofs.sty.  For example, the proof of the propositional logic theorem $\vdash(((p\rightarrow q)\land(\neg r\rightarrow\neg q))\rightarrow(p\rightarrow r))$ takes this form:
+
+
+\begin{prooftree}
+  \AxiomC{\sout{ 3 } }
+  \noLine
+  \UnaryInfC{$\neg r$}
+   \AxiomC{\sout{ 1 } }
+  \noLine
+   \UnaryInfC{$((p\rightarrow q) \wedge (\neg r\rightarrow \neg q))$}
+     \LeftLabel{} \RightLabel{\scriptsize $\wedge$-E}
+	\UnaryInfC{$(\neg r\rightarrow \neg q)$}
+         \LeftLabel{} \RightLabel{\scriptsize $\rightarrow$-E}
+   \BinaryInfC{$\neg q$}
+    \AxiomC{\sout{ 1 } }
+  \noLine
+    \UnaryInfC{$((p\rightarrow q) \wedge (\neg r\rightarrow \neg q))$}
+         \LeftLabel{} \RightLabel{\scriptsize $\wedge$-E}
+	\UnaryInfC{$(p\rightarrow  q)$}
+	 \AxiomC{\sout{ 2 } }
+  \noLine
+    \UnaryInfC{$p$}
+         \LeftLabel{} \RightLabel{\scriptsize $\rightarrow$-E}
+   \BinaryInfC{$ q$}
+    \LeftLabel{} \RightLabel{\scriptsize $\bot$-I}
+   \BinaryInfC{$\bot$}
+         \LeftLabel{} \RightLabel{\scriptsize $\bot$-E (3)}
+   \UnaryInfC{$r$}
+         \LeftLabel{} \RightLabel{\scriptsize $\rightarrow$-I (2)}
+   \UnaryInfC{$(p\rightarrow r)$}
+         \LeftLabel{} \RightLabel{\scriptsize $\rightarrow$-I (1)}
+   \UnaryInfC{$(((p\rightarrow q) \wedge (\neg r\rightarrow \neg q))\rightarrow(p\rightarrow r))$}
+
+\end{prooftree} 
+
+\medskip
+
+A perhaps more familiar style of natural deduction proofs, especially among those who learned their elementary logic in philosophy departments, are the ones usually called ``Fitch'' representations.  For this type of proof representation, there are two Latex packages in common use: Johan Kl\"uwer's fitch.sty and Peter Selinger's fitch.sty.  Minor variants of these style packages are available, such as Richard Zach's lplfitch.sty.   Here's that same proof using Kl\"uwer's fitch.sty:
+
+\begin{equation*}
+  \begin{fitch}
+	\fa \fh ((p\rightarrow q) \wedge(\neg r\rightarrow\neg q))		\\
+	\fa \fa \fh p		\\
+	\fa \fa \fa ((p\rightarrow q) \wedge(\neg r\rightarrow\neg q)) & 1, Reiteration	\\
+	\fa \fa \fa	(p\rightarrow q)	& 3,$\wedge$E		\\
+	\fa \fa \fa q	& 2,4 $\rightarrow$E	\\
+	\fa \fa \fa (\neg r\rightarrow\neg q)	& 3,$\wedge$E		\\
+	\fa \fa \fa  \fh \neg r		\\
+	\fa \fa \fa \fa (\neg r\rightarrow\neg q) & 6,Reiteration \\
+	\fa \fa \fa \fa \neg q			& 7,8 $\rightarrow$E	\\
+	\fa \fa \fa \fa q			& 5,Reiteration	\\
+	\fa \fa \fa r		& 7--10, $\neg$E	\\
+	\fa \fa 	(p\rightarrow r)	& 2--11, $\rightarrow$I	\\
+	\fa (((p\rightarrow q) \wedge(\neg r\rightarrow\neg q)))	& 1--12,$\rightarrow$I
+  \end{fitch}
+\end{equation*}
+
+\noindent This method is derived from one (of two) methods for natural deduction proof representation described by \Jas (1934).  However, this fitch method (from Fredric Fitch (1952) \emph{Symbolic Logic}) is not exactly the way \Jas did his proofs.  Here's that same proof in this one of his methods:
+
+\[
+\Jproof{
+  \cablk{
+    \proofline {((p\rightarrow q)\land(\neg r \rightarrow\neg q))}{Supposition}
+    \cablk{
+      \proofline {p}{Supposition}
+      \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{1 Repeat}
+      \proofline {(p\rightarrow q)}{3 Simplification}
+      \proofline {q}{2, 4 Modus Ponens}
+      \proofline {(\neg r\rightarrow\neg q)}{3 Simplification}
+      \cablk{
+        \proofline {\neg r}{Supposition}
+        \proofline {(\neg r\rightarrow\neg q)}{6 Repeat}
+        \proofline {\neg q}{7, 8 Modus Ponens}
+        \proofline {q}{5 Repeat}
+      }{
+        \proofline {r}{7--10 Reductio ad Absurdum}  
+      }
+    }{
+      \proofline {p\supset r}{2-11 Conditionalization}
+    }
+  }{
+    \proofline {(((p\rightarrow q)\land(\neg r\rightarrow\neg q)) \rightarrow(p \rightarrow r))}{1--12 Conditionalization}
+  }
+}
+\]
+
+
+\noindent It can be seen that what Fitch did was to remove all but the left-side of the boxes (rectangles) that \Jas employed to indicate the new ``world of the supposition''.  And Fitch underlined the assumption or hypothesis or supposition of each such world, which is the first line inside one of \Jass boxes.   Although the difficulty of typesetting these boxes caused Fitch's method to became more common, at least one textbook employed a variant on this method of \JassA, namely D. Kalish \& R. Montague's (1964) \emph{Logic} and the expanded D. Kalish, R. Montague \& G. Mar (1980) \emph{Logic}.  One noticeable difference is that the \KM method placed the conclusion of each one of the boxes at the \emph{beginning} of the subproof, just before the assumption.  This was indicated by the word {\sc show}, so that when engaged in a (sub)proof, one starts by writing the desired conclusion of that (sub)proof, prefixed by this {\sc show}.  And when one legitimately completes that subproof, one ``cancels'' the {\sc show} by drawing a line through it, which indicates that the conclusion can become a part of the next-outer (sub)proof.  Here is that same theorem proved in the \KM system.
+
+The codes for producing the \Jas and \KM proofs are in Listings~\ref{basicJproof} and \ref{basicKMproof}, respectively.
+
+\scriptsize
+\[
+\KMproof{
+  \cbblk{  
+  	\proofline {(((p\rightarrow q)\land(\neg r\rightarrow\neg q))\rightarrow(p\rightarrow r))}{2--13 Conditionalization}
+  }{
+    \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{Supposition}   
+    \cbblk{
+      \proofline {p\rightarrow r}{4--13 Conditionalization}
+    }{
+      \proofline {p}{Supposition}
+      \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{2 Repeat}
+      \proofline {(p\rightarrow q)}{5 Simplification}
+      \proofline {q}{4, 6 Modus Ponens}
+      \proofline {(\neg r\rightarrow\neg q)}{5 Simplification}
+      \cbblk{
+        \proofline {r}{10--13 Reductio ad Absurdum}
+      }{   
+        \proofline {\neg r}{Supposition}    
+        \proofline {(\neg r\rightarrow\neg q)}{8 Repeat}
+        \proofline {\neg q}{10, 11 Modus Ponens}
+        \proofline {q}{7 Repeat}
+      }
+    }
+  }
+}
+\]
+
+
+\begin{lstlisting}[caption={\LaTeX\, code for Ja\'skowski-style proof},label={basicJproof},numbers=left,escapeinside={@}{@}]
+\[
+\Jproof{
+  \cablk{
+    \proofline {((p\rightarrow q)\land(\neg r \rightarrow\neg q))}{Supposition}
+    \cablk{
+      \proofline {p}{Supposition}
+      \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{1 Repeat}
+      \proofline {(p\rightarrow q)}{3 Simplification}
+      \proofline {q}{2, 4 Modus Ponens}
+      \proofline {(\neg r\rightarrow\neg q)}{3 Simplification}
+      \cablk{
+        \proofline {\neg r}{Supposition}
+        \proofline {(\neg r\rightarrow\neg q)}{6 Repeat}
+        \proofline {\neg q}{7, 8 Modus Ponens}
+        \proofline {q}{5 Repeat}
+      }{
+        \proofline {r}{7--10 Reductio ad Absurdum}  
+      }
+    }{
+      \proofline {p\supset r}{2-11 Conditionalization}
+    }
+  }{
+    \proofline {(((p\rightarrow q)\land(\neg r\rightarrow\neg q)) \rightarrow(p \rightarrow r))}{1--12 Conditionalization}
+  }
+}
+\]
+\end{lstlisting}
+
+\begin{lstlisting}[caption={\LaTeX\, code for Kalish-Montague-style proof},label={basicKMproof},numbers=left,escapeinside={@}{@}]
+\[
+\KMproof{
+  \cbblk{  
+  	\proofline {(((p\rightarrow q)\land(\neg r\rightarrow\neg q))\rightarrow(p\rightarrow r))}{2--13 Conditionalization}
+  }{
+    \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{Supposition}   
+    \cbblk{
+      \proofline {p\rightarrow r}{4--13 Conditionalization}
+    }{
+      \proofline {p}{Supposition}
+      \proofline {((p\rightarrow q)\land(\neg r\rightarrow\neg q))}{2 Repeat}
+      \proofline {(p\rightarrow q)}{5 Simplification}
+      \proofline {q}{4, 6 Modus Ponens}
+      \proofline {(\neg r\rightarrow\neg q)}{5 Simplification}
+      \cbblk{
+        \proofline {r}{10--13 Reductio ad Absurdum}
+      }{   
+        \proofline {\neg r}{Supposition}    
+        \proofline {(\neg r\rightarrow\neg q)}{8 Repeat}
+        \proofline {\neg q}{10, 11 Modus Ponens}
+        \proofline {q}{7 Repeat}
+      }
+    }
+  }
+}
+\]
+\end{lstlisting}
+
+\normalsize
+\medskip
+
+\noindent Within the code to produce the \Jas and the Kalish-Montague proofs we see two differences:  First, the \Jas proofs use the main control \verb+\Jproof+, while the Kalish-Montague proofs employ \verb+\KMproof+.  Secondly, within each of these different proof controls are the commands for typesetting the conclusion: in the \verb+\Jproof+, conclusions go \emph{after} the supporting subproof, so we use \verb+\cablk+ for \uline{c}onclusion \uline{a}fter block; in the \verb+\KMproof+ the conclusions come before the subproof so we use \verb+\cbblk+ for \uline{c}onclusion \uline{b}efore block.  And we have written the block structure before the conclusion in the \Jas proof, while it is written after the conclusion in the Kalish-Montague proof.
+
+\medskip
+
+On Kl\"uwer's and Selinger's pages describing their two fitch.sty files, the following argument is displayed:
+
+\begin{equation*}
+  \begin{fitch}
+  \fh \exists x\forall y P(x,y)					\\
+  \fa \fitchmodal{v} \fitchmodalh{u} \forall y P(u,y)	\\
+  \fa \fa \fa P(u,v) 		& $\forall${\bf E}, 2	\\
+  \fa \fa \fa \exists x P(x,v)	& $\exists${\bf i}, 3	\\
+  \fa \fa \exists x P(x,v)	& $\exists${\bf E}, 1, 2--4 \\
+  \fa \forall y\exists x P(x,y)	  & $\forall${\bf I},  2--5 \\
+  \end{fitch}
+\end{equation*}
+
+\noindent The idea is that $u$ and $v$ are \emph{guards}, whose role is to prevent  certain variables being imported into or exported out of the relevant subproof that they are guarding.  A \Jas style proof of this theorem is given in  Figure~\ref{fig:JasVarGuard} and is generated by Listing~\ref{lst:JasVarGuard}.
+
+\scriptsize
+
+\begin{figure}[h!]
+\caption{A Ja\'skowski-style proof with guarded variables\label{fig:JasVarGuard}}
+\scriptsize
+\[
+\Jproof	 
+	{\proofline{\exists x\forall yP(x,y)}{Premise} 
+	 \cablk[v]{   
+           \cablk[u]{  								
+             \proofline{\forall yP(u,y)}{Supposition} 		 
+             \proofline{P(u,v)}{2, $\forall\bm{E}$}    		
+             \proofline{\exists xP(x,v)}{3, $\exists\bm{I}$}  
+          }  
+          {\proofline{\exists xP(x,v)}{1,2--4, $\exists\bm{E}$}  }
+        } 
+        {\proofline{\forall y\exists xP(x,y)}{2--5, $\forall\bm{I}$}  
+        }
+      }
+\]
+\end{figure}
+
+\begin{lstlisting}[caption={\LaTeX\, code for \JasA-style proof with guarded variables},label={lst:JasVarGuard},numbers=left,escapeinside={@}{@}]
+\[
+\Jproof
+	 {\proofline{\exists x\forall yP(x,y)}{Premise} 
+	 \cablk[v]{   
+           \cablk[u]{  								
+             \proofline{\forall yP(u,y)}{Supposition} 		 
+             \proofline{P(u,v)}{2, $\forall\bm{E}$}    		
+             \proofline{\exists xP(x,v)}{3, $\exists\bm{I}$}  
+          }  
+          {\proofline{\exists xP(x,v)}{1,2--4, $\exists\bm{E}$}  }
+        } 
+        {\proofline{\forall y\exists xP(x,y)}{2--5, $\forall\bm{I}$}  
+        }
+      }
+\]
+\end{lstlisting}
+
+\normalsize
+
+\medskip
+Kalish-Montague's strategy of putting {\sc show} lines at the beginning of a subproof and of counting the (free) variables in that formula as if they actually occurred in the proof at the time one wishes to reiterate into the area beneath such an uncancelled {\sc show} (or to do $\exists\bm{E}$ by instantiating to  variables that occur in the {\sc show} formula), makes it unnecessary to have explicit guards to protect $\forall\bm{I}$ and $\exists\bm{E}$, since these are the only reasons to have guards for variables -- although one could indicate them using the present \verb+\KMproof+, if one wished.  (Another peculiarity of the Kalish-Montague system is that their $\exists$-elimination rule does not employ a subproof, but directly introduces a (completely) new variable into the proof, including being completely distinct from variables in {\sc show} lines -- even uncancelled ones.)  For these reasons we do not display the use of guards for variables in the Kalish-Montague system.  But such guards are more logically useful in a \JasA-style proof.  
+
+
+ Another use of guards is in modal logic, where -- depending on the particular modal system that we are providing a proof system for -- certain formulas cannot be reiterated into a guarded-with-a-$\bx$ scope line.  Here is an example in modal system S$_4$ (or any stronger one).  A \Jas style proof of the valid argument $\bx p\land\bx q\vdash\bx(p\land q)$ is given in  Figure~\ref{fig:JmodalGuard} and is generated by Listing~\ref{lst:JmodalGuard}.  It is followed by a \KM style proof of the same argument in Figure~\ref{fig:KMmodalGuard} together with its code in Listing~\ref{lst:KMmodalGuard}.
+
+\scriptsize
+
+\begin{figure}[h!]
+\caption{A \JasA-style proof with modal guards\label{fig:JmodalGuard}}
+\scriptsize
+\[
+\Jproof{
+	\proofline{\bx p\land\bx q}{premise}
+	\proofline{\bx p}{1,$\land\bm{E}$}
+	\proofline{\bx q}{1,$\land\bm{E}$}
+	\cablk[\bx]
+	     {\proofline{\bx p}{2, Reiterate}
+	       \proofline{\bx q}{3, Reiterate}
+	       \proofline{p}{4, $\bx\bm{E}$}
+	       \proofline{q}{5, $\bx\bm{E}$}
+	       \proofline{p\land q}{6,7, $\land\bm{I}$}
+	      }
+	      {\proofline{\bx(p\land q)}{4--8, $\bx\bm{I}$} }
+	 }
+\]
+\end{figure}
+
+\begin{lstlisting}[caption={\LaTeX\, code for \JasA-style proof with modal guards},label={lst:JmodalGuard},numbers=left,escapeinside={@}{@}]
+\[
+\Jproof{
+	\proofline{\bx p\land\bx q}{premise}
+	\proofline{\bx p}{1,$\land\bm{E}$}
+	\proofline{\bx q}{1,$\land\bm{E}$}
+	\cablk[\bx]
+	     {\proofline{\bx p}{2, Reiterate}
+	       \proofline{\bx q}{3, Reiterate}
+	       \proofline{p}{4, $\bx\bm{E}$}
+	       \proofline{q}{5, $\bx\bm{E}$}
+	       \proofline{p\land q}{6,7, $\land\bm{I}$}
+	      }
+	      {\proofline{\bx(p\land q)}{4--8, $\bx\bm{I}$} }
+	 }
+\]
+\end{lstlisting}
+
+\begin{figure}[h!]
+\caption{A Kalish/Montague-style proof with modal guards\label{fig:KMmodalGuard}}
+\[
+\KMproof{
+	\cbblk
+		{\proofline{\bx (p \land q)}{5, Direct Proof} }
+		{\proofline{\bx p \land \bx q}{Premise} 
+		\proofline{\bx p}{2, $\land\bm{E}$ } 
+	  	\proofline{\bx q}{2, $\land\bm{E}$ }
+	   	\cbblk[\bx]
+			{ \proofline{\bx (p \land q)}{6--10, $\bx\bm{I}$} } 
+			{ \proofline{\bx p}{3, Reiterate} 
+	        		  \proofline{\bx q}{4, Reiterate} 
+	       		  \proofline{p}{6, $\bx\bm{E}$}
+	    		  \proofline{q}{7, $\bx\bm{E}$}
+		       	  \proofline{(p\land q)}{8,9 $\land\bm{I}$}   }
+		}
+	}
+\]
+\end{figure}
+
+\begin{lstlisting}[caption={\LaTeX\, code for \KMA-style proof with modal guards},label={lst:KMmodalGuard},numbers=left,escapeinside={@}{@}]
+\[
+\KMproof{
+	\cbblk
+		{\proofline{\bx (p \land q)}{5, Direct Proof} }
+		{\proofline{\bx p \land \bx q}{Premise} 
+		\proofline{\bx p}{2, $\land\bm{E}$ } 
+	  	\proofline{\bx q}{2, $\land\bm{E}$ }
+	   	\cbblk[\bx]
+			{ \proofline{\bx (p \land q)}{6--10, $\bx\bm{I}$} } 
+			{ \proofline{\bx p}{3, Reiterate} 
+	        		  \proofline{\bx q}{4, Reiterate} 
+	       		  \proofline{p}{6, $\bx\bm{E}$}
+	    		  \proofline{q}{7, $\bx\bm{E}$}
+		       	  \proofline{(p\land q)}{8,9 $\land\bm{I}$}   }
+		}
+	}
+\]
+
+\end{lstlisting}
+
+
+\normalsize
+
+\bigskip
+
+For further details on the history of natural deduction, including how it became the standard method in elementary logic textbooks, especially in the years 1950-1990 and beyond, see F.J. Pelletier (1999) ``A Brief History of Natural Deduction'' \emph{History and Philosophy of Logic}, v. 20, pp. 1--31.  Also discussed are the four main styles of representing natural deduction proofs:  the Gentzen trees, the \JasA-Fitch graphical (boxes) method, the \JasA-Quine (1950) bookkeeping method, and the Suppes (1957) sequent natural deduction method.  A discussion of how comparatively wide-spread these four methods have become is also indicated by a survey of many elementary natural deduction textbooks.
+
+\end{document}

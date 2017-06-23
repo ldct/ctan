@@ -1,0 +1,451 @@
+%%
+%% Partial Emulation of Emma Pease's tree-dvips.sty using pst-nodes
+%%
+%%  version 0.5 (an alpha)
+%%
+%%  License: LaTeX Project Public License
+%%
+%%  c.  Avery D Andrews 2006
+%%
+%%   acknowledgements
+%%     Herbert Voss for info on how to get at the corners
+%%     Robert Levine and John Frampton for incitement
+%%     Emma Pease for the original
+%%
+%%   the philosophy is to combine a reasonable amount of backward
+%%     compatibility for documents based on tree-dvips, without
+%%     trying to push that notation much further (but a little bit,
+%%     if it's easy and seems like it might be useful).
+%%
+%%   \(a)nodecurve seems to be the biggest problem, since tree-dvips
+%%      wants dimension for curvature, and pst-node's nccurv etc.
+%%      want numbers.  The solution adopted is have \(a)nodecurve require
+%%      numbers in the curvature parameters, so that these will have to
+%%      be changed in the documents, but add \pcnodecurve not requiring
+%%      any curvature parameters, but taking linestyle options as a final
+%%      optional [] parameter.
+%%
+%%   \nodepoint affords a similar problem; no easy way to get vert
+%%      displacement.  Implementation treats height parameter as angle
+%%
+%%  Implemented:
+%%     \node
+%%     \nodepoint   (extended with angle option)
+%%     \(a)nodeconnect, \nodeconnect (extended)
+%%     \treelinewidth
+%%     \(a)nodecurve (with curvature issue)
+%%     \pcnodecuve (non tree-dvips)
+%%     \(a)barnodeconnect
+%%     \nodetriangle
+%%     \putstuff: non-tree-dvips, but useful
+%%     \putpoint:   "
+%%
+%%  Partially Implemented:
+%%
+%%     \nodebox, \nodeoval, \nodecircle : dimension parameters needed
+%%
+
+\csname PSTTreeDvipsEmuLoaded\endcsname
+\let\PSTTreeDvipsEmuLoaded\endinput
+
+\ifx\PSTnodesLoaded\endinput\else\input pst-node.tex\fi\relax
+
+
+{
+\catcode`\_=11     % sets underbar to letter
+\catcode` =9       % causes spaces to be ignored
+\catcode`\^^M=9    % causes <CR> to be ignored
+
+%
+%  Some tree mode parameters (from tree-dvips.sty)
+%
+%
+\newdimen\nodemargin % 
+\global\nodemargin=2pt
+\newdimen\treelinewidth
+
+\global\treelinewidth=.4pt
+
+\newbox\tempbox
+
+\gdef\thinline{\treelinewidth=.3pt}
+
+\newdimen\dashlength
+%
+% makedash at end so spaces will work
+%
+
+%
+% cheap and nasty test for empty argument, assuming a real
+%  one doesn't start with a colon
+%
+\gdef\ada@ifempty#1#2#3{\test@empty#1:{#2}{#3}}
+\gdef\test@empty{\@ifnextchar :{\@testfirst}{\@testsecond}}
+\gdef\@testfirst#1:#2#3{#2}
+\gdef\@testsecond#1:#2#3{#3}
+
+\gdef\ada@ifnotempty#1#2{\ada@ifempty{#1}{}{#2}}
+
+%
+% machinery for parsing an arglist of the form [a(,b)]
+%   n-ary generalization possible?  Yes, see gloss/lingtrees code!
+%
+\gdef\oneortwoargs#1#2[#3]{\@oneortwoargs{#1}{#2}[#3,]}
+\gdef\@oneortwoargs#1#2[#3,{\@ifnextchar ]
+  {#1[#3}
+  {\@secondarg{#2}[#3]}
+} 
+\gdef\@secondarg#1[#2]#3,]{#1[#2,#3]}
+
+%
+% These commands retrieve coords from names, for use when
+%  pstricks \SpecialCoor is active.  They must be surrounded
+%  by parens in their environments in order to work
+%
+\gdef\loc@tl#1{#1_tl}
+\gdef\loc@t#1{#1|#1_tl}
+\gdef\loc@tr#1{#1_br|#1_tl}
+\gdef\loc@r#1{#1_br|#1}
+\gdef\loc@br#1{#1_br}
+\gdef\loc@b#1{#1|#1_br}
+\gdef\loc@bl#1{#1_tl|#1_br}
+\gdef\loc@l#1{#1_tl|#1}
+\gdef\loc@c#1{#1}
+
+\gdef\ang@tl{135}
+\gdef\ang@t{90}
+\gdef\ang@tr{45}
+\gdef\ang@r{0}
+\gdef\ang@br{-45}
+\gdef\ang@b{-90}
+\gdef\ang@bl{-135}
+\gdef\ang@l{180}
+
+
+%
+% a prettier package for the above, usable in the document
+%
+\gdef\nodeloc#1#2{\csname loc@#1\endcsname{#2}}
+% #2 for node; does nothing yet, but maybe someday ...
+\gdef\nodeang#1#2{\csname ang@#1\endcsname}
+
+
+% \node{label}{content}
+%  Perhaps a dive into postscript could let us do it with one node instead of 3
+%  (if, in postscript, nodes know how big they are)
+%
+\gdef\node#1#2{
+   \rnode[tl]{#1_tl}{
+      \rnode[br]{#1_br}{
+         \rnode{#1}{#2}
+      }
+   }
+}
+
+%
+% \nodepoint{nodename}[displacement distance](angle)
+%    default is current point.  Maybe someday [vertical displacement]
+%
+\gdef\nodepoint#1{\@ifnextchar [{\@nodepoint#1}{\pnode{#1}}}
+\gdef\@nodepoint#1[#2]{\@ifnextchar ({\@@nodepoint#1[#2]}
+   {\@ifnextchar [{\@@@nodepoint#1[#2]}
+     {\@@nodepoint#1[#2](0)}
+   }
+}
+\gdef\@@nodepoint#1[#2](#3){{
+  \SpecialCoor
+  \pnode{@a}
+  %
+  % this below seems excessive but how else to get \nodeconnect to work?
+  %
+  \uput{#2}[#3](@a){\pnode{#1}\pnode{#1_tl}\pnode{#1_br}}
+}}
+
+\gdef\@@@nodepoint#1[#2][#3]{{
+  \psset{xunit=#2, yunit=#3}
+  \uput{0}[0](1,1){\pnode{#1}\pnode{#1_tl}\pnode{#1_br}}
+ }}
+
+%  \putpoint{label}{distance}(angle)[from corner]{from node}
+%               1       2        3       4            5
+%   2 is either {num} or {num,num}=x,y; in the latter case 3 is ignored
+%
+\gdef\putpoint#1#2{\@ifnextchar (
+  {\@putpoint{#1}{#2}}
+  {\@putpoint{#1}{#2}(0)}
+}
+\gdef\@putpoint#1#2(#3){\@ifnextchar [
+  {\@@putpoint{#1}{#2}(#3)}
+  {\@@putpoint{#1}{#2}(#3)[]}
+}
+\gdef\@@putpoint#1#2(#3)[#4]#5{
+   \def\procloc[##1]{\oneortwoargs{\oneloc}{\twolocs}[##1]}
+   \def\oneloc[##1]{\putpoint_ang}
+   \def\twolocs[##1,##2]{\putpoint_cart}
+   \procloc[#2]{#1}[#2]{#3}[#4]{#5}
+}
+\gdef\putpoint_ang#1[#2]#3[#4]#5{{
+  \SpecialCoor
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodepoint{#1}}
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodepoint{#1_tl}}
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodepoint{#1_br}}
+}}
+\gdef\putpoint_cart#1[#2,#3]#4[#5]#6{{
+  \SpecialCoor
+%  \message{xunit is #2}
+  \ifdim #2=0em
+    \putpoint_ang{#1}[#3]{90}[#5]{#6}
+  \else
+    \ifdim #3=0em
+         \putpoint_ang{#1}[#2]{0}[#5]{#6}
+      \else
+        \psset{xunit=#2,yunit=#3}
+        \rput(\nodeloc{#5}{#6}){\uput{0}[0](1,1){\nodepoint{#1}}}
+        \rput(\nodeloc{#5}{#6}){\uput{0}[0](1,1){\nodepoint{#1_tl}}}
+        \rput(\nodeloc{#5}{#6}){\uput{0}[0](1,1){\nodepoint{#1_br}}}
+      \fi
+  \fi
+}}
+
+%  \putstuff{label}{distance}(angle)[from corner]{from node}
+%               1       2        3       4            5
+%   2 is either {num} or {num,num}=x,y; in the latter case 3 is ignored
+%
+\gdef\putstuff#1#2{\@ifnextchar (
+  {\@putstuff{#1}{#2}}
+  {\@putstuff{#1}{#2}(0)}
+}
+\gdef\@putstuff#1#2(#3){\@ifnextchar [
+  {\@@putstuff{#1}{#2}(#3)}
+  {\@@putstuff{#1}{#2}(#3)[]}
+}
+\gdef\@@putstuff#1#2(#3)[#4]#5{
+   \def\procloc[##1]{\oneortwoargs{\oneloc}{\twolocs}[##1]}
+   \def\oneloc[##1]{\putstuff_ang}
+   \def\twolocs[##1,##2]{\putstuff_cart}
+   \tracingmacros=1
+   \procloc[#2]{#1}[#2]{#3}[#4]{#5}
+}
+\gdef\putstuff_ang#1[#2]#3[#4]#5{{
+  \SpecialCoor
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodestuff{#1}}
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodestuff{#1_tl}}
+  \uput{#2}[#3](\nodeloc{#4}{#5}){\nodestuff{#1_br}}
+}}
+\gdef\putstuff_cart#1[#2,#3]#4[#5]#6{{
+  \SpecialCoor
+%  \message{xunit is #2}
+  \ifdim #2=0em
+    \putstuff_ang{#1}[#3]{90}[#5]{#6}
+  \else
+    \ifdim #3=0em
+         \putstuff_ang{#1}[#2]{0}[#5]{#6}
+      \else
+        \psset{xunit=#2,yunit=#3}
+        \rput(\nodeloc{#5}{#6}){\uput{0}[0](1,1){#1}}
+      \fi
+  \fi
+}}
+
+
+% \nodeconnect<command>(pre-options)[fromloc]{fromnode}[toloc]{tonode}[style parameters]
+%                 1           2         3        4        5      6             7
+%
+% plain lines by default.  \pc node connection command should work; \nc's won't
+%
+% the pre-options are for defining variants (e.g. \anodeconnect), not general use
+% in definitions, inherent properties first, then pre-option and finally the
+%   style parameters
+%
+\gdef\nodeconnect{\@ifnextchar <
+  {\@nodeconnect}
+  {\@nodeconnect<\pcline>}
+}
+\gdef\@nodeconnect<#1>{\@ifnextchar (
+  {\@@nodeconnect<#1>}
+  {\@@nodeconnect<#1>()}
+}
+\gdef\@@nodeconnect<#1>(#2){\@ifnextchar [
+  {\@@@nodeconnect<#1>(#2)}
+  {\@@@nodeconnect<#1>(#2)[b]}
+}
+\gdef\@@@nodeconnect<#1>(#2)[#3]#4{\@ifnextchar [
+  {\@@@@nodeconnect<#1>(#2)[#3]{#4}}
+  {\@@@@nodeconnect<#1>(#2)[#3]{#4}[t]}
+}
+\gdef\@@@@nodeconnect<#1>(#2)[#3]#4[#5]#6{\@ifnextchar [
+  {\@@@@@nodeconnect<#1>(#2)[#3]{#4}[#5]{#6}}
+  {\@@@@@nodeconnect<#1>(#2)[#3]{#4}[#5]{#6}[]}
+}
+\gdef\@@@@@nodeconnect<#1>(#2)[#3]#4[#5]#6[#7]{{\SpecialCoor
+   \psset{nodesep=0pt, linewidth=\treelinewidth}
+   \ada@ifnotempty{#2}{\psset{#2}}
+   \ada@ifnotempty{#7}{\psset{#7}}
+   #1(\nodeloc{#3}{#4})(\nodeloc{#5}{#6})
+}}
+
+% \anodeconnect[fromloc]{fromnode}[toloc]{tonode}[style options]
+%
+% connecting line with arrow at the end (for complicated arrows,
+%  use \nodeconnect with arrows option)
+%
+\gdef\anodeconnect{\nodeconnect(arrows=->)}
+
+%
+% application of oneortwoargs machinery for the nodecurve curvature argument
+%
+\gdef\getncurv[#1]{\oneortwoargs{\ncurv@}{\ncurv@AB}[#1]}
+\gdef\ncurv@[#1]{\psset{ncurv=#1}}
+\gdef\ncurv@AB[#1,#2]{\psset{ncurvA=#1,ncurvB=#2}}
+
+
+% \nodecurve<command>(pre-option)[fromloc]{fromnode}[toloc]{tonode}(curve)[style options]
+%               1          2        3         4       5       6      7        8
+%   for curve, either one number or 2, separated by commas, eg: (2) or (1,2)
+%    1 does nothing for the moment, but maybe someday (curved zigags?)
+%  
+%   for curve, either one number or 2, separated by commas, eg: (2) or (1,2)
+%
+\gdef\nodecurve{\@ifnextchar <
+  {\@nodecurve}
+  {\@nodecurve<\pccurve>}
+}
+\gdef\@nodecurve<#1>{\@ifnextchar (
+  {\@@nodecurve<#1>}
+  {\@@nodecurve<#1>()}
+}
+\gdef\@@nodecurve<#1>(#2){\@ifnextchar [
+  {\@@@nodecurve<#1>(#2)}
+  {\@@@nodecurve<#1>(#2)[b]}
+}
+\gdef\@@@nodecurve<#1>(#2)[#3]#4{\@ifnextchar [
+  {\@@@@nodecurve<#1>(#2)[#3]{#4}}
+  {\@@@@nodecurve<#1>(#2)[#3]{#4}[t]}
+}
+\gdef\@@@@nodecurve<#1>(#2)[#3]#4[#5]#6{\@ifnextchar (
+  {\@@@@@nodecurve<#1>(#2)[#3]{#4}[#5]{#6}}
+  {\@@@@@nodecurve<#1>(#2)[#3]{#4}[#5]{#6}()}
+}
+\gdef\@@@@@nodecurve<#1>(#2)[#3]#4[#5]#6(#7){\@ifnextchar [
+  {\@@@@@@nodecurve<#1>(#2)[#3]{#4}[#5]{#6}(#7)}
+  {\@@@@@@nodecurve<#1>(#2)[#3]{#4}[#5]{#6}(#7)[]}
+}
+\gdef\@@@@@@nodecurve<#1>(#2)[#3]#4[#5]#6(#7)[#8]{{
+   \SpecialCoor
+  \ada@ifnotempty{#7}{\getncurv[#7]}
+    \psset{nodesep=\nodemargin, linewidth=\treelinewidth, angleA=\nodeang{#3}{#4},
+       angleB=\nodeang{#5}{#6}}
+   \ada@ifnotempty{#2}{\psset{#2}}
+   \ada@ifnotempty{#8}{\psset{#8}}
+   #1(\nodeloc{#3}{#4})(\nodeloc{#5}{#6})
+}}
+
+
+% \anodecurve[fromloc]{fromnode}[toloc]{tonode}{depth}
+%   for fancy options use \pcnodecurve with arrows style.
+%
+\gdef\anodecurve{\nodecurve(arrows=->)}
+       
+
+%
+% connect two words with straight-edge U
+%
+% \barnodeconnect(pre-options)[arm]{from}{to}[style]
+%                      1        2     3    4    5
+%
+\gdef\barnodeconnect{\@ifnextchar (
+  {\@barnodeconnect}
+  {\@barnodeconnect()}
+}
+\gdef\@barnodeconnect(#1){\@ifnextchar [
+  {\@@barnodeconnect(#1)}
+  {\@@barnodeconnect(#1)[]}
+}
+\gdef\@@barnodeconnect(#1)[#2]#3#4{\@ifnextchar [
+  {\@@@barnodeconnect(#1)[#2]{#3}{#4}}
+  {\@@@barnodeconnect(#1)[#2]{#3}{#4}[]}
+}
+\gdef\@@@barnodeconnect(#1)[#2]#3#4[#5]{{
+  \psset{nodesep=\nodemargin, linewidth=\treelinewidth, angle=-90}
+  \ada@ifnotempty{#1}{\psset{#1}}
+  \ada@ifnotempty{#2}{\psset{arm=#2}}
+  \ada@ifnotempty{#5}{\psset{#5}}
+  \ncbar{#3}{#4}
+}}
+
+%
+% \abarnodeconnect[arm]{from}{to}[linestyle]
+%
+\gdef\abarnodeconnect{\barnodeconnect(arrows=->)}
+
+%     triangles of laziness
+%
+% \nodetriangle {apex}{base}[style]
+%                 1      2     3
+%
+\gdef\nodetriangle#1#2{\@ifnextchar [
+  {\@nodetriangle{#1}{#2}}
+  {\@nodetriangle{#1}{#2}[]}
+}
+\gdef\@nodetriangle#1#2[#3]{{
+  \nodeconnect{#1}[tl]{#2}[#3]
+  \nodeconnect{#1}[tr]{#2}[#3]
+  \nodeconnect[tl]{#2}[tr]{#2}[#3]
+}}
+
+
+%
+% \nodecircle{node}{radius}[style options[
+%
+\gdef\nodecircle#1(#2){\@ifnextchar [
+  {\@nodecircle#1(#2)}
+  {\@nodecircle#1(#2)[]}
+}
+\gdef\@nodecircle#1(#2)[#3]
+{{
+  \SpecialCoor
+  \ada@ifempty{#3}{\pscircle(#1){#2}}
+      {\pscircle[#3](#1){#2}} % \psset{#3} doesn't seem to work here
+}}
+
+%
+% \nodeoval{node}{hradius, vradius}[style options]
+%
+\gdef\nodeoval#1(#2){\@ifnextchar [
+  {\@nodeellipse#1(#2)}
+  {\@nodeellipse#1(#2)[]}
+}
+\gdef\@nodeellipse#1(#2,#3)[#4]
+{{
+  \SpecialCoor
+  \ada@ifempty{#4}{\psellipse(#1)(#2,#3)}
+      {\psellipse[#4](#1)(#2,#3)} 
+}}
+
+%
+% \nodebox{node}[style options]
+%
+\gdef\nodebox#1{\@ifnextchar [
+  {\@nodebox#1}
+  {\@nodebox#1[]}
+}
+
+\gdef\@nodebox#1[#2]
+{{
+  \SpecialCoor
+  \putpoint{@a}{\nodemargin}(135)[tl]{#1}
+  \putpoint{@b}{\nodemargin}(-45)[br]{#1}
+  \ada@ifempty{#2}{\psframe(@a)(@b)}
+      {\message{fuccon arg #2}
+       \psframe[#2](@a)(@b)} % \psset{#3} doesn't seem to work here
+}}
+
+
+}  % end group & restore standard catcodes
+
+% \makedash{dimen}  makes dashes of dimen length (0 dimen = none not solid)
+\gdef\makedash#1{\psset{linestyle=dashed, dash=2pt #1}}
+
+\gdef\nodepointerror{third argument of nodepoint must now be angle (number)}
+
+\psset{arrowsize=2pt 2, arrowlength=1.2, arrowinset=.3}

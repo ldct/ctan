@@ -1,0 +1,918 @@
+% bxpdfver.sty
+
+%% package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bxpdfver}[2017/02/11 v0.4]
+\def\bxpv@pkgname{bxpdfver}
+
+%% preparations
+\RequirePackage{ifthen}[]% for \newboolean
+\newif\ifbxpv@ok
+\providecommand\bxDebug[1]{}
+
+%--------------------------------------- package options
+
+%% variables
+\let\bxpv@drv@type\relax  % driver type
+   % p=pdfmode,d=dvipdfmx,0=disabled,x=unsupported
+\let\bxpv@drv@name\relax  % driver name
+\let\bxpv@version\relax   % version value (eg. 1.4)
+\let\bxpv@compress=t      % use compression?
+\let\bxpv@obj@compress=t  % use object stream?
+\chardef\bxpv@infolevel=2 % info-log level
+
+%% options
+% (PDF version)
+\DeclareOption{1.4}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+\DeclareOption{1.5}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+\DeclareOption{1.6}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+\DeclareOption{1.7}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+\DeclareOption{1.8}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+\DeclareOption{1.9}{%
+  \edef\bxpv@version{\CurrentOption}%
+}
+% (compression)
+\DeclareOption{nocompress}{%
+  \let\bxpv@compress=f%
+}
+\DeclareOption{compress}{%
+  \let\bxpv@compress=t%
+}
+\DeclareOption{noobjcompress}{%
+  \let\bxpv@obj@compress=f%
+}
+\DeclareOption{objcompress}{%
+  \let\bxpv@obj@compress=t%
+}
+% (driver)
+\DeclareOption{native}{%
+  \let\bxpv@drv@type=p%
+  \def\bxpv@drv@name{native}%
+}
+\DeclareOption{dvipdfmx}{%
+  \let\bxpv@drv@type=d%
+  \def\bxpv@drv@name{dvipdfmx}%
+}
+\DeclareOption{dvips}{%
+  \let\bxpv@drv@type=x%
+  \def\bxpv@drv@name{dvips}%
+}
+\DeclareOption{dviout}{%
+  \let\bxpv@drv@type=x%
+  \def\bxpv@drv@name{dviout}%
+}
+\DeclareOption{xdvi}{%
+  \let\bxpv@drv@type=x%
+  \def\bxpv@drv@name{xdvi}%
+}
+\DeclareOption{disabled}{%
+  \let\bxpv@drv@type=0%
+  \def\bxpv@drv@name{disabled}%
+}
+\DeclareOption{nodvidriver}{%
+  \let\bxpv@drv@type=0%
+  \def\bxpv@drv@name{nodvidriver}%
+}
+% (other)
+\DeclareOption{lenient}{%
+  \chardef\bxpv@infolevel=1
+}
+
+%% process
+\ProcessOptions*
+
+%--------------------------------------- helpers
+
+%% unique tokens
+\def\bxpv@end{\bxpv@end@}
+\def\bxpv@mt{\bxpv@mt@}
+\let\bxpv@mk\noindent
+
+%% \bxpv@csletcs
+\def\bxpv@csletcs#1#2{%
+  \expandafter\let\csname#1\expandafter\endcsname\csname#2\endcsname
+}
+
+%% \bxpv@detokenize\CS
+\def\bxpv@detokenize#1{%
+  \expandafter\bxpv@detokenize@a\meaning#1\bxpv@end#1%
+}
+\def\bxpv@detokenize@a#1>#2\bxpv@end#3{%
+  \def#3{#2}%
+}
+
+%% \bxpv@fail{<message>}
+% Issues an error or a warning.
+\@onlypreamble\bxpv@fail
+\def\bxpv@fail#1{%
+  \ifcase\bxpv@infolevel % silenced
+  \or % lenient
+    \PackageWarningNoLine\bxpv@pkgname{#1}%
+  \or % strict
+    \PackageError\bxpv@pkgname{#1}{\@ehc}%
+  \fi
+}
+
+%% \bxpv@fail@nafea
+\@onlypreamble\bxpv@fail@nafea
+\def\bxpv@fail@nafea#1{%
+  \bxpv@fail{#1, because\MessageBreak
+    the engine/driver does not support the feature}%
+}
+
+%--------------------------------------- internal dispatchers
+
+%% \bxpv@suppress@compress
+\@onlypreamble\bxpv@suppress@compress
+\def\bxpv@suppress@compress{%
+  \bxpv@fail@nafea{Cannot suppress compression}%
+}
+%% \bxpv@suppress@obj@compress
+\@onlypreamble\bxpv@suppress@obj@compress
+\def\bxpv@suppress@obj@compress{%
+  \bxpv@fail@nafea{Cannot suppress object compression}%
+}
+%% \bxpv@set@version
+\@onlypreamble\bxpv@set@version
+\def\bxpv@set@version{%
+  \bxpv@fail@nafea{Cannot set PDF version}%
+}
+%% \bxpv@set@decimaldigits
+\@onlypreamble\bxpv@set@decimaldigits
+\def\bxpv@set@decimaldigits{%
+  \bxpv@fail@nafea{Cannot set PDF decimal digits}%
+}
+%% \bxpv@set@pkresolution
+\@onlypreamble\bxpv@set@pkresolution
+\def\bxpv@set@pkresolution{%
+  \bxpv@fail@nafea{Cannot set PK resolution}%
+}
+%% \bxpv@preserve@destinations
+\@onlypreamble\bxpv@preserve@destinations
+\def\bxpv@preserve@destinations{%
+  \bxpv@fail@nafea{Cannot preserve PDF destinations}%
+}
+%% \bxpv@cancel@obj@compress
+% The silent version of \bxpv@suppress@obj@compress.
+\@onlypreamble\bxpv@cancel@obj@compress
+\let\bxpv@cancel@obj@compress\relax
+
+%% \bxpv@begin@document@hook
+% The begin-document hook.
+\@onlypreamble\bxpv@begin@document@hook
+\let\bxpv@begin@document@hook\@empty
+\AtBeginDocument{\bxpv@begin@document@hook}
+
+%% 'disabled' driver
+\if 0\bxpv@drv@type
+  \chardef\bxpv@infolevel=0
+\fi
+
+%% adjust internal dispatchers
+\ifx 0\bxpv@drv@type\else               %--------
+\begingroup
+
+%% \bxpv@check@prim\CS{<proc>}
+% Do <proc> if \CS is defined as primitive.
+\def\bxpv@check@prim#1{%
+  \edef\bxpv@tmpa{\string#1}%
+  \edef\bxpv@tmpb{\meaning#1}%
+  \ifx\bxpv@tmpa\bxpv@tmpb \expandafter\@firstofone
+  \else \expandafter\@gobble
+  \fi
+}
+
+%% \bxpv@pdfoutput
+\chardef\bxpv@pdfoutput\z@
+\bxpv@check@prim\pdfoutput{\chardef\bxpv@pdfoutput\pdfoutput}
+\bxpv@check@prim\outputmode{\chardef\bxpv@pdfoutput\outputmode}
+\bxpv@check@prim\ngbanner{\chardef\bxpv@pdfoutput\@ne}
+
+%% when in PDF mode
+\ifnum\bxpv@pdfoutput>\z@
+  \global\let\bxpv@drv@type=p
+  \global\let\bxpv@@compresslevel\pdfcompresslevel
+  \global\let\bxpv@@objcompresslevel\pdfobjcompresslevel
+  \global\let\bxpv@@minorversion\pdfminorversion
+  \global\let\bxpv@@decimaldigits\pdfdecimaldigits
+  \global\let\bxpv@@pkresolution\pdfpkresolution
+  \bxpv@check@prim\pdfvariable{%
+    \protected\xdef\bxpv@@compresslevel{\pdfvariable compresslevel}%
+    \protected\xdef\bxpv@@objcompresslevel{\pdfvariable objcompresslevel}%
+    \protected\xdef\bxpv@@minorversion{\pdfvariable minorversion}%
+    \protected\xdef\bxpv@@decimaldigits{\pdfvariable decimaldigits}%
+    \protected\xdef\bxpv@@pkresolution{\pdfvariable pkresolution}%
+  }%
+  % If \pdfcompresslevel is available, use it.
+  \ifx\bxpv@@compresslevel\@undefined\else
+    \gdef\bxpv@suppress@compress{%
+      \global\bxpv@@compresslevel\z@
+    }%
+  \fi
+  % If \pdfobjcompresslevel is available, use it.
+  \ifx\bxpv@@objcompresslevel\@undefined\else
+    \global\chardef\bxpv@org@objcompresslevel\bxpv@@objcompresslevel
+    \gdef\bxpv@suppress@obj@compress{%
+      \global\bxpv@@objcompresslevel\z@
+    }%
+    \global\let\bxpv@cancel@obj@compress\bxpv@suppress@obj@compress
+  \fi
+  % If \pdfminorversion is available, use it.
+  \ifx\bxpv@@minorversion\@undefined\else
+    \global\chardef\bxpv@org@minorversion\bxpv@@minorversion
+    \gdef\bxpv@set@version{%
+      \ifx\bxpdfverMinorVersion\relax
+        \global\bxpv@@minorversion\bxpv@org@minorversion
+      \else
+        \global\bxpv@@minorversion\bxpdfverMinorVersion
+      \fi
+    }%
+    \g@addto@macro\bxpv@begin@document@hook{%
+      \ifnum\bxpv@@minorversion<5
+        \bxpv@cancel@obj@compress
+      \fi
+    }%
+  \fi
+  % If \pdfdecimaldigits is available, use it.
+  \ifx\bxpv@@decimaldigits\@undefined\else
+    \global\chardef\bxpv@org@decimaldigits\bxpv@@decimaldigits
+    \gdef\bxpv@set@decimaldigits{%
+      \ifx\bxpdfverDecimalDigits\relax
+        \global\bxpv@@decimaldigits\bxpv@org@decimaldigits
+      \else
+        \global\bxpv@@decimaldigits\bxpdfverDecimalDigits
+      \fi
+    }%
+  \fi
+  % If \pdfpkresolution is available, use it.
+  \ifx\bxpv@@pkresolution\@undefined\else
+    \global\mathchardef\bxpv@org@pkresolution\bxpv@@pkresolution
+    \gdef\bxpv@set@pkresolution{%
+      \ifx\bxpdfverPkResolution\relax
+        \global\bxpv@@pkresolution\bxpv@org@pkresolution
+      \else
+        \global\bxpv@@pkresolution\bxpdfverPkResolution
+      \fi
+    }%
+  \fi
+  % On pdfTeX or LuaTeX, \pdfpreservedestionations can be no-op.
+  \bxpv@oktrue \bxpv@check@prim\ngbanner{\bxpv@okfalse}%
+  \ifbxpv@ok
+    \global\let\bxpv@preserve@destinations\relax
+  \fi
+\else
+  % XeTeX should do just as dvipdfmx.
+  \bxpv@check@prim\XeTeXversion{%
+    \global\let\bxpv@drv@type=d%
+  }
+\fi
+
+%% when in DVI mode
+\if x\bxpv@drv@type % 'bad' driver
+  \bxpv@fail{Unsupported driver '\bxpv@drv@name'}%
+  % no further errors
+  \global\chardef\bxpv@infolevel=0
+\else\if d\bxpv@drv@type % 'dvipdfmx'
+  \global\let\bxpv@suppress@compress\relax
+  \global\let\bxpv@suppress@obj@compress\relax
+  \global\let\bxpv@set@version\relax
+  \global\let\bxpv@set@decimaldigits\relax
+  %\global\let\bxpv@set@pkresolution\relax
+  \global\let\bxpv@preserve@destinations\relax
+  \g@addto@macro\bxpv@begin@document@hook{%
+    \bxpv@begin@document@dvipdfmx
+  }
+  \AtEndOfPackage{\g@addto@macro\bxpv@begin@document@hook{%
+    \bxpv@cache@finalize
+  }}
+\else\if \relax\bxpv@drv@type % no driver
+  \bxpv@fail
+   {No driver option is given}%
+  \global\chardef\bxpv@infolevel=0
+\fi\fi\fi
+
+\endgroup
+\fi                                     %--------
+
+%--------------------------------------- public interface
+
+%%<*> \suppresspdfcompression
+\@onlypreamble\suppresspdfcompression
+\newcommand*\suppresspdfcompression{%
+  \bxpv@suppress@compress
+  \global\bxpdfverCompressionSuppressedtrue
+}
+
+%%<*> \suppresspdfobjcompression
+\@onlypreamble\suppresspdfobjcompression
+\newcommand*\suppresspdfobjcompression{%
+  \bxpv@suppress@obj@compress
+  \global\bxpdfverObjCompressionSuppressedtrue
+}
+
+%%<*> \setpdfversion{<version>}
+\@onlypreamble\setpdfversion
+\newcommand*\setpdfversion[1]{%
+  \edef\bxpv@version{#1}%
+  \bxpv@get@mversion
+  \bxpv@set@version
+}
+
+%%<*> \setpdfdecimaldigits{<number>}
+\@onlypreamble\setpdfdecimaldigits
+\newcommand*\setpdfdecimaldigits[1]{%
+  \bxpv@assign@num\bxpdfverDecimalDigits{#1}{0}{4}%
+  \bxpv@set@decimaldigits
+}
+
+%%<*> \setpdfpkresolution{<number>}
+\@onlypreamble\setpdfpkresolution
+\newcommand*\setpdfpkresolution[1]{%
+  \bxpv@assign@num\bxpdfverPkResolution{#1}{0}{10000}%
+  \bxpv@set@pkresolution
+}
+
+%%<*> \preservepdfdestinations
+\@onlypreamble\preservepdfdestinations
+\newcommand*\preservepdfdestinations{%
+  \bxpv@preserve@destinations
+  \global\bxpdfverDestinationsPreservedtrue
+}
+
+%%<+> \ifbxpdfverCompressionSuppressed
+\newboolean{bxpdfverCompressionSuppressed}
+
+%%<+> \ifbxpdfverObjCompressionSuppressed
+\newboolean{bxpdfverObjCompressionSuppressed}
+
+%%<+> \bxpdfverMinorVersion
+% The PDF minor version (eg. '4' for 1.4) that this package
+% will impose. It is a number constant, or \relax.
+\@ifdefinable{\bxpdfverMinorVersion}{%
+  \let\bxpdfverMinorVersion\relax
+}
+
+%%<+> \bxpdfverDecimalDigits
+% The PDF decimal-digits value that this package
+% will impose. It is a number constant, or \relax.
+\@ifdefinable{\bxpdfverDecimalDigits}{%
+  \let\bxpdfverDecimalDigits\relax
+}
+
+%%<+> \bxpdfverPkResolution
+% The PK resolution value that this package
+% will impose. It is a number constant, or \relax.
+\@ifdefinable{\bxpdfverPkResolution}{%
+  \let\bxpdfverPkResolution\relax
+}
+
+%%<+> \ifbxpdfverDestinationsPreserved
+\newboolean{bxpdfverDestinationsPreserved}
+
+%% \bxpv@assign@num\CS{<value>}{<min>}{<max>}
+\@onlypreamble\bxpv@assign@num
+\def\bxpv@assign@num#1#2#3#4{%
+  \begingroup
+    \edef\bxpv@tmpa{#2}%
+    \ifx\bxpv@tmpa\@empty
+      \global\let#1\relax
+    \else
+      \@tempswatrue
+      \afterassignment\bxpv@assign@num@a
+      \@tempcnta=\bxpv@tmpa\bxpv@mk
+      \if@tempswa
+        \ifnum\@tempcnta<#3\relax \@tempswafalse \fi
+        \ifnum\@tempcnta>#4\relax \@tempswafalse \fi
+        \if@tempswa
+          \global\mathchardef#1=\@tempcnta
+        \else
+          \PackageError\bxpv@pkgname
+           {Number is out of range (#3..#4)\MessageBreak
+            (value=\the\@tempcnta)}%
+           {\@ehc}
+        \fi
+      \else
+        \PackageError\bxpv@pkgname
+         {Illegal number format\MessageBreak
+          (value=\bxpv@tmpa)}%
+         {\@ehc}
+      \fi
+    \fi
+  \endgroup}
+\@onlypreamble\bxpv@assign@num@a
+\def\bxpv@assign@num@a#1\bxpv@mk{%
+  \ifx\bxpv@mt#1\bxpv@mt\else \@tempswafalse \fi}
+
+%--------------------------------------- version values
+
+%% variables
+\let\bxpv@mversion\relax  % minor version (temporary)
+
+%% \bxpv@get@mversion
+% Sets \bxpdfverMinorVersion.
+\@onlypreamble\bxpv@get@mversion
+\def\bxpv@get@mversion{%
+  \edef\bxpv@version{\bxpv@version}%
+  \ifx\bxpv@version\@empty
+    \global\let\bxpdfverMinorVersion\relax % unset
+  \else
+    \let\bxpv@mversion\relax
+    \@tfor\bxpv@x:=456789\do{%
+      \edef\bxpv@tmpa{1.\bxpv@x}%
+      \ifx\bxpv@version\bxpv@tmpa
+        \chardef\bxpv@mversion=\bxpv@x\relax
+      \fi
+    }%
+    \ifx\bxpv@mversion\relax
+      \bxpv@file@mversion
+    \fi
+    \ifx\bxpv@mversion\relax
+      \PackageError\bxpv@pkgname
+       {Invalid value given for PDF version\MessageBreak
+        (value=\bxpv@version)}{%
+        PDF version must be either 1.4, 1.5, ..., 1.9, or\MessageBreak
+        or the name of a PDF file from which the version is pulled.%
+        \MessageBreak\@ehc}%
+    \else
+      \PackageInfo\bxpv@pkgname
+       {Output PDF version is set to 1.\the\bxpv@mversion
+        \MessageBreak}%
+      \global\let\bxpdfverMinorVersion\bxpv@mversion
+    \fi
+  \fi
+}
+
+%% \bxpv@file@mversion
+\@onlypreamble\bxpv@file@mversion
+\def\bxpv@file@mversion{%
+  \let\bxpv@mversion\relax
+  \expandafter\bxpv@file@mversion@a\bxpv@version\bxpv@end
+}
+\@onlypreamble\bxpv@file@mversion@a
+\def\bxpv@file@mversion@a#1\bxpv@end{%
+  \filename@parse{#1}%
+  \edef\bxpv@next{%
+    \lowercase{\def\noexpand\filename@ext{\filename@ext}}%
+  }\bxpv@next
+  \def\bxpv@tmpb{pdf}%
+  \ifx\filename@ext\bxpv@tmpb
+    \global\let\bxpv@gtmpa\relax
+    \bxpv@read@file{#1}{%
+      \bxpv@file@mversion@xa{##1 }%
+      \bxpv@read@file@finish
+    }%
+    \ifbxpv@read@file@ok\else
+      \PackageWarning\bxpv@pkgname
+       {File '#1' not found}%
+    \fi
+    \@tfor\bxpv@x:=456789\do{%
+      \ifx\bxpv@x\bxpv@gtmpa
+        \chardef\bxpv@mversion=\bxpv@x\relax
+      \fi
+    }%
+  \fi
+}
+% some more subprocedures
+\@onlypreamble\bxpv@file@mversion@xa
+\@onlypreamble\bxpv@file@mversion@xb
+\@onlypreamble\bxpv@file@mversion@xc
+\begingroup
+  \escapechar\m@ne
+  \def\bxpv@tmpa#1\bxpv@end{%
+    \gdef\bxpv@file@mversion@xa##1{%
+      \bxpv@file@mversion@xb##1#1\bxpv@end
+    }%
+    \gdef\bxpv@file@mversion@xb##1#1##2\bxpv@end{%
+      \ifx\bxpv@mt##1\bxpv@mt
+        \bxpv@file@mversion@xc##2\bxpv@end
+      \fi
+    }%
+    \gdef\bxpv@file@mversion@xc##1 ##2\bxpv@end{%
+      \gdef\bxpv@gtmpa{##1}%
+    }%
+  }
+  \edef\bxpv@tmpb{{\expandafter\string\csname\string\%PDF-1.\endcsname}}%
+  \expandafter\bxpv@tmpa\bxpv@tmpb\bxpv@end
+\endgroup
+
+%--------------------------------------- dvipdfmx something
+\ifx d\bxpv@drv@type % 'dvipdfmx'
+
+%% required packages
+\RequirePackage{atbegshi}[2007/04/19]% v1.2
+
+%% variables
+\let\bxpv@C@value\relax
+
+%% \bxpv@C@bits
+\@onlypreamble\bxpv@C@bits
+\let\bxpv@C@bits\@empty
+
+%% \bxpv@page@specials
+\let\bxpv@page@specials\@empty
+
+%% \bxpv@put@special
+\@onlypreamble\bxpv@put@special
+\def\bxpv@put@special#1{%
+  \edef\bxpv@page@specials{\bxpv@page@specials\special{#1}}%
+}
+
+%% \bxpv@begin@document@dvipdfmx
+\@onlypreamble\bxpv@begin@document@dvipdfmx
+\def\bxpv@begin@document@dvipdfmx{%
+  % PDF version
+  \ifx\bxpdfverMinorVersion\relax\else
+    \g@addto@macro\bxpv@page@specials{%
+      \special{pdf:minorversion \the\bxpdfverMinorVersion}%
+    }%
+  \fi
+  % compression
+  \ifbxpdfverCompressionSuppressed
+    \bxpv@check@dvipdfmx@version{20160307}%
+     {Cannot suppress compression}%
+    \ifbxpv@ok
+      % New dvipdfmx supports this special.
+      \g@addto@macro\bxpv@page@specials{%
+        \special{dvipdfmx:config z 0}%
+      }%
+    \fi
+  \fi
+  % object compression
+  \ifbxpdfverObjCompressionSuppressed
+    \bxpv@check@dvipdfmx@version{20160307}%
+     {Cannot suppress object compression}%
+    \ifbxpv@ok
+      \g@addto@macro\bxpv@C@bits{\do{64}}%
+    \fi
+  \fi
+  % PDF decimal digits
+  \ifx\bxpdfverDecimalDigits\relax\else
+    \bxpv@check@dvipdfmx@version{20160307}%
+     {Cannot set PDF decimal digits}%
+    \ifbxpv@ok
+      \bxpv@put@special{dvipdfmx:config d \the\bxpdfverDecimalDigits}%
+    \fi
+  \fi
+  % PK resolution
+  \ifx\bxpdfverPkResolution\relax\else
+    \iffalse % This will never work....
+      \bxpv@put@special{dvipdfmx:config r \the\bxpdfverPkResolution}%
+    \fi
+  \fi
+  % PDF destinations
+  \ifbxpdfverDestinationsPreserved
+    \bxpv@check@dvipdfmx@version{20160307}%
+     {Cannot preserve PDF destinations}%
+    \ifbxpv@ok
+      \g@addto@macro\bxpv@C@bits{\do{16}}%
+    \fi
+  \fi
+  % C option value
+  \ifx\bxpv@C@bits\@empty\else
+    \bxpv@cache@fetch{dvipdfmxcfg}%
+    \def\bxpv@next##1##2\bxpv@mk{\def\bxpv@C@value{##1}}%
+    \expandafter\bxpv@next\bxpv@cache@@dvipdfmxcfg{0}\bxpv@mk
+    \bxpv@rc@bitset{\bxpv@C@value}{64}%
+    \def\do##1{%
+      \bxpv@rc@bitset{\bxpv@C@value}{##1}%
+      \let\bxpv@C@value\bxpv@rc@num}%
+    \bxpv@C@bits
+    \bxpv@put@special{dvipdfmx:config C \bxpv@C@value}%
+  \fi
+  % special added to every page
+  \ifx\bxpv@page@specials\@empty\else
+    \edef\bxpv@page@specials{\bxpv@page@specials}%
+    \AtBeginShipout{%
+      \setbox\AtBeginShipoutBox=\vbox{%
+        \baselineskip\z@skip\lineskip\z@skip\lineskiplimit\z@
+        \bxpv@page@specials
+        \copy\AtBeginShipoutBox
+      }%
+    }%
+  \fi
+}
+
+%% \bxpv@check@dvipdfmx@version
+\@onlypreamble\bxpv@check@dvipdfmx@version
+\def\bxpv@check@dvipdfmx@version#1#2{%
+  \bxpv@cache@fetch{dvipdfmxver}%
+  \bxpv@okfalse
+  \ifnum\bxpv@cache@@dvipdfmxver=\z@
+    \bxpv@fail
+     {#2, because the\MessageBreak
+      version of dvipdfmx in use is unknown
+      \MessageBreak (v.#1 or later is required)}%
+  \else\ifnum\bxpv@cache@@dvipdfmxver<#1
+    \bxpv@fail
+     {#2, because the\MessageBreak
+      version of dvipdfmx in use (v.\bxpv@cache@@dvipdfmxver) is too old
+      \MessageBreak (v.#1 or later is required)}%
+  \else
+    \PackageInfo\bxpv@pkgname
+     {dvipdfmx version is \bxpv@cache@@dvipdfmxver\@gobble}%
+    \bxpv@oktrue
+  \fi\fi
+}
+
+\fi
+%--------------------------------------- software version
+
+%% \bxpv@cache@get@@newtex
+% Returns 1 if the version of TeX is 3.14159265 (released on
+% 2014/01/20) or later, 0 otherwise.
+\@onlypreamble\bxpv@cache@get@@newtex
+\def\bxpv@cache@get@@newtex{%
+  \edef\bxpv@tmpa{\expandafter\noexpand\csname\endcsname}%
+  \def\bxpv@tmpb##1 ##2##3\@nil{\gdef\bxpv@g@value{##2}}%
+  \expandafter\bxpv@tmpb\meaning\bxpv@tmpa1 0\@nil
+}
+
+%% \bxpv@cache@get@@dvipdfmxver
+% Returns the version of dvipdfmx (eg. 20110311).
+% It returns 0 in failure.
+\@onlypreamble\bxpv@cache@get@@dvipdfmxver
+\def\bxpv@cache@get@@dvipdfmxver{%
+  % Here the version of TeX is checked, bacause on old TeX
+  % engines on Windows, pipe inputs will fail when the
+  % command line has arguments.
+  \bxpv@cache@fetch{newtex}%
+  \global\let\bxpv@gtmpa\relax
+  \ifnum\bxpv@cache@@newtex>\z@
+    \def\bxpv@tmpc{This is extractbb Version }%
+    \bxpv@detokenize\bxpv@tmpc
+    \bxpv@read@file{"|extractbb --version"}{%
+      \bxpv@split@at{\bxpv@tmpc}{##1}%
+      \ifx\bxpv@pre\relax\else
+        \global\let\bxpv@gtmpa\bxpv@post
+      \fi
+    }%
+  \fi
+  \ifx\bxpv@gtmpa\relax % failed somewhere
+    \gdef\bxpv@g@value{0}%
+  \else
+    \global\let\bxpv@g@value\bxpv@gtmpa
+  \fi
+}
+
+%--------------------------------------- dvipdfmx config
+
+%% variables
+\let\bxpv@rc@num\relax
+
+%% \bxpv@cache@get@@dvipdfmxcfg
+\@onlypreamble\bxpv@cache@get@@dvipdfmxcfg
+\def\bxpv@cache@get@@dvipdfmxcfg{%
+  % check TeX version
+  \bxpv@cache@fetch{newtex}%
+  \ifnum\bxpv@cache@@newtex>\z@
+    % search dvipdfmx.cfg
+    \global\let\bxpv@gtmpa\@empty
+    \bxpv@read@file{%
+      "|kpsewhich --progname=dvipdfmx --format=othertext dvipdfmx.cfg"%
+    }{%
+      \gdef\bxpv@gtmpa{##1}%
+      \bxpv@read@file@finish
+    }%
+    % read the file
+    \ifx\bxpv@gtmpa\@empty\else
+      \gdef\bxpv@g@rc@tmp@C{0}%
+      \def\bxpv@rc@tmp@C{C }%
+      \bxpv@detokenize\bxpv@rc@tmp@C
+      \gdef\bxpv@g@rc@tmp@V{5}%
+      \def\bxpv@rc@tmp@V{V }%
+      \bxpv@detokenize\bxpv@rc@tmp@V
+      \bxpv@read@file{\bxpv@gtmpa}{%
+        \bxpv@split@at{\bxpv@rc@tmp@C}{##1}%
+        \ifx\bxpv@pre\@empty
+          \bxpv@rc@parse@num{\bxpv@post}%
+          \global\let\bxpv@g@rc@tmp@C\bxpv@rc@num
+        \fi
+        \bxpv@split@at{\bxpv@rc@tmp@V}{##1}%
+        \ifx\bxpv@pre\@empty
+          \bxpv@rc@parse@num{\bxpv@post}%
+          \global\let\bxpv@g@rc@tmp@V\bxpv@rc@num
+        \fi
+      }%
+      % the return value
+      \xdef\bxpv@g@value{{\bxpv@g@rc@tmp@C}{\bxpv@g@rc@tmp@V}}%
+    \fi
+  \fi
+}
+
+%% \bxpv@rc@parse@num{<string>}
+% Returns to \bxpv@rc@num.
+\def\bxpv@rc@parse@num#1{%
+  \edef\bxpv@tmpy{#1\relax\relax}%
+  \expandafter\bxpv@rc@parse@num@a\bxpv@tmpy\bxpv@end
+}
+\def\bxpv@rc@parse@num@a#1#2\bxpv@end{%
+  % skip leading spaces and change to uppercase
+  \uppercase{\bxpv@rc@parse@num@b#1#2\bxpv@end}%
+}
+\def\bxpv@rc@parse@num@b#1#2#3\bxpv@end{%
+  \def\bxpv@tmpy{#1#2#3}%
+  \if0#1\if X#2% convert '0x' to '"'
+    \def\bxpv@tmpy{"#3}%
+  \fi\fi
+  \afterassignment\bxpv@rc@parse@num@c\@tempcnta=\bxpv@tmpy
+}
+\def\bxpv@rc@parse@num@c#1\relax{% discard trailer
+  \edef\bxpv@rc@num{\the\@tempcnta}%
+}
+
+%% \bxpv@rc@bitset{<number1>}{<number2>}
+% Returns to \bxpv@rc@num.
+\def\bxpv@rc@bitset#1#2{%
+  \@tempcnta=#1\relax \divide\@tempcnta#2\relax
+  \@tempcnta=\ifodd\@tempcnta\z@\else#2\relax\fi
+  \advance\@tempcnta#1\relax
+  \edef\bxpv@rc@num{\the\@tempcnta}%
+}
+
+%--------------------------------------- string splitter
+
+%% variables
+\let\bxpv@pre\relax
+\let\bxpv@post\relax
+
+%% \bxpv@split@at{<sep>}{<text>}
+% Splits the text by the given separator.
+% In success, it will set \bxpv@pre and \bxpv@post.
+\def\bxpv@split@at#1#2{%
+  \edef\bxpv@next{{#1}{#2}}%
+  \expandafter\bxpv@split@at@a\bxpv@next
+}
+\def\bxpv@split@at@a#1#2{%
+  \def\bxpv@next##1#1##2\bxpv@end{%
+    \bxpv@split@at@b{##1}{##2}}%
+  \bxpv@next#2\bxpv@mk#1\bxpv@end
+}
+\def\bxpv@split@at@b#1#2{%
+  \ifx\bxpv@mt#2\bxpv@mt
+    \let\bxpv@pre\relax \let\bxpv@post\relax
+  \else
+    \def\bxpv@pre{#1}%
+    \bxpv@split@at@c#2\bxpv@end
+  \fi
+}%
+\def\bxpv@split@at@c#1\bxpv@mk#2\bxpv@end{%
+  \def\bxpv@post{#1}%
+}%
+
+%--------------------------------------- file reader
+
+%% variables
+\let\bxpv@rf@parse\relax    % line parser
+\let\bxpv@rf@line\relax     % line content
+\let\bxpv@rf@cont\relax     % continue to read?
+
+%% \ifbxpv@read@file@ok
+% Whether or not the last \bxpv@read@file succeeded.
+\newboolean{bxpv@read@file@ok}
+
+%% \bxpv@read@file{<file-name>}{<line-parser-code>}
+% Reads from a text file. The line parser takes as #1 the
+% content of each line. 
+\def\bxpv@read@file#1{%
+  \bxpv@read@file@oktrue
+  \begingroup
+    \openin\@inputcheck=#1\relax
+    \afterassignment\bxpv@read@file@a
+      \def\bxpv@rf@parse##1%
+}
+\@onlypreamble\bxpv@read@file@a
+\def\bxpv@read@file@a{%
+    \ifeof\@inputcheck
+      \aftergroup\bxpv@read@file@okfalse
+    \else
+      % freeze special characters
+      \@tempcnta\z@
+      \loop\ifnum\@tempcnta<\@cclvi
+        \catcode\@tempcnta12
+        \advance\@tempcnta\@ne
+      \repeat
+      \endlinechar\m@ne
+      % go to loop
+      \chardef\bxpv@rf@cont\@ne
+      \bxpv@read@file@b
+    \fi
+  \endgroup
+}
+\@onlypreamble\bxpv@read@file@b
+\def\bxpv@read@file@b{%
+  \read\@inputcheck to\bxpv@rf@line
+  \bxpv@detokenize\bxpv@rf@line
+  \expandafter\bxpv@rf@parse\expandafter{\bxpv@rf@line}%
+  \ifeof\@inputcheck
+    \chardef\bxpv@rf@cont\z@
+  \fi
+  \ifnum\bxpv@rf@cont>\z@
+    \expandafter\bxpv@read@file@b
+  \fi
+}
+
+%% \bxpv@read@file@finish
+\@onlypreamble\bxpv@read@file@finish
+\def\bxpv@read@file@finish{%
+  \chardef\bxpv@rf@cont\z@
+}
+
+%--------------------------------------- simple cache system
+% - \bxpv@cache@xxx can be invoked only in \AtBeginDocument.
+% - \bxpv@cache@finalize must be called last.
+
+%% \bxpv@g@value
+% The return variable for fetchers.
+\@onlypreamble\bxpv@g@value
+\let\bxpv@g@value\@undefined
+
+%% \bxpv@cache@fetch{<key>}
+\@onlypreamble\bxpv@cache@fetch
+\def\bxpv@cache@fetch#1{%
+  \begingroup
+    \expandafter\ifx\csname bxpv@cache@@#1\endcsname\relax
+      \global\let\bxpv@g@value\@empty
+      \@nameuse{bxpv@cache@get@@#1}%
+      \bxpv@cache@store{#1}{\bxpv@g@value}%
+      \bxDebug{cache-fetch:#1=\@nameuse{bxpv@cache@@#1}}%
+    \fi
+  \endgroup
+}
+
+%% \bxpv@cache@store{<key>}{<value>}
+\def\bxpv@cache@store#1#2{%
+  \expandafter\ifx\csname bxpv@cache@@#1\endcsname\relax
+    \expandafter\xdef\csname bxpv@cache@@#1\endcsname{#2}%
+    \g@addto@macro\bxpv@cache@keylist{{#1}}%
+  \fi
+}
+\@onlypreamble\bxpv@cache@keylist
+\let\bxpv@cache@keylist\@empty
+
+%% \bxpv@cache@finalize
+\@onlypreamble\bxpv@cache@finalize
+\def\bxpv@cache@finalize{%
+  \if@filesw
+    \ifx\bxpv@cache@keylist\@empty\else
+      \immediate\write\@auxout{%
+        \string\providecommand\string\bxpv@cache@store[2]{}}%
+    \fi
+    \def\bxpv@x{\@tfor\bxpv@x:=}%
+    \expandafter\bxpv@x\bxpv@cache@keylist\do{%
+      \immediate\write\@auxout{%
+        \string\bxpv@cache@store{\bxpv@x}{\@nameuse{bxpv@cache@@\bxpv@x}}}}%
+  \fi
+  \global\let\bxpv@cache@store\@gobbletwo % for end-document clear-up
+}
+
+%--------------------------------------- start-up
+
+\ifx t\bxUseDebug
+  \typeout{**bxpdfver-----------%
+    ^^Jdrvtype=\meaning\bxpv@drv@type
+    ^^Jdrvname=\meaning\bxpv@drv@name}
+  \AtBeginDocument{%
+    \def\do#1=#2{\ifx#2\@undefined\else
+      ^^J#1=\the#2 [\meaning#2]%
+    \fi}%
+    \def\next#1{\expandafter\meaning\csname if#1\endcsname}%
+    \typeout{**bxpdfver-----------%
+      ^^JMinorVersion=\meaning\bxpdfverMinorVersion
+      ^^JCompressionSuppressed=\next{bxpdfverCompressionSuppressed}%
+      ^^JObjCompressionSuppressed=\next{bxpdfverObjCompressionSuppressed}%
+      ^^JDecimalDigits=\meaning\bxpdfverDecimalDigits
+      ^^JPkResolution=\meaning\bxpdfverPkResolution
+      \do minorversion=\bxpv@@minorversion
+      \do compresslevel=\bxpv@@compresslevel
+      \do objcompresslevel=\bxpv@@objcompresslevel
+      \do decimaldigits=\bxpv@@decimaldigits
+      \do pkresolution=\bxpv@@pkresolution
+      ^^JCvalue=\meaning\bxpv@C@value
+    }%
+  }
+\fi
+
+%% Applies the setting specified by package options
+\ifx\bxpv@version\relax\else
+  \setpdfversion{\bxpv@version}
+\fi
+\if t\bxpv@compress\else
+  \suppresspdfcompression
+\fi
+\if t\bxpv@obj@compress\else
+  \suppresspdfobjcompression
+\fi
+
+%--------------------------------------- all done
+\endinput
+%% EOF

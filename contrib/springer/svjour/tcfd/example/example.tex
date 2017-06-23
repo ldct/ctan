@@ -1,0 +1,1172 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% An example input file demonstrating the tcfd option of the SVJour      %
+% document class for the journal: Theoret. Comput. Fluid Dynamics        %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+\documentclass[tcfd]{svjour}
+
+\usepackage{graphicx}
+%%% \usepackage{times}
+%%% \usepackage{mathtime}
+
+\sloppy
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Several Macro's for this article programmed by the Author              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{example.sty}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\title{Subgrid-Scale Models for Compressible Large-Eddy
+Simulations\thanks{The authors gratefully acknowledge the support from
+the Air Force Off\/ice of Scientific Research, under Grant
+Nos. AF/F49620-98-1-0035 (MPM and GVC) and AF/F49620-97-1-0244 (UP),
+monitored by D.L.~Sakell. This work was also sponsored by the Army High
+Performance Computing Research Center under the auspices of the
+Department of the Army, Army Research Laboratory cooperative agreement
+number DAAH04-95-2-0003/contract number DAAH04-95-C-0008, the content of
+which does not necessarily ref\/lect the position or the policy of the
+government, and no off\/icial endorsement should be inferred. A portion
+of the computer time was provided by the University of Minnesota
+Supercomputing Institute.}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% You have to protect commands within the "Author"-macro by using the
+% \protect-command
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Author{M. Pino Mart\protect{\'\i}n}
+{Department of Aerospace Engineering and Mechanics, University of Minnesota,\\
+110 Union St. SE, Minneapolis, MN 55455, USA\\
+pino@aem.umn.edu}
+
+\Author{Ugo Piomelli}
+{Department of Mechanical Engineering, University of Maryland,\\
+College Park, MD 20742, USA\\
+ugo@eng.umd.edu}
+
+\Author{Graham V. Candler}
+{Department of Aerospace Engineering and Mechanics, University of Minnesota,\\
+110 Union St. SE, Minneapolis, MN 55455, USA\\
+candler@aem.umn.edu}
+
+\commun{Communicated by M.Y. Hussaini}
+
+\date{Received 12 March 1999 and accepted 11 August 1999}
+
+\abstract{An {\it a priori} study of subgrid-scale (SGS) models for the
+unclosed terms in the energy equation is carried out using the f\/low
+f\/ield obtained from the direct simulation of homogeneous isotropic
+turbulence. Scale-similar models involve multiple f\/iltering operations
+to identify the smallest resolved scales that have been shown to be the
+most active in the interaction with the unresolved SGSs. In the present
+study these models are found to give more accurate prediction of the SGS
+stresses and heat f\/luxes than eddy-viscosity and eddy-diffusivity
+models, as well as improved predictions of the SGS turbulent diffusion,
+SGS viscous dissipation, and SGS viscous diffusion.}
+
+
+\authorrunning{M.P. Mart\protect{\'\i}n, U. Piomelli, and G.V. Candler}
+\maketitle
+
+%%%%%%%%%%%%%%%
+%% Section 1 %%
+%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:1}
+
+Large-eddy simulation (LES) is a technique intermediate between the
+direct numerical simulation (DNS) of turbulent f\/lows and the solution of the
+Reynolds-averaged equations. In LES the contribution of the large,
+energy-carrying structures to momentum and energy transfer is computed
+exactly, and only the effect of the smallest scales of turbulence is
+modeled. Since the small scales tend to be more homogeneous and
+universal, and less affected by the boundary conditions, than the
+large ones, there is hope that their models can be simpler and require
+fewer adjustments when applied to different f\/lows than similar models
+for the Reynolds-averaged Navier--Stokes equations.
+
+While a substantial amount of research has been carried out into
+modeling for the LES of incompressible f\/lows, applications to
+compressible f\/lows have been signif\/icantly fewer, due to the increased
+complexity introduced by the need to solve an energy equation, which
+introduces extra unclosed terms in addition to the subgrid-scale (SGS)
+stresses that must be modeled in incompressible f\/lows. Furthermore,
+the form of the unclosed terms depends on the energy equation chosen
+(internal or total energy, total energy of the resolved f\/ield, or
+enthalpy).
+
+Early applications of LES to compressible f\/lows used a transport
+equation for the internal energy per unit mass $\varepsilon$
+\citep{moi91,elh94} or for the enthalpy per unit mass $h$
+\citep{spe88,erl92}. In these equations the SGS heat f\/lux was modeled
+in a manner similar to that used for the SGS stresses, while two
+additional terms, the SGS pressure-dilatation $\Pi_{\rm dil}$ and the
+SGS contribution to the viscous dissipation $\varepsilon_{\rm v}$, were
+neglected.
+
+\citet[b]{vre95a} performed {\it a priori} tests using DNS data obtained
+from the calculation of a mixing layer at Mach numbers from 0.2 to 0.6.
+They found that the SGS pressure-dilatation $\pi_{\rm dil}$ and SGS
+viscous dissipation $\varepsilon_{\rm v}$ are of the same order as the
+divergence of the SGS heat f\/lux $Q_j$, and that modeling
+$\varepsilon_{\rm v}$ improves the results, especially at moderate or
+high Mach numbers. They also proposed the use of a transport equation
+for the total energy of the f\/iltered f\/ield, rather than either the
+enthalpy or the internal energy equations; the same unclosed terms that
+appear in the internal energy and enthalpy equations are also present in
+this equation.
+
+Very few calculations have been carried out using the transport equation
+for the total energy, despite the desirable feature that it is a
+conserved quantity, and that all the SGS terms in this equation can be
+cast in conservative form. This equation has a different set of unclosed
+terms, whose modeling is not very advanced yet. \citet{nor92} performed
+calculations of a transitional boundary layer, and modeled only the SGS
+heat f\/lux, neglecting all the other terms. \citet{kni98} performed the
+LES of isotropic homogeneous turbulence on unstructured grids and
+compared the results obtained with the \citet{sma63} model with those
+obtained when the energy dissipation was provided only by the
+dissipation inherent in the numerical algorithm. They modeled the SGS
+heat f\/lux and an SGS turbulent diffusion term, and neglected the SGS
+viscous diffusion. \citet{com98} proposed the use of an eddy-diffusivity
+model for the sum of the SGS heat f\/lux and SGS turbulent diffusion,
+neglecting the SGS viscous diffusion.
+
+In this paper the f\/low f\/ield obtained from a DNS of homogeneous
+isotropic turbulence is used to compute the terms in the energy
+equations, and evaluate eddy-viscosity and scale-similar models for
+their parametrization. We place emphasis on the total energy equation,
+both because of the lack of previous studies in the terms that appear in
+it, and because of the desirability of solving a transport equation for
+a conserved quantity. In the remainder of the paper the governing
+equations are presented and the unclosed terms are def\/ined. The DNS
+database used for the {\it a priori} tests is described. Finally,
+several models for the unclosed terms are presented and tested.
+
+%%%%%%%%%%%%%%%
+%% Section 2 %%
+%%%%%%%%%%%%%%%
+
+\section{Governing Equations}
+\label{sec:2}
+
+To obtain the equations governing the motion of the resolved eddies,
+we must separate the large from the small scales. LES is based on the
+def\/inition of a f\/iltering operation: a resolved variable, denoted by
+an overbar, is def\/ined as \citep{leo74}
+\begin{equation}
+ \overline{f}({\bf x}) = \int_D f({\bf x'})
+ G({\bf x},{\bf x'};\delbar)
+ \D{\bf x'},
+ \label{eq:filtering}
+\end{equation}
+where $D$ is the entire domain, $G$ is the f\/ilter function, and
+$\delbar$ is the f\/ilter-width associated with the wavelength of the
+smallest scale retained by the f\/iltering operation. Thus, the f\/ilter
+function determines the size and structure of the small scales.
+
+In compressible f\/lows it is convenient to use Favre-f\/iltering
+\citep[b]{fav65a} to avoid the introduction of SGS
+terms in the equation of conservation of mass. A Favre-f\/iltered
+variable is def\/ined as $\widetilde{f}=\overline{\rho
+f}/\overline{\rho}$. In addition to the mass and momentum
+equations, one can choose solving an equation for the internal energy,
+enthalpy, or total energy. Applying the Favre-f\/iltering operation, we
+obtain the resolved transport equations
+\begin{equation}
+ \label{eq:mass-ff}
+ \frac{\partial\rhob}{\partial t}
+ + \frac{\partial}{\partial x_{j}} \left(\rhob\util_j\right)
+ = 0 ,
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+ \label{eq:mom-ff}
+ \frac{\partial\rhob\,\util_i}{\partial t}
+ + \frac{\partial}{\partial x_{j}}\left(\rhob\util_i\util_j
+ + \pb \delta_{ij} - \widetilde{\sigma}_{ji} \right)
+ = - \frac{\partial\tau_{ji}}{\partial x_{j}} ,
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+ \label{eq:int-en-ff}
+ \frac{\partial (\rhob\,\widetilde{\varepsilon}\,)}{\partial t}
+ + \frac{\partial}{\partial x_{j}}
+ \left(\rhob\util_j\widetilde\varepsilon\right)
+ + \frac{\partial\widetilde{q}_j}{\partial x_j}
+ + \pb\Stkk - \widetilde{\sigma}_{ji}\Stij
+ = - C_{\rm v}\frac{\partial Q_j}{\partial x_{j}} - \Pi_{\rm dil} +
+ \varepsilon_{\rm v} ,
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+ \label{eq:enth-ff}
+ \frac{\partial (\rhob\,\widetilde{h})}{\partial t}
+ + \frac{\partial}{\partial x_j}\left(\rhob\util_j\htil\right)
+ + \frac{\partial\widetilde{q}_j}{\partial x_j}
+ - \frac{\partial\pb}{\partial t}
+ - \util_j\frac{\partial\pb}{\partial x_j}
+ - \widetilde{\sigma}_{ji}\Stij =
+ - C_{\rm v}\frac{\partial Q_j}{\partial x_j}
+ - \Pi_{\rm dil}
+ + \varepsilon_{\rm v} ,
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+ \label{eq:tot-en-ff}
+ \frac{\partial}{\partial t} (\rhob\,\Etil)
+ + \frac{\partial}{\partial x_j}
+ \left[(\rhob\,\Etil + \pb)\util_j + \widetilde{q}_j
+ - \widetilde{\sigma}_{ij}\util_i \right] =
+ - \frac{\partial}{\partial x_j}\left(\gamma C_{\rm v}Q_j
+ + {\textstyle\half}{\cal J}_j
+ - {\cal D}_j \right) .
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Here $\rho$ is the density, $u_j$ is the velocity in the $x_j$ direction,
+$p$ is the pressure, $\varepsilon=c_{\rm v} T$ is the internal energy
+per unit mass, $T$ is the temperature; $h=\varepsilon + p/\rho$ is the
+enthalpy per unit mass; $E=\varepsilon +u_iu_i/2$ is the total energy per
+unit mass, and the diffusive f\/luxes are given by
+\begin{equation}
+ \label{eq:sig-hat}
+ \widetilde{\sigma}_{ij} = 2\widetilde{\mu} \Stij
+ - {\textstyle\frac{2}{3}}\widetilde{\mu} \delta_{ij}\Stkk, \qquad
+ \widetilde{q}_j = - \widetilde{k}\frac{\partial\Ttil}{\partial x_j} ,
+\end{equation}
+where $S_{ij}=\frac{1}{2}
+(\partial u_i/\partial x_i + \partial u_j/\partial x_i)$ is
+the strain rate tensor, and $\widetilde{\mu}$ and $\widetilde{k}$ are the
+viscosity and thermal conductivity corresponding to the f\/iltered temperature
+$\Ttil$.
+
+The effect of the SGSs appears on the right-hand side of the governing
+equations through the SGS stresses $\tij$; SGS heat f\/lux $Q_j$; SGS
+pressure-dilatation $\Pi_{\rm dil}$; SGS viscous dissipation $\varepsilon_{\rm v}$;
+SGS turbulent diffusion $\partial{\cal J}_j/\partial x_j$; and SGS viscous
+diffusion $\partial{\cal D}_j/\partial x_j$. These quantities are
+def\/ined as
+\begin{eqnarray}
+ \label{eq:tauij}
+ \tij & = & \rhob(\widetilde{u_iu_j}-\util_i\util_j), \\
+ \label{eq:qj}
+ Q_j & = & \rhob \left(\widetilde{u_j T}-\util_j\widetilde{T}\right), \\
+ \label{eq:pdil}
+ \Pi_{\rm dil} & = & \overline{p\Skk}-\pb\Stkk, \\
+ \label{eq:vdiss}
+ \varepsilon_{\rm v} & = & \overline{\sigma_{ji}\Sij}
+ - \widetilde{\sigma}_{ji}\Stij,\\
+ \label{eq:tdiff}
+ {\cal J}_j & = & \rhob\left(\widetilde{u_ju_ku_k} -
+ \util_j\widetilde{u_ku_k} \right), \\
+ \label{eq:vdiff}
+ {\cal D}_j & = & \overline{\sigma_{ij}u_i}
+ -\widetilde{\sigma}_{ij}\util_i .
+\end{eqnarray}
+The equation of state has been used to express pressure-gradient and
+pressure-diffusion correlations in terms of $Q_j$ and $\Pi_{\rm dil}$. It
+is also assumed that $\overline{\mu(T)\Sij} \simeq \mu(\Ttil)\Stij$,
+and that an equivalent equality involving the thermal conductivity
+applies. \citet{vre95b} performed {\it a priori}
+tests using DNS data obtained from the calculation of a mixing layer
+at Mach numbers in the range 0.2--0.6, and concluded that neglecting
+the nonlinearities of the diffusion terms in the momentum and energy
+equations is acceptable.
+
+%%%%%%%%%%%%%%%
+%% Section 3 %%
+%%%%%%%%%%%%%%%
+
+\section{{\em A priori} Test}
+\label{sec:3}
+
+One method to evaluate the performance of models for LES or RANS
+calculations is the {\it a priori} test, in which the velocity
+f\/ields obtained from a direct simulation are f\/iltered to yield the
+exact SGS terms, and the f\/iltered quantities are used to assess the
+accuracy of the parametrization. The database used in this study was
+obtained from the calculation of homogeneous isotropic turbulence
+decay.
+
+The Navier--Stokes equations were integrated in time using a
+fourth-order Runge--Kutta method.\break The spatial derivatives were
+computed using an eighth-order accurate central f\/inite-difference
+scheme. The\pagebreak\ results have been validated by comparison with the
+DNS data of \citet[1999]{mar98}. The simulations were performed
+on grids with 256$^3$ points. The computational domain is a periodic
+box with length 2$\pi$ in each dimension. The f\/luctuating f\/ields were
+initialized as in \citet{ris97}.
+
+The calculation was performed at a Reynolds number
+$Re_{\lambda}=u'\lambda/\nu=50$, where
+$\lambda=\langle u^2\rangle^{1/2}/$\break
+$\langle{(\partial u/\partial x)^2}\rangle^{1/2}$ is the Taylor
+microscale and $u'=(u_iu_i)^{1/2}$ is the turbulence intensity, and
+at a turbulent Mach number $M_t=u'/a=0.52$, where $a$ is the speed
+of sound. The initial f\/low f\/ield is allowed to evolve for four
+dimensionless time units $\tau_t=\lambda/u'$, so that the energy
+spectrum may develop an inertial range that decays as $k^{-5/3}$,
+where $k$ is the nondimensional wave number.
+
+The f\/iltered f\/ields were obtained using a top-hat f\/ilter, which is
+def\/ined in one dimension as
+\begin{equation}
+ \label{eq:tophat}
+ \overline{f}_i = \frac{1}{2n}
+ \left( f_{i-{n}/{2}}+2\sum_{i-{n}/{2}+1}^{i+{n}/{2}-1}f_{i}+f_{i+{n}/{2}}\right) .
+\end{equation}
+Various f\/ilter-widths $\delbar=n\Delta$ (where $\Delta$ is the grid
+size and $n=4$, 8, 16, and 32) were used. Note that the grid
+resolution is high enough that $n=2$ would correspond to a DNS. The
+location of the various f\/ilter cutoffs along the energy spectrum at
+$t/\tau_t=6.5$ are shown in Figure~\ref{fig:fig01}; they cover the decaying range of
+the spectrum ($n=4$), the inertial range ($n=8$ and 16), and the
+energy-containing range ($n=32$). With the f\/ilters used,
+respectively, 5\%, 15\%, 40\%, and 70\% of the total turbulent kinetic
+energy resides in the SGSs. The two intermediate values are
+representative of actual LES calculations, in which the SGS kinetic energy\break
+is typically between 15\% and 30\% of the total energy. A higher
+percentage of SGS energy in general indicates an under-resolved
+calculation. In the following, results will be shown for
+$\delbar=8\Delta$, except when evaluating the effect of f\/ilter-width.
+
+The accuracy of a model is evaluated by computing the exact term $R$
+and its model representation $M$ and comparing the two using the
+correlation coeff\/icient $C(R)$ and the root-mean-square (rms) amplitudes
+$\langle (R-\langle R\rangle)^2\rangle^{1/2}$ and $\langle(M-\langle
+M\rangle)^2\rangle^{1/2}$. The correlation coeff\/icient is given by
+\begin{equation}
+ \label{eq:corr-coeff}
+ C(R) = \frac{ \langle(R-\langle R \rangle) (M-\langle M \rangle) \rangle}
+ {\left(\langle (R-\langle R \rangle)^2 \rangle
+ \langle(M-\langle M \rangle)^2 \rangle\right)^{1/2}} ,
+\end{equation}
+where the brackets $\langle\cdot\rangle$ denote averaging over the
+computational volume. A ``perfect'' model would give a correlation
+coeff\/icient of 1. In the following, the quantities plotted are made
+nondimensional using the initial values of $\rho$, $u'$, and
+$\lambda$.
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=51mm]{01fig.eps}
+\vspace{51mm}% to simulate the figure
+\caption{Energy spectrum; \diam, location of the f\/ilter-widths used
+in the {\it a priori} test; \solid $k^{-5/3}$ slope; \dotted, DNS. $q^2 = u_iu_i$, and $\eta$ is
+the Kolmogorov length scale.}
+\label{fig:fig01}
+\end{figure}
+
+%%%%%%%%%%%%%%%
+%% Section 4 %%
+%%%%%%%%%%%%%%%
+
+\section{Models for the Momentum Equation}
+\label{sec:4}
+
+The SGS stresses (\ref{eq:tauij}) are the only unclosed term that
+appears in the momentum equation. Various types of models have been
+devised to represent the SGS stresses. Eddy-viscosity models
+try to reproduce the global exchange of energy between the resolved
+and unresolved stresses by mimicking the drain of energy associated
+with the turbulence energy cascade. Yoshizawa (1986)
+proposed an eddy-viscosity model for weakly compressible turbulent
+f\/lows using a multiscale direct-interaction approximation method.
+The anisotropic part of the SGS stresses is parametrized using the
+\citet{sma63} model, while the SGS energy $\tkk$ is
+modeled separately:
+\begin{equation}
+ \label{eq:tauij-yoshi}
+ \tij - \frac{\delta_{ij}}{3}\qsgs =
+ - C_s^22\delbar^2\rhob|\St|\left(\Stij
+ -\frac{\delta_{ij}}{3}\Stkk\right) = C_s^2\aij
+ , \qquad
+ \qsgs = C_I 2\rhob\delbar^2|\St|^2 = C_I \alpha,
+\end{equation}
+with $C_s=0.16$, $C_I=0.09$, and $|\St|=(2 \St_{ij}\St_{ij})^{1/2}$.
+
+\citet{moi91} proposed a modif\/ication of the
+eddy-viscosity model (\ref{eq:tauij-yoshi}) in which the two model
+coeff\/icients were determined dynamically, rather than input {\it a
+priori}, using the Germano identity $\Lij = T_{ij} -
+\widehat{\tau_{ij}}$ \citep{ger92}, which relates the SGS
+stresses $\tij$ to the ``resolved turbulent stresses''
+$\Lij=\left(\widehat{\overline{\rho u_i}\,\overline{\rho
+ u_j}/\rhob}\right) - \widehat{\overline{ \rho u_i }}\,
+\widehat{\overline{ \rho u_j}}/\rhobh$, and the subtest stresses
+$\Tij=\rhobh\breve{\widetilde{u_iu_j}} - \rhobh\utbi\utbj$
+(where $\breve{\widetilde{f}}=\widehat{\overline{\rho f}}/\rhobh$, and the
+hat represents the application of the test f\/ilter $\widehat{{G}}$ of
+characteristic width $\delhat=2\delbar$)
+that appear if the f\/ilter $\widehat{{G}}$ is applied to (\ref{eq:mom-ff}).
+\citet{moi91} determined the model coeff\/icients by
+substituting (\ref{eq:tauij-yoshi}) into the Germano identity and
+contracting with $\Stij$. In the present paper the contraction
+proposed by \citet{lil92} to minimize the error in a
+least-squares sense are used instead. Accordingly, the two model
+coeff\/icients for the dynamic eddy-viscosity (DEV) model will be given
+by
+\begin{equation}
+ \label{eq:coeff_dsm}
+ C = C_s^2 = \frac{ \langle {\cal L}_{ij}M_{ij}\rangle }
+ { \langle M_{kl}M_{kl}\rangle } , \qquad
+ C_I = \frac{ \langle {\cal L}_{kk}\rangle }
+ { \langle\beta-\widehat{\alpha}\rangle } ,
+\end{equation}
+where $\beta_{ij} = -2\delhat^2\rhobh|\Stb|
+(\Stbij-\delta_{ij}\Stbkk/3)$, $\Mij=\bij-\widehat{\aij}$, and
+$\beta=2\delhat^2 \rhobh|\Stb\,|^2$.
+
+Scale-similar models are based on the assumption that the most active
+SGSs are those closer to the cutoff, and that the scales
+with which they interact are those immediately above the cutoff wave number
+\citep{bar80}. Thus, scale-similar models employ
+multiple operations to identify the smallest resolved scales and use
+the smallest ``resolved'' stresses to represent the SGS stresses.
+Although these models account for the local energy events, they
+underestimate the dissipation.
+
+\citet{spe88} proposed the addition of a scale-similar
+part to the eddy-viscosity model of \citet{yos86}
+introducing the mixed model. In this way, the eddy-viscosity
+contribution provides the dissipation that is underestimated by purely
+scale-similar models. This mixed model was also used by \citet{erl92}
+and \citet{zan92}, and is given by
+\begin{equation}
+ \label{eq:tauij-sezhu}
+ \tij - \frac{\delta_{ij}}{3}\qsgs = C_s\aij + \Aij
+ - \frac{\delta_{ij}}{3} \Akk , \qquad
+ \qsgs = C_I \alpha + \Akk,
+\end{equation}
+where $\Aij=\rhob(\widetilde{\uti\util}_j-\utti\uttj)$.
+
+\citet{erl92} tested the constant
+coeff\/icient model {\it a priori} by comparing DNS and LES
+results of compressible isotropic turbulence and found good agreement
+in the dilatational statistics of the f\/low, as well as high
+correlation between the exact and the modeled stresses.
+\citet{zan92} compared the DNS and LES results of isotropic
+turbulence with various initial ratios of compressible to total
+kinetic energy. They obtained good agreement for the evolution of
+quantities such as compressible kinetic energy and f\/luctuations of the
+thermodynamic variables.
+
+Dynamic model adjustment can be also applied to the mixed model
+(\ref{eq:tauij-sezhu}), to yield the dynamic mixed model (DMM)
+\begin{equation}
+ \label{eq:c-dmm}
+ C = \frac{\langle\Lij\Mij\rangle - \langle\Nij\Mij\rangle}
+ {\langle\Mlk\Mlk\rangle} , \qquad
+ C_I = \frac{\langle\Lkk-\Nkk\rangle}
+ {\langle \beta-\widehat{\alpha}\rangle},
+\end{equation}
+with $\Bij=\rhobh(\breve{\widetilde{\utbi\utbj}} - \utbtbi\utbtbj)$,
+and $\Nij=\Bij-\widehat{\Aij}$.
+
+An issue that requires some attention is the necessity to model
+separately the trace of the SGS stresses $\qsgs$. \citet{yos86},
+\citet{moi91}, and \citet{spe88} proposed a separate model
+for this term. \citet{erl92} conjectured that, for
+turbulent Mach numbers $M_t<0.4$ this term is negligible; their DNS of
+isotropic turbulence conf\/irm this conjecture. \citet{zan92}
+conf\/irmed these results {\it a posteriori}:
+they ran calculations with $0\leq C_I\leq0.066$ (the latter value is ten
+times higher than that predicted by the theory) and observed little
+difference in the results.
+
+\citet{com98} proposed incorporating this term into a
+modif\/ied pressure ${\cal P}$. This leads to the presence of an
+additional term in the equation of state, which takes the form
+\begin{equation}
+ \label{eq:cl-state}
+ {\cal P} = \rhob R\Ttil + \frac{3\gamma-5}{6}\qsgs ;
+\end{equation}
+for $\gamma=\frac{5}{3}$ the additional term is zero, and for $\gamma=\frac{7}{5}$ it
+might be negligible, unless $M_t$ is very large. This observation can
+be used to explain {\it a posteriori} the insensitivity of the LES
+results to the value of $C_I$ discussed by \citet{zan92}:
+the SGS stress trace can be approximately incorporated in the pressure
+with no modif\/ication to the equation of state. Another factor may be
+that both the calculations by \citet{erl92} and those by \citet{zan92}
+used mixed models, in which the
+scale-similar part gave a contribution to the normal SGS stresses.
+Thus, $\qsgs$ is taken into account, at least partially, by the
+scale-similar contribution.
+
+If the mixed model is used, the trace of the SGS stresses can be
+parameterized without requiring a separate term. A one-coeff\/icient
+dynamic mixed model (DMM-1) would be of the form
+\begin{equation}
+ \label{eq:tauij-dmm-oc}
+ \tij = C \aij + \Aij ,
+\end{equation}
+with
+\begin{equation}
+ \label{eq:c-dmm-oc}
+ C = \frac{\langle\Lij\Mij\rangle - \langle\Nij\Mij\rangle}
+ {\langle\Mlk\Mlk\rangle}.
+\end{equation}
+
+\begin{figure}[b]
+%\centering
+%\includegraphics[height=84mm]{02fig.eps}
+\vspace{84mm}% to simulate the figure
+\caption{{\it A priori} comparison of the normal SGS stresses
+$\tau_{11}$. (a) Correlation coeff\/icient and (b) nondimensional rms magnitude. \solid,
+Eddy-viscosity model DEV (\protect\ref{eq:tauij-yoshi})--(\protect\ref{eq:coeff_dsm});
+\dashed, two-coeff\/icient mixed model DMM
+(\protect\ref{eq:tauij-sezhu})--(\protect\ref{eq:c-dmm}); \chndot, one-coeff\/icient mixed model
+DMM-1 (\protect\ref{eq:tauij-dmm-oc})--(\protect\ref{eq:c-dmm-oc}); \trian, DNS.}
+\label{fig:fig02}
+\end{figure}
+
+The models DEV (\ref{eq:tauij-yoshi})--(\ref{eq:coeff_dsm}), DMM
+(\ref{eq:tauij-sezhu})--(\ref{eq:c-dmm}), and DMM-1
+(\ref{eq:tauij-dmm-oc})--(\ref{eq:c-dmm-oc}) are evaluated in
+Figures~\ref{fig:fig02}--\ref{fig:fig04}. Figure~\ref{fig:fig02}(a) shows that the DMM-1 model gives the highest
+correlation for the diagonal components of the SGS stress tensor;
+Figure~\ref{fig:fig02}(b) shows that neither the eddy-viscosity model nor the
+two-coeff\/icient mixed model DMM predict the rms of the SGS stresses
+accurately. The DMM-1 model gives the most accurate prediction among
+those tested.
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=86mm]{03fig.eps}
+\vspace{86mm}% to simulate the figure
+\caption{{\it A priori} comparison of the off-diagonal SGS stresses
+$\tau_{12}$. (a) Correlation coeff\/icient and (b) nondimensional rms magnitude. \solid,
+Eddy-viscosity model DEV (\protect\ref{eq:tauij-yoshi})--(\protect\ref{eq:coeff_dsm}); \dashed,
+two-coeff\/icient mixed model DMM (\protect\ref{eq:tauij-sezhu})--(\protect\ref{eq:c-dmm}) and
+one-coeff\/icient mixed model DMM-1 (\protect\ref{eq:tauij-dmm-oc})--(\protect\ref{eq:c-dmm-oc});
+\trian, DNS.}
+\label{fig:fig03}
+\end{figure}
+
+Figure~\ref{fig:fig03}(a) shows the correlation coeff\/icient for the off-diagonal
+components of the SGS stress. As in incompressible f\/lows, the
+eddy-viscosity model gives very poor correlation (near 0.2), while much
+improved results are obtained with the mixed models. Note that the
+correlation coeff\/icient for DMM and DMM-1 overlap in the f\/igure.
+Figure~\ref{fig:fig03}(b) shows the rms of $\tau_{12}$. DEV underpredicts the rms
+magnitude of the exact term, while DMM and DMM-1 slightly overpredict it.
+
+The coeff\/icient $C_s$ remained nearly constant at a value of 0.15
+throughout the calculation, consistent with the theoretical arguments
+\citep{yos86}. The coeff\/icient of the SGS energy, $C_I$, on the
+other hand, has a value three times higher than predicted by the
+theory, consistent with the results of \citet{moi91}.
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=46mm]{04fig.eps}
+\vspace{46mm}% to simulate the figure
+\caption{Nondimensional rms magnitude of $\tau_{11}$ versus
+f\/ilter-width at $t/\tau_t=6.5$. \solid, Eddy-viscosity model DEV
+(\protect\ref{eq:tauij-yoshi})--(\protect\ref{eq:coeff_dsm}); \dashed, two-coeff\/icient mixed
+model DMM (\protect\ref{eq:tauij-sezhu})--(\protect\ref{eq:c-dmm}); \chndot, one-coeff\/icient
+mixed model DMM-1 (\protect\ref{eq:tauij-dmm-oc})--(\protect\ref{eq:c-dmm-oc}); \trian,
+DNS.}
+\label{fig:fig04}
+\end{figure}
+
+Figure~\ref{fig:fig04} shows the rms magnitude of $\tau_{11}$ versus the
+f\/ilter-width, at time $t/\tau_t=6.5$. For very small f\/ilter-widths
+($\delbar/\Delta=4$), all the models are accurate, ref\/lecting the
+capability of dynamic models to turn off the model contribution when
+the grid becomes suff\/iciently f\/ine to resolve all the turbulent
+structures (models with constants assigned {\it a priori}, such as
+the \citet{sma63} model, do not have this characteristic). For
+$\delbar/\Delta=8$, consistent with the results shown above, the
+one-coeff\/icient mixed model DMM gives the most accurate predictions.
+For intermediate f\/ilter-widths, up to $\delbar/\Delta=16$, the best
+prediction is given by the DMM-1 model; when this f\/ilter-width is used
+the unresolved scales contain a considerable amount of energy, 40\%.
+For $\delbar/\Delta=32$, it appears that the DMM model predicts the
+rms magnitude accurately. However, since the DMM model overpredicts
+the rms signif\/icantly for $\delbar/\Delta=8$ and 16, the accurate
+prediction given by DMM for $\delbar/\Delta=32$ is a coincidence.
+When $\delbar/\Delta=32$ the SGSs contain a large contribution
+from the energy-containing eddies (70\% of the energy is in the SGS);
+since $\delbar/\Delta=32$ is not in the inertial range the
+assumptions on which LES modeling is based fail. The same results are found
+for $\tau_{12}$ (not shown).
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=90mm]{05fig.eps}
+\vspace{90mm}% to simulate the figure
+\caption{Comparison of unclosed terms in the energy equations. (a)
+Nondimensional terms in the internal energy or enthalpy equations and (b) nondimensional terms
+in the total energy equation. \solid, Divergence of the SGS heat f\/lux, $C_{\rm v}\ \partial
+Q_j/\partial x_j$; \chndot, SGS viscous dissipation $\varepsilon_{\rm v}$; \dashed, pressure
+dilatation $\Pi_{\rm dil}$; \chndotdot, divergence of the SGS heat f\/lux, $\gamma C_{\rm
+v}\ \partial Q_j/\partial x_j$; \dotted, SGS turbulent diffusion $\partial{\cal J}_j/\partial
+x_j$; \ldash, SGS viscous diffusion $\partial{\cal D}_j/\partial x_j$.}
+\label{fig:fig05}
+\end{figure}
+
+%%%%%%%%%%%%%%%
+%% Section 5 %%
+%%%%%%%%%%%%%%%
+
+\section{Models for the Energy Equations}
+\label{sec:5}
+
+Figure~\ref{fig:fig05} compares the magnitude of the unclosed terms
+appearing in the internal-energy and enthalpy equations
+(\ref{eq:int-en-ff}) and (\ref{eq:enth-ff}), respectively (Figure~\ref{fig:fig05}(a)) and
+in the total energy equation (Figure~\ref{fig:fig05}(b)). Unlike in the mixing layer
+studied by \citet{vre95b}, in this f\/low the pressure
+dilatation $\Pi_{\rm dil}$ is negligible, and the viscous dissipation
+$\varepsilon_{\rm v}$ is one order of magnitude smaller than the divergence of
+the SGS heat f\/lux. In the total energy equation (\ref{eq:tot-en-ff}),
+the SGS turbulent diffusion $\partial{\cal J}_j/\partial x_j$ is
+comparable with the divergence of the SGS heat f\/lux and the SGS viscous
+diffusion is one order of magnitude smaller than the other terms. In
+this section several models for the more signif\/icant terms are examined.
+
+%%%%%%%%%%%%%%%%%%%%
+%% Subsection 5.1 %%
+%%%%%%%%%%%%%%%%%%%%
+
+\subsection{SGS Heat Flux}
+\label{sec:5.1}
+
+The simplest approach to modeling the SGS heat f\/lux $Q_j$ is to use an
+eddy-diffusivity model of the form
+\begin{equation}
+ \label{eq:eddy-diff}
+ Q_j = -\frac{\rhob\nu_{\rm T}}{\prt}\frac{\partial \Tt}{\partial x_j}
+ = -C \frac{\delbar^2\rhob|\St|}{\prt}\frac{\partial \Tt}{\partial x_j},
+\end{equation}
+where $C$ is the eddy-viscosity coeff\/icient that can be either
+assigned if a model of the form (\ref{eq:tauij-yoshi}) is used, or
+computed dynamically as in (\ref{eq:coeff_dsm}). The turbulent
+Prandtl number $\prt$ can be also f\/ixed or calculated dynamically
+according to\pagebreak
+\begin{equation}
+ \label{eq:prt-dev}
+ \prt = \frac{C\langle T_kT_k\rangle}{\langle\Kj T_j\rangle},
+\end{equation}
+where
+\begin{equation}
+ T_j= -\delhat^2\rhobh|\Stb|\frac{\partial\Ttb}{\partial x_j}
+ +\delbar^2\widehat{\rhob|\St|\frac{\partial\Tt}{\partial x_j}}
+ ,\qquad
+ \Kj = \left(\frac{\widehat{\overline{\rho u_j}
+ \,\overline{\rho T}}}{\rhob} \right)
+ - \frac{\widehat{\overline{ \rho u_j }}\,
+ \widehat{\overline{ \rho T }}}{\rhobh}.
+\end{equation}
+
+A mixed model of the form
+\begin{equation}
+ \label{eq:qj-dmm}
+ Q_j = -C\frac{\delbar^2\rhob|\St|}{\prt}\frac{\partial\Tt}{\partial x_j}
+ +\rhob \left(\widetilde{\utj\Tt} - \uttj\Ttt\right)
+\end{equation}
+was proposed by \citet{spe88}. The model coeff\/icients
+$C$ and $\prt$ can again be assigned or adjusted dynamically
+according to (\ref{eq:c-dmm}) and
+\begin{equation}
+ \label{eq:prt-dmm}
+ \prt = C \frac{\langle T_kT_k\rangle}
+ {\langle\Kj T_j\rangle-\langle V_jT_j\rangle } ,
+\end{equation}
+with
+\begin{equation}
+ V_j = \rhobh\left(\breve{\widetilde{\utbj\Ttb}}
+ - \utbtbj\Ttbtb \right) -
+ \widehat{\rhob \left(\widetilde{\utj\Tt} - \uttj\Ttt\right)}.
+\end{equation}
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=85mm]{06fig.eps}
+\vspace{85mm}% to simulate the figure
+\caption{{\it A priori} comparison of the SGS heat f\/lux $Q_j$. (a)
+Correlation coeff\/icient and (b) nondimensional rms magnitude. \solid, Eddy-diffusivity model
+(\protect\ref{eq:eddy-diff}), $Pr_{\rm T}=0.7$; \dashed, eddy-diffusivity model
+(\protect\ref{eq:eddy-diff}), Prandtl number adjusted according to (\protect\ref{eq:prt-dev});
+\chndot, mixed model (\protect\ref{eq:qj-dmm})--(\protect\ref{eq:prt-dmm}); \trian$\!$,\ $\,$
+DNS.}
+\label{fig:fig06}
+\end{figure}
+
+Figure~\ref{fig:fig06}(a) shows the correlation coeff\/icient for the three models
+described above. Both eddy-viscosity models overlap on the plot
+giving a poor correlation factor, roughly 0.2, whereas the mixed model
+gives a correlation above 0.6. Both eddy viscosity models
+under-predict the rms of the exact $Q_j$, shown in Figure~\ref{fig:fig06}(b), while the
+mixed model is more accurate.
+The mixed model maintains accuracy for all f\/ilter-widths
+$\delbar/\Delta\leq16$ (Figure~\ref{fig:fig07}).
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=45mm]{07fig.eps}
+\vspace{45mm}% to simulate the figure
+\caption{Nondimensional rms magnitude of $Q_j$ versus f\/ilter-width
+at $t/\tau_t=6.5$. \solid, eddy-diffusivity model (\protect\ref{eq:eddy-diff}), $Pr_{\rm
+T}=0.7$; \dashed, eddy-diffusivity model (\protect\ref{eq:eddy-diff}), Prandtl number adjusted
+according to (\protect\ref{eq:prt-dev}); \chndot, mixed model
+(\protect\ref{eq:qj-dmm})--(\protect\ref{eq:prt-dmm}); \trian, DNS.}
+\label{fig:fig07}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%
+%% Subsection 5.2 %%
+%%%%%%%%%%%%%%%%%%%%
+
+\subsection{SGS Viscous Dissipation}
+\label{sec:5.2}
+
+The other term in the enthalpy or internal energy equations that was
+found to be signif\/icant in the present f\/low is the viscous dissipation
+$\varepsilon_{\rm v}$. In this section the three models proposed by
+\citet{vre95b} are tested:\pagebreak
+\begin{eqnarray}
+ \label{eq:ev-dss}
+ \varepsilon_{\rm v}^{(1)} & = &
+ C_{\varepsilon1} \left(\widetilde{\widetilde{\sigma}_{ji}\Stij}
+ -\widetilde{\widetilde{\sigma}}_{ij}\Sttij
+ \right) ;\\
+ \label{eq:ev-dtone}
+ \varepsilon_{\rm v}^{(2)} & = & C_{\varepsilon2}\rhob \widetilde{q}^3/\delbar ,
+ \qquad \widetilde{q}^2 \sim\delbar^2|\St|^2 ; \\
+ \label{eq:ev-dttwo}
+ \varepsilon_{\rm v}^{(3)} & = & C_{\varepsilon3}\rhob \widetilde{q}^3\delbar ,
+ \qquad \widetilde{q}^2 \sim \widetilde{\utk\util}_k-\uttk\uttk .
+\end{eqnarray}
+The f\/irst is a scale-similar model; the second and third represent the
+SGS dissipation as the ratio between the cube of the SGS velocity
+scale, $\widetilde{q}$, and the length scale. The velocity scale can
+be obtained using either the \citet{yos86} model, as in
+(\ref{eq:ev-dtone}), or the scale-similar model as in
+(\ref{eq:ev-dttwo}). \citet{vre95b} f\/ixed the values
+of the coeff\/icients by matching the rms magnitude of the modeled and
+exact terms obtained from the {\it a priori} test, and obtained
+$C_{\varepsilon1}=8$, $C_{\varepsilon2}=1.6$, and $C_{\varepsilon3}=0.6$. In
+the present study the dynamic procedure will be used instead to
+determine the coeff\/icients. The analog of the Germano identity for
+this term reads
+\begin{equation}
+ \left\langle\widehat{\widetilde\sigma_{ji}\Stij}
+ - \widehat{\overline{\rho\sigma_{ij}}}\,
+ \widehat{\overline{\rho\Sij}}/\rhobh^2\right\rangle =
+ \left\langle E_{\rm v}^{(n)}-\widehat{\varepsilon_{\rm v}^{(n)}}\right\rangle,
+\end{equation}
+and the modeled terms $\varepsilon_{\rm v}^{(n)}$ can be given
+respectively by (\ref{eq:ev-dss})--(\ref{eq:ev-dttwo}), while the
+$E_{\rm v}^{(n)}$ are
+\begin{eqnarray}
+ E_{\rm v}^{(1)} & = &
+ C_{\varepsilon1}
+ \left(\breve{\widetilde{\breve{\widetilde{\sigma}}_{ji}\Stbij}}
+ -\breve{\widetilde{\breve{\widetilde{\sigma}}}}_{ij}\Stbtbij
+ \right) ;\\
+ E_{\rm v}^{(2)} & = & C_{\varepsilon2} \rhobh \breve{\widetilde{q}}^3/\delhat ,
+ \qquad \breve{\widetilde{q}}^2 \sim\delhat^2|\Stb|^2 ; \\
+ E_{\rm v}^{(3)} & = & C_{\varepsilon3} \rhobh \breve{\widetilde{q}}^3/\delhat ,
+ \qquad \breve{\widetilde{q}}^2 \sim \breve{\widetilde{\utbi\utbj}} -
+ \utbtbi\utbtbj.
+\end{eqnarray}
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=85mm]{08fig.eps}
+\vspace{85mm}% to simulate the figure
+\caption{{\it A priori} comparison of the SGS viscous dissipation
+$\varepsilon_{\rm v}$. (a) Correlation coeff\/icient and (b) nondimensional rms magnitude.
+\solid, scale-similar model (33); \dashed, dynamic model (34); \chndot, dynamic model (35);
+\trian, DNS.}
+\label{fig:fig08}
+\end{figure}
+
+Figure~\ref{fig:fig08}(a) shows the correlation coeff\/icient for the three models.
+The scale-similar model gives the highest correlation. The use of a
+velocity scale obtained from the scale-similar assumption, however,
+results in improved prediction of the rms magnitude; using
+$q\sim\delbar|\St|$ yields a signif\/icant overprediction of the rms.
+The values of the coeff\/icients obtained from the dynamic adjustment in
+this f\/low are signif\/icantly lower than those obtained in the mixing
+layer by \citet{vre95b}. For the particular
+f\/ilter-width shown, we obtained $C_{\varepsilon 1}=2.4$, and $C_{\varepsilon
+ 2}=0.03$, while $C_{\varepsilon3}$ increased monotonically in time from
+0.25 to 0.4. The fact that with these values the f\/irst and third
+models match the rms magnitude of the exact term indicates a lack of
+universality of these constants. Dynamic adjustment of the model
+coeff\/icient appears to be benef\/icial for this term.
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=45mm]{09fig.eps}
+\vspace{45mm}% to simulate the figure
+\caption{Nondimensional rms magnitude of $\varepsilon_{\rm v}$
+versus f\/ilter-width at $t/\tau_t=6.5$. \solid, scale-similar model (33); \dashed, dynamic
+model (34); \chndot, dynamic model (35); \trian, DNS.}
+\label{fig:fig09}
+\end{figure}
+
+The modeling of the viscous dissipation is more sensitive than the
+other terms to the f\/ilter-width. The prediction accuracy deteriorates
+with increasing f\/ilter-width, and in this case even for
+$\delbar/\Delta=16$ none of the models is particularly accurate
+(Figure~\ref{fig:fig09}).
+\pagebreak
+
+%%%%%%%%%%%%%%%%%%%%
+%% Subsection 5.3 %%
+%%%%%%%%%%%%%%%%%%%%
+
+\subsection{SGS Turbulent Diffusion}
+\label{sec:5.3}
+
+The SGS turbulent diffusion $\partial{\cal J}_j/\partial x_j$ appears
+in the total energy equation (\ref{eq:tot-en-ff}). Comte and Lesieur (1998)
+did not model this term explicitly, but added it to
+the SGS heat f\/lux by using an eddy-diffusivity model to parametrize
+\begin{equation}
+ \label{eq:comtel-qj}
+ \left( \widetilde{\rho Eu_j} +\widetilde{pu_j} \right) -
+ \left(\rhob \widetilde{E}\util_j+\pb\util_j\right)
+ = \gamma \rhob \left(\widetilde{u_j T}-\util_j\widetilde{T}\right)
+ + {\cal J}_j
+ \simeq -\frac{\nu_{\rm T}}{\prt}
+ \frac{\partial\widetilde{T}}{\partial x_j};
+\end{equation}
+with this model, however, the SGS turbulent diffusion ${\cal J}_j$,
+which depends mostly on the unresolved velocity f\/luctuations, is
+modeled in terms of the temperature gradient. In an isothermal f\/low,
+${\cal J}_j$ may be nonzero, and, even if the temperature is
+not constant, there is no reason to couple a term due to mechanical
+energy gradients to the temperature. A model of the form
+(\ref{eq:comtel-qj}) effectively neglects ${\cal J}_j$.
+
+The only attempt to model the SGS turbulent diffusion was that by
+\citet{kni98}. They argue that $\uti\simeq\utti$ and
+propose a model of the form
+\begin{equation}
+ \label{eq:tdif-knight}
+ {\cal J}_j \simeq \utk\tau_{jk}.
+\end{equation}
+
+A dynamic scale-similar model can be obtained using the generalized
+central moments \citep{ger92}
+\begin{eqnarray}
+ \label{eq:gcm1}
+ \tau(u_i,u_j) & = & \rhob\left[\widetilde{u_iu_j} - \uti\utj\right], \\
+ \label{eq:gcm2}
+ \tau(u_i,u_j,u_k) & = & \rhob\widetilde{u_iu_ju_k}
+ - \uti\tau(u_j,u_k) - \utj\tau(u_i,u_k)
+ - \utk\tau(u_i,u_j) - \rhob\uti\utj\utk.
+\end{eqnarray}
+Using this notation the turbulent diffusion term can be written as
+\begin{equation}
+ \label{eq:tdiff2}
+ 2 {\cal J}_j = \tau(u_j,u_k,u_k) + 2\utk\tau(u_j,u_k) ,
+\end{equation}
+since $\tau(u_j,u_k)=\tau_{jk}$. Using this formalism, scale-similar
+models can be derived by approximating the quadratic terms using the
+f\/iltered velocities $\util_j$ to replace the velocities $u_j$; for
+instance, one can write
+\begin{equation}
+ \label{eq:gcm_ss1}
+ \tau(u_i,u_j) \sim \tau(\uti,\utj) \quad \Rightarrow \quad
+ \rhob\left(\widetilde{u_iu_j}-\uti\utj\right) \sim
+ \rhob\left(\widetilde{\uti\utj}-\utti\uttj\right) .
+\end{equation}
+If the proportionality constant in (\ref{eq:gcm_ss1}) is set to one,
+the scale-similar part of the mixed model (\ref{eq:tauij-sezhu})
+is obtained. Analogously, the triple product can be written as
+\begin{eqnarray}
+ \label{eq:tdiff_mod}
+ 2{\cal J}_j & = & \tau(u_j,u_k,u_k) + 2\utk\tau(u_j,u_k) \nonumber \\
+ & \simeq & C_{J}\tau(\utj,\utk,\utk) + 2\utk\tau(u_j,u_k) \nonumber \\
+ & = & C_{J} \left[ \rhob\widetilde{\utj\utk\utk}
+ - \rhob\uttj\uttk\uttk
+ - \uttj\Akk - 2\uttk\Ajk \right]
+ + 2\utk\tau_{jk} ,
+\end{eqnarray}
+the last term is parametrized by the same model used in the momentum
+equation. The coeff\/icient $C_J$ can be set using the identity
+\begin{equation}
+\widehat{\rhob\utj\utk\utk} - \rhobh\utbj\utbk\utbk
+ = 2 J_j - 2 \widehat{ {\cal J}_j} ,
+\end{equation}
+where
+\begin{eqnarray}
+ 2 J_j & = & C_{J} \left[ \rhobh\breve{\widetilde{\utbj\utbk\utbk}}
+ - \rhobh\utbtbj\utbtbk\utbtbk
+ - \utbtbj\Bkk - 2\utbtbk\Bjk \right]
+ + 2\utbk T_{jk}, \nonumber \\
+\Bjk & = & \rhobh\left(\breve{\widetilde{\utbj\utbk}}
+ - \utbtbj\utbtbk\right),
+\end{eqnarray}
+to yield
+\begin{equation}
+ C_J = \frac{\left\langle \left(\widehat{\rhob\utj\utk\utk} -
+ \rhobh\utbj\utbk\utbk\right) {\cal P}_j
+ -{\cal Q}_j{\cal P}_j\right\rangle}
+ {\langle{\cal P}_k{\cal P}_k\rangle},
+\end{equation}
+where
+\begin{eqnarray}
+ {\cal P}_j & = & \left[ \rhobh\breve{\widetilde{\utbj\utbk\utbk}}
+ - \rhobh\utbtbj\utbtbk\utbtbk
+ - \utbtbj\Bkk - 2\utbtbk\Bjk \right]
+ \nonumber \\
+ & - & \left[ \widehat{\rhob\widetilde{\utj\utk\utk}}
+ -\widehat{\rhob\uttj\uttk\uttk}
+ - \widehat{\uttj\Akk} - 2\widehat{\uttk\Ajk}
+ \right], \\
+ {\cal Q}_j & = & 2 \left( \utbk T_{jk} - \widehat{\utk\tau_{jk}}
+ \right) .
+\end{eqnarray}
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=86mm]{10fig.eps}
+\vspace{86mm}% to simulate the figure
+\caption{{\it A priori} comparison of the SGS turbulent diffusion
+${\cal J}_j$. (a) Correlation coeff\/icient and (b) nondimensional rms magnitude. \solid, knight
+\etal (1998); \dashed, scale-similar, one-coeff\/icient model; \trian, DNS.}
+\label{fig:fig10}
+\end{figure}
+
+Figure~\ref{fig:fig10}(a) shows the correlation coeff\/icient for the two models
+(\ref{eq:tdif-knight}) and (\ref{eq:tdiff_mod}) and using (21)--(22) to
+model $\tau_{jk}$. The correlation factor is greater than 0.7 for
+both models, and both models overpredict slightly the rms magnitude
+of ${\cal J}_j$ (Figure~\ref{fig:fig10}(b)). When the one-coeff\/icient, scale-similar
+model is used this overprediction is signif\/icantly reduced. Both
+models perform equally well for $\delbar/\Delta\leq16$, while neither
+is accurate for $\delbar/\Delta=32$.
+\pagebreak
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=86mm]{11fig.eps}
+\vspace{86mm}% to simulate the figure
+\caption{{\it A priori} comparison of the SGS viscous diffusion
+${\cal D}_j$. (a) Correlation coeff\/icient and (b) nondimensional rms magnitude. \solid,
+scale-similar model; \trian, DNS.}
+\label{fig:fig11}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%
+%% Subsection 5.4 %%
+%%%%%%%%%%%%%%%%%%%%
+
+\subsection{SGS Viscous Diffusion}
+\label{sec:5.4}
+
+The SGS viscous diffusion $\partial{\cal D}_j/\partial x_j$ is the
+smallest of the terms in the total energy equation, and is about 5\%
+of the divergence of $Q_j$. No model for this term has been proposed
+in the literature to date. One possibility is to parametrize it
+using a scale-similar model of the form\pagebreak
+\begin{equation}
+ \label{eq:vdif}
+ {\cal D}_j = C_D ( \widetilde{\widetilde{\sigma}_{ij}\uti}
+ - \widetilde{\widetilde{\sigma}}_{ij}\utti ) ,
+\end{equation}
+in which the coeff\/icient can be obtained from
+\begin{equation}
+ \label{eq:cd}
+ C_D = \frac{\left\langle\left[
+ \widehat{{\overline{\rho\sigma_{ij}}\,\overline{\rho u_i}}/
+ {\rhob^2}}
+ - {\widehat{\overline{\rho\sigma_{ij}}}\,
+ \widehat{\overline{\rho u_i}}}/
+ {\rhobh^2}
+ \right] {\cal R}_j \right\rangle}
+ { \left\langle{\cal R}_k{\cal R}_k\right\rangle } ,
+\end{equation}
+where
+\begin{equation}
+ {\cal R}_l =
+ \left(\breve{\widetilde{ \breve{\widetilde{\sigma}}_{lk}\utbk}}
+ -\breve{\widetilde{\breve{\widetilde{\sigma}}}}_{lk}\utbtbk \right)
+ - \left(\widehat{\widetilde{\widetilde{\sigma}_{lk}\utk}}
+ -\widehat{\widetilde{\widetilde{\sigma}}_{lk}\uttk} \right) .
+\end{equation}
+As can be seen from Figure~\ref{fig:fig11}, this model gives a poor correlation and poor
+agreement for the prediction of the rms magnitude. However, since
+the viscous diffusion is relatively small, its contribution to
+the total energy spectrum does not go to the inertial range, but rather
+to the decaying range. In this situation the accuracy of the model
+is degraded, as shown by \citet{men97}. Thus, the scale-similar
+approach may still give good predictions when this term is signif\/icant.
+In this particular f\/low, the error given by the model (or by not using
+a model) may be tolerable given the small contribution that the term
+gives to the energy budget.
+
+%%%%%%%%%%%%%%%%%%%%
+%% Subsection 5.5 %%
+%%%%%%%%%%%%%%%%%%%%
+
+\subsection{General Considerations}
+\label{sec:5.5}
+
+In addition to the term-by-term comparisons shown before, it is
+possible to evaluate the global accuracy of the models by comparing
+the sum of the exact SGS terms and the modeled quantity, namely,
+\begin{equation}
+ \label{eq:global}
+ E_{SGS}=\gamma C_{\rm v}Q_j + {\textstyle\half}{\cal J}_j - {\cal D}_j.
+\end{equation}
+
+\begin{figure}[t]
+%\centering
+%\includegraphics[height=85mm]{12fig.eps}
+\vspace{85mm}% to simulate the figure
+\caption{{\it A priori} comparison of the sum of the SGS terms in
+the total energy equation (\ref{eq:tot-en-ff}). (a) Correlation coeff\/icient and (b)
+nondimensional rms magnitude. \solid, Model; \trian, DNS.}
+\label{fig:fig12}
+\end{figure}
+
+The mixed model (26)--(27) was used for the SGS heat f\/lux, the
+scale-similar model (44)--(45) for the SGS turbulent diffusion, and the SGS
+viscous diffusion has been neglected. Figure~\ref{fig:fig12}(a) shows the correlation
+coeff\/icient for the exact and modeled quantities. While the
+individual correlations were roughly 0.6 and 0.7 for the SGS heat f\/lux
+model and the SGS turbulent diffusion, respectively, the global
+correlation drops just below 0.6 when considering the sum of the
+terms. Figure~\ref{fig:fig12}(b) shows the rms for both quantities.
+The agreement between the exact and modeled quantities is slightly
+less\pagebreak\ accurate than for the SGS heat f\/lux alone, Figure~\ref{fig:fig06}(b), but more
+accurate than for the SGS turbulent diffusion alone, Figure~\ref{fig:fig10}(b).
+Figure~\ref{fig:fig12} shows that the overall performance is very good.
+
+%%%%%%%%%%%%%%%
+%% Section 6 %%
+%%%%%%%%%%%%%%%
+
+\section{Conclusions}
+\label{sec:6}
+
+Several mixed and eddy-viscosity models for the momentum and energy
+equations have been tested. The velocity, pressure, density, and
+temperature f\/ields obtained from the DNS of homogeneous isotropic
+turbulence at $Re_\lambda=50$, $M_t=0.52$ were f\/iltered and the
+unclosed terms in the momentum, internal energy, and total energy
+equations were computed.
+
+In the momentum equation, mixed models were found to give better
+prediction, in terms of both correlation and {\rm rms} amplitude,
+than the pure eddy-viscosity models. The dynamic adjustment of the
+model coeff\/icient was benef\/icial, as already observed by
+\citet{moi91}.
+
+In the internal energy and enthalpy equations only the divergence of
+the SGS heat f\/lux was signif\/icant in this f\/low; the SGS pressure
+dilatation $\Pi_{\rm dil}$ and viscous dissipation $\varepsilon_{\rm v}$,
+which were signif\/icant in the mixing layer studied by \citet{vre95b},
+were found to be negligible here. Once again, mixed dynamic models
+gave the most accurate results.
+
+In the total energy equation two additional terms are present, one of
+which, the turbulent diffusion $\partial{\cal J}_j/\partial x_j$, is
+signif\/icant. The model proposed by \citet{kni98} and a new
+scale-similar model proposed here correlate well with the actual SGS
+turbulent diffusion, and predict the correct {\rm rms} amplitude.
+However, the new scale-similar model was found to be more accurate. A
+mixed model for the SGS viscous diffusion was also proposed and
+tested, although this term is much smaller than the others. The
+accuracy of the models for the sum of the terms was also evaluated,
+and it was found that the models proposed still predict nearly the
+correct {\rm rms} amplitude, and an acceptable value of the
+correlation coeff\/icient.
+
+The results obtained in this investigation are promising and indicate
+that it is possible to model accurately the terms in the energy
+equations. Further work may extend these results to cases in which the
+pressure-dilatation is signif\/icant, as well as to inhomogeneous
+f\/lows, and evaluate these models {\it a posteriori}.
+
+%%%%%%%%%%%%%%%%
+%% References %%
+%%%%%%%%%%%%%%%%
+
+\begin{thebibliography}{}
+
+\bibitem[Bardina \etal(1980)]{bar80} Bardina, J., Ferziger, J.H., and Reynolds, W.C. (1980). Improved subgrid-scale models
+for large eddy simulation. AIAA Paper 80-1357.
+
+\bibitem[Comte and Lesieur(1998)]{com98} Comte, P., and Lesieur, M. (1998). Large-eddy simulation of compressible turbulent
+f\/lows. In: {\it Advances in Turbulence Modeling}, edited by D.~Olivari. Von Karman Institute
+for Fluid Dynamics, Rhode-Ste-Gen\`ese, 4:1--4:133.
+
+\bibitem[El-Hady \etal(1994)]{elh94} El-Hady, N., Zang, T.A. , and Piomelli, U. (1994). Application of the dynamic
+subgrid-scale model to axisymmetric transitional boundary layer at high speed. \pofa{6},
+1299--1309.
+
+\bibitem[Erlebacher \etal(1992)]{erl92} Erlebacher, G., Hussaini, M.Y., Speziale, C.G., and Zang, T.A. (1992). Toward the
+large-eddy simulation of compressible turbulent f\/lows. \jfm{238}, 155--185.
+
+\bibitem[Favre(1965a)]{fav65a} Favre, A. (1965a). \'{E}quations des gaz turbulents compressible. I. Formes
+g\'{e}n\'{e}rales. {\it J. M\'ec.}, {\bf 4}, 361--390.
+
+\bibitem[Favre(1965b)]{fav65b} Favre, A. (1965b). \'{E}quations des gaz turbulents compressible. II. M\'{e}thode des
+vitesses moyennes; m\'{e}thode des vitesses macroscopiques pond\'{e}r\'{e}es par la masse
+volumique. {\it J. M\'ec.}, {\bf 4}, 391--421.
+
+\bibitem[Germano(1992)]{ger92} Germano, M. (1992). Turbulence: the f\/iltering approach. \jfm{238}, 325--336.
+
+\bibitem[Knight \etal(1998)]{kni98} Knight, D., Zhou, G., Okong'o, N., and Shukla, V. (1998). Compressible large eddy
+simulation using unstructured grids. AIAA Paper 98-0535.
+
+\bibitem[Leonard(1974)]{leo74} Leonard, A. (1974). Energy cascade in large-eddy simulations of turbulent f\/luid f\/lows.
+{\it Adv. Geophys.}, {\bf 18A}, 237--248.
+
+\bibitem[Lilly(1992)]{lil92} Lilly, D.K. (1992). A proposed modif\/ication of the Germano subgrid-scale closure
+method. \pofa{4}, 633--635.
+
+\bibitem[Mart\protect{\'\i}n and Candler(1998)]{mar98} Mart\'{\i}n, M.P., and Candler, G.V. (1998). Effect of chemical reactions on decaying
+isotropic turbulence. {\it Phys.\ Fluids}, {\bf 10}, 1715--1724.
+
+\bibitem[Mart\protect{\'\i}n and Candler(1999)]{mar99} Mart\'{\i}n, M.P., and Candler, G.V. (1999). Subgrid-scale model for the temperature
+f\/luctuations in reacting hypersonic turbulent f\/lows. {\it Phys.\ Fluids}, {\bf 11},
+2765--2771.
+
+\bibitem[Meneveau and Lund(1997)]{men97} Meneveau, C., and Lund, T.S. (1997). The dynamic Smagorinsky model and
+scale-dependent coeff\/icients in the viscous range of turbulence. {\it Phys.\ Fluids}, {\bf 9},
+3932--3934.
+
+\bibitem[Moin \etal(1991)]{moi91} Moin, P., Squires, K.D., Cabot, W.H., and Lee, S. (1991). A dynamic subgrid-scale
+model for compressible turbulence and scalar transport. \pofa{3}, 2746--2757.
+
+\bibitem[Normand and Lesieur(1992)]{nor92} Normand, X., and Lesieur, M. (1992). Direct and large-eddy simulation of laminar
+breakdown in high-speed axisymmetric boundary layers. {\it Theoret.\ Comput.\ Fluid Dynamics},
+{\bf 3}, 231--252.
+
+\bibitem[Ristorcelli and Blaisdell(1997)]{ris97} Ristorcelli, J.R., and Blaisdell, G.A. (1997). Consistent initial conditions for the
+DNS of compressible turbulence. {\it Phys.~Fluids}, {\bf 9}, 4--6.
+
+\bibitem[Smagorinsky(1963)]{sma63} Smagorinsky, J. (1963). General circulation experiments with the primitive equations.
+I.~The basic experiment. {\it Mon. Weather Rev.} {\bf 91}, 99--164.
+
+\bibitem[Speciale \etal(1988)]{spe88} Speziale, C.G., Erlebacher, G., Zang, T.A., and Hussaini, M.Y. (1988) The
+subgrid-scale modeling of compressible turbulence. \pofa{31}, 940--942.
+
+\bibitem[Vreman \etal(1995a)]{vre95a} Vreman, B., Geurts, B., and Kuerten, H. (1995a). A priori tests of large eddy
+simulation of the compressible mixing layer. {\it J. Engrg.\ Math.}, {\bf 29}, 299--327.
+
+\bibitem[Vreman \etal(1995b)]{vre95b} Vreman, B., Geurts, B., and Kuerten, H. (1995b). Subgrid-modeling in LES of
+compressible f\/low. {\it Appl. Sci.\ Res.}, {\bf 54}, 191--203.
+
+\bibitem[Yoshizawa(1986)]{yos86} Yoshizawa, A. (1986). Statistical theory for compressible turbulent shear f\/lows, with
+the application to subgrid modeling. \pofa{29}, 2152--2164.
+
+\bibitem[Zang \etal(1992)]{zan92} Zang, T.A., Dahlburg, R.B., and Dahlburg, J.P. (1992). Direct and large-eddy
+simulations of three-dimensional compressible Navier--Stokes turbulence. \pofa{4}, 127--140.
+
+\end{thebibliography}
+
+\end{document}

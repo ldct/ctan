@@ -1,0 +1,211 @@
+\documentclass[11pt]{article}
+\usepackage{oubraces}
+\overfullrule=5pt
+\title{\textsf{oubraces.sty}\\[5pt]
+    \large{Interleave \textbackslash overbrace with \textbackslash underbrace}}
+\author{Donald Arseneau}
+\date{2011 (1993)}
+
+\makeatletter
+
+%  LaTeX article explaining \overunderbraces
+
+% hacked version with extra labels for this article:
+% \Xoverunderbraces{upper_brace}{main_formula}{lower_brace}{special_labels}
+%
+\newdimen \Xheight
+
+\def\Xoverunderbraces #1#2#3#4{{% #4 = special labels
+ \baselineskip\z@skip \lineskip4pt \lineskiplimit4pt
+ \displaystyle % generate error if not in math mode!
+% first, do the top half of the alignment in a save-box to measure the height
+ \setbox\z@\vbox{\ialign{&\hfil${}##{}$\hfil\cr
+   \global\let\br\br@label #1\cr % upper labels
+   \global\let\br\br@down #1\cr  % upper braces
+   #2\cr % main line of the formula
+ }}% finished partial alignment and \vbox.
+ \dimen@-\ht\z@ %   Measure height -- it is the height we want for the whole
+% second, do the whole alignment without the rules to find its size
+ \Xheight\z@
+ \setbox\z@\vbox{\ialign{&\hfil${}##{}$\hfil\cr
+   \global\let\br\br@label #1\cr % upper labels
+   \global\let\br\br@down #1\cr  % upper braces
+   #2\cr % main line of the formula
+   \global\let\br\br@up #3\cr    % lower braces
+   \global\let\br\br@label #3\cr % lower labels
+   \noalign{\kern4pt}% Extra space
+   #4\cr % special labels
+ }}% finished whole alignment and \vbox.
+ \Xheight\ht\z@ \global\let\XV\relax
+% finally, do the whole alignment yet again in its final format
+ \setbox\z@\vbox{\ialign{\XV\hfil${}##{}$\hfil\XV&&\hfil${}##{}$\hfil\XV\cr
+   \global\let\br\br@label #1\cr % upper labels
+   \global\let\br\br@down #1\cr  % upper braces
+   #2\cr % main line of the formula
+   \global\let\br\br@up #3\cr    % lower braces
+   \global\let\br\br@label #3\cr % lower labels
+   \noalign{\kern4pt \global\let\XV\XVR}% Extra space
+   #4\cr % special labels
+ }}% finished whole alignment and \vbox.
+ \advance\dimen@\ht\z@
+ \lower\dimen@\hbox{\box\z@}% move alignment to get the desired height
+}}
+
+\def\XVR{\kern-.05pt\vbox to\z@{\vss\hrule width.1pt height\Xheight}\kern-.05pt}
+
+\begin{document}
+
+\maketitle
+
+\parskip=4pt
+\linespread{1.05}\selectfont
+
+\noindent Sometimes one would like to interleave braces labelling
+parts of an equation, like in
+$$
+ \overunderbraces{&\br{2}{x}& &\br{2}{y}}%
+    {a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m}%
+    {&  &\br{3}{z}}
+  = \pi r^2
+$$
+which is something that straightforward \verb"\overbrace" and 
+\verb"\underbrace" cannot do. 
+
+There is a trick, which I heard from Etienne Riga, that works well 
+for simple cases without requiring any packages or new commands, and 
+it involves \emph{overprinting} parts of the equation:
+put an overlapping \verb"\overbrace" (or \verb"\underbrace") 
+into \verb"\rlap{$...$}", and insert it into the equation.  
+This does not easily handle the multiple-overlap of the example 
+above (the overlapping gets misaligned) but can do 
+$$
+\rlap{$\overbrace{A+B}^x$}A+\underbrace{B+C}_z
+$$
+with \verb"\rlap{$\overbrace{A+B}^x$}A+\underbrace{B+C}_z".
+
+The oubraces package provides an alternative solution (for both plain 
+\TeX\ and \LaTeX) based on visual formatting into columns, like an array 
+or table. The formula at top is then produced by
+\begin{verbatim}
+ \overunderbraces{&\br{2}{x}& &\br{2}{y}}%
+    {a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m}%
+    {& &\br{3}{z}}
+  = \pi r^2
+\end{verbatim}
+
+First, (on paper or imagination) write the formula
+and divide it into segments at the tip of each brace.
+In our example there are seven segments:
+$$
+ \Xoverunderbraces{&\br{2}{x}& &\br{2}{y}}%
+    {a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m}%
+    {& &\br{3}{z}}%
+    {1&2&3&4&5&6&7}
+  = \pi r^2
+$$
+although segments 1 and 7 could be omitted.
+We will type the main line of the formula with \verb"&" inserted
+between each segment:
+\begin{verbatim}
+     a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m
+\end{verbatim}
+Each segment then becomes a column in an alignment,
+and each brace may span multiple columns.  The idea is best
+illustrated by a \LaTeX{} array:
+\begin{verbatim}
+\begin{array}[c]{ccccccc}
+  & \multicolumn{2}{c}{x}& & \multicolumn{2}{c}{y}\\
+  & \multicolumn{2}{c}{\downbracefill}&
+                      & \multicolumn{2}{c}{\downbracefill}\\
+  a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m\\
+  & & \multicolumn{3}{c}{\upbracefill}\\
+  & & \multicolumn{3}{c}{z}
+\end{array} = \pi r^2
+\end{verbatim}
+This doesn't work well at all, having bad braces with bad vertical and
+horizontal spacing.  We should instead use \TeX's primitive
+\verb"\halign" command, and measure the size of boxes to get the
+correct vertical positioning of the formula's main line. Rather
+than type the very messy \TeX\ commands  directly with each use,
+it is better to make a new command:
+$$
+\hbox to\hsize{\indent\verb"\overunderbraces{"{\sl
+  upper\_braces\/}\verb"}{"{\sl main\_formula\/}\verb"}{"{\sl
+  lower\_braces\/}\verb"}"\hfil}
+$$
+We already know how to write the main line of the formula
+(by segmenting the formula and inserting \verb"&" between
+segments), and we will also use \verb"&" between braces.
+Each labelled brace will be specified in the format:
+$$
+\hbox to\hsize{\indent\verb"\br{"$n$\verb"}{"\mbox{\sl
+   label\/}\verb"}"\hfil}
+$$
+where $n$ is the number of segments spanned by the brace.
+Each top brace of our example spans two segments (with an
+empty segment between them) and the bottom
+brace spans three segments, so they are specified by:
+
+\medskip
+\indent \hbox to8em{top braces:\hfil}\verb" &\br{2}{x}&  &\br{2}{y}"\\
+\indent \hbox to8em{bottom braces:\hfil}\verb" & &\br{3}{z}"
+
+\medskip
+
+Having determined all three parameters to use with
+\verb"\over"\-\verb"under"\-\verb"braces",  the complete command is
+\begin{verbatim}
+ \overunderbraces{&\br{2}{x}& &\br{2}{y}}%
+    {a + b +&c + d +&e + f&+&g + h&+ i + j&+ k + l + m}%
+    {& &\br{3}{z}}
+  = \pi r^2
+\end{verbatim}
+which produces the equation at the start of this article.
+
+\end{document}
+
+Here is the definition of \verb"\overunderbraces".  It may look
+long, but it has some repetition in order to measure the height of
+the top half of the formula. There are also the auxiliary macros
+\verb"\brAup", \verb"\brAdown", and \verb"\brAlabel" that allow
+the same \verb"\br" command to produce up-braces, down-braces, and
+centered labels at the appropriate places.
+
+\begin{verbatim}
+% \overunderbraces{upper_braces}{main_formula}{lower_braces}
+%
+\def\overunderbraces #1#2#3{{%
+ \baselineskip=0pt \lineskip=4pt \lineskiplimit=4pt
+ \displaystyle % generate error if not in math mode!
+% first, do the top half of the alignment in a save-box
+ \setbox0=\vbox{\ialign{&\hfil${}##{}$\hfil\cr
+   \global\let\br\brAlabel #1\cr % upper labels
+   \global\let\br\brAdown #1\cr  % upper braces
+   #2\cr % main line of the formula
+ }}% finished partial alignment and \vbox.
+ \dimen0=-\ht0 %   Measure height of partial alignment --
+% ... it is the height we want for the whole.
+% Now do the whole alignment (notice the repetition from above)
+ \setbox0=\vbox{\ialign{&\hfil${}##{}$\hfil\cr
+   \global\let\br\brAlabel #1\cr % upper labels
+   \global\let\br\brAdown #1\cr  % upper braces
+   #2\cr % main line of the formula
+   \global\let\br\brAup #3\cr    % lower braces
+   \global\let\br\brAlabel #3\cr % lower labels
+ }}% finished whole alignment and \vbox.
+ \advance\dimen0 by\ht0 % calc. the necessary lowering
+ \lower\dimen0\hbox{\box0}% shift to get the desired height
+}}
+
+% Three aliases for \br. 
+% #1=number of spanned columns,  #2=label
+\def\brAup#1#2{\multispan{#1}\upbracefill}
+\def\brAdown#1#2{\multispan{#1}\downbracefill}
+\def\brAlabel#1#2{\multispan{#1}\hidewidth $#2$\hidewidth}
+\end{verbatim}
+
+If you check the definitions in oubraces.sty, you will
+find some streamlining with `internal' commands such as \verb"\dimen@"
+used for \verb"\dimen0".
+
+\end{document}

@@ -1,0 +1,163 @@
+%%
+%% This is file `ut-backref.sty',
+%%
+%% Most of the code in here is taken from:
+%%
+%% File: backref.dtx Copyright (C) 1995, 1996, 1997 David Carlisle,
+%%       Sebastian Rahtz
+%% 
+%% 
+\def\fileversion{1.2}
+\def\filedate{1998/11/03}
+\ProvidesPackage{ut-backref}[\filedate:
+  bibliographical back referencing, \fileversion]
+
+%%% User-Interface
+
+\long\def\page@backref#1#2#3{#1}
+\long\def\section@backref#1#2#3{#2}
+\long\def\hyper@section@backref#1#2#3{\hyperlink{#3}{#2}}
+\long\def\hyper@page@backref#1#2#3{\hyperlink{page.#1}{#1}}
+\DeclareOption{pageref}{%
+  \def\backref{\small(cited on p\thinspace}%
+  \def\backrefs{\small(cited on pp\thinspace}%
+  \def\backrefclose{)}%
+  \def\backrefsclose{)}%
+  \let\backrefxxx\page@backref
+}
+\DeclareOption{ref}{%
+  \def\backref{\small(cited in section\thinspace}%
+  \def\backrefs{\small(cited in sections\thinspace}%
+  \def\backrefclose{)}%
+  \def\backrefsclose{)}%
+  \let\backrefxxx\section@backref
+}
+\DeclareOption{hyperref}{%
+  \def\backref{}%
+  \def\backrefs{}%
+  \def\backrefclose{}%
+  \def\backrefsclose{}%
+  \let\backrefxxx\hyper@section@backref
+}
+\DeclareOption{hyperpageref}{%
+  \def\backref{}%
+  \def\backrefs{}%
+  \def\backrefclose{}%
+  \def\backrefsclose{}%
+  \let\backrefxxx\hyper@page@backref
+}
+\ExecuteOptions{pageref}
+\ProcessOptions
+
+%%% 
+
+\newcommand\loopcmd{}
+\newcommand\br@last{}
+
+%%% a standard loop with `delimited arguments'. \end is used
+%%% only as an end marker here. The argument will be
+%%% expanded, so you'll get the meaning of e.g. \backrefxxx as
+%%% last element.
+\def\@getlast#1,#2\end{%
+%        \typeout{   checking elem #1}%
+        \if!#2! % test if ! equals !, i.e. if #2 is empty
+        \edef\br@last{#1}
+%        \typeout{Last elem is: \br@last}%
+        \let\loopcmd\relax
+        \else
+        \def\loopcmd{\@getlast#2\end}%
+        \fi
+        \loopcmd
+}%
+
+%%% A wrapper adding `,' and `\end' so that we can check these
+%%% in \@getlast
+\newcommand\getlast[1]{\expandafter\@getlast#1,\end}
+
+\newcounter{br@el@mcnt}
+
+%%% this uses LaTeX's \@for ... \do loop. See ltcntrl.dtx for details.
+\newcommand\lengthof[1]{%
+    \setcounter{br@el@mcnt}{0}%
+    \@for\testitem:=#1\do
+        {\stepcounter{br@el@mcnt}}
+%    \typeout{length of #1 is: \arabic{br@el@mcnt}}
+    }
+
+%%%
+
+\@ifundefined{newblock}{\def\newblock{\par}}{}
+
+\def\xcitedOn#1{%
+\@ifundefined{br@#1}{%
+\typeout{Warning: No page list for reference `#1'.}%
+}{% At least one citation, find out how many
+\newblock% newline if "open" format used
+\edef\x{\csname br@#1\endcsname}% These are the citations
+\lengthof{\x}% number of citations will be in br@el@mcnt
+\ifnum\arabic{br@el@mcnt}>1% More than one citation?
+\backrefs%
+\x%
+\backrefsclose%
+\else% exactly one citation
+\backref%
+\x%
+\backrefclose%
+\fi%
+}% end of if defined
+}% end of \def\xcitedOn
+
+\def\xbibitem{\@ifnextchar[{\@xlbibitem}{\@xbibitem}}
+\def\@xlbibitem[#1]#2#3\par{%
+ \oldb[#1]{#2}#3\xcitedOn{#2}
+ \par
+}%
+\def\@xbibitem#1#2\par{%
+ \oldb{#1}#2\xcitedOn{#1}
+ \par
+}
+\def\backcite#1#2{% #1 = list of labels, #2 = page, section, text
+  \@for\x:=#1\do{% for each label in list
+    \edef\br@label{\thinspace\protect\backrefxxx#2}%
+    \edef\br@list{\csname br@\x\endcsname}%
+    \getlast{\br@list}%
+%    \typeout{label \meaning\br@label, last \meaning\br@last}
+    \ifx\br@label\br@last
+    \relax\else%
+   \edef\x{\expandafter\@firstofone\x\@empty}%
+   \expandafter\protected@xdef\csname br@\x\endcsname{%
+   \expandafter\ifx\csname br@\x\endcsname\relax\else
+     \csname br@\x\endcsname,\fi\thinspace\protect\backrefxxx#2}%
+   \fi
+   }}
+\def\@currentHref{}
+\AtBeginDocument{%
+  \let\oldb\bibitem
+  \let\bibitem\xbibitem
+  \let\oldbibl\thebibliography
+  \def\thebibliography{\@starttoc{brf}{}\oldbibl}
+  \@ifundefined{NAT@parse}{%
+   \global\let\old@citex\@citex
+   \global\let\@citex\x@citex
+   }{\typeout{** backref set up for natbib ***}}
+}
+\def\x@citex[#1]#2{%
+  \old@citex[#1]{#2}%
+  \hy@backout{#2}%
+}
+\def\hy@backout#1{%
+  \@bsphack
+  \ifx\@empty\@currentlabel
+    \protected@write\@auxout{}%
+    {\string\@writefile{brf}%
+      {\string\backcite{#1}{{\thepage}{(document)}{Doc-Start}}}}%
+  \else
+   \protected@write\@auxout{}%
+   {\string\@writefile{brf}%
+     {\string\backcite{#1}{{\thepage}{\@currentlabel}{\@currentHref}}}}%
+  \fi
+   \@esphack
+}
+\endinput
+%%
+%% End of file `backref.sty'.

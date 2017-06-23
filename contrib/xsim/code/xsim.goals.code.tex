@@ -1,0 +1,307 @@
+% ----------------------------------------------------------------------------
+% the XSIM package - goals module
+% 
+%   eXercise Sheets IMproved
+% 
+% ----------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://github.com/cgnieder/xsim
+% E-Mail: contact@mychemistry.eu
+% ----------------------------------------------------------------------------
+% Copyright 2017 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% ----------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% ----------------------------------------------------------------------------
+\XSIMmodule{goals}{counting of points and bonus points}
+
+\xsim_load_modules:n {properties,exercises}
+
+\msg_new:nnn {xsim} {goal-unknown}
+  { The~ goal~ `#1'~ has~ never~ been~ declared~ \msg_line_context: }
+
+\seq_new:N \l__xsim_goals_seq
+\tl_new:N  \l_xism_grading_table_template_tl
+\tl_new:N  \l_xism_grading_table_exercise_type_tl
+
+% #1: name
+\cs_new_protected:Npn \xsim_declare_exercise_goal:n #1
+  {
+    \xsim_if_goal_exists:nF {#1}
+      {
+        \xsim_verbose:n { Declaring~ new~ goal~ `#1'. }
+        \xsim_declare_property:nnnn
+          { \c_false_bool }
+          { \c_false_bool }
+          { \c_false_bool }
+          {#1}
+        \seq_put_right:Nn \l__xsim_goals_seq {#1}
+        \fp_gzero_new:c {g__xsim_goal_#1_fp}
+        \fp_gzero_new:c {l__xsim_current_goal_#1_fp}
+        \fp_if_exist:cF {g__xsim_total_goal_#1_fp}
+          { \fp_new:c {g__xsim_total_goal_#1_fp} }
+        \fp_if_exist:cF {g__xsim_total_goal_recorded_#1_fp}
+          { \fp_new:c {g__xsim_total_goal_recorded_#1_fp} }
+        \AtBeginDocument
+          {
+            \xsim_foreach_exercise_type:n
+              {
+                \fp_gzero_new:c {g__xsim_##1_goal_#1_fp}
+                \fp_if_exist:cF {g__xsim_total_##1_goal_#1_fp}
+                  { \fp_new:c {g__xsim_total_##1_goal_#1_fp} }
+              }
+          }
+      }
+  }
+
+\prg_new_conditional:Npnn \xsim_if_goal_exists:n #1 {p,T,F,TF}
+  {
+    \seq_if_in:NnTF \l__xsim_goals_seq {#1}
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+% #1: exercise type
+% #2: id
+% #3: goal
+\cs_new_protected:Npn \xsim_update_goal:nnn #1#2#3
+  {
+    \xsim_if_goal_exists:nT {#3}
+      {
+        \fp_gadd:cn {g__xsim_goal_#3_fp}
+          { 0 \xsim_get_property:nnn {#1} {#2} {#3} }
+        \fp_gadd:cn {g__xsim_#1_goal_#3_fp}
+          { 0 \xsim_get_property:nnn {#1} {#2} {#3} }
+      }
+  }
+
+% #1: exercise type
+% #2: id
+\cs_new_protected:Npn \xsim_update_goals:nn #1#2
+  {
+    \xsim_foreach_goal:n
+      { \xsim_update_goal:nnn {#1} {#2} {##1} }
+  }
+\cs_generate_variant:Nn \xsim_update_goals:nn {nV}
+
+\cs_new_protected:Npn \xsim_foreach_goal:n #1
+  { \seq_map_inline:Nn \l__xsim_goals_seq {#1} }
+
+% #1: exercise type
+% #2: id
+% #3: goal
+% #4: value
+\cs_new_protected:Npn \xsim_addto_goal:nnnn #1#2#3#4
+  {
+    \xsim_if_goal_exists:nT {#3}
+      {
+        \xsim_verbose:n { Adding~ `#4'~ to~ `#3'~ goal~ of~ #1~ #2 }
+        \fp_gadd:cn {g__xsim_goal_#3_fp} {#4}
+        \fp_gadd:cn {g__xsim_#1_goal_#3_fp} {#4}
+        \fp_add:cn {l__xsim_current_goal_#3_fp} {#4}
+      }
+  }
+\cs_generate_variant:Nn \xsim_addto_goal:nnnn {xx,nVnx}
+
+% #1: exercise type
+% #2: id
+% #3: goal
+% #4: relation and value
+\prg_new_conditional:Npnn \xsim_if_goal_value:nnnn #1#2#3#4 {p,T,F,TF}
+  {
+    \fp_compare:nTF
+      { (0 \xsim_get_property:nnn {#1} {#2} {#3}) #4 }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+\cs_generate_variant:Nn \xsim_if_goal_value:nnnnTF {xx}
+
+% ----------------------------------------------------------------------------
+% a function which can be used to modify how the numbers of a goal are
+% printed:
+\cs_new_protected:Npn \__xsim_print_goal:n #1 {#1}
+\cs_generate_variant:Nn \__xsim_print_goal:n {x}
+
+% #1: value
+% #2: value == 1
+% #3: value != 1
+\cs_new_protected:Npn \xsim_print_goal:nnn #1#2#3
+  {
+    \__xsim_print_goal:n { \fp_to_decimal:n {#1} }
+    \fp_compare:nTF { (#1) = 1 } {#2} {#3}
+  }
+
+% #1: exercise type
+% #2: goal
+% #3: sum == 1
+% #4: sum != 1
+\cs_new_protected:Npn \xsim_print_goal_sum:nnnn #1#2#3#4
+  { \xsim_print_goal:nnn { \use:c {g__xsim_total_#1_goal_#2_fp} } {#3} {#4} }
+
+% #1: goal
+% #2: sum == 1
+% #3: sum != 1
+\cs_new_protected:Npn \xsim_print_total_goal_sum:nnn #1#2#3
+  { \xsim_print_goal:nnn { \use:c {g__xsim_total_goal_#1_fp} } {#2} {#3} }
+
+% ----------------------------------------------------------------------------
+% the same as the last to functions but for a list of goals:
+
+% #1: fp variable to be set
+% #2: list of goals (separated with +)
+% #3: function to be applied to goal names
+\cs_new_protected:Npn \__xsim_exercise_goals_sum_aux:Nnn #1#2#3
+  {
+    \seq_set_split:Nnn \l__xsim_tmpa_seq {+} {#2}
+    \seq_set_map:NNn \l__xsim_tmpb_seq \l__xsim_tmpa_seq {#3}
+    \fp_set:Nn #1 { \seq_use:Nn \l__xsim_tmpb_seq {+} }
+  }
+
+% #1: fp variable
+% #2: exercise type
+% #3: list of goals (separated with +)
+\cs_new_protected:Npn \__xsim_exercise_goals_sum:Nnn #1#2#3
+  {
+    \__xsim_exercise_goals_sum_aux:Nnn #1 {#3}
+      { \exp_not:c {g__xsim_total_#2_goal_ \tl_trim_spaces:n {##1} _fp} }
+  }
+
+% #1: fp variable
+% #2: list of goals (separated with +)
+\cs_new_protected:Npn \__xsim_exercise_goals_sum:Nn #1#2
+  {
+    \__xsim_exercise_goals_sum_aux:Nnn #1 {#2}
+      { \exp_not:c {g__xsim_total_goal_ \tl_trim_spaces:n {##1} _fp} }
+  }
+
+% #1: exercise type
+% #2: list of goals (separated with +)
+% #3: sum == 1
+% #4: sum != 1
+\cs_new_protected:Npn \xsim_print_goals_sum:nnnn #1#2#3#4
+  {
+    \__xsim_exercise_goals_sum:Nnn \l__xsim_tmpa_fp {#1} {#2}
+    \xsim_print_goal:nnn { \l__xsim_tmpa_fp } {#3} {#4}
+  }
+
+% #1: list of goals (separated with +)
+% #2: sum == 1
+% #3: sum != 1
+\cs_new_protected:Npn \xsim_print_total_goals_sum:nnn #1#2#3
+  {
+    \__xsim_exercise_goals_sum:Nn \l__xsim_tmpa_fp {#1}
+    \xsim_print_goal:nnn { \l__xsim_tmpa_fp } {#2} {#3}
+  }
+
+% ----------------------------------------------------------------------------
+% #1: exercise type
+% #2: goal
+% #3: relation and value
+\prg_new_conditional:Npnn \xsim_if_goal_sum:nnn #1#2#3 {p,T,F,TF}
+  {
+    \fp_compare:nTF
+      { ( \use:c {g__xsim_total_#1_goal_#2_fp} ) #3 }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+% #1: exercise type
+% #2: list of goals (separated with +)
+% #3: relation and value
+\prg_new_protected_conditional:Npnn \xsim_if_goals_sum:nnn #1#2#3 {T,F,TF}
+  {
+    \__xsim_exercise_goals_sum:Nnn \l__xsim_tmpa_fp {#1} {#2}
+    \fp_compare:nTF
+      { ( \l__xsim_tmpa_fp ) #3 }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+% #1: goal
+% #2: relation and value
+\prg_new_conditional:Npnn \xsim_if_total_goal_sum:nn #1#2 {p,T,F,TF}
+  {
+    \fp_compare:nTF
+      { ( \use:c {g__xsim_total_goal_#1_fp} ) #2 }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+% #1: list of goals (separated with +)
+% #2: relation and value
+\prg_new_protected_conditional:Npnn \xsim_if_total_goals_sum:nn #1#2 {T,F,TF}
+  {
+    \__xsim_exercise_goals_sum:Nn \l__xsim_tmpa_fp {#1}
+    \fp_compare:nTF
+      { ( \l__xsim_tmpa_fp ) #2 }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+% ----------------------------------------------------------------------------
+% #1: exercise type
+% #2: goal
+% #3: value
+\xsim_new_aux_cs:cpn {goal} #1#2#3
+  { \fp_gset:cn {g__xsim_total_#1_goal_#2_fp} {#3} }
+
+% #1: goal
+% #2: value
+\xsim_new_aux_cs:cpn {totalgoal} #1#2
+  { \fp_gset:cn {g__xsim_total_goal_#1_fp} {#2} }
+
+\AtBeginDocument
+  {
+    \seq_map_inline:Nn \l__xsim_goals_seq
+      {
+        \fp_gset_eq:cc
+          {g__xsim_total_goal_recorded_#1_fp}
+          {g__xsim_total_goal_#1_fp}
+      }
+  }
+  
+\AtEndDocument
+  {
+    \seq_map_inline:Nn \l__xsim_goals_seq
+      {
+        \xsim_foreach_exercise_type:n
+          {
+            \xsim_add_cs_to_aux:nn {goal}
+              { {##1} {#1} { \fp_to_decimal:c {g__xsim_##1_goal_#1_fp} } }
+          }
+        \tl_set:Nx \l__xsim_tmpa_tl
+          { \fp_to_decimal:c {g__xsim_total_goal_#1_fp} }
+        \tl_set:Nx \l__xsim_tmpb_tl
+          { \fp_to_decimal:c {g__xsim_total_goal_recorded_#1_fp} }
+        \tl_if_eq:NNF \l__xsim_tmpa_tl \l__xsim_tmpb_tl { \xsim_rerun: }
+        \xsim_add_cs_to_aux:nn {totalgoal}
+          { {#1} { \fp_to_decimal:c {g__xsim_goal_#1_fp} } }
+      }
+  }
+
+% ----------------------------------------------------------------------------
+
+\keys_define:nn {xsim}
+  {
+    goal-print .code:n =
+      \cs_set_protected:Npn \__xsim_print_goal:n ##1 {#1} ,
+    grading-table/template .tl_set:N  = \l_xism_grading_table_template_tl ,
+    grading-table/template .initial:n = default ,
+    grading-table/type     .tl_set:N  = \l_xism_grading_table_exercise_type_tl ,
+    grading-table/type     .initial:n =
+  }
+
+% ----------------------------------------------------------------------------
+\tex_endinput:D

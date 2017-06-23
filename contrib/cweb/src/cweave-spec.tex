@@ -1,0 +1,403 @@
+% $DocId: cweave-spec.tex,v 1.8 1995/09/12 22:56:02 schrod Exp $
+%------------------------------------------------------------
+
+%
+% specification of CWEAVE/TeX interface
+%
+% [LaTeX]
+% (history at end)
+
+
+% This file is either a subdocument of the style doc or a document on
+% its own. In the former case it's a chapter, in the latter it's a
+% ``normal'' LaTeX progltx document.
+%     If it's a subdocument, this file will be included after
+% \begin{document}. We can detect this: \document redefines
+% \documentclass to be \@twoclasseserror. Then we also have to define
+% how this document is ended: Either by \endinput or by an additional
+% revision log.
+% Of course, this test works only if LaTeX 2e is used for processing.
+
+\expandafter\ifx \csname @twoclasseserror\endcsname \documentclass
+
+        \let\endSubDocument=\endinput
+
+        \chap The interface between \cweave{} and \TeX{}.
+        \label{sec:cweave-spec}
+
+\else
+
+        \let\endSubDocument=\relax
+
+        \documentclass{progltx}
+
+        \usepackage{cweb-doc}           % additional document-specific markup
+        \usepackage{a4-9}               % Tschichold's A4 layout
+
+
+        \begin{document}
+
+        \title{The Interface between \cweave{} and \TeX{}}
+        \author{Joachim Schrod%
+            \thanks{Email: \texttt{schrod@iti.informatik.th-darmstadt.de}}%
+            }
+        \RCSdate $DocDate: 1995/09/12 22:56:02 $
+
+        \maketitle
+
+        \sect
+
+\fi
+
+
+
+
+Here we present all tags output by \cweave{}%
+    \footnote{This information refers to \cweb{}~3.4. Differences to
+    other 3.x versions of \cweave{} are minor and can be ignored in
+    our context. See the revision log of the complete interface specs
+    document for more information.}
+in an ordered fashion. First we look at those
+tags which are part of the `protected interface,' i.e., they are
+visible to a \cweb{} user, but he must not use them. Then we consider
+the private tags, some are used in the documentation part, others
+are needed to typeset program code, and there are a few tags for
+typesetting special characters in strings.
+
+
+\sect Some tags output by \cweave{} are part of the protected
+interface even though they are not prefixed by |cweb|. We'll present
+them in the order they'll arrive in the document instance.
+
+The following table specifies in the second column if this tag takes
+arguments. If the entry is non-empty, it's either a number listing
+just how many arguments are expected; then usual argument passing is
+used. Or it displays the context required.
+ %
+\begin{cseqtab}
+|\ATL| & \verb*|#1 #2 | & \cweb{} operator: |@l|
+        && (how to output non-ASCII chars in \ctangle{})
+        && \arg1 hex code of mapped character
+        && \arg2 string output by \ctangle{}
+|\M| & 1 & \cweb{} structure tag: start of a chunk
+        && \arg1 chunk number
+|\N| & |#1#2#3.| & \cweb{} structure tag: start of a section
+        && \arg1 section rank, $0 \le |#1| \le 10$
+        && \arg2 chunk number
+        && \arg3 section title
+|\PB| & 1 & restricted program mode material
+        && \arg1 program code
+|\Y| & & between major pieces of a program part
+|\B| & & start program material
+|\fi| & & \cweb{} structure tag: end of a chunk
+|\9| & 1 & index entry, user defined layout
+        && \arg1 text of index entry
+\end{cseqtab}
+
+|\ATL| does only appear in front of the very first chunk. The
+chunk number is an explicit \TeX{} number which might be followed
+by a `changed flag' (see chunk~\ref{sec:text-tag.priv}). Note the
+usage of |\fi|, ie, each chunk must open an according |\if|. |\PB|
+might appear within its own argument (created by restricted program
+mode material in a refinement name within restricted program mode).
+
+|\9| deserves a further explanation: It is expected, though not
+defined, that it expands to an empty token list. The parameter will
+be a sort key, actually; the real key to be typeset will appear
+afterwards. So a \cweb{} user might index \TeX{} as
+`|@:TeX}{\TeX@>|', the index will feature it in the ``T''~chunk,
+not in the ``|\|''~chunk.
+
+With the exception of |\PB| the tags above will not appear in math mode.
+
+
+\sect The following tags might appear to be public ones, but they
+are, in fact, never used. That's because they will be placed after
+the |\fi| which terminates the last chunk. Our problem is that we
+have to produce the information which were produced by these tags in
+the Plain macros. Namely the optional lists poses us the problems. We
+must read behind the document end to gather the information which
+lists to produce.
+
+%% This label is used in cweb.doc
+\label{spec:sec:docend}
+
+We can depend on the following rules.
+ %
+\begin{enumerate}
+
+\item If |\end| is found, there will be no other of these tags.
+
+\item |\ch| comes first, but is optional.
+
+\item |\inx\fin| come next, they are mandatory.
+
+\item |\con| is optional again; if it is found it's the very last
+token to look at in this document.
+
+\end{enumerate}
+ %
+\begin{fixme}
+
+Perhaps |\inx| should be defined as |\end{document}|, and both |\ch|
+and |\inx| should be added to the protected interface. Then the user
+may simply omit |\end{document}|. But we should take care of a
+possible occurence anyhow.
+
+\end{fixme}
+
+Here are the tags mentioned in this chunk, and their respective
+meaning in the Plain version:
+ %
+\begin{cseqtab}
+|\ch| & |#1.| & Note which chunks are changed
+        && \arg1 list of chunk numbers, like in |\U| and such.
+|\inx| & & Create index
+|\fin| & & Create the table of refinement names
+|\con| & & Create the table of contents
+|\end| & & output if index and all lists were suppressed
+\end{cseqtab}
+
+
+
+\sect \label{sec:text-tag.priv}
+ Some tags appear only in special circumstances and may therefore be
+considered as private tags. The largest part of them concern the tagging of
+program code, we'll have a look at them later. First we present the
+tags used in other areas.
+
+Lists of chunk numbers occurs on several places: At the chunk
+start (where the list has actually only one element), within
+refinement names, in the identifier index, and for cross reference
+purposes. Cross references can be made at the end of a chunk, and
+in the refinement name list at the very end. Everywhere where a
+chunk number can occur it can be followed by a tag which shows that
+this chunk was changed by the changefile.
+ %
+\begin{cseqtab}
+|\*| &  & tag after chunk number: this chunk is changed.
+\end{cseqtab}
+
+Within the identifier index we have also special tags. The identifiers
+are tagged like in the program mode, ie, with |\\| and |\&|. Remember
+that |\9|, listed above, appears also in the index.
+ %
+\begin{cseqtab}
+|\I| & \verb*|#1, | & start of an index entry
+        && \arg1 index entry
+|\[| & |#1]| & underlined chunk number in index
+        && \arg1 chunk number
+|\.| & 1 & |@.| index entry
+        && \arg1 index entry
+\end{cseqtab}
+
+In the list of refinement names the entries are marked similar to
+the index entries. But note that |\I| has no arg here.
+ %
+\begin{cseqtab}
+|\I| & & start of a new refinement name
+\end{cseqtab}
+
+
+\sect \label{sec:prog-tag}
+ OK, now we can have a look at the large amount of tags used
+for tagging program code. First, we have those which represent
+directly C or \C++ tokens.
+ %
+\begin{cseqtab}
+|\?| &  & C operator: conditional expression
+|\AND| &  & C operator: logical and
+|\CM| &  & C operator: binary complement
+|\DC| &  & \C++ operator: scope resolution
+|\E| &  & C operator: equivalence
+        && and equivalence sign after refinement name on it's definition
+|\G| &  & C operator: greater or equal
+|\GG| &  & C operator: shift right
+|\I| &  & C operator: not equal
+|\K| &  & C operator: assignment
+|\LL| &  & C operator: shift left
+|\MG| &  & C operator: pointer to struct component
+|\MGA| &  & \C++ operator: pointer to pointer to member
+|\MM| &  & C operator: decrement
+|\MOD| &  & C operator: modulo (actually, remainder)
+|\NULL| &  & `quoted' identifier
+|\OR| &  & C operator: binary or
+|\PA| &  & \C++ operator: pointer to member
+|\PP| &  & C operator: increment
+|\R| &  & C operator: logical negation
+|\this| &  & `quoted' identifier
+|\TeX| &  & `customized' identifier
+|\V| &  & C operator: logical or
+|\W| &  & C operator: logical and
+|\XOR| &  & C operator: binary exclusive or
+|\Z| & & C operator: less or equal
+\end{cseqtab}
+
+Other tokens have variable parts, passed as arguments.
+ %
+\begin{cseqtab}
+|\.| & 1 & C string
+        && \arg1 string
+|\)| &  & discretionary break between string parts
+|\&| & 1 & reserved identifier
+        && \arg1 identifier
+|\\| & 1 & ``normal'' identifier with more than one chars
+        && \arg1 identifier
+\verb"\|" & 1 & ``normal'' identifier with one char
+        && \arg1 character
+|\C| & 1 & C comment
+        && \arg1 comment text
+|\MRL| & 1 & C operator: combined binary operators
+        && \arg1 operators, |\K| must print as `$=$'
+|\SHC| & 1 & \C++ comment
+        && \arg1 comment text
+|\T| & 1 & numeric constants
+        && \arg1 constant
+|\X| & |#1: #2\X| & refinement name
+        && \arg1 chunk number
+        && \arg2 refinement name
+\end{cseqtab}
+ %
+The refinement name (second argument of |\X|) may be a file name
+tagged by `|\.|'. Then the name must be set like a C~string.
+
+\cweb{} itself introduces its own operators:
+ %
+\begin{cseqtab}
+|\ATH| &  & |@h| (place the preprocessor definitions here)
+|\D| &  & |@d| (define macro)
+|\F| &  & |@f| (format identifier like another one)
+|\J| &  & |@&| (join)
+|\vb| & 1 & |@=| (pass arg verbatim by \ctangle{})
+        && \arg1 string
+\end{cseqtab}
+
+And we have some tags used for cross referencing. Chunk
+cross-referencing (actually, for program parts) is started with some
+tag, then follows a list of chunk numbers.
+ %
+\begingroup
+ \hfuzz=22pt    % 21.76602pt too wide (with a4-9.sty)
+\begin{cseqtab}
+|\A| &  & one add-on definition (``See also chunk'')
+|\As| &  & more than one add-on definition (``See also chunks'')
+|\ET| &  & separator between the last two numbers if there are only two
+|\ETs| &  & separator between the last two numbers if there are more than two
+|\Q| &  & the chunk where it is cited (``This code is cited in chunk'')
+|\Qs| &  & more than one chunk where it is cited (``This code is cited in chunk'')
+|\U| &  & used in one chunk (``This code is used in chunk'')
+|\Us| &  & used in more than one chunk (``This code is used in chunks'')
+\end{cseqtab}
+\endgroup
+
+Program code must be indented according to its structure. Each
+``larger'' statement is typeset as one paragraph, usually only one
+line long. The basic indentation of the next statement may be
+incremented and decremented in given units. If a statement has to be
+broken in more than one line nevertheless, a hanging indentation is
+added to the basic indentation for the subsequent lines. One can mark
+an `optional' statement start, ie, some kind of optional paragraph
+start. If a line break must be inserted it should be inserted here and
+no hanging indentation should be added to the basic indentation.
+ %
+\begin{cseqtab}
+|\1| &  & future stmts indented one more unit
+|\2| &  & future stmts indented one less unit
+|\3| & 1 & optional line break within a statement
+        && \arg1 digit, penalty for line break
+|\4| &  & backspace one indentation unit
+|\5| &  & optional line break or small space (between run-in statements)
+|\6| &  & line break
+|\7| &  & line break and additional vertical space
+|\8| &  & line is a preprocessor directive (must be issued at start of line)
+\end{cseqtab}
+
+
+\sect Some args are designated as strings above. Within these args the
+following tags are used to represent special characters:
+ %
+\begin{cseqtab}
+\verb*|\ | &  & space
+|\&| &  & ampersand
+|\\| &  & backslash
+|\^| &  & hat
+|\_| &  & underscore
+|\{| &  & left brace
+|\}| &  & right brace
+|\~| &  & tilde
+\end{cseqtab}
+
+
+\sect Last, we have tags which are used in their ``standard''
+\LaTeX{} meaning. We don't have much work with them:
+ %
+\begin{cseqtab}
+|\#| &  & hash mark in program or in string
+|\$| &  & dollar
+|\%| &  & percent
+|\{| &  & block start (is set in math mode)
+|\}| &  & block end (is set in math mode)
+|\,| &  & thin space (like the \LaTeX{} default)
+|\langle| &  & left delimiter in include directives, or in templates
+|\le| &  & C operator: less or equal
+|\ldots| &  & Function protoypes: Variable number of arguments
+|\rangle| &  & right delimiter in include directives, or in templates
+\end{cseqtab}
+
+
+
+
+\endSubDocument
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\vskip \PltxPreSectSkip
+
+\begin{rcslog}
+$DocLog: cweave-spec.tex,v $
+\Revision 1.8 1995/09/12 22:56:02 schrod
+|cweave -x| doesn't output |\vfill| in front of |\end| any more.
+Change noticed in \cweb{} 3.4.
+
+\Revision 1.7 1995/08/29 01:40:24 schrod
+Checked the interface description for \cweb{}~3.4.
+
+\Revision 1.6 1995/08/25 19:09:57 schrod
+Cleaned up terminology: Chunks are not named sections any more.
+Explicate possible range of section ranks.
+
+\Revision 1.5 1995/08/08 00:14:26 schrod
+Updated to \LaTeXe{}, the |cweb| style is now a document class. Used
+my standard templates for that, no changes in functionality.
+
+\Revision 1.4  1993/06/17  15:09:28  schrod
+\cweb{} 3.0 was released officially on June 16, 1993. Mentioned in
+the documentation that this version is needed for the |cweb| style.
+
+\Revision 1.3  1993/06/14  17:50:14  schrod
+Clarify the occurence pattern of the lists after the last section:
+which are optional, the expected order, etc.
+
+Changed `cseq' to `tag'. On this level of abstraction (that's the
+specification!), we're still not considering \TeX{}nical details.
+
+\Revision 1.2  1993/06/14  15:40:02  schrod
+Adapted to April 93 changes to \cweave{}: |\N| has three parameters
+(added group level), |\M| param is no data-tag any more, |\Z| and
+|\MRL| are new.
+
+Added further explanation of |\9| and |\X|.
+
+Replaced `program part name' by `refinement name'.
+
+\Revision 1.1  1993/04/09  15:00:37  schrod
+Initial revision
+
+\end{rcslog}
+
+
+
+\end{document}
+
+% LocalWords:

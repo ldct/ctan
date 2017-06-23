@@ -1,0 +1,1308 @@
+#!/usr/bin/env perl
+# File          : makejmlrbook
+# Author        : Nicola L C Talbot
+# Date          : 22nd March 2010
+# Last Modified : 30 May 2012
+# Version       : 0.32
+# Description   : Given the name of a document using the
+#                 jmlrbook class file, this script runs
+#                 pdflatex (and possibly bibtex) on the
+#                 imported articles and the main document.
+# http://theoval.cmp.uea.ac.uk/~nlct/
+#
+# This file is distributed as part of the jmlr LaTeX bundle.
+#
+# Copyright (c) 2006 Nicola L.C. Talbot
+# This work may be distributed and/or modified under the
+# conditions of the LaTeX Project Public License, either version 1.3
+# of this license or any later version.
+# The latest version of this license is in
+#   http://www.latex-project.org/lppl.txt
+# and version 1.3 or later is part of all distributions of LaTeX
+# version 2005/12/01 or later.
+#
+# This work has the LPPL maintenance status `maintained'.
+#
+# The Current Maintainer of this work is Nicola Talbot.
+
+use Getopt::Long;
+use File::Basename;
+use File::Copy;
+use Cwd;
+use strict;
+
+my $version = "0.32 (2012-05-28)";
+
+my $eol = "\n";
+my $dd  = '/';
+
+if ($^O eq 'MSWin32')
+{
+  $eol = "\r\n";
+  $dd = "\\";
+}
+
+my $showversion      = 0;
+my $showhelp         = 0;
+my $quiet            = 0;
+my $batchtex         = 0;
+my $online           = 1;
+my $print            = 1;
+my $html             = 1;
+my $latexapp         = 'pdflatex';
+my $bibtexapp        = 'bibtex';
+my $latexopts        = '';
+my $bibtexopts       = '';
+my $format           = 'pdf';
+my $logourl          = '';
+my $extractpreface   = 0; # v0.3 added
+# execute system calls (--noexecute will just list the system calls
+# without executing them)
+my $execute          = 1; # v0.31 added
+
+unless(&GetOptions(
+   "online!"          => \$online,
+   "print!"           => \$print,
+   "html!"            => \$html,
+   "extractpreface!"  => \$extractpreface,
+   "logourl=s"        => \$logourl,
+   "format=s"         => \$format,
+   "latexapp=s"       => \$latexapp,
+   "bibtexapp=s"      => \$bibtexapp,
+   "latexopts=s"      => \$latexopts,
+   "bibtexopts=s"     => \$bibtexopts,
+   "quieter!"         => \$quiet,
+   "batchtex!"        => \$batchtex,
+   "execute!"         => \$execute,
+   "version"          => \$showversion,
+   "help"             => \$showhelp))
+{
+   die "Use --help for help\n";
+}
+
+my $appname = basename($0);
+
+if ($showhelp)
+{
+  die "$appname version $version Copyright (c) 2010 Nicola L C Talbot\n",
+    "Distributed under the LaTeX Project Public License.\n\n",
+    "Syntax: $appname [options] <filename>\n\n",
+    "<filename> should be the name of the master document for a LaTeX \n",
+    "file that uses the jmlrbook class. The .tex extension may be\n",
+    "omitted.\n\n",
+    "Basic options:\n",
+    "--online\t\tGenerate the color on-line version (default)\n",
+    "--noonline\t\tDon't generate the color on-line version\n",
+    "--print\t\t\tGenerate the grayscale print version (default)\n",
+    "--noprint\t\tDon't generate the grayscale print version\n",
+    "--html\t\t\tGenerate the HTML version (default)\n",
+    "--nohtml\t\tDon't generate the HTML version\n",
+    "--extractpreface\tParse document for preface environment\n",
+    "--noextractpreface\tDon't parse document for preface environment\n",
+    "--logourl <url>\tMake the logo on the HTML index page link to <url>\n",
+    "--batchtex\t\tRun TeX in batch mode\n",
+    "--nobatchtex\t\tDon't run TeX in batch mode\n",
+    "--quieter\t\tReduce messages to stdout and run TeX in batch mode\n",
+    "--noquieter\t\tDon't reduce messages to stdout\n",
+    "--execute\t\tExecute system calls (default)\n",
+    "--noexecute\t\tDon't execute system calls, just list the\n",
+    "\t\t\tcommands.\n",
+    "--version\t\tDisplay version number and exit\n",
+    "--help\t\t\tDisplay help message and exit\n",
+    "\nAdvanced options:\n",
+    "--latexapp <name>\tApplication used to call LaTeX\n",
+    "\t\t\t(Defaults to 'pdflatex')\n",
+    "--format <string>\tOutput format (default: 'pdf')\n",
+    "--bibtexapp <name>\tApplication used to call BibTeX\n",
+    "\t\t\t(Defaults to 'bibtex')\n",
+    "--latexopt <string>\tOptions to pass to LaTeX\n",
+    "--bibtexopt <string>\tOptions to pass to BibTeX\n";
+}
+
+if ($showversion)
+{
+  die "$appname version $version copyright (c) 2010 Nicola L C Talbot\n",
+    "Distributed under the LaTeX Project Public License.\n";
+}
+
+unless ($#ARGV == 0)
+{
+   die "$appname: missing filename\n",
+       "use --help for help\n";
+} 
+
+if ($quiet or $batchtex)
+{
+   $latexopts = '-interaction=batchmode '.$latexopts;
+}
+
+if ($quiet)
+{
+   $bibtexopts = '-terse '.$bibtexopts;
+}
+
+my ($main_name, $main_path, $main_suffix) 
+  = fileparse($ARGV[0], '\.(tex|ltx)');
+
+$main_suffix = '.tex' unless $main_suffix;
+
+my $org_dir = cwd();
+
+&chdirordie($main_path);
+
+my $mainaux = "$main_name.aux";
+
+# If the aux file doesn't exist or the aux file is older than
+# the main file, run latex
+
+if (not -e $mainaux or (-M $mainaux > -M "$main_name$main_suffix"))
+{
+   &latex($main_name);
+}
+
+my $main_bibdata = 0;
+my @imports = ();
+my %pagerefs = ();
+my $preface_data; # v0.3 new
+my @preface_editors = ();
+
+# Parse aux file
+
+&parsemainaux($mainaux);
+
+# Replace any instances of \articlepagesref
+
+foreach my $import (@imports)
+{
+   my $label = $import->{'label'};
+
+   my $pages = $pagerefs{$label}->{'start'}.'--'
+             . $pagerefs{$label}->{'end'};
+
+   $import->{'author'}=~s/\\articlepagesref\s*{$label}/$pages/;
+}
+
+if ($html)
+{
+   # If the html files need to be created, make the directory
+   # html-src, if it doesn't already exist
+
+   unless (-d 'html-src')
+   {
+      &mkdirordie('html-src');
+   }
+
+   unless (-d 'html')
+   {
+      &mkdirordie('html');
+   }
+
+   if ($extractpreface) # v0.3 new
+   {
+      # If the preface needs to be extract, make a directory for it if
+      # it doesn't already exist
+
+      my $prefdir = &fname("html-src", $preface_data->{'OutFile'});
+
+      unless (-d $prefdir)
+      {
+         &mkdirordie($prefdir);
+      }
+
+      my $prefbase = &fname($prefdir, $preface_data->{'OutFile'});
+
+      &createprefacefile($prefdir, $prefbase);
+
+      # Create the cfg file
+
+      &createjmlrcfg("html-src", $preface_data->{'OutFile'});
+
+      &chdirordie($prefdir);
+
+      &latex($preface_data->{'OutFile'});
+      &htlatex($preface_data->{'OutFile'}, 'jmlr');
+
+      &chdirordie($org_dir, $main_path);
+
+      # Check the appropriate subdirectory is in html directory
+
+      my $outname = &fname('html', $preface_data->{'OutFile'});
+
+      unless (-d $outname)
+      {
+         &mkdirordie($outname);
+      }
+
+      # Copy pdf file
+
+      &copyordie("$prefbase.$format",
+                &fname($outname, "$preface_data->{OutFile}.$format"));
+
+      # Copy html file
+
+      &copyhtml($preface_data->{'OutFile'}, $preface_data->{'OutFile'});
+   }
+}
+
+# Iterate through each imported article
+
+foreach my $import (@imports)
+{
+   my $label = $import->{'label'};
+   my $importbase = &fname($import->{'path'}, $import->{'name'});
+
+   # Check the aux file of this article
+
+   my $aux = "$importbase.aux";
+
+   # The aux file should exist because running LaTeX on the
+   # main file will create the aux file.
+
+   my $bibdata = 0;
+
+   if (open AUX, $aux)
+   {
+      &message("Reading '$aux'...\n");
+
+      while (<AUX>)
+      {
+         if (/\\bibdata\b/)
+         {
+            $bibdata = 1;
+         }
+      }
+  
+      close AUX;
+   }
+   elsif (not $execute)
+   {
+      warn "Can't open '$aux' - skipping\n";
+   }
+   else
+   {
+      die "$appname: Can't open '$aux' $!\n";
+   }
+
+   # Do we need a bibtex run?
+
+   if ($bibdata)
+   {
+      my $log = "$importbase.log";
+
+      # If the log file doesn't exist, run LaTeX
+
+      unless (-e $log)
+      {
+         &chdirordie($import->{'path'});
+
+         &latex($import->{'name'});
+
+         &chdirordie($org_dir, $main_path);
+      }
+
+      open LOGFD, $log or die "$appname: Can't open '$log' $!\n";
+
+      &message("Reading '$log'...\n");
+
+      my $runbibtex = 0;
+
+      while (<LOGFD>)
+      {
+         if (/There were undefined citations\./)
+         {
+            # Run bibtex and latex
+            $runbibtex = 1;
+
+            last;
+         }
+      }
+
+      close LOGFD;
+
+      if ($runbibtex)
+      {
+         &chdirordie($import->{'path'});
+
+         &bibtex($import->{'name'});
+         &latex($import->{'name'});
+
+         &chdirordie($org_dir, $main_path);
+      }
+   }
+
+   if ($html)
+   {
+      # If html is required, we also need pdf versions of the
+      # individual articles.
+
+      # v0.2 run latex even if pdf file exists to ensure start page 
+      # number is correct.
+
+      &chdirordie($import->{'path'});
+
+      &latexstartpage($import->{'name'}, $pagerefs{$label}->{'start'});
+
+      &chdirordie($org_dir, $main_path);
+
+      # Do we need a rerun?
+
+      if (&needs_rerun($importbase))
+      {
+         &chdirordie($import->{'path'});
+
+         &latexstartpage($import->{'name'}, $pagerefs{$label}->{'start'});
+
+         &chdirordie($org_dir,$main_path);
+      }
+
+      my $importdir = $import->{'path'};
+
+      if ($importdir = '.')
+      {
+         $importdir = $import->{'name'};
+      }
+
+      # Check the appropriate subdirectory is in html-src
+
+      my $name = &fname('html-src', $importdir);
+
+      unless (-d $name)
+      {
+         &mkdirordie($name);
+      }
+
+      my $text = '';
+
+      # Read the LaTeX file and store everything up to
+      # the end of the abstract
+
+      my $tex = "$importbase.tex";
+
+      my $absfile = &fname("html-src", $importdir,
+                           $import->{'name'}.'.tex');
+
+      if ($execute)
+      {
+         open TEX, $tex or die "$appname: Can't open '$tex': $!\n";
+
+         while (<TEX>)
+         {
+            # This doesn't handle complicated cases, such as
+            # the author using \abstract ... \endabstract
+            # or commenting out the abstract with conditionals
+            if (/^([^%]*)\\end{abstract}/)
+            {
+               $text .= $&;
+               last;
+            }
+
+            $text .= $_;
+         }
+
+         close TEX;
+
+         # Add the 'html' class option:
+         unless ($text=~
+          s/^([^%]*)\\documentclass\s*\[(.*)\]/$1\\documentclass[$2,html]/m)
+         {
+           $text=~s/^([^%]*)\\documentclass\s*/$1\\documentclass[html]/m;
+         }
+
+         my $aux = "$importbase.aux";
+
+         $aux=~s/\\/\//g if ($dd eq '\\');
+
+         my $prebegindoc = '\\hypersetup{draft}' . $eol
+                         . '\\makeatletter' . $eol
+                         . "\\input{../../$aux}" . $eol
+                         . '\\makeatother'
+                         . $eol;
+
+         my $begindoc = '';
+
+         # Set the authors
+         if (defined($import->{'author'}))
+         {
+            my $author = $import->{'author'};
+
+            $author=~s/^([^;]*);/\\textbf{\\emph{$1};}/;
+
+            $begindoc .= "\\jmlrauthors{$author}";
+         }
+
+         # Add content div
+
+         # v0.31 modified \footnote to set the footnote text as in-line
+         # parenthesis.
+
+         $text=~s/^([^%\n\r\f]*)\\begin{document}/
+                 $prebegindoc$&$begindoc
+                 \\HCode{<div id="content">}
+                 \\renewcommand{\\footnote}[2][]{ (\#2)}%$eol
+                 /mx;
+
+         # Create file containing the abstract
+
+         open ABSFD,">$absfile" 
+           or die "$appname: Can't create '$absfile': $!\n";
+
+         print ABSFD "\\batchmode", $eol if ($batchtex or $quiet);
+
+         my $texpath = $import->{path};
+
+         $texpath=~s/\\/\//g if ($dd eq '\\');
+
+         print ABSFD
+           "\\makeatletter",$eol,
+           "\\def\\input\@path{{../../$texpath/}}$eol",
+           "\\makeatother",$eol,
+           $text, $eol, 
+           "\\HCode{", &htmltimestamp, "}", $eol,
+           "\\HCode{</div>}", $eol,
+           &htmlmenu, # v0.3 added by Olivier Chapelle
+           "\\end{document}",$eol;
+
+         close ABSFD;
+      }
+      else
+      {
+         &messagecall("Skipping creation of '$absfile'\n");
+      }
+
+      # Create the cfg file
+
+      &createjmlrcfg("html-src", $importdir);
+
+      # Run htlatex
+
+      # Change directory
+      &chdirordie("html-src", $importdir);
+
+      &htlatex($import->{'name'}, 'jmlr');
+
+      # Go back to main directory
+
+      &chdirordie($org_dir, $main_path);
+
+      # Copy the html file to the html directory, but rename
+      # the css file to jmlr.css
+
+      &copyhtml($importdir, $import->{'name'});
+
+      # Check the appropriate subdirectory is in html directory
+
+      my $outname = &fname('html', $importdir);
+
+      unless (-d $outname)
+      {
+         &mkdirordie($outname);
+      }
+
+      # Copy pdf file
+
+      &copyordie("$importbase.$format",
+                 &fname($outname, "$import->{name}.$format"));
+   }
+}
+
+# do we need to run bibtex on the main document?
+
+if ($main_bibdata)
+{
+   &bibtex($main_name);
+}
+
+if ($online)
+{
+   &latexonline($main_name);
+
+   # do we need a rerun?
+
+   if (&needs_rerun($main_name))
+   {
+      &message("Rerun required\n");
+      &latexonline($main_name);
+
+      # check again
+
+      if (&needs_rerun($main_name))
+      {
+         &message("Rerun required\n");
+         &latexonline($main_name);
+      }
+   }
+}
+
+if ($print)
+{
+   &latexprint($main_name);
+
+   # do we need a rerun?
+
+   if (&needs_rerun($main_name))
+   {
+      &message("Rerun required\n");
+      &latexprint($main_name);
+
+      # check again
+
+     if (&needs_rerun($main_name))
+     {
+        &message("Rerun required\n");
+        &latexprint($main_name);
+     }
+   }
+}
+
+if ($html and $execute)
+{
+   # Make the index file
+
+   my $indexfile = &fname('html-src', "index");
+
+   my $preamble = '';
+
+   open OUTFD, ">$indexfile.tex" 
+    or die "Can't open '$indexfile.tex': $!\n";
+
+   open INFD, "$main_name.tex"
+     or die "Can't open '$main_name.tex': $!\n";
+
+   print OUTFD "\\batchmode", $eol if ($batchtex or $quiet);
+
+   print OUTFD
+        "\\makeatletter",$eol,
+        "\\def\\input\@path{{../}}$eol",
+        "\\makeatother",$eol,
+        "\\def\\jmlrgrayscale{0}",$eol;
+
+   while (<INFD>)
+   {
+      unless
+        (s/^([^%]*)\\documentclass\s*\[([^\]]*)\]/
+           $1\\documentclass[$2,html]/x)
+      {
+         s/^([^%]*)\\documentclass\s*/$&\[html\]/;
+      }
+
+      s/^([^%]*)\\begin{document}/
+        \\hypersetup{draft}$eol$&\\HCode{<div id="content">}/x;
+
+      if (/^([^%]*)\\maketitle/)
+      {
+         $preamble .= join('', $1, "\\maketitle", $eol);
+         last;
+      }
+
+      $preamble .= $_;
+   }
+
+   close INFD;
+
+   # Find the book logo
+   if ($preamble
+     =~/\\logo\s*(?:\[[^\]]*\])?\s*{(%\s*\n)?\\includegraphics\s*(\[[^\]]*\])?{([^}]*)}}/m)
+   {
+      my $texpath = $3;
+      my $orgtexpath = $texpath;
+      $texpath=~s/\//\\/g if ($dd eq "\\");
+
+      my $ext = '';
+
+      if (-e $texpath)
+      {
+         &copyordie($texpath, 'html');
+
+         &copyordie($texpath, 'html-src');
+      }
+      elsif (-e "$texpath.png")
+      {
+         &copyordie("$texpath.png", 'html');
+
+         &copyordie("$texpath.png", 'html-src');
+
+         $ext = '.png';
+      }
+      elsif (-e "$texpath.jpg")
+      {
+         &copyordie("$texpath.jpg", 'html');
+         &copyordie("$texpath.jpg", 'html-src');
+
+         $ext = '.jpg';
+      }
+      elsif (-e "$texpath.gif")
+      {
+         &copyordie("$texpath.gif", 'html');
+
+         &copyordie("$texpath.gif", 'html-src');
+
+         $ext = '.gif';
+      }
+
+      my $img = basename($texpath);
+      
+      if ($logourl)
+      {
+         $preamble=~s/
+                  \\includegraphics(\[[^\]]*\])?{$orgtexpath}/
+                  \\href{$logourl}{\\includegraphics${1}{$img$ext}}/mgx;
+      }
+      else
+      {
+         $preamble=~s/
+                  \\includegraphics(\[[^\]]*\])?{$orgtexpath}/
+                  \\includegraphics${1}{$img$ext}/mgx;
+      }
+   }
+
+   print OUTFD $preamble, $eol;
+
+   # Parse TOC
+
+   my $toc = "$main_name.toc";
+
+   # Add link to preface if required
+
+   if ($extractpreface)
+   {
+      print OUTFD
+         "\\begin{description}\\item[\\normalfont \\prefacename]", $eol;
+
+      print OUTFD "\\textbf{\\emph{\\jmlrabbrnamelist{{",
+                  join('},{', @preface_editors),
+                  "}}};} ",
+                  '\\csname @jmlrabbrvproceedings\\endcsname\\space',
+                  '\\csname @jmlrvolume\\endcsname:',
+                  $preface_data->{'Start'};
+
+      unless ($preface_data->{'Start'} eq $preface_data->{'End'})
+      {
+         print OUTFD '--', $preface_data->{'End'};
+      }
+
+      print OUTFD ', \\csname @jmlryear\\endcsname\\newline', $eol;
+
+      my $name = $preface_data->{'OutFile'};
+
+      print OUTFD "[\\HCode{<a href=\"$name.html\">html</a>}] ",
+                  "[\\HCode{<a href=\"$name/$name.pdf\">pdf</a>}]",
+                  $eol;
+
+      print OUTFD "\\end{description}$eol";
+   }
+
+   open TOC, $toc or die "Can't open '$toc': $!\n";
+
+   my $idx = 0;
+
+   while (<TOC>)
+   {
+      if (/^\\tocpart\s*{(.*)}\s*$/)
+      {
+         print OUTFD "\\begin{center}\\bfseries $1\\end{center}$eol";
+      }
+      elsif (/\\contentsline\s*{papertitle}{(.*)}{[^{}]*}{[^{}]*}\s*$/)
+      {
+         # v0.3 Changed by Olivier Chapelle to use description
+         # environment instead of paragraph break
+         print OUTFD "\\begin{description}\\item[\\normalfont $1]$eol";
+      }
+      elsif (/\\contentsline\s*{chapterauthor}{(.*)}{[^{}]*}{[^{}]*}\s*$/)
+      {
+         my $details = $1;
+         $details=~s/([^;]*);/\\textbf{\\emph{$1};}/;
+
+         my $label = $imports[$idx]->{'label'};
+         my $pages = $pagerefs{$label}->{'start'}.'--'
+                   . $pagerefs{$label}->{'end'};
+
+         $details=~s/\\articlepagesref\s*{$label}/$pages/;
+
+         # v0.3 Changed by Olivier Chapelle to use newline instead of par
+         print OUTFD "$details\\newline$eol";
+
+         my $name = $imports[$idx]->{'name'};
+
+         print OUTFD "[\\HCode{<a href=\"$name.html\">abs</a>}] ",
+                     "[\\HCode{<a href=\"$name/$name.pdf\">pdf</a>}]",
+                     $eol;
+
+         # v0.3 Changed by Olivier Chapelle to end description
+         print OUTFD "\\end{description}$eol";
+
+         $idx++;
+      }
+   }
+
+   close TOC;
+
+   # version 0.2 added time stamp
+
+   print OUTFD "\\HCode{", &htmltimestamp, "}$eol";
+
+   print OUTFD &htmlmenu; # v0.3 Added by Olivier Chapelle
+
+   print OUTFD "\\HCode{</div>}\\end{document}$eol";
+
+   close OUTFD;
+
+   # Go into html-src directory and run htlatex
+
+   &chdirordie('html-src');
+
+   &htlatex("index", 'xhtml');
+
+   &chdirordie('..');
+
+   # Copy to html directory
+
+   my $inname = &fname('html-src', 'index.html');
+   my $outname = &fname('html', 'index.html');
+
+   open INFD, $inname or die "Can't open '$inname': $!\n";
+
+   open OUTFD, ">$outname" or die "Can't open '$outname': $!\n";
+
+   while (<INFD>)
+   {
+      s/href="index.css"/href="jmlr.css"/;
+
+      print OUTFD;
+   }
+
+   close OUTFD;
+
+   close INFD;
+
+   # v0.2 new:
+   # Copy any images generated by htlatex to html/
+
+   my @imagefiles = glob(&fname('html-src', "index*.png"));
+
+   foreach my $imagefile (@imagefiles)
+   {
+      copy($imagefile, 'html');
+   }
+}
+elsif ($html)
+{
+   &messagecall("chdir 'html-src'\n");
+   &htlatex("index", 'xhtml');
+}
+
+# Return to original directory
+chdir $org_dir;
+
+# Subroutines
+
+sub message{ print @_ unless ($quiet) }
+
+sub messagecall{ print @_ if (not $quiet or not $execute) }
+
+sub systemcall{
+  my $cmd = shift;
+
+  &messagecall($cmd, "\n");
+
+  my $code = 0;
+
+  $code = system($cmd) if ($execute);
+
+  $code;
+}
+
+sub latex{
+   my $file = shift;
+
+   my $code = &systemcall(join(' ', $latexapp, $latexopts, "\"$file\""));
+
+   if ($code)
+   {
+      die "**LaTeX run failed with exit code $code.**\n",
+          "Check '$file.log' for details\n";
+   }
+}
+
+# v0.2 new
+sub latexstartpage{
+   my $file = shift;
+   my $page = shift;
+
+   my $code = &systemcall(join(' ', $latexapp, $latexopts,
+     "\"\\def\\startpage{$page}\\input{$file}\""));
+
+   if ($code)
+   {
+      die "**LaTeX run failed with exit code $code.**\n",
+          "Check '$file.log' for details\n";
+   }
+}
+
+sub copyordie{
+   my ($org, $dest) = @_;
+
+   &messagecall("copy '$org' to '$dest'\n");
+
+   if ($execute)
+   {
+      copy($org, $dest) or die "Can't copy '$org' to '$dest': $!\n";
+   }
+}
+
+sub latexonline{
+   my $file = shift;
+
+   my $code = &systemcall(join(' ', $latexapp, $latexopts,
+     "\"\\def\\jmlrgrayscale{0}\\input{$file}\""));
+
+   if ($code)
+   {
+      die "**LaTeX run failed with exit code $code.**\n",
+          "Check '$file.log' for details\n";
+   }
+
+   &copyordie("$file.$format", "$file-online.$format");
+}
+
+sub latexprint{
+   my $file = shift;
+
+   my $code = &systemcall(join(' ', $latexapp, $latexopts,
+     "\"\\def\\jmlrgrayscale{1}\\input{$file}\""));
+
+   if ($code)
+   {
+      die "**LaTeX run failed with exit code $code.**\n",
+          "Check '$file.log' for details\n";
+   }
+
+   &copyordie("$file.$format", "$file-print.$format");
+}
+
+sub bibtex{
+   my $file = shift;
+
+   my $code = &systemcall(
+                 join(' ', $bibtexapp, $bibtexopts, "\"$file\""));
+
+   if ($code)
+   {
+      die "**BibTeX run failed with exit code $code.**\n",
+          "Check '$file.blg' for details\n";
+   }
+}
+
+sub needs_rerun{
+  my $file = shift;
+  my $rerun = 0;
+
+  unless ($execute)
+  {
+     &messagecall("Skipping rerun check for '$file'\n");
+     return 0;
+  }
+
+  # Scan log file for rerun message
+
+  my $log = "$file.log";
+
+  # If there's no log file a run is needed
+  open LOGFD, $log or return 1;
+
+  while (<LOGFD>)
+  {
+     if (/Rerun to get cross-references right\./)
+     {
+        $rerun = 1;
+        last;
+     }
+  }
+
+  close LOGFD;
+
+  return $rerun;
+}
+
+sub fname{ join($dd, @_) }
+
+# v0.3 new
+sub chdirordie{
+  my $dirname = &fname(@_);
+
+  &messagecall("chdir '$dirname'\n");
+
+  unless (chdir $dirname)
+  {
+     if ($execute)
+     {
+        die "$appname: Can't change directory to $dirname: $!\n";
+     }
+     else
+     {
+        warn "(Can't change directory to '$dirname')\n";
+     }
+  }
+}
+
+# v0.31 new
+sub mkdirordie{
+  my $dirname = &fname(@_);
+
+  &messagecall("mkdir '$dirname'\n");
+
+  unless (mkdir $dirname)
+  {
+     if ($execute)
+     {
+        die "$appname: Can't create directory '$dirname': $!\n";
+     }
+     else
+     {
+        warn "(Can't create directory '$dirname')\n";
+     }
+  }
+}
+
+# v0.2 new
+sub htmltimestamp{
+   my $timestamp = localtime;
+
+   return "<hr><center>Page last modified on $timestamp.</center>";
+}
+
+# v0.3 Added by Olivier Chapelle
+sub htmlmenu{
+  return '
+\\HCode{<div id="fixed"><br>}
+\\HCode{<a align="right" href="http://www.jmlr.org" target=_top><img align="right" class="jmlr" src="http://jmlr.csail.mit.edu/jmlr.jpg" border="0"></a>}
+\\HCode{<p><br><br>}
+\\HCode{<p align="right"> <A href="http://www.jmlr.org/"> Home Page </A>}
+\\HCode{<p align="right"> <A href="/papers"> Papers </A>}
+\\HCode{<p align="right"> <A href="/author-info.html"> Submissions </A>}
+\\HCode{<p align="right"> <A href="/news.html"> News </A>}
+\\HCode{<p align="right"> <A href="/scope.html"> Scope </A>}
+\\HCode{<p align="right"> <A href="/editorial-board.html"> Editorial Board </A>}
+\\HCode{<p align="right"> <A href="/announcements.html"> Announcements </A>}
+\\HCode{<p align="right"> <A href="/proceedings"> Proceedings </A>}
+\\HCode{<p align="right"> <A href="/mloss">Open Source Software</A>}
+\\HCode{<p align="right"> <A href="/search-jmlr.html"> Search </A>}
+\\HCode{<p align="right"> <A href="/manudb"> Login </A></p>}
+\\HCode{<br><br>}
+\\HCode{<p align="right"> <A href="http://jmlr.csail.mit.edu/jmlr.xml">}
+\\HCode{<img src="http://jmlr.csail.mit.edu/RSS.gif" class="rss" alt="RSS Feed">}
+\\HCode{</A>}
+\\HCode{</div>}
+'
+}
+
+# v0.3 new
+sub htlatex{
+   my ($filename, $cfg) = @_;
+
+   # unicode-related options suggested by Olivier Chapelle
+
+   # v0.31 added latex options in 5th parameter
+
+   my $code = &systemcall(join(' ', 'htlatex',
+                  "\"$filename\"",
+                  "\"$cfg,uni-html4\"",
+                  "\" -cunihtf -utf8\"",
+                  '""',
+                  "\" $latexopts\""
+                 ));
+
+   if ($code)
+   {
+      die "$appname: htlatex failed with exit code $code.\n";
+   }
+}
+
+#v0.3 new
+sub createjmlrcfg{
+   my $cfg = &fname(@_, "jmlr.cfg");
+
+   unless ($execute)
+   {
+      &messagecall("Skipping creation of '$cfg'\n");
+      return;
+   }
+
+   open CFG, ">$cfg" or die "$appname: Can't create '$cfg': $!\n";
+
+print CFG <<END_CFG;
+\\Preamble{html}
+\\begin{document}
+\\Css{div.maketitle {text-align:left;}}
+\\Css{h2.titleHead {text-align:left;}}
+\\Css{. {font-family:verdana,helvetica,sans-serif}}
+\\Css{a {text-decoration:none;color:\\#3030a0}}
+\\Css{.cmbx-10x-x-109{ font-weight: bold;}}
+\\Css{.cmbxti-10x-x-109{ font-weight: bold; font-style: italic;}}
+\\Css{\\#fixed {position:absolute; top:0; left:0; width:8em;
+height:100\\%;}}
+\\Css{\\#content {margin-top:1em; margin-left:10em;
+margin-right:0.5em;}}
+\\Css{img.jmlr {width: 7em;}}
+\\Css{img.rss {width: 2em;}}
+\\EndPreamble
+END_CFG
+
+# v0.3 Last four \Css lines above added by Olivier Chapelle
+   close CFG;
+}
+
+#v0.3 new
+# copy html from html-src/$dir/ to html/ and rename css file
+sub copyhtml{
+   my ($dir, $name) = @_;
+
+   my $infile = &fname("html-src", $dir, "$name.html");
+
+   my $outfile = &fname("html", "$name.html");
+
+   unless ($execute)
+   {
+      &messagecall("Copy '$infile' to '$outfile'\n");
+      return;
+   }
+
+   open INFD, $infile or die "Can't open '$infile': $!\n";
+
+   open OUTFD, ">$outfile" or die "Can't open '$outfile': $!\n";
+
+   while (<INFD>)
+   {
+      s/href="$name\.css"/href="jmlr.css"/;
+
+      print OUTFD;
+   }
+
+   close OUTFD;
+
+   close INFD;
+
+   # Copy css file
+
+   &copyordie("html-src/$dir/$name.css", "html/jmlr.css");
+}
+
+sub parsemainaux{
+   my $mainaux = shift;
+
+   &message("Reading '$mainaux'...\n");
+
+   unless (open AUX, "$mainaux")
+   {
+      if ($execute)
+      {
+         die "$appname: Can't open '$mainaux' $!\n";
+      }
+      else
+      {
+         warn "(Can't open '$mainaux' - skipping)\n";
+         return;
+      }
+   }
+
+   while (<AUX>)
+   {
+      if (/\\bibdata\b/)
+      {
+         $main_bibdata = 1;
+      }
+      elsif (/\\\@jmlr\@import{(.*)}{(.*)}{(.*)}/)
+      {
+         my $import = 
+           {
+             label => $1,
+             path  => $2,
+             name  => $3
+           };
+
+         $import->{'name'} =~s/\.(tex|ltx)\Z//;
+
+         push @imports, $import;
+      }
+      elsif (/\\contentsline\s*{chapterauthor}{(.*)}{}{}}\s*$/
+        and $#imports > -1)
+      {
+         $imports[$#imports]->{'author'} = $1;
+      }
+      elsif (/^\\newlabel\s*{([^}]*)jmlrstart}{{([^}]*)}{([^}]*)}/)
+      {
+         my $label = $1;
+      
+         $pagerefs{$label}->{'start'} = $3;
+      }
+      elsif (/^\\newlabel\s*{([^}]*)jmlrend}{{([^}]*)}{([^}]*)}/)
+      {
+         my $label = $1;
+
+         $pagerefs{$label}->{'end'} = $3;
+      }
+      elsif ($extractpreface) # v0.3 new
+      {
+         if (/^\\\@prefacestart{([^}]*)}{(\d*)}/)
+         {
+            $preface_data->{'Start'} = $1;
+            $preface_data->{'StartArabic'} = $2;
+         }
+         elsif (/^\\\@prefaceend{([^}]*)}/)
+         {
+            $preface_data->{'End'} = $1;
+         }
+         elsif (/^\\\@prefacefile{([^}]*)}{([^}]*)}/)
+         {
+            $preface_data->{'File'}    = $1;
+            $preface_data->{'OutFile'} = $2;
+         }
+         elsif (/^\\\@prefaceeditor{(.*)}/)
+         {
+            my $name = $1;
+            $name=~s/\\\\.*//;
+            push @preface_editors, $name;
+         }
+      }
+   }
+
+   # if preface is to be extracted, has the require data been found?
+
+   if ($extractpreface)
+   {
+      unless ($preface_data->{'File'})
+      {
+         warn "$appname: Can't find preface information in aux file.\n",
+              "Have you used the preface environment?\n";
+
+         $extractpreface = 0;
+      }
+   }
+
+   close AUX;
+}
+
+sub createprefacefile{
+   my ($prefdir, $prefbase) = @_;
+
+   my $prefout = "$prefbase.tex";
+
+   &messagecall("Create preface file '$prefout'\n");
+
+   return unless ($execute);
+
+   # Open preface output file
+
+   open PREFOUT, ">$prefout"
+      or die "$appname: Can't open '$prefout': $!\n";
+
+   print PREFOUT "\\batchmode", $eol if ($batchtex or $quiet);
+   print PREFOUT "\\makeatletter", $eol;
+   print PREFOUT "\\def\\input\@path{{../../}}", $eol;
+   print PREFOUT "\\makeatother", $eol;
+
+   # Get the book's preamble
+
+   my $filename = "$main_name$main_suffix";
+
+   open BOOK, $filename
+     or die "$appname: Can't open '$filename': $!\n";
+
+   while (<BOOK>)
+   {
+      if (/\\documentclass/)
+      {
+         unless (s/^([^%]*)\\documentclass\s*\[(.*)\]/$1\\documentclass[$2,html]/m)
+         {
+           s/^([^%]*)\\documentclass\s*/$1\\documentclass[html]/m;
+         }
+
+         print PREFOUT;
+      }
+      elsif (/^\\begin{document}/)
+      {
+         if ($preface_data->{'Start'}=~/^[clxvi]+$/)
+         {
+            print PREFOUT "\\pagenumbering{roman}%", $eol;
+         }
+         elsif ($preface_data->{'Start'}=~/^[CLXVI]+$/)
+         {
+            print PREFOUT "\\pagenumbering{Roman}%", $eol;
+         }
+
+         print PREFOUT 
+           "\\setcounter{page}{",
+           $preface_data->{'StartArabic'},
+           "}%", $eol;
+
+         # \hypersetup{draft} is used to suppress links.
+         # (Only a partial document so internal links may be
+         # dead. Also prevents unwanted tag before the DOCTYPE
+         # line in the HTML file.)
+
+         print PREFOUT
+               "\\hypersetup{draft}", $eol,
+               '\\makeatletter',
+               "\\\@openrightfalse\\input{../../$main_name.aux}",
+               '\\makeatother', $eol;
+
+         print PREFOUT
+               "\\providecommand{\\HCode}[1]{}", $eol,
+               "\\title{\\prefacename}", $eol,
+               "\\begin{document}", $eol,
+               "\\HCode{<div id=\"content\">}", $eol;
+
+         last;
+      }
+      else
+      {
+         print PREFOUT;
+      }
+   }
+
+   close BOOK;
+
+   # Preface file name will have '/' as directory divider
+
+   my $preffile = $preface_data->{'File'};
+
+   if ($dd eq "\\")
+   {
+      $preffile=~s/\//\\/g;
+   }
+
+   open PREFIN, $preffile
+     or die "$appname: Can't open '$preffile': $!\n";
+
+   my $scanning  = 0;
+
+   while (<PREFIN>)
+   {
+      # This is fairly primitive and works best when the begin
+      # and end of the environment are on their own line.
+
+      if (/\\begin{preface}/)
+      {
+         print PREFOUT;
+         $scanning = 1;
+      }
+      elsif ($scanning)
+      {
+         print PREFOUT;
+
+         last if /\\end{preface}/;
+      }
+   }
+
+   close PREFIN;
+
+   print PREFOUT
+     "\\HCode{", &htmltimestamp, "}", $eol,
+     "\\HCode{</div>}", $eol,
+     &htmlmenu,
+     "\\end{document}", $eol;
+
+   close PREFOUT;
+
+}
+
+1;

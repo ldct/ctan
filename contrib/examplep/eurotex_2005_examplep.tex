@@ -1,0 +1,1848 @@
+%
+% eurotex_2005_examplep.tex
+% by pts@fazekas.hu at Thu Nov 11 20:44:25 CET 2004
+% -- Wed Jan 12 00:42:06 CET 2005
+%
+% Dat: this is the supposed final version of the article, without corrections
+% Dat: required houses.{eps,pdf} pexaminipage.{eps,pdf} shorthyp_t1xtts.{eps,pdf}
+% Dat: auxilary files: eurotex_2005_examplep.bib ttt.tex
+% OK:  eliminate Overfull \hbox{}es
+% OK:  submit to CTAN
+%
+
+\documentclass[a4paper]{article}
+\usepackage[latin2]{inputenc}% Dat: because of `á' etc.; also ÷
+\usepackage{t1enc}
+\usepackage{booktabs}
+\usepackage{graphicx}% Dat: after Babel
+\usepackage{mflogo}
+
+% Dat: for \documentclass[a4paper]{article}
+\special{\string!\expandafter\expandafter\csname @gobble\endcsname
+  \string\%xdvi.dvo: -expert -s 6 -xoffset -1.54cm -yoffset -1.54cm
+  -paper 12.8cmx23cm} % -xoffset 7mm -yoffset 13mm -paper 385ptx576pt}
+
+\title{Verbatim phrases and listings in {\LaTeX}}
+\author{P\'eter Szab\'o $\langle$\texttt{pts@fazekas.hu}$\rangle$
+\thanks{Thanks to Ferenc Wettl for the fruitful long discussion about the
+line syntax of the \texttt{code} environment, and also for reviewing the
+article.}
+\\[3pt]%\par\smallskip
+\normalsize Budapest University of Technology and Ecomomics,\\[-3pt]
+\normalsize Department of Analysis,\\[-3pt]
+\normalsize M\H{u}egyetem rakpart 3--9.,\\[-3pt]
+\normalsize Budapest, Hungary H-1111}
+\date{2004-11-11}
+
+\def\verbatizee#1{\begingroup\ttfamily
+   \toks0{#1}\edef\next{\the\toks0}%
+   %\dimen0=\the\fontdimen2\font % Dat: disable spaces, `=' is required here
+   \dimen0\fontdimen2\font % Dat: disable spaces, `=' is required here
+   %\showthe\dimen0
+   \fontdimen2\font=0pt
+   {\expandafter\stripit\meaning\next}% Dat: grouping to keep \dimen0
+   \unskip % Dat: strip final space, possibly after command
+   \fontdimen2\font=\dimen0
+   %\showthe\dimen0
+   \endgroup}
+\def\next{}
+\expandafter\def\expandafter\stripit\meaning\next{}
+
+%** So \verb+÷+ works.
+\DeclareInputText{247}{\ensuremath{\div}}
+
+\belowcaptionskip0pt
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+  The \textsf{examplep} package written by the author recently provides
+  sophisticated features for typesetting verbatim source code listings,
+  including the display of the source code and its compiled \LaTeX{} or
+  \textsf{METAPOST} output side-by-side, with automatic width detection and
+  enabled page breaks (in the source), without the need for specifying the
+  source twice. Special care is taken so section, page and footnote numbers
+  do not interfere with the main document. For typesetting short verbatim
+  phrases, a replacement for the \verb+\verb+ command is also provided
+  in the package, which can be used inside tables and moving arguments such as
+  footnotes and section titles. The listings package is used for syntax
+  highlighting.
+
+  The article reviews the design decisions
+  made during the package development and also presents some interesting
+  implementation internals. \textsf{examplep} is compared to standard
+  \LaTeX{} packages such as \textsf{listings}, \textsf{ltxdoc},
+  \textsf{sverb} and \textsf{moreverb}. The new \textsf{codep} package and
+  its accomanying \textsf{Perl} script,
+  which provide a convenient interface to the \textsf{examplep} package for
+  authors of manuals, is also presented. With \textsf{codep} it is possible
+  to generate the source code, the \LaTeX{} or \textsf{METAPOST} output and
+  the compilable example file onto the CD from a single source embedded
+  into the appropriate place of the \texttt{.tex} document file.
+%%%WF A CD-re irasnak semmi koze a lenyeghez, sajnos a dolgozat
+%%%   hatralevo reszeben is folyton CD-file es egyebekrol szolsz, de
+%%%   valojaban csak arrol van szo, hogy kulon file-ba irjuk a
+%%%   futtathato kodot (amit aztan a web-re, CD-re, DVD-re... lehet tenni).
+%% -- kellett neki nevet adni, ez lett
+\end{abstract}
+
+
+\section{Terminology}
+
+\begin{description}
+
+\item[verbatim text] A visually distinguishable textual part of the
+   document (usually typeset with a monospaced, or typewriter font) that is
+   allowed to contain the full ASCII character set. Verbatim text is often
+   used to typeset parts of program source files, including \TeX{} source.
+   Verbatim text must be marked up (i.e.\ surrounded)
+   in the source of the \LaTeX{}
+   document, so backslash and other control characters are typeset verbatim
+   instead of being interpreted as commands or special \LaTeX{} characters.
+
+%%%WF a kovetkezo 2 def nem pontos, nem biztos, hogy paragrafusok kozt
+%%%   van a kiemelt verbatim. Sorban? vagy sorok kozt van? 
+%% -- lehetne még pontosítani, de szerintem ebbõl rögtön lehet tudni, mire
+%%    gondolok
+\item[inline verbatim] A verbatim text passage inside a paragraph
+   or table cell.
+
+\item[display verbatim] is a vertical verbatim text block between
+   paragraphs.
+
+\item[side-by-side display]
+   When typesetting program source in a display verbatim, it is often
+   desirable to show the output of the program as well. This is especially
+   useful when teaching scripting languages, so the reader can see the
+   command and its effect side-by-side in a quick glance. For \TeX{} or
+   \textsf{METAPOST} sources and EPS and PDF source files it is also useful to
+   see the source and the typeset result side-by-side.
+
+\item[Source and Sample]
+   Side-by-side displays can be divided to \emph{Source} and \emph{Sample},
+   the latter being program output or typeset material.
+
+\item[CD-files]
+   Files accompanying a book, usually on a CD or DVD shipped with the book,
+   or avalable for download on the home page of the book. These
+   files usually contain some of the display verbatim material in the book,
+   so readers do not have to retype them.
+
+\end{description}
+
+\section{Special characters in the \LaTeX{} source}
+
+The special meaning of the input characters in the source file must be
+disabled in verbatim mode -- except for the character(s) that delimit the end
+of the verbatim text. The following characters have to be dealt with:
+
+\begin{description}
+
+\item[ASCII symbols] The ligatures have to be disabled, especially \verb+?`+ $\to$
+\texttt{?`} etc. The safest way is to make both characters of such a ligature
+active, and %then
+defining \verb+\def?{\relax\string?\relax}+
+and \verb+\def`{\relax\string`+\allowbreak\verb+\relax}+. \hskip0pt
+minus3.3pt\relax \textsf{examplep} issues similar
+definitions covering all such ligatures in the OT1- and T1-encoded CM fonts.
+
+\item[ASCII letters] Most verbatim fonts don't contain the ``fi'' or similar
+ligatures, so \textsf{examplep} takes no care to disable them.
+
+\item[special \TeX{} source symbols] To disable the special meaning of the symbols
+\verb+\+
+\verb-{-
+\verb-}-
+\verb+$+ %%%$
+\verb+%+
+\verb+^+
+\verb+&+
+\verb+_+,
+\textsf{examplep} redefines their \verb+\catcode+ for display verbatim.
+However, catcode changes are not always appriopriate for inline verbatim,
+so \textsf{examplep} provides \verb+\÷+ (see below) which doesn't change
+catcodes at all.
+
+\item[other ASCII punctuation] Some of these characters (%
+\verb+[+
+\verb+]+
+\verb+;+
+\verb+'+
+\verb+,+
+\verb+.+
+\verb+/+
+\verb+~+
+\verb+!+
+\verb+@+
+\verb+*+
+\verb+(+
+\verb+)+
+\verb-+-
+\verb-|-
+\verb-:-
+\verb-"-
+\verb-<-
+\verb->-
+\verb-?-
+\verb+`+
+\verb+-+
+\verb+=+) may be active, for example, \verb+~+ is ÷\nobreakspace÷,
+\verb+`+ is a Babel shorthand (e.g.\ in the Hungarian language module,
+\textsf{magyar.ldf}); \verb+"+ is a Babel shorthand (e.g\ in the German
+language module); \verb+?+, \verb+!+, \verb+:+ and \verb+;+ are activated
+(e.g.\ by the French language module), and other characters may be activated,
+too. So \textsf{examplep} sets the catcode of all characters in the range
+$33\ldots126$ to other (12). This includes all ASCII punctuation, letter and
+digit characters.
+
+\item[double carets] For example, the letter
+``J'' can be input as its ASCII code in hex,
+prefixed by double carets: \verb+^^4a+. However, in verbatim mode we want the
+4 characters, not the letter {J}. There is no problem in inline verbatim
+mode, because \verb+^+ loses its special meaning once its catcode is changed.
+However, when the verbatim material is written to a file or to the terminal,
+\TeX{} may change ``unprintable'' characters to escapes prefixed by \verb+^^+.
+These changes must be reverted when reading the file back. See Subsection
+\ref{tcx} for more.
+
+\item[high characters] Input characters in the range $128\ldots255$ are
+usually activated by the \textsf{inputenc} package, and they know how to
+typeset themselves -- so \textsf{examplep} leaves the catcode of such
+characters intact. However, in some modes, \textsf{examplep} has already
+changed all catcodes to 12 and 10 (with \verb+\meaning+), so it has to change
+the catcodes of such high codes back to 13 (active).
+
+\end{description}
+
+\section{Features of \textsf{examplep}}
+
+These are the most important, unique features:
+
+\begin{itemize}
+
+\item layout of side-by-side display may depend on maximum Source width
+\item automatic hyphenation of inline verbatim. The text is divided into
+  words and punctuation symbols (based on catcodes). For words, the normal
+  \TeX{} hyphenation patterns apply, and it is allowed to break the line on
+  both sides of a punctuation symbol.
+\item customizable isolation of page, section etc.\ numbers in the Sample
+      and the host document with the \texttt{PexaMiniPage} environment
+\item besides the outer level, inline verbatim (when properly escaped inside
+      \verb+\Q+ or \verb+\÷+) works safely inside macro arguments, section
+      titles, footnotes, table cells and index entries
+\item generated CD-files with automatic page and chapter number
+\item writing verbatim data to CD-files with a \textsf{Perl} script; exact,
+      binary reproduction of verbatim text is guaranteed
+\item ability to write different material to Source, Sample and CD-files
+\item the accents \verb+\H+ and \verb+\.+ work as expected with monospaced
+      fonts in the OT1 encoding. By default, \verb+\texttt{\H o}+ produces
+      \hbox to0pt{\verb+}+\hss}\verb+o+ in OT1 encoding, because such
+      typewriter fonts (such as \textit{cmtt10}) have those accents 
+%%%WF repaced
+      replaced
+      by ASCII symbols. \textsf{examplep} solves the problem by getting the
+      accent from the \textit{cmr} font family.
+
+\end{itemize}
+
+\noindent Some other features:
+
+\begin{itemize}
+
+\item side-by-side display of the Source and the Sample
+\item between-word hypenation of inline verbatim
+\item customizable left and right indentation of display verbatim
+\item specifying inline verbatim with nested braces (\verb+\PVerb+,
+  \verb+\Q+) or terminating character (\verb+\PVerb+, \verb+÷+, \verb+\÷+)
+\item automatic line breaks with hyphenation in display verbatim
+\item the discretionary hyphen (\verb+\hyphenchar+) of verbatim text is
+      different from the one in normal text
+\item line numbering in display verbatim
+\item writing to temporary files only if needed
+\item reading back contents of any file in display verbatim
+%\item writing verbatim data to temporary files (\verb+^+\relax\verb+^+ab, .tcx)
+% Dat: not a feature: automatic \textsf{METAPOST} processing, see the \texttt{eempost} package
+\item inline verbatim with a single character ($\div$) and its escaped
+      version (\textbackslash$\div$ and \verb+\Q+)
+\item automatic \verb+\indent+\allowbreak/\allowbreak\verb+\noindent+,
+      based on empty line above \verb+\begin{...}+
+\item ISO Latin accented input character support in all modes (also present
+      in \verb+\verb+)
+\item support for syntax highlighting with the \textsf{listings} package
+      \cite{listings}
+%%%WF a (\cite{...}) kicserelendo \cite{...} -re az EGESZ DOLGOZATBAN, 
+%%%   nem kell kerek zarojel, ott van mar a szogletes
+%% -- javítva
+\item emits a tab as eight spaces in normal mode, but tabs are supported
+      properly with \texttt{ttlistings=yes} and \texttt{ttlistings=showtabs}
+\item simple side-by-side display emulation without temporary files,
+      using \texttt{src\allowbreak style=leftboth} or \texttt{srcstyle=leftleft}
+
+\end{itemize}
+
+
+\subsection{Escaped mode of inline verbatim locations}\label{escaped}
+
+For compatibility reasons, \textsf{examplep} doesn't change the original
+%%%WF ÷\verb+ and ÷\verb*+ 
+\verb+\verb+ and \verb+\verb*+
+%%%
+commands in any way, but defines its own commands:
+\verb+\PVerb+, \verb+\PVerbH+, \verb+\PVerbInner+,
+\verb+\PVerbOpt+, \verb+\Q+, \verb+÷+ and \verb+\÷+. Most of the
+\verb+\PVerb+\ldots{}
+commands are historical. For new documents, only the use of
+\verb+\PVerbOpt+, \verb+\Q+, \verb+÷+ and \verb+\÷+ is recommended. Some of
+these commands have to be activated with package load options:
+\verb+\usepackage[Q=yes,div=yes,bsdiv=yes]{examplep}+. The reason why
+\verb+÷+ was introduced is that it is a high Latin-1 (and Latin-2) character
+available on the Hungarian keyboard, which is usually not used in \LaTeX{}
+documents (in fact, \verb+$\div$+ is used instead). Inline verbatim sources
+with such a character are compact, and they can contain all ASCII symbols.
+
+\begin{table}
+\caption{Contexts and features of inline verbatim commands}\label{contexts}
+\vskip\abovecaptionskip
+\small
+\noindent\hfil\begin{tabular}{@{}llllll@{}}\toprule
+                  & outer& argument& tablular& elsewhere& escaped \\\midrule
+\verb+\verb+      & +    & $-$$^1$ & +       & $-$$^1$  & no      \\
+\verb+\PVerbOpt+  & +    & +$^2$   & +       & $-$      & no \\
+\verb+÷+          & +    & +$^2$   & $-$     & +$^2$    & no \\
+\verb+\÷+         & +    & +       & +       & +        & yes \\
+\verb+\Q+         & +    & +       & +       & +        & yes \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+$^1$sometimes displays the proper error message\par
+$^2$inner mode only (spaces compressed or lost, \verb+%+ is comment etc.)
+\end{table}
+
+\textsf{examplep} supports inline verbatim text at the outer level,
+inside macro arguments, in table cells and elsewhere (in section titles, in
+footnotes and in index entries), see also in Table \ref{contexts}.
+The reason why some of these cases are treated differently
+is that catcode changes must be timed correctly so that the proper catcodes
+are active by the time \TeX{} reads the verbatim text from the input file for
+the first time. (Please note that section titles and index entries are also
+written to and read back from auxilary files.)
+
+This is quite hard to accomplish in several cases (because \TeX{}'s mouth
+gathers macro arguments at high speed, a way before \TeX{}'s stomach could
+change the catcodes), so \textsf{examplep} provides the commands \verb+÷+
+and \verb+\Q+, which do not change catcodes at all, so they work everywhere.
+Each special (say, not alphanumeric) character of the source text of these
+commands must be prefixed by a backslash, so \TeX's eyes will see it as a
+controls sequence token. The backslashes are retained when the construct is
+written to auxilary files, but they get removed upon typesetting. Letters,
+when prefixed by a backslash, get special meaning, for example \verb+\V+
+denotes a visible space. For example, The construct
+\verb+\÷\\\}÷+ is seen by \TeX's eyes as
+\verb+\÷+$_{13}$\allowbreak
+\verb+\\+$_{13}$\allowbreak
+\verb+\}+$_{13}$\allowbreak
+\verb+÷+$_{13}$, and its gets typeset as \verb+\}+ (by running the command
+\verb+\÷+). Please note that the construct is properly nested, because all
+braces are inside control sequence names. The same result (\verb+\}+) can be
+achieved with \verb+\Q{\\\}}+. Both constructs are safe, because they can be
+freely moved to anywhere in the source file. However, for compatibility
+reasons, \verb+\Q+ is recommended, because its execution doesn't rely on the
+current catcode of the terminating \verb+÷+ of \verb+\÷+. A more complicated
+example: \verb+``\Q{\\\V X\ }''+ gets typeset as ``\verb*+\ X+\verb+ +''.
+In escaped mode, \verb+\V+ dentoes a visible, unbreakable space,
+\verb+\S+ and \verb*+\ + denote default space (affected by the
+\texttt{pverb-space=} option), \verb+\B+ allows a line break there with a
+discreationary hyphen (affected by the \texttt{pverb-linebreak=} option),
+and \verb+\n+ flushes left and starts a new line.
+
+The \verb+\PVerb+ macros can detect whether they have been invoked from
+within a macro argument. If so, they do not insist on catcode changes, but
+they emit all the tokens that has been seen by \TeX's eyes. (Spaces are
+already compressed now, and everything after \verb+%+
+is ignored etc., so this is not purely verbatim anymore.) However, this works
+only if the macro argument is properly nested with respect to braces, and it
+is delimited by braces (not a terminator character).
+
+Please note that there might be problems with verbatim material in index
+entries processed by \textsf{makeindex} if characters
+\verb+"+, \verb+@+, \verb+!+ and \verb+|+ are not quoted properly with
+\verb+"+. This is a generic \textsf{makeindex} issue. The quoting must be
+applied even inside verbatim material.
+
+\subsection{Horizontal alignment of the Source lines}\label{srcstyle}
+
+The \texttt{verbatim} environment of standard \LaTeX{} reads the whole
+verbatim text into a macro argument, thus limiting the length of the verbatim
+material to the available main memory. This is enough for about 3400
+80-character lines. The \textsf{verbatim}, \textsf{moreverb},
+\textsf{listings} and
+% Dat: moreverb pkg uses verbatim pkg
+\textsf{examplep} packages parse the input line-by-line, so there is no such
+limit. However, with \textsf{examplep}, additional memory is required for
+aligned mode, which limits the maximum number of lines to about 2200
+(32 pages) when the average line width is 80 characters. Please note that
+the maximums mentioned here may be lower if more packages are loaded; in
+another situatian the maximum number of lines was 375. As a reference,
+a plain \verb+\halign+ with all lines having
+\verb+(9999)\hfil\cr+ only could accomodate about 5000 lines when no packages
+were loaded. The
+maximum memory can be increased by increasing the \verb+extra_mem_bot+
+variable in \textsf{texmf.cnf} or in the environment.
+%As a reference measurement.
+%%%WF mi itt ez az utso mondat?
+%% -- tényleg hülyeség, hihúzva
+
+There are two display modes used for display verbatim: paragraph and aligned
+(see the \verb+\pexa@show@pars+ and \verb+\pexa@show@halign+ macros,
+respectively, in the source). Aligned mode is used when multiple columns
+(such as line numbers and text) have to be aligned horizontally. Aligned mode
+uses the \TeX{} \verb+\halign+ primitive to do the alignment, and this
+primitive reads the whole construct into memory before typesetting it (in
+order to be able to calculate the column widths). The other one,
+paragraph mode, is used when
+horizontal alignment is not needed and side-by-side display is not used. In
+paragraph mode, each line is typeset as a seperate paragraph, so the length
+of the verbatim text is only limited by the available disk space to hold the
+resulting DVI file. \textsf{examplep} chooses the mode automatically: for
+side-by-side display it always chooses aligned mode (so it can measure the
+width of the Source before typesetting it), otherwise, if the
+\texttt{srcstyle=} makes it possible, it chooses paragraph mode, otherwise
+it chooses aligned mode. See Figure \ref{fig:srcstyle} for details about
+Source styles.
+
+\begin{figure}\small
+{\relax\normalsize \parindent1em
+ \advance\leftskip\parindent %\advance\rightskip\parindent % Dat: automatic for \hsize
+ \advance\hsize-2\parindent
+ \parindent0pt
+\texttt{srcstyle=left} \emph{PAF}\par
+\leavevmode\hbox to0pt{\hss\scriptsize9}\texttt{srcstyle=leftnumhang} \emph{PAF}\par
+{\scriptsize9}\texttt{srcstyle=leftnum} \emph{PAF}\par
+\leavevmode{\scriptsize\phantom99}\texttt{srcstyle=leftnumcol} \emph{AF} when the last page number has 2 digits\par
+\hfil\texttt{srcstyle=center} \emph{PAF}\par
+\hfill\texttt{srcstyle=right} \emph{PAF}\par
+\texttt{srcstyle=paralign}\hfill\emph{PF}\hfill with\hfill \texttt{source-par-align=justjust}\par
+\strut\texttt{srcstyle=leftboth}\ \vrule\ srcstyle=leftboth \emph{A}\par
+\leavevmode{\scriptsize\phantom99}\strut\texttt{srcstyle=leftbothnumcol}\ \vrule\ srcstyle=leftbothnumcol \emph{A}\par
+\strut\texttt{srcstyle=leftleft}\ \vrule\ anything \emph{A}\par
+%%%WF eleg zavaros egy tablazat, es harom sorban a | utani dolgok is
+%%%   erthetetlenek
+%% -- mivel nincs jobb ötletem, marad ez
+% Imp: boxed?
+}
+\medskip
+\emph{P:} works in paragraph mode\\
+\emph{A:} works in aligned mode\\
+\emph{F:} works when Source is read back from file
+\caption{The effect of the \texttt{srcstyle=} option}\label{fig:srcstyle}
+\end{figure}
+
+Please note that the Source styles \texttt{leftboth} and
+\texttt{leftbothnumcol} display each line twice, as Source and as Sample,
+too. This is different from regular side-by-side display, because lines of
+the Source and Sample here are forcibly aligned, and this solution doesn't
+use a temporary file. The source style \texttt{leftleft} is similar, but it
+lefts the author specify different Source and Sample for the same line (they
+should be separated by \verb+&+ in the source).
+
+
+\subsection{Display verbatim isolation}\label{pexaminipage}
+
+The \texttt{PexaMinipage} environment is provided, which is similar to the
+%%%WF bulilt-in 
+built-in
+%%%
+\texttt{minipage} environment, but provides better isolation of the
+Sample from the container document, because it saves and restores section,
+page, equiation (etc.) numbers and also marks (section titles in
+page headers).
+Labels (for \verb+\label+, \verb+\ref+ etc.) are not isolated, because many
+packages use them in a non-standard way.
+See Figure \ref{fig:pexaminipage} for an example.
+
+\begin{figure}\small
+\noindent\hfil\hbox to0pt{\hss\includegraphics{pexaminipage}\hss}
+\caption{Display verbatim isolation with the \texttt{PexaMinipage} environment}%
+\label{fig:pexaminipage}
+\end{figure}
+
+The environment also
+cancels vertical skips (including \verb+\belowdisplayskip+) at the bottom
+of its contents. For space conservation, \verb+\abovedisplayskip+ above the
+very first displayed equation is also canceled. To vaid this, put
+\verb+\everydisplay{}+ before the formula. The environment starts with
+\verb+\noindent+, but subsequent paragraphs are indented.
+
+
+\subsection{Feature comparison}
+
+Although there are several \LaTeX{} packages providing display and/or inline
+verbatim environments for \LaTeX{}, \textsf{examplep} has some important
+unique features not found in other packages (see the beginning of this
+section for details). The author has tried the following packages before
+deciding to write \textsf{examplep}:
+
+\begin{description}
+
+\item[\normalfont\textsf{verbatim}]
+  Although the \texttt{verbatim} environment is built-in into \LaTeX{}, its
+  most important limitation is that it eats up \TeX{} memory when typesetting
+  very long verbatim material (of several hundred or thousand lines). The
+  \textsf{verbatim} package fixes this, and provides the
+  \verb+\verbatiminput+ command (similar to the \verb+\PexaShowSource+
+  command of \textsf{examplep}) and the \texttt{comment} environment (similar
+  to \texttt{PIgnore} in \textsf{examplep}).
+
+\item[\normalfont\textsf{moreverb}]
+  This package extends the \textsf{verbatim} package with additional
+  features: proper handling of tabulators (also accessible from
+  \textsf{examplep} with the \textsf{listings} interface), line numbering
+  (also available in \textsf{examplep} with much more customization),
+  verbatim surrounded by a frame (this is not available in \textsf{examplep},
+  but it works with \textsf{listings}, with page breaks allowed), the
+  \texttt{verbatimwrite} environment writes its contents to a file (similar
+  to the \texttt{WFile} environment in \textsf{examplep}).
+
+\item[\normalfont\textsf{sverb}]
+  It provides display verbatim with tabulators and long environments, and it
+  can read and write text from files. It also has a side-by-side environment
+  (\texttt{demo}) with fancy frames.
+  The \textsf{verbfwr} package (part of the \textsf{examplep} distribution)
+  was derived from parts of this package.
+  
+\item[\normalfont\textsf{syntax}]
+  This package is written by the author of \textsf{sverb}. It provides
+  generic and customizable inline verbatim support and it also has powerful
+  features to typeset BNF-like grammars and syntax diagrams. It is documented
+  that no attempt is made to make the constructs work inside macro arguments
+  or section titles.
+
+\item[\normalfont\textsf{alltt}]
+  This standard \LaTeX{} package defines the \texttt{alltt} environment in
+  which the characters \verb+\ { }+ retain their original meaning, so it is
+  possible to do some manual formatting in the verbatim text.
+
+\item[\normalfont\textsf{fancyvrb}] \cite{fancyvrb}
+  This is extremely configurable verbatim package provides inline
+  verbatim even in footnotes, display verbatim even with side-by-side, line
+  numbers on any side, all
+  kinds of francy frames even with page breaks, text formatting and
+  writing and reading from files; and very long diplay verbatim text.
+  Options can be specified any time within the argument of the \verb+\fvset+
+  command. The original \texttt{verbatim} environment is not modified,
+  but a new one, \texttt{Verbatim} is defined. Setting the background color
+  is not possible.
+
+  This package is not actively developed. Version 2.7 (dated
+  2000/03/21) is part of te\TeX{}. Oddly enough, the newest version on CTAN
+  is 2.6, which a file timestamp in 2004, but it dated 1998/07/17).
+
+\item[\normalfont\textsf{fvrb-ex}]
+  This package is part of the \textsf{fancyvrb} distribution and uses the
+  \textsf{fancyvrb} package. It provides a
+  side-by-side display verbatim environment (\texttt{SideBy\allowbreak SideExample}). A
+  page break is not allowed in the Source after the Sample. % Dat: tested
+  The \texttt{xrightmargin} option has to be specified manually (e.g.\,%
+  \texttt{xrightmargin\allowbreak=3cm}. The first two
+  characters of each line in the environment are ignored.
+
+\item[\normalfont\textsf{ltxdoc}]
+  The most important features of \textsf{examplep} inspired by the \LaTeX{}
+  documentation package are display verbatim line numbering with
+  \texttt{srcstyle=left\allowbreak num} and inline verbatim started with \verb+÷+.
+  The \textsf{ltxdoc} package typesets everything between two \verb+|+
+  characters as inline verbatim. This is not supported by \textsf{examplep}
+  to avoid making an ASCII character active.
+
+\item[\normalfont\textsf{listings}] \cite{listings}
+  The most important layout elements of this sophisticated, highly
+  customizable, actively developed package missing from
+  \textsf{examplep} are: background color, frames (with page breaks allowed),
+  syntax highlighting and proper tabulator support. Except for the background
+  color and frames, these features can be used from \textsf{examplep} with
+  its interface to \textsf{listings}, see in Subsection \ref{listings}.
+  Use \verb+\lstset{columns=fullflexible,lang+\allowbreak\verb+uage=C,back+\allowbreak\verb+groundcolor=\color{red},frame=trBL}+
+  to try these features. \textsf{listings} also provides inline verbatim
+  mode (with syntax highlighting), in the character-delimited argument of the
+  command \verb+\lstinline+;\,unfortunately, spaces at line breaks (with
+  option \texttt{breaklines}) are rendered in an inconsistent way, and line
+  breaks do not work well with background color.
+
+  \textsf{listings} has an important weak point: it cannot typeset ISO Latin
+  accented characters with the \textsf{inputenc} package;
+  the way described in the manual doesn't work as expected: it puts the
+  accented characters to the wrong place in the line. This problem,
+  however, is solved when \textsf{listings} is invoked from
+  \textsf{examplep}. See more about listings in Subsection \ref{listings}.
+
+%%%WF  This package is actively developed.
+%%%    ezt mar emlitetted a bekezdes elejen
+\end{description}
+
+\section{Customization}\label{customization}
+
+The operation of \textsf{examplep} can be customized with options as
+$\langle$key$\rangle${}$=${}$\langle$value$\rangle$ pairs. Global options, which affect all subsequent commands within
+the current block, can be specified as package load options
+(\verb+\usepackage[+\ldots\verb+]{examplep}+) or as argument of the \verb+\PexaDefaults+
+command. \LaTeX{} doesn't allow complicated option values (such as values
+containing some expandable macros, for example after \texttt{linenumberformat=})
+to be specified in the \verb+\usepackage+
+line -- use \verb+\PexaDefaults+ in such cases.
+Many commands and environment accept local options, which affect
+only that construct.
+
+All options have default values, which are indicated below right after the
+option name. If the option has a fixed set of possible values, all of them
+are mentioned, and they are prefixed by \texttt{=}. The defaults have been
+chosen so the \texttt{PSource} environment matches the builtin
+\texttt{verbatim} environment as closely as possible. Note that the original
+environment is not overridden before the \texttt{verbatimenv=yes} is
+specified.
+
+\begin{description}
+\makeatletter % Dat: for \verbatizee{\z@}
+
+\item[\verbatizee{Q=unchanged}]
+  To enable \verb+\Q+, use \texttt{=yes} instead of the default.
+\item[\verbatizee{abreak=unchanged}]
+  To enable \verb+\abreak+, use \texttt{=yes} instead of the default.
+\item[\verbatizee{addvspace-bottom={\vskip\z@skip\addvspace}}]
+  \hskip0pt plus4pt
+  Specifies the command to add vertical space below display verbantim. The default works
+  fine, but e.g.\ packages maintaining the baseline grid might want to
+  change it.
+\item[\verbatizee{addvspace-top=\addvspace}]
+  Command to add vertical space above display verbantim. The default works
+  fine, but for example, packages maintaining the baseline grid might want to
+  change it.
+\item[\verbatizee{allowbreak=yes}]
+  Use \texttt{=no} to disable page breaks in the Source of display verbatim.
+\item[\verbatizee{allowshrink=yes}]
+  The default will shrink the Sample horizontally if the
+  Source is too wide. Use \texttt{=no} to disable this.
+  Use \texttt{=force} to enable shrinking of Source, and with
+  \texttt{srcstyle=leftleft} or \texttt{srcstyle=leftboth}, also enable
+  shrinking of the Source if it is narrow.
+\item[\verbatizee{baseline-grid=no}]
+  Use \texttt{=yes} to adjust the height of the Sample to be an integer
+  multiply of \verb+\baselineskip+ (with \texttt{yalign=u} and
+  \texttt{yalign=v}).
+\item[\verbatizee{boxstyle=p}] Controls how the Sample is boxed. Capital
+  letters are not allowed for side-by-side display. By default (\texttt{=p}),
+  a \texttt{PexaMinipage} environment is put inside a \verb+\vtop+. Use
+  \texttt{=h} to put a \verb+\hbox+ only, \texttt{=v} to put a \verb+\vtop+
+  only, \texttt{=V} to put a \verb+\vbox+ only,
+  \texttt{=m} to put a \texttt{minipage} environment inside a \verb+\vtop+, 
+  \texttt{=M} to put a \texttt{minipage} environment inside a \verb+\vbox+, 
+  \texttt{=P} to put a \texttt{PexaMinipage} environment inside a \verb+\vbox+,
+  \texttt{=G} to add \verb+\begingroup+ and \verb+\endgroup+ only.
+  The default is recommended for most cases, because the \verb+\vtop+
+  provides proper alignment with the Source, and the \texttt{PexaMinipage}
+  environment provides isolation (of page and section numbers etc.) from the
+  main document.
+\item[\verbatizee{bsdiv=unchanged}]
+  To enable \verb+\÷+, use \texttt{=yes} instead of the default.
+\item[\verbatizee{div=unchanged}]
+  To enable \verb+÷+, use \texttt{=yes} instead of the default.
+\item[\verbatizee{firstlinenum=1}]
+  Specifies the number of the first line of a numbered Source listing.
+  Useful with \texttt{srcstyle=leftnumcol} and \texttt{srcstyle=leftnumhang}.
+\item[\verbatizee{linenumberformat={{...}}}]
+  %\item[\verbatizee{linenumberformat={{\normalfont\rmfamily\scriptsize\number-\pexa@@cntb}\pexa@default@linenumbersep}}]
+  Commands to display a line number and the separator in a numbered Source
+  listing. See the default value in \texttt{examplep.sty}.
+\item[\verbatizee{linenumbersep={}}]
+  Commands to display the separator in a numbered Source listing.
+\item[\verbatizee{listings=no}]
+  Use \texttt{=yes} to display each Source line with the \textsf{listings}
+  package. Specify options (to be executed in \verb+\lstset+), separated by
+  commas in the argument. Read more about the options in the documentation of
+  the \textsf{listings} package. For example, \verb+listings=yes+ and
+  \verb+listings={}+ uses \textsf{listings} with default options (no syntax
+  highlighting), and \verb+listings={language=+\allowbreak\verb+C,showtabs}+ enables syntax
+  highlighting for C language and enables visible tabulators. See
+  Subsection \ref{listings} for more information.
+\item[\verbatizee{listings-verbatimfont=pexavf}]
+  Set the font to be used in the Source when \texttt{listings=} is active. See
+  \texttt{source-verbatimfont=} for the possible values.
+\item[\verbatizee{mp-equation-reset=yes}]
+  Use \texttt{=no} to make the main document and the Samples inside
+  \texttt{PexaMinipage} share the same equation counter.
+\item[\verbatizee{mp-varioref-reset=no}]
+  Use \texttt{=yes} to make the internal counter \texttt{vrcnt} of the
+  \textsf{varioref} package to be reset for each Sample inside
+  \texttt{PexaMinipage}. This option doesn't affect the final output, and
+  \textsf{varioref} expects this counter not to be reset, so it is not
+  recommended to change the default.
+\item[\texttt{noligs=some}]
+  By default, only those ligatures are disabled whose second character is one
+  of \verb+`+ \verb+'+ \verb+,+ \verb+-+ \verb+<+ \verb+>+. Use
+  \texttt{=kernel} to get the same effect, but using the \LaTeX{} built-in
+  \verb+\@noligs+. Use \verb+=most+ to get all ligatures with either the
+  first or the second character having code between 32 and 127 and catcode
+  12. Please note that ligatures in inline verbatim mode are disabled anyway,
+  because \verb+\allowbreak+ is inserted between characters of catcode 12,
+  depending on the value of \texttt{pverb-linebreak=}.
+\item[\verbatizee{pexaminipage-setuphook={}}]
+  Extra commands to run when starting the \texttt{Pexa\allowbreak MiniPage} environment,
+  just after the environment has finished its own initialization.
+\item[\verbatizee{pverb-hash=full}]
+  Use \texttt{=half} to make \verb+\PVerb+ convert \verb+##+ to \verb+#+.
+  The command \verb+\PVerbH+ is the same as \verb+\PVerb+ but
+  forces \texttt{=half}. This is required when \verb+\PVerb+ or \verb+÷+ is
+  used inside a macro argument. For example, \verb+\textit{÷#÷}+ yields
+  the error message \textit{Illegal parameter number in definition of
+  \string\reserved@a}, but \verb+\textit{\PVerbH{##}}+ works fine. The error
+  message is a general \LaTeX{} kernel limitation, for example
+  \verb+\textit{\@gobb+\allowbreak\verb+le{#}}+ doesn't work either.
+\item[\verbatizee{pverb-hyphenchar=hyphen}]
+  By default, the minus character (ASCII code 45) is used to for automatic word
+  hyphenation in inline verbatim. Use \texttt{=char'30} to have character
+  with code 24; see also Subsection \ref{char'30}. Use \texttt{=none} to
+  disable word hyphenation (by setting \verb+\hyphenchar+ to $-1$).
+  Use \texttt{=unchanged} to get the hyphenchar from
+  the font (the \textit{cmtt} and \texttt{ectt} fonts have word hyphenation
+  disabled). Please note that hyphenation around symbols is affected
+  the \texttt{pverb-linebreak=} option, not this one.
+\item[\verbatizee{pverb-leftbreakmin=2}]
+  Specifies the minimum number of characters in inline verbatim after which it
+  is allowed to break the line (with \texttt{pverb-linebreak\allowbreak=}). Values
+  allowed are $0$, $1$ and $2$, but $0$ usually doesn't make sense.
+\item[\verbatizee{pverb-linebreak=char}]
+  By default, \verb+\PexaAllowBreak+ is inserted around symbols in inline
+  verbatim, so a line break (with a discreationary hyphen affected by
+  \texttt{pverb-linebreakchar=}) is allowed there. Use \texttt{=yes} to insert
+  \verb+\allowbreak+ instead, which allows a line break without
+  discretionaries. Use \texttt{=no} to disable line breaks around symbols in
+  inline verbatim. The option \texttt{pverb-hyphenchar=} affects
+  intra-word hyphenation in inline verbatim, not this one.
+\item[\verbatizee{pverb-linebreakchar={$\lnot$}}]
+  Specifies the discreationary hyphen to be used in \verb+\PexaAllowBreak+.
+  See also \texttt{pverb-linebreak=}.
+\item[\verbatizee{pverb-space=invbreak}]
+  By default, spaces in inline verbatim are invisible, variable width (as
+  allowed by the font, see also \texttt{pverb-stretchshrink=})
+  and breakable (i.e.\ a space can be replaced by a line
+  break if necessary). Use \texttt{=invdisc} to get an invisible, variable
+  width space which becomes visible (\verb*+ +) when it is broken at the end
+  of the line. Use \texttt{=invfixbreak} to get an invisible, fixed width and
+  breakable space. Use \texttt{=invnobreak} to get an visible, variable width
+  and unbreakable space. Use \texttt{=visnobreak} to get a visible, fixed
+  width and unbreakable space. Use \texttt{=visbreak} to get a visible, fixed
+  width space with line breaks allowed on both sides. Use
+  \texttt{=invbreakleft} to get a visible, variable width space with infinite
+  stretchablility if the line is broken there (this may have strange effect
+  on other line breaks in the paragraph, so please try to avoid it).
+  The built-in \verb+\verb*+ command uses
+  \texttt{source-space=visnobreak}.
+\item[\verbatizee{pverb-stretchshrink=yes}]
+  By default, spaces in inline verbatim are forced to be stretchable and
+  shrinkable (by \verb+\quad+${}/9$). Use \texttt{=no} to disable
+  stretchability and shrinkability. Use \texttt{=unchanged} to keep the
+  settings in the font. Note that \verb+\fontdimen+$3$ and
+  \verb+\fontdimen+$4$ are changed by this option, and the changes are local
+  to inline verbatim mode.
+\item[\verbatizee{pverb-verbatimfont=pexavf}]
+  Set the font to be used in inline verbatim mode. See
+  \texttt{source-verbatimfont=} for the possible values.
+\item[\verbatizee{samplewidth=.5\PexaWidth}]
+  Specifies the maximum width of the Sample in side-by-side display as a
+  \TeX{} dimension. The actual Sample can become actually narrower (see
+  \texttt{allowshrink=}. The dimensions \verb+\hsize+, \verb+\linewidth+ and
+  \verb+\PexaWidth+ can be used. (Our \LaTeX{} book used
+  \verb+sample+\allowbreak\verb+width=.45\PexaWidth+.) \verb+\leftskip+ and \verb+\rightskip+
+  do not affect this option. \verb+\hsize+ can be used, which is the total
+  width available (including the extra margins added by surrounding list
+  environments), \verb+\linewidth+ is \verb+\hsize+ widtout the extra margins
+  produced by lists, and \verb+\PexaWidth+ is the total width of the Source,
+  the separator (see \texttt{vrule=}) and the Sample.
+\item[\verbatizee{source-par-align=left}]
+  Specifies the alignment of Source lines when \texttt{srcsty\allowbreak le=paralign} is
+  active. Use \texttt{=left} (default), \texttt{=right} or \texttt{=center} to
+  specified flush-left, flush-right or centered alignment, respectively. Use
+  \texttt{=justi\allowbreak fy} to have the last line flush-left and the previous line
+  justified (please note that each Source line is mapped to a single
+  paragraph, so the paragraph will have more than 1 line only if the source
+  line is too long). Use \texttt{=justjust} to have all lines justified.
+  Use \texttt{=unchanged} to keep the alignment of the enclosing block.
+\item[\verbatizee{source-sepwidth=\tabcolsep}]
+  Specifies the horizontal distance between the Source and the Sample.
+  See also \texttt{vrule=}.
+\item[\verbatizee{source-space=invfixbreak}]
+  Specifies how to typeset spaces of the Source. See \texttt{pverb-space=}
+  for the possible values. The built-in \texttt{verbatim*} environment uses
+  \texttt{source-space=visnobreak}.
+\item[\verbatizee{source-verbatimfont=pexavf}]
+  Sets the font to be used for the Source when \texttt{listings=} is not
+  active (see also \texttt{listings-verbatimfont=} for
+  \texttt{listings\allowbreak=}).
+  Give
+  \texttt{=ttfamily} to use \verb+\ttfamily+,
+  \texttt{=pexavf} to use \verb+\pexa@@verbatim+\allowbreak\verb+font+ (which defaults to
+  \verb+\verbatim@font+),
+  \texttt{=latexvf} to use \verb+\verbatim@+\allowbreak\verb+font+ (which defaults to \verb+\normalfont\ttfamily+),
+  \texttt{=unchanged} to keep the current font,
+  or \texttt{=normalfont} to use \verb+\normalfont+.
+\item[\verbatizee{srcstyle=left}]
+  Specifies the horizontal alignment of the Source lines. See more in
+  Subsection \ref{srcstyle} and Figure \ref{fig:srcstyle}.
+\item[\verbatizee{ttlistings=}\normalfont\ (no default)] % Dat: $\varnothing$
+  Shorthand of \texttt{listings-verbatimfont=ttfamily,\allowbreak listings=}.
+\item[\verbatizee{url=unchanged}]
+  To enable \verb+\url+, use \texttt{=yes} instead of the default. The
+  \verb+\url+ will be defined as \verb+\def\url{\PVerbOpt{}}+. This has the
+  disadvantage that inside \verb+\textit+ etc.\ it cannot typeset URLs having
+  a single \verb+#+ (see \texttt{pverb-hash=} for more), but the \textsf{url}
+  package has the same limitation. A quick fix: use \verb+\itshape+ instead
+  of \verb+\textit+ etc.
+\item[\verbatizee{usewidth=skipwidth}]
+  Specifies which horizontal part of the main text should be used in a
+  display verbatim. By default, left and right margins introduced by list
+  environments (such as \texttt{itemize}) and \verb+\leftskip+ and
+  \verb+\rightskip+ are respected. Use \texttt{=linewidth} to ignore
+  \verb+\leftskip+ and \verb+\rightskip+ but respect list environments. Use
+  \texttt{=hsize} to use the whole width of main text. Note that this option
+  affects the calculation of \verb+\PexaWidth+.
+\item[\verbatizee{vextrabotdepth=\z@}]
+  Dimension to add to the depth of the display verbatim with
+  \texttt{yalign=v}. The default works
+  fine, but for example, packages maintaining the baseline grid might want to
+  change it for each instance.
+\item[\verbatizee{vextravskip=\z@}]
+  Amount of vertical space to be added above display verbantim with
+  \texttt{yalign=v}. The default works
+  fine, but for example, packages maintaining the baseline grid might want to
+  change it for each instance.
+\item[\verbatizee{vsmallht=1pt}]
+  Specifies Sample height threshold for \texttt{yalign=v}. If the Sample is
+  lower than this (or sample a higher than the 1st line of the Source plus
+  \verb+\vextravskip+ --
+  typical for \verb+\includegraphics+), its top will be aligned to the top of
+  the Source, otherwise
+  its top baseline (with \verb+\vtop+) will be aligned to the top baseline of
+  the Source. 
+\item[\verbatizee{xalign=l}]
+  Specifies horizontal alignment (\texttt{=l} for left, \texttt{=r} for
+  right) of the Sample box (and the separator) within its allocated width for
+  side-by-side display. Please note that \texttt{=r} works only
+  with \texttt{boxstyle=h}, because all other box sizes use their
+  full allocated width.
+\item[\verbatizee{xindent=deeppre}]
+  Specifies additional horizontal indentation in display verbatim mode. Use
+%%%WF  \texttt{=nonoe} 
+  \texttt{=none}
+%%%
+  to get no extra indentation. Use \texttt{=narrower} to get
+  \verb+\narrower+ (both \verb+\leftskip+ and \verb+\rightskip+ are decreased
+  by \verb+\parindent+).
+  Use \texttt{=deeper} to move one level deeper in the list environment
+  hierarchy and get that indentation.
+%%%WF na most akkor mi a default? a deeper vagy a deeppre?
+  Use \texttt{=deeppre} (default) to move one level deeper, but don't change
+  indentation (this is useful with \texttt{yindent=deeper} --
+  otherwise it is equivalent to \texttt{=none}). % Dat: really??
+  Use \texttt{=deepright} to set both left and right indentation from
+  the left indentation of \texttt{=deeper}.
+\item[\verbatizee{yalign=u}]
+  Specifies vertical alignment in side-by-side display. By default, the top
+  of the bounding boxes of the Source and the Sample is aligned, which looks
+  nice if the Sample is an image, but doesn't align properly if the Sample is
+  text with a font of similar size to the Source.  Use \texttt{=b} to align
+  the topmost baselines of the Sample and the Source. This looks nice if the
+  Sample is text, but it is ugly if the Sample is an image higher than
+  \verb+\baselineskip+. The use of \texttt{=v} is recommended, which decides
+  between \texttt{=b} and \texttt{=u} based on the height of the Sample (see
+  \texttt{vsmallht=} for the details).
+\item[\verbatizee{yindent=deeper}]
+  Specifies the vertical space separating display verbatim from the
+  surrounding text. Use \texttt{=none} no have no extra vertical space, the
+  display verbatim appears to be a new paragraph as far as
+  \verb+\baselineskip+ and \verb+\vskip+s are concerned. Use \texttt{=deeper}
+  (default) to move one level deeper in the list environment hierarchy
+  (and use the \verb+\parsep+ and \verb+\partopsep+ etc.\ specified there).
+  It is recommended to have \texttt{yindent=deeper} and
+  \texttt{xindent=deeppre} together, so there is no extra horizontal
+  indentation.
+\item[\verbatizee{verbatimenv=unchanged}]
+  Use \texttt{=yes}
+  to change the implementation of the \texttt{verba\allowbreak tim} and \texttt{verbatim*}
+  environments to use the \texttt{PSource} environment.
+\item[\verbatizee{vrule=rule}]
+  By default, the Source and the Sample are separated with a vertical rule
+  of width \verb+\arrayrulewidth+ in the middle of a horizontal space
+  specified by \texttt{source-sepwidth=}. Use \texttt{=skip} to omit the rule
+  but keep the space. Use \texttt{=none} to have no separator at all.
+
+\end{description}
+
+The other packages (\textsf{codep} and \textsf{verbfwr}) shipped with
+\textsf{examplep} do not have load options.
+
+
+\subsection{Interface to the \textsf{listings} package}\label{listings}
+
+The \textsf{listings} package \cite{listings} provides advanced typographic for display
+verbatim, including proper typesetting of tabulators and syntax highlighting
+for more than a hundred languages. \textsf{examplep} doesn't try to
+reimplement these features, but it supports calling the \textsf{listings}
+package to typeset the Source lines in display verbatim. The surroundings
+(line numbers, vertical separation, horizontal margins and the Sample) are
+not effected, only the Source line contents are passed to \textsf{listings}.
+This implies that the border and the background color support provided by the
+\textsf{listings} package doesn't work with \textsf{examplep}. To use the
+interface, the \textsf{listings} package must be loaded, and either the
+\textsf{listings=} or the \textsf{ttlistings=} options of \textsf{examplep}
+has to be active when the Source is typeset. Additional options
+can be specified to \textsf{listings} in the argument of \verb+\lstset+ at
+any time. The interface has been tested
+with the \textsf{listings} package dated 2000/08/23 and 2004/09/07.
+
+\textsf{examplep} treats tabulators (ASCII code 9) as 8 spaces. This is
+acceptable at the beginning of the line, but it may be incorrect elsewhere.
+To get tabs right, specify the \verb+ttlistings=yes+, or, to be more precise,
+the \verb+ttlistings={tabsize+\allowbreak\verb+=8}+ option to \textsf{examplep}. It is also
+possible to have visible tabulators: specify, for example,
+\verb+ttlistings={tabsize=8,showtabs}+. In our tests \textsf{listings} failed
+to detect the width of a character of a fixed width font, so
+\textsf{examplep} enforces character width using the natural width of the
+space each time it calls \textsf{listings}. This workaround made the
+\texttt{showtabs} \textsf{listings} option work properly.
+See the documentation of the
+\textsf{listings} package for options that affect the typesetting of
+Source line contents. See an example of using \textsf{listings} from
+\textsf{examplep} on page \pageref{pag:use-listings}.
+
+\textsf{listings} supports fixed width characters with a variable with fonts.
+However, this support seems to be broken when used with \textsf{examplep}, so
+the \texttt{columns=full\allowbreak flexible} \textsf{listings} option is enforced so
+proportional fonts will look proportional. Although the
+\textsf{listings} package claims that it has accented letter support, this
+didn't work well with the single-character accented letters input using
+the \textsf{inputenc} package (those characters were positioned to a wrong
+place inside the line, possibly because \textsf{listings} has failed to
+recognise that \verb+\lst@UseLostSpace\lst@+\allowbreak\verb+PrintToken+ has to be inserted
+in front of the accented character into its internal token list).
+\textsf{examplep} contains a work-around to this problem, with the following
+limitations: multibyte input encodings such as UTF-8 are not supported (will
+print strange error message); accented characters may not be part of keyword
+names in syntax highlighting; accented characters are shown as \verb+^^+ hex
+escapes in aligned mode (see in Subsection \ref{srcstyle}), so they don't
+work with \verb+\PexaShowBoth+.
+
+\textsf{listings}, when called from \textsf{examplep}, failed to break
+ligatures such as \verb+`?+ and \verb+<<+. This has the side effect that
+guillemots would be typeset instead of bitwise right shift in C language
+sources. \textsf{examplep} modifies
+the \verb+\lst@FillOutputBox@+ macro so it will add a \verb+\relax+ between
+each character displayed -- so all ligatures are broken. (This approach is
+quite differrent from the way \LaTeX{} disables a few ligatures
+with \verb+\@noligs+; \verb+\pexa@noligs+ is similar to \verb+\@noligs+ in
+this respect.)
+
+It is possible to customize the \textsf{listings} package so it typesets some
+strings differently. For example, with the
+\verb+literate={<=}{{$\leq$}}1+ \textsf{listings} option, all occurences of
+\verb+<=+ (even those inside strings of the target programming language)
+are typeset as $\leq$. There are no problems when using this feature from
+within \textsf{examplep}. It is also possible for strings and comments in the
+syntax-highlighted Source to span multiple lines -- \textsf{listings} takes
+care to remember its internal state between lines.
+
+
+\section{Commands and environments}
+
+The arguments between brackets (\verb+[+ and \verb+]+) are optional: either
+the the argument and the brackets are all missing all all present. The
+arguments named ``options'' is a comma-separated list of local customization
+options, defined in Section \ref{customization}. The \texttt{\{}$^+$ notation
+in front of an argument means that the argument can be delimited by braces
+(thus it must be properly nested), or with any symbol in
+\verb+\dospecials+ (%
+\verb+\+ \verb+$+ \verb+&+ \verb+#+ \verb+^+ \verb+_+ \verb+%+
+\verb+~+) %%%WF $
+or in \verb+\pexa@cverb@donormals+ (%
+\verb+`+ \verb+!+ \verb+@+ \verb+*+ \verb+-+ \verb-+- \verb+=+ \verb+|+
+\verb+:+ \verb+;+ \verb+'+ \verb+"+ \verb+,+ \verb+.+ \verb+/+ \verb+?+
+\verb+<+ \verb+>+ \verb+(+ \verb+)+ \verb+[+ \verb+]+).
+
+\begin{description}
+
+\def\cearg #1{{\normalfont\texttt{\{}$\langle  $\relax#1\relax$\rangle$\texttt{\}}}}
+\def\verarg#1{{\normalfont\texttt{\{}$^+\langle$\relax#1\relax$\rangle$\texttt{\}}}}
+\def\delarg#1{{\normalfont           $\langle  $\relax#1\relax$\rangle           $}}
+\def\optarg#1{{\normalfont[$\langle$\relax#1\relax$\rangle$]}}
+
+\item[\verbatizee{\PVerb}\optarg{options}\verarg{verbatimtext}]
+  Typesets its argument in inline verbatim mode. Similar to the \LaTeX{}
+  \verb+\verb+ macro, but respects the options. The use of \verb+[]+ is
+  recommended instead of omitting the options altogether, because \verb+[]+
+  will ensure that the proper catcode changes are in effect even for the
+  first verbatim character.
+  This command is robust.
+\item[\verbatizee{\PVerbH}\verarg{verbatimtext}]
+  Shorthand for \verb+\PVerb[pverb-hash=half]+\ \hskip0pt plus2pt
+  (extra options cannot be specified).
+  This command is robust.
+\item[\verbatizee{\PVerbInner\PVerb}\ldots]
+  Forces the \verb+\PVerb+\ldots{} command immediately following it to work
+  in inner mode, thus compressing spaces, respecting comment characters etc.
+  Because of how \TeX{} works, it is impossible to go the other way round,
+  and force outer mode, because it is too late change catcodes -- the
+  argument has already been tokenized in inner mode.
+  This command is robust.
+\item[\verbatizee{\PVerbOpt}\cearg{options}\verarg{verbatimtext}]
+  Equivalent to \verb+\PVerb+, but uses a different syntax.
+  For example, \verb+\item[\PVerb[pverb-space=visbreak]{xy+\allowbreak\verb+}]+ doesn't work
+  because of the nested \verb+[+. Use this instead:
+  \verb+\item[\PVerb+\allowbreak\verb+Opt{pverb-space=+\allowbreak\verb+visbreak}{xy}]+,
+  \hskip0pt plus4pt or \hskip0pt plus4pt 
+  \verb+\item[{\PVerb[pverb-space=+\allowbreak\verb+visbreak]{xy}}]+.
+  This command is robust.
+\item[\verbatizee{\Q}\cearg{verbatimtext}]
+  Similar to \verb+\PVerb+, but its argument must be escaped
+  (see in Subsection \ref{escaped}), and it can be used in section titles etc.
+  Must be enabled with \texttt{Q=yes}.
+  This command is robust.
+\item[$\div$\delarg{verbatimtext}$\div$]
+  Similar to \verb+\PVerb+, but it can be used in section titles etc. (but not
+  int \texttt{tabular}) (see in Subsection \ref{escaped}).
+  Must be enabled with \texttt{div=yes}.
+  This command is robust.
+\item[\textbackslash$\div$\delarg{verbatimtext}$\div$]
+  Equivalent to \verb+\Q+, but the argument delimiter is different.
+  Similar to \verb+\PVerb+, but its argument must be escaped
+  (see in Subsection \ref{escaped}), and it can be used in section titles etc.
+  Must be enabled with \texttt{bsdiv=yes}.
+  This command is robust.
+\item[\verbatizee{\url}\cearg{url}]
+  Must be enabled with \texttt{url=yes}.
+  This command is robust.
+%%%WF  az eleme jelet NE HASZNALD, osszesen 3-szor szerepel, irj
+%%%    valamit, hogy pl.: (after laoding verbfwr package)
+%%%    vagy valami hasonlot
+%% -- javítva
+\item[\verbatizee{\begin{WFile}}\cearg{filename}] (defined in the \textsf{verbfwr} package)
+  Writes its contents verbatim to the specified file.
+  \TeX{} \texttt{.tcx} and line ending transformations apply, so it is
+  possible that accented letters will be converted to \verb+^^+hex according
+  to the input encoding.
+\item[\verbatizee{\begin{WAux}}] (defined in the \textsf{verbfwr} package)
+  Writes its contents verbatim into the current \texttt{.aux} file.
+  \TeX{} \texttt{.tcx} and line ending transformations apply, so it is
+  possible that accented letters will be converted to \verb+^^+hex according
+  to the input encoding.
+\item[\verbatizee{\begin{PWSource}}\optarg{options}]
+  Comination of \verb+\begin{WSource}+ and \verb+\PexaShow+\allowbreak\verb+Source+.
+  It is recommended to have a \verb+[]+ even if there are no
+  options, so the very first token of the contents will be read with proper
+  catcodes.
+\item[\verbatizee{\begin{WBoth}}]
+  Writes its contents to the Source and the Sample temporary file. It is
+  a combination of \texttt{WSample} and \texttt{WSample}.
+\item[\verbatizee{\begin{WSample}}]
+  Writes its contents to the Sample temporary file (\texttt{pexa-sam.\allowbreak tex}),
+  to be typeset by a subsequent \verb+\PexaShowSample+ or
+  \verb+\PexaShowBoth+.
+  The line must end at \verb+\end{WSample}+ because of technical reasons.
+\item[\verbatizee{\begin{WSource}}]
+  Writes its contents to the Source temporary file (\texttt{pexa-src.\allowbreak tex}),
+  to be typeset by a subsequent \verb+\PexaShowSource+ or
+  \verb+\PexaShowBoth+. It is similar to
+  \verb+\begin{verbwrite}+ in the \texttt{sverb} package
+  and the \verb+\begin{+\allowbreak\verb+filecontents}+ \LaTeX{} built-in environment.
+  The line must end at \verb+\end{+\allowbreak\verb+WSource}+ because of technical reasons.
+\item[\verbatizee{\begin{PIgnore}}]
+  Ignores everything up to \verb+\end{PIgnore}+. The environment closer must
+  be at the end of its line. Similar to the \texttt{comment} environment in
+  some other packages.
+\item[\verbatizee{\begin{PSource}}\optarg{options}]
+  Typesets its contents in display verbatim. Similar to the \LaTeX{}
+  \verb+\begin{verbatim}+ environment, but respects the customization
+  options. It is recommended to have a \verb+[]+ even if there are no
+  options, so the very first token of the contents will be read with proper
+  catcodes. This environment is similar to \texttt{PWSource}, but it doesn't
+  create a temporary file, so it is faster, \texttt{srcstyle=leftboth} (etc.)
+  can be used, and there is no ambiguity between \verb+^^e1+ and
+  \texttt{\'a} (etc., see more in Subsection \ref{tcx}). Page breaks are
+  allowed between each Source line. (The implementation of this environment
+  is fairly complex compared to \texttt{PWSource}.)
+\item[\verbatizee{\begin{verbatim}}]
+  Equivalent to \verb+\begin{PSource}[]+.
+  Must be enabled with \texttt{verbatimenv=yes}.
+\item[\verbatizee{\begin{verbatim*}}]
+  Equivalent to \verb+\begin{PSource}[source-space=visbrea+\allowbreak\verb+k]+.
+  Must be enabled with \texttt{verbatimenv=yes}.
+\item[\verbatizee{\begin{PexaMinipage}}\optarg{vbox-type}\cearg{width}]
+  Similar to the \LaTeX{} \texttt{minipage} environment (and
+  accepts the same arguments), but 
+  isolates (concerning section numbers etc.) of its contents from the main
+  document more thoroughly. See Subsection \ref{pexaminipage} for
+  details of isolation.
+\item[\verbatizee{\PexaShowBoth}\cearg{options}]
+  Typeets the Source and the Sample side-by-side in display verbatim mode.
+  The Source comes from the temporary file written by the last
+  \texttt{WSource} or \texttt{WBoth} environment, and
+  the Sample comes from the temporary file written by the last
+  \texttt{WSample} or \texttt{WBoth} environment.
+  By default, a vertical separator line is drawn between the Source and the
+  Sample, and page breaks are allowed in the Source after the end of
+  Sample.
+  It can be called multiple times with different options for the same file.
+%\item[\verbatizee{\PexaShowBothMany}]% Dat: for internal use
+\item[\verbatizee{\PexaShowSample}\cearg{options}]
+  Typesets the Sample (written by\,the\,last
+  \texttt{WSample} or \texttt{WBoth} environment) in display mode.
+  It can be called multiple times with different options for the same file.
+%\item[\verbatizee{\PexaShowSampleMany}]% Dat: for internal use
+\item[\verbatizee{\PexaShowSource}\cearg{options}]
+  Equivalent to \verb+\PexaInputSource+ with the file written by the last
+  \texttt{WSource} or \texttt{WBoth} environment.
+  It can be called multiple times with different options for the same file.
+%\item[\verbatizee{\PexaShowSourceMany}]% Dat: for internal use
+\item[\verbatizee{\PexaInputSource}\cearg{filename}\cearg{options}]
+  Typesets the contents of the specified file as Source in display verbatim
+  mode.
+% \item[\verbatizee{\PexaAddlastskip}] (not used anymore, see comment in lb.sty)
+\item[\verbatizee{\begin{code}}] (defined in the \texttt{codep} package)
+  Typesets its contents side-by-side and also marks its contents to be dumped
+  to the CD. By default, each line is emitted to all 
+%%%WF  thre 
+  three
+%%%
+  streams, but lines
+  with special prefixes will go into the Source, Sample or CD-file stream
+  only. See Section \ref{code} for details.
+\item[\verbatizee{\PexaAllowBreak}]
+  Allows a line break here with a discreationary specified
+  in the option \texttt{pverb-linebreakchar=} inserted.
+\item[\verbatizee{\abreak}]
+  A robust command which
+  inserts \verb+\PexaAllowBreak+ when the font \verb+{\ttdefault}{m}{n}+
+  is active; inserts \verb+\allowbreak+ otherwise.
+  Must be enabled with \texttt{abreak=yes}.
+
+\end{description}
+
+\section{Writing examples with the \textsf{codep} package}\label{code}
+
+Textbooks and manuals tend to have many display verbatim examples. The
+examples are usually code snippets which can be further processed by a
+compiler or another program.
+Sometimes minor modifications, such as adding the proper header or trailer,
+are necessary before the code snippet can be processed. It is customary to
+put all code snippets in the book onto the CD accompanying the book. The
+\texttt{code} environment of the \textsf{codep} package (part of the
+\textsf{examplep} distribution) generates CD-files automatically.
+
+Three streams are generated from the contents of each \texttt{code}
+%%%WF environemnt: 
+environment:
+%%%
+the Source, the Sample and the CD-file streams. Most parts of
+these streams are identical. The Sample usually differs from the Source
+because the code snippet has to be typeset specially in the book (for
+example, \verb+\includegraphics+ has to be used to typeset an EPS file whose
+Source is displayed). The CD-file differs from Source because additional
+header and footer may be required (such as \verb+\begin{document}+ etc.),
+which are omitted from the book to conserve space.
+
+The \texttt{code} environment reads the code snippet line-by-line. The type
+of the line is specified in first two characters. Lines having the default
+type are written to all 3 streams, and special line types exist to write to a
+specific stream only. The \texttt{code} environment writes the Source and
+Sample streams to temporary files, and upon the end of the environment, it
+calls \verb+\PexaShowBoth+ (or \verb+\PexaShowSource+, if the Sample stream
+is empty) to typeset the example. The CD-file stream is not written to a file
+by \TeX{}, but the file name and starting line number of the \texttt{code}
+environment is reported in the \texttt{.aux} file. A \textsf{Perl} script
+(\textsf{wrfiles.pl}, part of the \textsf{examplep} distribution) has to be
+called later to the actual generaton of CD-files. It will examine the
+\texttt{.aux} files, extract the CD-file stream from the \texttt{.tex} files,
+and dump these streams to individual files in the \texttt{CDfiles} directory.
+The file names can be specified in the \texttt{code} enviroment, and the
+environment can generate file names based on chapter and page numbers (so the
+reader will know from the file name where to read more about the example).
+The same file name is never generated again.
+
+The \textsf{code} package was used in our recent \LaTeX{} textbook \cite{lakk}
+to typeset its examples. Most of the examples were written in \LaTeX{}, but
+many 
+%%%WF of of 
+of
+%%%
+them were \textsf{METAPOST} sources, and some of them were others
+(e.g.\ configuration files, shell scripts or EPS files). Because of the huge
+amount of \LaTeX{} examples, special features were added to make them easy
+and convenient to input for the author. For example,
+\begin{verbatim}
+\begin{code}
+t \usepackage{url}
+  URL:
+  \\\url{http://foo.org/~user/}
+\end{code}
+\end{verbatim}
+is displayed as (depending on the \textsf{examplep} options)
+\par\medskip
+\noindent\begin{tabular}{@{}l@{}l@{}l@{}}
+{\scriptsize1}\verb+%^\usepackage{url}+&\ \vrule\ \null&URL:\\
+{\scriptsize2}\verb+URL:+&\ \vrule\ \null&\verb+http//foo.org/~user/+\\
+{\scriptsize3}\verb+\\\url{http//foo.org/~user/}+&&\\
+\end{tabular}
+\par\medskip\par
+As seen above, examples are quite convenient to input, and \textsf{examplep}
+takes care of typesetting side-by-side, determining width of the Source,
+allowing page breaks, putting margins and \verb+\vskip+s right, adding the rule the
+separate the Source and the Sample, adding line numbers, generating file name
+for CD-file and writing the CD-file with header and footer.
+
+With \textsf{codep} it is easy to fulfill the following quality criterias:
+the Sample must be consistent with the Source (i.e.\ if the Source is
+changed during editing to book, the Sample should change automatically); the
+CD-file must be consistent with the Source; the CD-file must be directly
+compilable with \LaTeX{} (so a header and a footer have to be added). When
+the deadline of finishing the book approaches, there might not be enough time
+left to ensure these manually, so a package such as \textsf{codep} is very
+useful in this situation.
+
+\subsection{Example files on the CD}\label{codewritereasons}
+
+The following CD-file is generated from the code snippet above:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage[latin2]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[magyar]{babel}
+\usepackage{url}
+
+\begin{document}
+
+URL:
+\\\url{http://foo.org/~user/}
+
+\end{document}
+\end{verbatim}
+
+The \texttt{CodeDefaultD}, \texttt{CodeDefaultL}, \texttt{CodeDefaultB} and
+\texttt{CodeDefaultE} environments can be used in the preamble to customize
+the default header and footer generated into the CD-file. For example:
+\begin{verbatim}
+\begin{CodeDefaultD}
+\documentclass[10pt]{article}
+\end{CodeDefaultD}
+\begin{CodeDefaultL}
+\usepackage[latin2]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\end{CodeDefaultL}
+\end{verbatim}
+
+Although \TeX{} is able to write to external files with \verb+\textsfrite+, there
+were several reasons for using an external program (a \textsf{Perl} script) to
+extract the source snippets from the document sources:
+%
+\begin{itemize}
+
+\item with \verb+\write+ the file always ends at end-of-line
+\item \verb+\write+ forces \texttt{.tex} if no extension is specified
+\item \verb+\write+ removes whitespace from end-of-line
+\item \verb+\write+ translates accented letters to hat-escapes
+      (e.g.\ \texttt{á} to \verb+^+\verb+^e1+) unless
+      compiled with \texttt{latex --translate-file cp8bit.tcx}
+      (\texttt{--translate-file il2-t1.tcx} makes \texttt{\H{o}} in DVI
+      incorrect). There is the same problem when emitting UTF-8 text.
+\item it is impossible to distinguish missing files from empty files,
+      so accidental file overwrites are hard to prevent
+\item it is too late to verbatize if the verbatim text is inside
+      braced macro arguments
+
+\end{itemize}
+%
+The only limitations of this solution are: is not possible to \verb+\input+
+or \verb+\include+ a subfile, and then use the \texttt{code} environment in
+the referrer file; the subfile has to be included with
+\verb+\include{...}+ or \verb+\input{...}+ (with braces); 
+and the subfile must have extension \texttt{.tex}.
+The first one is usually not a problem, since referrer files themselves do not
+typeset text, they only include subfiles. See Subsection
+\ref{codeimpl} for implementation details.
+
+
+\subsection{\texttt{\textbackslash begin\{code\}} invocation}
+
+The input syntax of the \texttt{code} environment has been designed so that
+typing the most common examples (short \LaTeX{} code snippets) is simple and
+straightforward, but the author can have full control over all three streams
+if he wants to. The contents of the environment is divided into lines. The
+first two characters of each line specify the line type and the rest is the
+line data.
+% Lines with type \verb+% + are ignored.
+The first character of the line type is usually a lowercase
+ASCII letter or a punctuation symbol. Line types belong to classes, which are
+denoted by capital ASCII letters. The order of the classes in the environment
+is significant, but the order of the individual types or lines within the
+class is irrelevant. Some classes have default lines, which are used
+only if the class is omitted from the environment. The default lines make it
+possible to have default CD-file header and trailer. The clases, in proper
+order with allowed types in parentheses), are:
+%
+\begin{description}
+
+\item[F (f, f!, v, v!)] specify the file name.
+
+%    G |   |                         |ide visz egy F-beli parancs
+
+\item[D (d)] the \verb+\documentclass+ line, default uses article
+
+%%%WF kicsit fura, hogy a magyar a default, valami megjegyzessel itt
+%%%enyhiteni kellene, pl hogy ez hogy irhato folul...
+%% -- javítva
+\item[L (l)] the preamble specific to the natural language, defaults for
+  Hungarian \textsf{babel}, Latin-2 \textsf{inputenc}, T1 \textsf{fontenc}.
+  Use the \texttt{CodeDefaultL} environment to override.
+
+\item[P (p$\equiv$0, t)] the preamble with the \verb+\usepackage+ lines
+
+\item[B (b)] \verb+\begin{document}+
+
+\item[C (<$\equiv$c, >$\equiv$o, \textvisiblespace$\equiv$2, w, s, x, \%)] the document contents
+
+\item[E (e)] \verb+\end{document}+
+
+%    Z |   |                         |ide visz az \end{code}
+
+\end{description}
+%
+The meaning of the complicated types are:
+%
+\begin{description}
+
+\item[f] Accepts a file name with extension. The use of \verb+_+ in the name
+  is not recommended. The extension (e.g.\ \texttt{.tex}) is mandatory. The
+  chapter and page numbers will be prepended to the file name (only the
+  page number for document classes without chapters), for example
+  \texttt{f foo.mp} may become \texttt{2\textunderscore 63\textunderscore foo.mp} in chapter 2, on page 63.
+
+\item[v] Like \texttt{f}, but removes the default lines from classes
+  D, L, P, B and E. This is ideal for emitting non-\LaTeX{} examples.
+
+\item[f!] Like \texttt{f}, but don't prepend numbers to the file name.
+
+\item[v!] Like \texttt{v}, but don't prepend numbers to the file name.
+
+\item[p$\equiv$0] Writes only to the preamble of the CD-file.
+
+\item[t] Writes to CD-file, appends line prefixed by \verb+%^+
+  to Source. Useful to indicate in the book that a package is needed.
+  Example: \verb*+t \usepackage{url}+.
+
+\item[<$\equiv$c] Writes to Source and CD-file.
+\item[>] Writes only to Sample.
+\item[x] Writes to Sample and CD-file.
+\item[\textvisiblespace$\equiv$2] Writes %%%WF only 
+         to Source, CD-file and Sample.
+\item[w] Writes only to CD-file.
+\item[s] Writes only to Source.
+\item[\%] Comment, ignored.
+
+\end{description}
+
+The \texttt{code} environment omits the Sample part from the book if the
+Sample is empty,
+and it omits the whole display verbatim environment (but still writes to
+CD-files) if both the Sample and Source are empty.
+
+\subsection{An example with METAPOST code}
+
+If the \textsf{eempost} package is also loaded, the following code can be
+used to typeset a simple, syntax-highlighted \MP{} source and its output:
+\begin{verbatim}
+{\PexaDefaults{listings={language=metapost}}\begin{code}
+v house.mp
+> \begin{EempDef}{house.1}{}{}
+w beginfig(1)
+  u:=18bp; picture V; V:=image(
+    draw unitsquare scaled u xscaled 2;
+    fill (0,u)--(2u,u)--(u,1.5u)--cycle
+      withcolor red);
+  draw V rotated 10;
+  draw V shifted (3u,0);
+w endfig; end
+> \end{EempDef}
+> \leavevmode\EempUseFig{house.1}{0}{0}
+% ^^^ Dat: \leavevmode to get the Overfull \hbox warning
+\end{code}
+} % Dat: nothing allowed after \end{code} in its line
+\end{verbatim}
+%
+If \textsf{eempost} is not loaded, the following code should be used instead:
+%
+\begin{verbatim}
+{\PexaDefaults{listings={language=metapost}}\begin{code}
+v house.mp
+> \begin{WFile}{house.mp}
+x beginfig(2)
+  u:=18bp; picture V; V:=image(
+    draw unitsquare scaled u xscaled 2;
+    fill (0,u)--(2u,u)--(u,1.5u)--cycle
+      withcolor red);
+  draw V rotated 10;
+  draw V shifted (3u,0);
+x endfig; end
+> \end{WFile}
+> \leavevmode\includemps{house.2}
+\end{code}
+}
+\end{verbatim}
+The \verb+\includemps+ command should be defined in the preamble as:
+\begin{verbatim}
+\usepackage{graphicx}
+\DeclareGraphicsRule{*}{mps}{*}{}
+\makeatletter
+\@ifundefined{Ginclude@eps}{}{\def\Ginclude@mps{\Ginclude@eps}}
+\def\includemps{\@ifnextchar[\includempsb{\includempsb[]}}
+\def\includempsb[#1]#2{\includempsc{#1}#2\@nil}
+\def\includempsc#1#2.#3\@nil{%
+  \IfFileExists{#2.#3}{\includegraphics[#1]{#2.#3}}{
+  \GenericWarning{}{Please run: mpost #2^^J\@gobble}}}
+\makeatother
+\end{verbatim}
+This should work with both \textsf{dvips} and \textsf{pdflatex}. The typeset
+output looks like this:\label{pag:use-listings}
+\par\medskip
+\noindent\begin{tabular}{@{}l@{}l@{}l@{}}
+{\scriptsize1}u:=18\textbf{bp}; \textbf{picture} V; V:=\textbf{image}(          &\ \vrule\ \null&\\
+{\scriptsize2}\ \ \textbf{draw} \textbf{unitsquare} \textbf{scaled} u \textbf{xscaled} 2;&\ \vrule\ \null&\\
+{\scriptsize3}\ \ \textbf{fill} (0,u)$-${}$-$(2u,u)$-${}$-$(u,1.5u)$-${}$-$\textbf{cycle}&\ \vrule\ \null&
+  \setbox0\hbox{\includegraphics{houses}}\ht0=0pt \box0 \\
+{\scriptsize4}\ \ \ \ \textbf{withcolor} \textbf{red});		     &          &\\
+{\scriptsize5}\textbf{draw} V \textbf{rotated} 10;		     &          &\\
+{\scriptsize6}\textbf{draw} V \textbf{shifted} (3u,0);		     &          &\\
+\end{tabular}
+\par\medskip\par
+
+
+\section{Some implementation details}
+
+\subsection{Starting from poor man's inline verbatim}
+
+The following macro, derived from a macro in the \texttt{.dtx} documentation
+of David Kastrup's \textsf{binhex} package \cite{binhex},
+typesets its argument in inline verbatim mode:
+%
+\begin{verbatim}
+{\catcode\string`>12 \gdef\stripprefix#1>{}}
+\def\verbatize#1{{\ttfamily
+   \toks0{#1}\edef\next{\the\toks0}% Dat: make # OK
+   \fontdimen2\font=0pt % Dat: hide spaces
+   \expandafter\stripprefix\meaning\next
+   \unskip % Dat: strip final space, possibly after command
+   \fontdimen2\font=\dimen0}}% Dat: reset global change
+\end{verbatim}
+%
+This demonstration show how useful the \TeX{} primitives \verb+\string+ and
+\verb+\meaning+ are. Both of them convert tokens to characters with catcode
+12 (other) or 10 (space). Token lists with spaces are hard to post-process by
+\TeX{} macros, because \TeX{} macro expansion ignores spaces before
+undelimited macro arguments. But it is possible to write a macro which
+converts spaces to anything with catcode 12, for example the \verb+\sca+
+macro below does this:
+%
+\begin{verbatim}
+\begingroup\catcode\string``12 \lccode```\%\lowercase{\endgroup
+  \def\scc#1 {\ifx\hfuzz#1\else#1`\expandafter\scc\fi}}
+\def\scb#1#2{\scc#2\hfuzz#1} \def\sca{\scb{ }}
+% try with: \message{\sca{foo  bar }}
+\end{verbatim}
+%
+It is possible to change \verb+%+
+in the definition above to anything, including a space: the replacement
+character will have catcode 12. After such a conversion, the text to be
+emitted can be easily processed to add \TeX{} macros, change catcodes back to
+13 for ISO Latin high accented characters, replace spaces with appropriate
+constructs, insert \verb+\allowbreak+ to the right places to enable line
+breaks etc. The \verb+\PVerb+ macro, when invoked in inner mode (i.e.\ read
+inside a macro argument) works this way, and respects the options specified
+by the author.
+
+\subsection{Hex escapes with output translation}\label{tcx}
+
+The \TeX{} primitives \verb+\write+, \verb+\message+ and \verb+\errmessage+
+may escape some characters when printing them. By default, \TeX{} changes the
+code ranges 0--31 and 127--255 (the codes outside the printable ASCII range),
+escaping such codes with a \verb+^^+: for example,
+the tabulator (code 9) becomes \verb+^^I+, and characters having a high code
+in the font (not the input) encoding are dumped in hexadecimal, for example
+\texttt{\H{o}} (having code 174 in T1 encoding) becomes \texttt{^^ae}.
+(This behaviour depends on the default \texttt{.tcx} file the \TeX{}
+distribution uses. No translation occurs with \textsf{cp8bit.tcx}.
+To spot the difference, run
+\verb+tex -translate-file cp8bit "\messa+\allowbreak\verb+ge{^^I^^1f+\allowbreak\verb+á}\end"+, and then change
+\texttt{cp8bit} to \texttt{.missing.}, and run again.)
+The transformation is lossy: %, for example % e.g.\
+both
+\verb+\message{+\texttt{\H{o}}\verb+}+ and
+\verb+\message{\string^^ae}+ yield the same result: \verb+^^ae+. Escaping the caret
+as \verb+^^5e+ doesn't help either, because the \TeX{} unescapes carets
+recursively when reading back the written file. Since ISO Latin
+accented characters are
+more often needed in verbatim environments than double carets,
+\textsf{examplep} does the necessary unescaping when it reads the file back.
+% Dat: doesn't work The back-transformation works with UTF-8, too, because it is timed properly.
+The back-transformation doesn't work with UTF-8, because the 2nd byte is not
+decoded by the time the first one is being executed.
+The unescaping would be done by \TeX{} itself if the caret had its original
+catcode 7, but that would imply that the non-escaping, verbatim carets
+wouldn't work.
+
+The unescaping is implemented in a straighforward, but ugly way in the
+\verb+\pexa@dohex@low+\ldots{} macros. The caret escapes are parsed in a
+huge \verb+\if+%\ldots
+\verb+\else+\allowbreak\verb+\if+ construct nested in 40 levels, and once
+the hexadecimal code is available and converted to upper case, the
+\verb|\lccode`+="|$\langle$code$\rangle$\verb*|\lowercase{+}| construct is
+used to insert the appropriate character with catcode 12 (\verb+~+ is
+used instead of \verb|+| to get an active character, catcode 13). The
+construct is not expandable, but it works because it is used for typesetting.
+The caret is made active and defined to execute \verb+\pexa@dohex+, so each
+caret in the file will get unescped.
+
+\subsection{Disabling ligatures}
+
+The only way to disable a ligature in \TeX{} is to insert a nonexpandable
+tokens into the input stream between the characters forming the ligature.
+For example, \verb+f{}i+ or \verb+f\relax i+ can be used to get ``f{}i''
+instead of ``fi''. The most important ligatures (in addition to ligature
+letters) to be disabled in verbatim mode are:
+\verb+<<+ \verb+>>+ \verb+?`+ \verb+!`+ \verb+,,+ \verb+``+ \verb+''+
+\verb+--+ and \verb+---+. This can be accomplised by inserting a \verb+\relax+
+token in front of each \verb+`+ \verb+'+ \verb+,+ \verb+-+ \verb+<+
+and \verb+>+. The \verb+\pexa@noligs@some+ command of \textsf{examplep} does
+exactly this, for example, it defines
+\verb+{\lccode`~`<13 \gdef~{\relax+\allowbreak\verb+\string~}}+. The definition
+slightly different from the one of the \verb+\@noligs+ command in the
+\LaTeX{} kernel: \verb+\def<{\leavevmode\kern\z@\char`\<}+; but the effect is
+the same.  The \verb+\pexa@noligs@most+ command, on the other hand, makes
+all characters with category code 12 in the range 32\ldots127 active, and
+adds \verb+\relax+ to both sides. This change doesn't affect ASCII or
+accented letters, but usually there are no ligatures with letters in
+typewriter fonts. See also the \texttt{noligs=} load option.
+
+\subsection{Detecting inner/outer brace in inline verbatim mode}
+
+The \verb+\PVerb+ commands work differently based on whether they are inside
+a macro argument or not. More precisely, they detect whether they are able
+to change the catcode of the following token. If so, they are in outer mode
+(i.e.\ outside a macro argument), so they change all the other catcodes as
+well, so consecutive spaces and comment characters will be included in
+verbatim, too. Otherwise, they are in inner mode, their argument is already
+read and tokenized by \TeX{}'s eyes, so changing catcodes is pointless.
+
+The auto-detection works this way: the catcode of all the special characters
+(as enumerated in \verb+\dospecials+; including braces) is changed to 3
+(math-shift). Then the next token is read into \verb+\reserved@a+ with
+\verb*+\afterassignment\pexa@+\allowbreak\verb+cverb@gottoken\let\reserved@a= +. No tokens are
+ignored this way, not even spaces. The \verb+\pexa@cverb@gottoken+ macro then
+examines the catcode of the character in
+\verb+\reserved@a+, and if it is 3, it continues in
+outer mode, otherwise it continues in inner mode. In inner mode, the next
+token is forced to be an open-brace, because verbatim material with braces
+not nested cannot be read into inner mode anyway (\TeX{} would print an error
+message when it is trying to find the end of the macro argument containing
+the \verb+\PVerb+ construct).
+
+Another common trick is used when parsing the argument in outer mode when it
+is delimited by braces. Normally a \TeX{} macro expansion
+(using the definition \verb+\def\pexa@cverb@outerc#1{...}+) can read an
+argument that is in braces, but in our case the very first opening brace has
+been already read (by \verb+\let+ above), so we have to insert it back:
+\verb+\catcode`\{1 \catcode`\}2 \ex+\allowbreak\verb+pandafter\pexa@cverb@outerc\expandafter{\iffalse}\fi+.
+The \verb+\iffalse+\allowbreak\verb+}\fi+ here is needed for making the definition properly
+nested.
+
+\subsection{Inline verbatim in section titles}
+
+The \TeX{} command \verb+\write+, \verb+\message+ and \verb+\edef+ fully
+expand their arguments, and similar expansion is enforced by the
+\verb+\markboth+ built-in \LaTeX{} macro for section titles and page
+headings. Therefore macros in section titles have to be protected so their
+expansion is delayed until the section title is typeset. \LaTeX{} offers
+\verb+\protect+ for this: if the macro control sequence is preceded by
+\verb+\protect+, its expansion is properly delayed; the expansion of the
+argument has to be delayed manually in a similar way. Some macros have
+\verb+\protect+ion included; they are called ``robust''. If the definition a
+macro starts with \verb+\DeclareRobustCommand+ instead of \verb+\newcommand+,
+the macro is defined to be robust (and its body can be retrieved by looking
+at the control sequence with a space added, e.g.\
+\verb*+\expandafter\show\csname sqrt \endcsname+).
+
+\verb+\protect+ can have three definitions depending on what time it is
+processed: it is \verb+\string+ in a \verb+\typeout+ or a \LaTeX{} error or
+warning message (try \verb+\typeout{\meaning\protect}+);
+it is \verb+\noexpand\protect\noexpand+ when
+\verb+\write+ing to a file (most commonly the \texttt{.aux} file); otherwise
+it is just \verb+\relax+ ($\equiv{}$\verb+\@typeset@protect+; try
+\verb+\pagestyle{headings}\section{\meaning\pro+\allowbreak\verb+tect}+ and spot the difference
+between the main text, the section title and the \texttt{.aux} file).
+
+The \verb+\÷+ and \verb+\Q+ inline verbatim commands are made robust, so they
+can be used in macro arguments. In fact, they are extra-robust, since they
+take care of protecting their arguments when being written to a file by
+\LaTeX{}. Protecting here means adding \verb+\noexpand+ in front of each
+token in the argument. The token parsing is easy since the argument -- by the
+nature of these commands -- may not contain braces or spaces. The
+implementation looks like this.
+%
+\begin{verbatim}
+\long\def\÷#1÷{\Q{#1}}
+\long\def\Q{\ifx\protect\@typeset@protect\expandafter\@gobble\fi
+  \@thirdofthree\@firstoftwo\displayit\protectit}
+\def\displayit#1{...}
+\def\protectit#1{\noexpand\÷\protectnext#1÷}
+\long\def\protectnext#1{\noexpand#1%
+  \ifx#1÷\else\expandafter\protectnext\fi}
+\end{verbatim}
+%
+The first trick is in the body of \verb+\Q+: the argument is passed to
+either \verb+\displayit+ or \verb+\protectit+, depending on the current value
+of \verb+\protect+. If the condition is true, \verb+\@gobble+ is called,
+which removes \verb+\@thirdofthree+, so \verb+\@firstoftwo+ will choose
+\verb+\displayit+ (otherwise, \verb+\@thirdofthree+ chooses
+\verb+\protectit+).
+The second, more classical trick is the r\^ole of
+\verb+\expandafter+ in the definition of \verb+\protectnext+: it makes the
+\verb+\fi+ token disappear, so the tail-recursive call to \verb+\protectnext+
+will grab the next token into \verb+#1+ instead of \verb+\fi+ itself.
+
+
+\subsection{Special hyphenchar in inline verbatim}\label{char'30}
+
+When inline verbatim is hyphenated, care has to be taken to make the
+discretionary hyphen different from a regular, verbatim hyphen. (There is a
+similar problem with spaces disappearing when the line is broken; to avoid
+this, try setting the option \texttt{pverb-space=visbreak} or
+\texttt{pverb-space=invdisc}.) \TeX{} auto-hyphenation takes the
+discretionary hyphen from the \verb+\hyphenchar+ of the font. So the solution
+is adding a new glyph to the verbatim font, changing the font encoding
+vector to include the glyph, and then setting \verb+\hyphenchar+.
+
+We have chosen character position 24 (per-thousand sign) of the T1 encoding to
+be replaced by a soft hyphen (\includegraphics[scale=0.009]{shorthyp_t1xtts}),
+which is deliberately narrower than all the other characters, so the
+reader immediately sees its function. For example:
+``\texttt{foo\includegraphics[scale=0.009]{shorthyp_t1xtts}\break bar}''.
+We have drawn the glyph in \textsf{Fontforge}, saved the data to PFB,
+converted it to human-readable format with the command
+\texttt{type1fix.pl shorthyp.pfb gsx: shorthyp.gsx}, extracted the human
+readable glyph definition (\verb+/short+\allowbreak\verb+hyp { ... }+) from the output.
+We have changed the \texttt{/FontName} and
+injected the glyph to original font with the following command:
+%
+\begin{verbatim}
+perl -x -S type1fix.pl --set-leniv=0 --dump-spaces=no --pack \
+  --dump-bars --dump-stde --dump-ends=no --debug-warnings \
+  --chk-insize=no --set-uniqueid=random --set-fontname=t1xtts \
+  --set-glyph="/shorthyp { 50 354 hsbw 315 vmoveto -17 vlineto 0
+  -8 0 -8 6 -4 rrcurveto 4 -6 8 0 5 0 rrcurveto 195 hlineto -124
+  vlineto -11 0 -21 15 vhcurveto 2 0 3 1 2 1 rrcurveto 10 2 1 12
+  0 12 rrcurveto 0 8 -1 8 0 5 rrcurveto 130 vlineto 0 5 1 7 0 7
+  rrcurveto 0 12 -2 11 -11 3 rrcurveto -5 1 -6 0 -5 0 rrcurveto
+  -12 0 -12 -1 -10 0 rrcurveto -98 hlineto -16 0 -19 2 -17 0
+  rrcurveto -32 -6 -3 -24 hvcurveto closepath endchar} def" \
+  t1xtt.pfb pfb: t1xtt-shorthyp.pfb
+\end{verbatim}
+%
+We have changed six lines in \textsf{tex256.enc} to match the glyph names
+in the font (e.g. \texttt{/endash} $\to$ \texttt{/rangedash}), and we have
+changed position 24 to \texttt{/shorthyp}. We have also changed the name of
+the encoding in the beginning of the file. We have inserted the following
+line to the PostScript font map files (e.g.\ \textsf{psfonts.map}), without
+the line break:
+%
+%   into psfonts.map:
+%   ul9r8r LuxiMono "TeXBase1-shorthypEncoding ReEncodeFont" <8r-shorthyp.enc <ul9r8a-shorthyp.pfb
+\begin{verbatim}
+t1xtts t1xtts "TeX256-shorthypEncoding ReEncodeFont"
+  <tex256-shorthyp.enc <t1xtt-shorthyp.pfb
+\end{verbatim}
+%
+We have
+also added a new TFM file based on the old one. We have dumped the old one
+with \texttt{tftopl -charcode-format=octal t1xtt.tfm}, modified the
+width (\texttt{CHARWD}) of character 24 (\texttt{CHARACTER O 30}), and saved
+the modifications with \texttt{pltotf modified.pl t1xtts.tfm}.
+We've added the \LaTeX{} font map file \textsf{t1xtts.fd} with the following
+content:
+%
+\begin{verbatim}
+\DeclareFontFamily{T1}{xtts}{\hyphenchar\font\m@ne}
+\DeclareFontShape {T1}{xtts}{m}{n}{<->t1xtts}
+\end{verbatim}
+%
+The \verb+\hyphenchar+ settings above disables automatic word hyphenation, so
+words inside \verb+\texttt+ etc.\ won't be accidentally hyphenated. We have
+copied all the files above to the appropriate directories and we have run
+\textsf{mktexlsr} to update the file list. We have included some options in
+\verb+\PexaDefaults+ line in the document preamble:
+  \texttt{pverb-hyphenchar=char'30} (for automatic word hyphenation)
+  \texttt{pverb-linebreak=char},
+  \texttt{pverb-linebreakchar=}\verb*+{\string\char'30 }+ (insert\-ed around symbols).
+We have also defined
+\verb+\def\pexa@verbatimfont{\normal+\allowbreak\verb+font\fontfamily{xtts}\selectfont}+,
+and we have made sure that the T1 encoding is in use
+(\verb+\usepackage{t1enc}+).
+
+The overall effect of these modifications was that \textsf{examplep} now used
+our glyph for automatic word hyphenation and as discreationary hyphen around
+symbols in inline verbatim mode. The demonstrations above shows that it is
+quite complicated to change a single glyph in a \LaTeX{} font. It is hoped
+that the situtation will improve with \TeX's successors.
+
+
+\subsection{Passing information about the CD-files to \textsf{wrfiles.pl}}\label{codeimpl}
+
+\textsf{wrfiles.pl} is used to extract the CD-files from the \LaTeX{} sources
+of a book. The reasons why an external program is used instead of \TeX{}'s
+built-in \verb+\write+ command are described in Subsection
+\ref{codewritereasons}.
+
+The file names and environment start line numbers are passed to
+\textsf{wrfiles.pl} in the \texttt{.aux} file(s). For example, the line
+\verb+\@gobble{code:foo.tex:156:2_pic3.+\allowbreak\verb+mp}+ is a declaration that there is a
+\texttt{code} environment starting at line 156 in the file \texttt{foo.tex}.
+\textsf{wrfiles.pl} understands such declarations, and it also understands
+lines like \verb+\@input{foo1.aux}+, so dumping works even if the document is
+separated to several \verb+\include+d source files. The declaration above is
+ignored by \LaTeX{} when it reads back the \texttt{.aux} file (because
+\verb+\@gobble+ gobbles its argument).
+
+Although the \verb+\inputlineno+ primitive is mentioned twice in the
+\TeX{}book \cite{texbook}, its -- rather straightforward -- purpose is not
+documented there. But the real problem is that \TeX{} doesn't remember the
+name of the file being read. \verb+\jobname+ contains the name of the
+top-level \texttt{.tex} file, so it doesn't work when that file
+\verb+\include+s or \verb+\input+s subfiles containing \texttt{code}. The
+\textsf{codep} package thus modifies the \verb+\InputIfFileExists+ command to
+save the file name to the macro \verb+\codep@code@@inputfile+ if the
+extension is \texttt{.tex}. (The other most common extension after the preamble is
+\texttt{.fd}: such a file is loaded each time a \LaTeX{} font that has not
+been used yet is selected.) The implicit limitation here that \texttt{code}
+won't work unless the extension of the file included is \texttt{.tex}.
+Hooking \verb+\InputIfFileExists+ affects \verb+\include{...}+ and
+\verb+\input{...}+, but not not \verb*+\input ...+, \verb+\documentclass+ or
+\verb+\usepackage+. This is not a problem if the author remember that he has
+to use braces around the file name.
+
+Since there is no hook for \verb+\endinput+ (and some packages rely on that
+\verb+\endinput+ is an expandable primitive), it is not possible to set up a
+stack of names of files being read. Thus, if file $A$ has included file $B$,
+an after that \texttt{code} environment placed in $A$ will not work, because
+the declaration line read by \textsf{wrfiles.pl} will contain the name of $B$
+instead of $A$. This is not a serious limitation, becase files including
+other files usually don't typeset text by themselves after the inclusion.
+
+The primary reason why \textsf{wrfiles.pl} needs the \texttt{.aux}
+file is that it has to embed the page and chapter numbers into the file
+names. Although \textsf{wrfiles.pl} could find the source file with the
+\texttt{code} environments by trying to match line numbers with all source
+files in the current directory, we have decided to make it fail when the file
+name is not emitted properly into the declaration, so it is sure that the
+examples in the book and on the CD are consistent.
+
+
+\section{Future work}
+
+The most important features to be added and other improvement possibilites:
+
+\begin{itemize}
+
+%\item func-tion better hyphenation point in \verb+\Q+ than functi-on
+\item a better approach towards automatic hyphenation of inline verbatim,
+      after studies in typography
+\item allow wider sample if source is small enough
+\item why doesn't \verb+\selectlanguage+ work inside
+  \verb+\begin{PSource}[srcstyle=+\allowbreak\verb+leftboth]+
+\item \verb+\PVerb{foo}+ mustn't insert ``$\lnot$'' if foo is at end-of-line
+\item \verb+\PVerb{...}+ inner unnested braces (\verb+\futurelet+?)
+\item differentiated \verb+\penalty+ values in \verb+\PVerb+
+\item paragraph mode should work with side-by-side displays (of course,
+      measuring the width of the Source has still to be done in aligned mode)
+\item ASCII tabulator (9) characters aren't supported properly, they are just
+  converted to spaces. The width of the tab character should depend on its
+  horizontal position in the line. (With \texttt{listings=}, the results are
+  already correct.)
+\item framing and background color support to display verbatim
+\item accented characters should work with \textsf{listings} and
+      \verb+\PexaShowBoth+. The original catcode of \verb+^+ should be kept
+      so \TeX{} itself would parse the hex escapes.
+\item an interface to \verb+\lstinline+ in \textsf{listings}, with line
+      breaks allowed
+\end{itemize}
+
+\section{Conclusion}
+
+\textsf{examplep}, as it is now, is a highly customizable \LaTeX{} package
+that provides both inline and display verbatim mode with several advanced
+features, many of which are not available in any other packages. The
+\textsf{code} environment is also provided which can typeset both the Source
+and the Sample column of a side-by-side display verbatim from the same
+\LaTeX{} source stream, furthermore it can emit the stand-alone working
+version of the Source into a CD-file. These features make the \textsf{code}
+environment especially useful for sofware textbook and manual authoring. The
+whole \textsf{examplep} distribution is under the GNU GPL, and it is freely
+available from CTAN. An earlier version of the packages was used to typeset
+all the examples in a 770-page introductionary book about \LaTeX{}.
+
+\textsf{examplep} is not complete. Some important features are not
+implemented yet and the package has not been tested thoroughly. Some parts of
+the code are really ugly, partially because it has not been polished up after
+writing, and partially because the architecture of \TeX{} and \LaTeX{}
+doesn't provide an elegant way to address the problem. For example, active
+characters are overloaded: they are used by \textsf{inputenc}, \textsf{babel}
+(shorthands) and \textsf{listings} (syntax highlighting) for different
+purposes -- these packages have to make extra effort to cooperate with each
+other. We hope that \TeX's successors will improve these
+conditions, and the core system will provide a generic way to tokenize
+verbatim text instead of changing catcodes.
+
+\iffalse
+\bibliographystyle{plain}
+\bibliography{eurotex_2005_examplep}
+\else
+\begin{thebibliography}{1}
+
+\bibitem{listings}
+Carsten Heinz.
+\newblock {\em The \textsf{Listings} Package}, 7~September 2004.
+\newblock \\CTAN:\texttt{macros/latex/contrib/listings/listings-1.3.dtx}.
+
+\bibitem{binhex}
+David Kastrup.
+\newblock {\em The \texttt{binhex.tex} package for expansible conversion into
+  binary-based number systems}, 2001.
+\newblock \\CTAN:\texttt{macros/generic/kastrup/binhex.dtx}.
+
+\bibitem{texbook}
+Donald~E. Knuth.
+\newblock {\em The {{\TeX}book}}.
+\newblock Addison--Wesley, 1984.
+
+\bibitem{lakk}
+Ferenc Wettl, Gyula Mayer, and P\'eter Szab\'o.
+\newblock {\em {\LaTeX} k\'ezik\"onyv}.
+\newblock Panem, Budapest, 2004.
+
+\bibitem{fancyvrb}
+Timothy~Van Zandt, Denis Girou, and Sebastian Rahtz.
+\newblock {\em The `\textsf{fancyvrb}' package. Fancy Verbatims in \LaTeX{}},
+  1998.
+\newblock \\CTAN:\texttt{macros/latex/contrib/fancyvrb/fancyvrb.dtx}.
+
+\end{thebibliography}
+\fi
+
+\end{document}

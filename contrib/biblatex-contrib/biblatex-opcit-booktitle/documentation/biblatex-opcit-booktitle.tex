@@ -1,0 +1,270 @@
+\documentclass{ltxdockit}[2011/03/25]
+\usepackage{btxdockit}
+\usepackage{fontspec}
+\usepackage[mono=false]{libertine}
+\usepackage{microtype}
+\usepackage[american]{babel}
+\usepackage[strict]{csquotes}
+\setmonofont[Scale=MatchLowercase]{DejaVu Sans Mono}
+\usepackage{shortvrb}
+\usepackage{pifont}
+\usepackage{minted}
+\setminted{breaklines}
+\hypersetup{citecolor=black}
+% Usefull commands
+\newcommand{\biblatex}{biblatex\xspace}
+\pretocmd{\bibfield}{\sloppy}{}{}
+\pretocmd{\bibtype}{\sloppy}{}{}
+\newcommand{\namebibstyle}[1]{\texttt{#1}}
+% Meta-datas
+\titlepage{%
+  title={\emph{Op. cit.} for booktitle field},
+  subtitle={Abbreviated references},
+  email={maieul <at> maieul <dot> net},
+  author={Maïeul Rouquette},
+  revision={1.8.0},
+  date={2017/03/27},
+  url={https://git.framasoft.org/maieul/biblatex-opcit-booktitle}}
+
+% biblatex
+\usepackage[citestyle=verbose-trad2]{biblatex}
+\addbibresource{biblatex-opcit-booktitle-example.bib}
+\usepackage{biblatex-opcit-booktitle}
+
+\begin{document}
+
+\printtitlepage
+\tableofcontents
+
+
+\section{Aim of the package}
+
+The default citation styles \verb+verbose-trad1+;\verb+verbose-trad2+;\verb+verbose-trad3+ use the \emph{op. cit.} form in order to have shorter reference when a title have been already cited.
+
+However, when you cite two  entries which share the same \bibfield{booktitle} but not the same \bibfield{title}, the \emph{op. cit.} mechanism does not work.
+
+For example we obtain the following example:
+
+\begin{quotation}
+\makeatletter
+\cite{Pleiade_Barnabe}
+
+\csundef{blx@bsee@\the\c@refsection}
+
+\cite{Pseudo-Hippolyte}
+
+\csundef{blx@bsee@\the\c@refsection}
+
+\cite{Pleiade_Tite}
+
+\csundef{blx@bsee@\the\c@refsection}
+
+\cite{Pseudo-Epiphane}
+\makeatother
+\end{quotation}
+
+While we would like to obtain:
+
+\citereset
+
+
+\begin{quotation}
+
+\cite{Pleiade_Barnabe}
+
+\cite{Pseudo-Hippolyte}
+
+\cite{Pleiade_Tite}
+
+\cite{Pseudo-Epiphane}
+\end{quotation}
+
+The aim of this package is to enable such abbreviation.
+
+\section{Use}
+
+The \verb+biblatex-opcit-booktitle+ package must be loaded after the \verb+biblatex+ package, which must be at version 3.4 or greater. You must use a \verb+verbose-trad+ citation style. For example:
+
+\begin{minted}{latex}
+\usepackage[bibstyle=verbose,citestyle=verbose-trad1,citepages=omit]{biblatex}
+\usepackage{biblatex-opcit-booktitle}
+\end{minted}
+
+In order to know when two entry share the same \bibfield{booktitle}, you must use the crossref mechanism of \biblatex. In the case of the previous example, we used:
+\begin{minted}{latex}
+@book{Pleiade2,
+  Address = {Paris},
+  Number = {516},
+  Publisher = {Gallimard},
+  Series = {Bibliothèque de la Pléiade},
+  Title = {Écrits apocryphes chrétiens},
+  Volume = {2},
+  Year = {2005}}
+
+@bookinbook{Pleiade_Barnabe,
+  Annotator = {Enrico Norelli},
+  Crossref = {Pleiade2},
+  Pages = {627-642},
+  Title = {Actes de Barnabé},
+  Translator = {Enrico Norelli}}
+
+@bookinbook{Pleiade_Tite,
+  Annotator = {Willy Rordorf},
+  Bhg = {1850z},
+  Crossref = {Pleiade2},
+  Pages = {609-615},
+  Title = {Actes de Tite},
+  Translator = {Willy Rordorf}}
+
+@book{Schermann1907,
+  Address = {Leipzig},
+  Editor = {Theodor Schermann},
+  Publisher = {Teubner},
+  Title = {Prophetarum vitae fabulosae indices apostolorum discipulorumque Domini Dorotheo · Epiphanio · Hippolyto aliisque vindicata},
+  Year = {1907}
+}
+
+@bookinbook{Pseudo-Hippolyte,
+  Author = {{Pseudo-Hippolyte}},
+  Crossref = {Schermann1907},
+  Pages = {163-170},
+  Title = {Index apostolorum discipulorumque Domini}}
+
+@bookinbook{Pseudo-Epiphane,
+  Author = {{Pseudo-Épiphane}},
+  Crossref = {Schermann1907},
+  Pages = {107-126},
+  Title = {Index apostolorum discipulorumque Domini}}
+\end{minted}
+
+There is not other thing to do!
+
+The feature works with these entrytypes:  \bibtype{inbook}, \bibtype{incollection}, \bibtype{inproceedings}, \bibtype{bookinbook}. 
+
+If you define a \bibfield{shorttitle} in the main entry, it will be used instead of the full title when we need an abbreviated form.
+\subsection{Limits}
+
+We have not implemented options to use abbreviation like \verb+ibid+, because we want to have not ambiguous abbreviated forms. 
+
+If you have redefined the \verb+cite+ bibliographic macro, you must changes:
+\begin{minted}{latex}
+\usebibmacro{cite:full}%
+       \usebibmacro{cite:save}
+\end{minted}
+
+by:
+
+\begin{minted}{latex}
+\usebibmacro{cite:test:ifrelated}
+\end{minted}
+
+\subsection{Use with own citation style}
+
+If you have created your own citation style file (\verb.+cbx.), you must create a bibliographic driver called \verb+inbook:rel:<yourcitationstyle>+. You can look at the model \verb+inbook:rel:verbose-trad-xxx+  in the .sty file, or just use \cs{DeclareBibliographyAlias} to use an already existing model.
+
+If your citation style is public (i. e. published on CTAN), please contact us: we could provide the bibliographic driver directly in this package.
+
+If you have created your own \verb+cite+ bibmacro, this bibmacro must call, directly or indirectly the `cite:test:ifrelated` bibmacro (or your adaptation of this bibmacro).
+
+
+\subsection{Customization}
+
+You can change the \verb+inbook:rel:verbose-trad-xxx+ bibliographic driver to customize the way the main title is printed, \verb+xxx+ meaning 1, 2, or 3, depending of you specific citation style.
+
+\subsection{Use with new entrytypes}
+
+If you create new entrytypes, as the \emph{biblatex-bookintother} package does, you can let know to \emph{biblatex-opcit-booktitle} that these entry types are concerned by using short form of the main entry.
+ 
+
+To do it, just add in your \verb+.bbx+ or \verb+.dbx+ file:
+\begin{minted}{latex}
+\listadd\opcit@booktitle@entrytypes{<newentrytype>}
+\end{minted}
+
+\verb+<newentrytype>+ must be the new sub-entrytype concerned. For example, the \emph{biblatex-bookinother} package contains:
+
+\begin{minted}{latex}
+\listadd\opcit@booktitle@entrytypes{inarticle}
+\end{minted}
+
+In general, you want to have the volume number after the title of the volume. However, for some case, it could be useful to not have it. In this case, add you subtype entry to the \verb+\opcit@booktitle@entrytypes@novolume+ list. For example, the \emph{biblatex-bookinother} package contains:
+
+\begin{minted}{latex}
+\listadd\opcit@booktitle@entrytypes@novolume{inarticle}
+\end{minted}
+
+Depending of the fields of the new entry, you could have to modify the \verb+inbook:rel:verbose-trad-xxx+. But in this case, please contact us, in order to know if we could provide a generic mechanism directly in this package.
+\section{Credits}
+
+
+
+This package was created for Maïeul Rouquette's phd dissertation\footnote{\url{http://apocryphes.hypothese.org}.} in 2015. It is freely inspired by Paul Stanley code.\footnote{\url{http://tex.stackexchange.com/a/172777/7712}.} It is licensed on the \emph{\LaTeX\ Project Public License}.\footnote{\url{http://latex-project.org/lppl/lppl-1-3c.html}.}.
+
+
+All issues can be submitted, in French or English, in the Framasoft issues page\footnote{\url{https://git.framasoft.org/maieul/biblatex-opcit-booktitle/issues}.}.
+
+
+\section{Change history}
+
+
+\begin{changelog}
+
+\begin{release}{1.8.0}{2016-03-27}
+  \item Add support entrytype where you don't need to print volume number.
+\end{release}
+
+\begin{release}{1.7.0}{2016-09-08}
+  \item Add support for the \option{citetracker=context} option of \biblatex.
+\end{release}
+
+\begin{release}{1.6.0}{2016-09-08}
+  \item Add hooks for new entrytype.
+\end{release}
+
+\begin{release}{1.5.0a}{2016-06-12}
+  \item Precisions in the handbook.
+\end{release}
+
+
+\begin{release}{1.5.0}{2016-06-09}
+  \item Add error message to know more quickly break compatibility with new releases of biblatex.
+\end{release}
+
+\begin{release}{1.4.0}{2016-06-07}
+  \item Use new tool of biblatex 3.4.
+  \item Require biblatex 3.4.
+\end{release}
+\begin{release}{1.3.0}{2016-03-27}
+\item Add \emph{op. cit.} also for verbose-trad1.
+\item Set the entry type for the \emph{op. cit.} as the entry type of the main entry.
+\end{release}
+
+\begin{release}{1.2.0}{2015-10-18}
+\item Fix bug with internal hyperref.
+\item Fix shorter form to be consistent with verbose-trad1 and verbose-trad2.
+\item Use short form of name (idem or just last name, depending of style).
+\item Change bibliography driver name. If you have customized your bibliographic driver, you should adapt name: \verb+inbook:rel:verbose-trad-1+ or \verb+inbook:rel:verbose-trad-2+ or \verb+inbook:rel:verbose-trad-3+.
+\end{release}
+
+\begin{release}{1.1.1}{2015-07-02}
+\item Fix spurious space.
+\end{release}
+
+\begin{release}{1.1.0}{2015-06-18}
+\item If defined, use the \bibfield{shortitle} field of the main entry.
+\end{release}
+
+\begin{release}{1.0.2}{2015-06-05}
+\item Wrap \enquote{op. cit} in \cmd{mkibid}.
+\end{release}
+
+\begin{release}{1.0.1}{2015-06-03}
+\item Correct order of name's part (first name / last name).
+\end{release}
+
+\begin{release}{1.0.0}{2015-05-31}
+\item First public release.
+\end{release}
+
+\end{changelog}
+\end{document}

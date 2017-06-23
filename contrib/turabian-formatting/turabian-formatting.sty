@@ -1,0 +1,485 @@
+% Turabian Formatting for LaTeX
+%
+% Based on the Chicago Manual of Style (16th edition) and Kate Turabian's A
+% Manual for Writers of Research Papers, Theses, and Dissertations (8th edition)
+%
+% ==============================
+% Copyright 2013-2017 Omar Abdool
+%
+% This work may be distributed and/or modified under the conditions of the LaTeX
+% Project Public License (LPPL), either version 1.3 of this license or (at your
+% option) any later version.
+%
+% The latest version of this license is in:
+%	http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX version
+% 2005/12/01 or later.
+%
+% LPPL Maintenance Status: maintained (by Omar Abdool)
+%
+% This work consists of the files: turabian-formatting.sty,
+% turabian-researchpaper.cls, turabian-thesis.cls, turabian-formatting-doc.tex,
+% and turabian-formatting-doc.pdf (in addition to the README file).
+%
+% ==============================
+%
+%
+
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{turabian-formatting}[2017/03/18 Turabian Formatting]
+
+
+% Package options: flags
+
+\newif\if@optraggedright\@optraggedrightfalse
+
+\newif\if@authordateformat\@authordateformatfalse
+
+\newif\if@appendbibformat\@appendbibformattrue
+
+\newif\if@endnotesformat\@endnotesformatfalse
+
+
+% Package options: handling
+
+\DeclareOption{raggedright}{\@optraggedrighttrue}
+
+\DeclareOption{authordate}{\@authordateformattrue}
+
+\DeclareOption{noadjustbib}{\@appendbibformatfalse}
+
+\DeclareOption{endnotes}{\@endnotesformattrue}
+
+\ProcessOptions\relax
+
+
+\RequirePackage{etoolbox}
+
+
+% Margin size: 1 inch on all sides
+\setlength\textwidth{\paperwidth}
+\addtolength\textwidth{-2in}
+\setlength\hoffset{\z@}
+
+\setlength\textheight{\paperheight}
+\addtolength\textheight{-2in}
+\setlength\voffset{\z@}
+
+\setlength\oddsidemargin{\z@}
+\setlength\evensidemargin{\z@}
+
+% Header height: set to 1 line of text
+\ifcase \@ptsize
+	\setlength\headheight{10pt}
+\or
+	\setlength\headheight{11pt}
+\or
+	\setlength\headheight{12pt}
+\fi
+
+% Header top and footer baseline: set to 0.5in from page edges
+\setlength\topmargin{-0.5in}
+\setlength\headsep{0.5in}
+\addtolength\headsep{-\headheight}
+
+\setlength\footskip{0.5in}
+
+% Text spacing is double spaced
+\RequirePackage{setspace}
+\setstretch{2}
+
+% Preserve length of one line of text for subsequent use
+\newlength\tf@singlelineskip
+\setlength\tf@singlelineskip{0.5\baselineskip}
+
+% Paragraph indent
+\setlength\parindent{0.5in}
+
+% Renew \raggedright to preserve paragraph indent and set \@optraggedright to true
+\def\raggedright{%
+	\let\\\@centercr\@rightskip\@flushglue \rightskip\@rightskip
+	\leftskip\z@skip
+	\@optraggedrighttrue}
+
+% Use \raggedright if raggedright option true
+\if@optraggedright \raggedright \fi
+
+% Prevent widowed text with 2 line default
+\PassOptionsToPackage{defaultlines=2, all}{nowidow}
+\AtEndPreamble{%
+	\@ifpackageloaded{nowidow}%
+		{}%
+		{\RequirePackage{nowidow}}}
+
+
+% Footnotes: layout and formatting
+
+\PassOptionsToPackage{bottom, marginal}{footmisc}
+\if@endnotesformat
+	\PassOptionsToPackage{perpage}{footmisc}
+\fi
+
+\RequirePackage{footmisc}
+
+\setlength\footnotemargin{\parindent}
+
+% Footnotes: Chicago symbols used when needed
+\setfnsymbol{chicago}
+
+% Footnotes: separation between footnotes based on text size
+\ifcase \@ptsize
+	\setlength\footnotesep{16.65pt}
+\or
+	\setlength\footnotesep{18.7pt}
+\or
+	\setlength\footnotesep{20.4pt}
+\fi
+
+\setlength{\skip\footins}{\footnotesep}
+
+% Footnotes: readjust footnote rule size and placement
+\renewcommand{\footnoterule}{%
+	\vspace*{-3pt}
+	\hrule width 2in height 0.4pt
+	\vspace*{-4pt}}
+
+% Footnotes: make command to set footnote punctuation
+\newcommand{\tf@setfnpunct}[1]{\def\tf@thefnpunct{#1\,\,}}
+\tf@setfnpunct{.}
+
+% Footnotes: Renew command for typesetting footnotes
+\renewcommand{\@makefntext}[1]{%
+	\if@optraggedright \raggedright \fi
+	\setlength\parindent{\footnotemargin}%
+	\@thefnmark\tf@thefnpunct#1}
+
+
+% Page style (headings): place page number in header, top right
+\def\ps@headings{%
+	\let\@oddfoot\@empty
+	\let\@evenfoot\@empty
+	\def\@evenhead{\thepage\hfil\slshape\leftmark}
+	\def\@oddhead{{\slshape\rightmark}\hfil\thepage}
+	\let\@mkboth\@gobbletwo
+	\let\markboth\@mkboth
+	\let\chaptermark\@gobble
+	\let\sectionmark\@gobble}
+
+% Page style (myheadings): make same as headings page style 
+\let\ps@myheadings\ps@headings
+
+% Page style (headings): set default page style and page numbering
+\pagestyle{headings}
+\pagenumbering{arabic}
+
+% Page style (empty): adjust if twoside option used
+\if@twoside
+	\def\cleardoublepage{%
+		\clearpage
+		\ifodd \c@page \else
+			\hbox{}
+			\thispagestyle{empty}
+			\newpage
+		\fi}
+\fi
+
+
+% Set top section command name to "section" (default)
+\def\tf@topsecname{section}
+
+
+% Headings formatting: \section, \subsection, and \subsubsection
+
+\setcounter{secnumdepth}{0}
+
+\renewcommand{\section}{%
+	\@startsection{section}{1}%
+		{\z@}%
+		{-\tf@singlelineskip}%
+		{1\p@}%
+		{\normalfont\bfseries\normalsize\singlespacing\centering}}
+
+\renewcommand{\subsection}{%
+	\@startsection{subsection}{2}%
+		{\z@}%
+		{-\tf@singlelineskip}%
+		{1\p@}%
+		{\normalfont\mdseries\normalsize\singlespacing\centering}}
+
+\renewcommand{\subsubsection}{%
+	\@startsection{subsubsection}{3}%
+		{\z@}%
+		{-\tf@singlelineskip}%
+		{1\p@}%
+		{\normalfont\bfseries\normalsize\singlespacing\raggedright}}
+
+
+% Table of Contents, List of Figures, and List of Tables: section number alignment
+\def\tflist@beforesecnum{}
+\def\tflist@aftersecnum{\hfil}
+\def\numberline#1{\hb@xt@\@tempdima{\tflist@beforesecnum #1\tflist@aftersecnum}}
+
+
+% Table of Contents: renew \tableofcontents with single spacing support
+\def\tf@tocpagestyle{\@empty}
+\renewcommand{\tableofcontents}{%
+	\tf@tocpagestyle
+	\expandafter\csname \tf@topsecname\endcsname*{\contentsname}%
+	\@mkboth{\MakeUppercase\contentsname}{\MakeUppercase\contentsname}%
+	\if@optraggedright
+		\let\tf@tocrmarg\@tocrmarg
+		\def\@tocrmarg{\tf@tocrmarg plus1fil}
+	\fi
+	\singlespacing%
+	\vspace{-1\baselineskip}
+	\@starttoc{toc}%
+	\setstretch{2}}%
+
+% Table of Contents: right margin and number width formatting
+\def\@tocrmarg{5em}
+\def\@pnumwidth{2.5em}
+
+
+% List of Figures and List of Tables: adjust titles
+\renewcommand{\listfigurename}{Figures}
+\renewcommand{\listtablename}{Tables}
+
+\AtEndPreamble{
+	\@ifpackageloaded{polyglosia}%
+		{%
+			\addto\captionsenglish{%
+				\renewcommand{\listfigurename}{Figures}
+				\renewcommand{\listtablename}{Tables}}%
+		}{}
+	\@ifpackageloaded{babel}%
+		{%
+			\addto\captionsenglish{%
+				\renewcommand{\listfigurename}{Figures}
+				\renewcommand{\listtablename}{Tables}}%
+		}{}}
+
+% List of Figures
+\renewcommand{\listoffigures}{%
+	\expandafter\csname \tf@topsecname\endcsname*{\listfigurename}%
+	\@mkboth{\MakeUppercase\listfigurename}{\MakeUppercase\listfigurename}%
+	\singlespacing%
+	\vspace{-1\baselineskip}
+	\@starttoc{lof}
+	\setstretch{2}}
+
+% List of Tables
+\renewcommand{\listoftables}{%
+	\expandafter\csname \tf@topsecname\endcsname*{\listtablename}%
+	\@mkboth{\MakeUppercase\listtablename}{\MakeUppercase\listtablename}%
+	\singlespacing%
+	\vspace{-1\baselineskip}
+	\@starttoc{lot}
+	\setstretch{2}}
+
+% List of Illustrations
+\newcommand{\listillustrationname}{Illustrations}
+\def\tf@illustrsection{\normalfont\bfseries\normalsize\singlespacing\noindent}
+
+\newcommand{\listofillustrations}{%
+	\expandafter\csname \tf@topsecname\endcsname*{\listillustrationname}%
+	\@mkboth{\MakeUppercase\listillustrationname}{\MakeUppercase\listillustrationname}%
+	\singlespacing%
+	\vspace{-1\baselineskip}
+	{\tf@illustrsection Figures}\par\nopagebreak
+	\@starttoc{lof}
+	\vspace{1\baselineskip}
+	{\tf@illustrsection Tables}\par\nopagebreak
+	\@starttoc{lot}
+	\setstretch{2}}
+
+
+% Figures and Tables: float positioning
+
+\setlength\textfloatsep{2\tf@singlelineskip}
+\setlength\floatsep{2\tf@singlelineskip minus 0.5\tf@singlelineskip}
+\setlength\intextsep{2\tf@singlelineskip minus 0.25\tf@singlelineskip}
+
+\def\fps@table{!htb}
+\def\fps@figure{!htb}
+
+% Figures and Tables: caption formatting
+
+\setlength\abovecaptionskip{\z@}
+\setlength\belowcaptionskip{\z@}
+
+\long\def\@makecaption#1#2{%
+	\vskip\abovecaptionskip
+	\if@optraggedright \raggedright \fi
+	\small#1. #2\par
+	\vskip\belowcaptionskip}
+
+
+% Lists: enumerate and itemize formatting
+\setlength\leftmargini{1.5\parindent}
+\setlength\leftmargin{\leftmargini}
+\setlength\leftmarginii{\parindent}
+\setlength\leftmarginiii{\parindent}
+\setlength\leftmarginiv{\parindent}
+\setlength\labelsep{.65em}
+\setlength\labelwidth{\parindent}
+\addtolength\labelwidth{-\labelsep}
+
+% Lists: formatting command for both enumerate and itemize
+\def\tf@listformat{%
+	\setlength\topsep{\z@}
+	\setlength\itemsep{\z@}
+	\setlength\parsep{\z@}
+	\setlength\listparindent{\parindent}}
+
+% Lists (enumerate): format of enumerate list labels
+\renewcommand{\labelenumi}{\arabic{enumi}.}
+\renewcommand{\labelenumii}{\alph{enumii})}
+\renewcommand{\labelenumiii}{(\arabic{enumiii})}
+\renewcommand{\labelenumiv}{(\alph{enumiv})}
+
+% Lists (enumerate): redefine enumerate to include formatting command hook
+\def\tf@enumerateformat{\tf@listformat}
+\def\enumerate{%
+	\ifnum \@enumdepth >\thr@@\@toodeep \else
+		\advance\@enumdepth\@ne
+		\edef\@enumctr{enum\romannumeral\the\@enumdepth}%
+		\expandafter
+		\list
+			\csname label\@enumctr\endcsname
+			{\usecounter\@enumctr%
+			\def\makelabel##1{\hss\llap{##1}}%
+			\tf@enumerateformat}%
+	\fi}
+
+% Lists (itemize): redefine itemize to include formatting command hook
+\def\tf@itemizeformat{\tf@listformat}
+\def\itemize{%
+	\ifnum \@itemdepth >\thr@@\@toodeep \else
+		\advance\@itemdepth\@ne
+		\edef\@itemitem{labelitem\romannumeral\the\@itemdepth}%
+		\expandafter
+		\list
+			\csname\@itemitem\endcsname
+			{\def\makelabel##1{\hss\llap{##1}}%
+			\tf@itemizeformat}%
+	\fi}
+
+
+% Block quotation: formatting
+\renewenvironment{quotation}
+	{%
+		\list{}{%
+			\setlength\listparindent{\parindent}
+			\setlength\itemindent{\listparindent}
+			\setlength\leftmargin{\parindent}
+			% Adjust right margin based on raggedright option
+			\if@optraggedright
+				\setlength\rightmargin{\z@}
+			\else
+				\setlength\rightmargin{\leftmargin}
+			\fi
+			\setlength\parsep{\z@}
+			% Place line spacing between text and quotation
+			\ifnum \baselinestretch =1
+				\setlength\topsep{\baselineskip}
+			\else
+				\setlength\topsep{\z@}
+			\fi}%
+		\singlespacing%
+		\item\relax%
+	}
+	{\endlist}
+\def\quote{\quotation}
+
+
+% thebibliography environment: formatting (adjust \@openbib@code hook default)
+
+\setlength\bibindent{\parindent}
+
+\renewcommand\@openbib@code{%
+	\singlespacing
+	\setlength\leftmargin{\bibindent}
+	\setlength\itemindent{-\bibindent}
+	\addtolength\itemindent{\labelsep}
+	\addtolength\itemindent{\labelwidth}
+	\setlength\itemsep{\tf@singlelineskip}
+	\setlength\parsep{\z@}}
+
+
+% biblatex-chicago: set formatting defaults and pass options
+\PassOptionsToPackage%
+	{isbn=false, autolang=other, footmarkoff, backend=biber}%
+	{biblatex-chicago}
+\if@authordateformat
+	\PassOptionsToPackage{authordate}{biblatex-chicago}
+\fi
+
+% biblatex-chicago: adjustments to \printbibliography formatting
+\if@appendbibformat
+	\AtEndPreamble{%
+		\@ifpackageloaded{biblatex}%
+			{%
+				\if@authordateformat
+					\DefineBibliographyStrings{english}{%
+						bibliography = {References}}
+				\else
+					\DefineBibliographyStrings{english}{%
+						references = {Bibliography}}
+				\fi
+				\renewcommand{\bibsetup}{%
+					\addcontentsline{toc}{\tf@topsecname}{\bibname}
+					\singlespacing}
+				\renewcommand{\bibitemsep}{1\baselineskip}
+				\renewcommand{\bibhang}{0.5in}
+			}{}}
+\fi
+
+
+% Endnotes: support and formatting
+
+\if@endnotesformat
+
+	\RequirePackage{endnotes, xparse}
+
+	% Changes footnote marker type and formatting
+	\tf@setfnpunct{}
+	\renewcommand*{\thefootnote}{\fnsymbol{footnote}}
+
+	\PassOptionsToPackage{notetype=endonly}{biblatex-chicago}
+	
+	\AtEndPreamble{%
+		% Make endnotes use of "_" not a special character when in text mode
+		\appto{\enoteheading}{%
+			\catcode`_=12
+			\begingroup\lccode`~=`_
+			\lowercase{\endgroup\let~}\sb
+			\mathcode`_="8000}
+
+		% Create \jobname.ent if not already defined to avoid missing file error
+		\preto{\theendnotes}{%
+			\IfFileExists{./\jobname.ent}%
+				{}%
+				{%
+					\immediate\openout\@enotes=\jobname.ent\relax
+					\immediate\write\@enotes{}%
+				}}}
+
+	% Set default endnotes formatting
+	\renewcommand{\enotesize}{\normalsize}
+	\renewcommand{\enoteformat}{%
+		\if@optraggedright \raggedright \fi
+		\setlength\parindent{\footnotemargin}
+		\vspace{1\baselineskip}
+		\theenmark.\,\,}
+
+\else
+
+	% Define \theendnotes if endnotes package not loaded
+	\@ifpackageloaded{endnotes}%
+		{}%
+		{\def\theendnotes{\@empty}}
+
+\fi
+
+

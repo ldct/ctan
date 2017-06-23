@@ -1,0 +1,148 @@
+% Copyright 2009 T.M. Trzeciak
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is T.M. Trzeciak.
+%
+% This work consists of the files:
+% README.TXT
+% cachepic.tex
+% cachepic.pdf (derived)
+% cachepic.sty
+% prcachepic.def
+% cachepic.tlu
+% cachepic.cmd
+
+
+%\ProvidesFile{cachepic}[2009/09/23 v1.0 cachepic package]
+\documentclass{ltxdoc}
+\usepackage{booktabs}
+\usepackage{verbatim}
+\newcommand\mainfile{main file}
+\newcommand\filename{file name}
+\newcommand\texfrag{fragment}
+\newcommand\option[1]{\textbf{#1}}
+\newcommand{\figref}[2][\figurename~]{#1\ref{#2}}
+\newcommand{\tabref}[2][\tablename~]{#1\ref{#2}}
+\newcommand{\secref}[2][Section~]{#1\ref{#2}}
+\newenvironment{displaytext}{\quote}{\endquote}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex plus 0.5ex minus 0.2ex}
+
+\begin{document}
+%\GetFileInfo{cachepic}
+
+\title{The \textsf{cachepic} package}
+\author{Tomasz M. Trzeciak \\ \texttt{t34www@gmail.com}}
+\date{September 23, 2009}
+\maketitle
+
+\section{Introduction}
+
+It might be sometimes desirable to convert fragments of your document, e.g. drawings or diagrams, into external graphic files. Such a need may arise when you want to use some specialised package but your document have to compile on a system without said package.
+
+The purpose of \textsf{cachepic} package is to simplify and automate conversion of document fragments into external \textsf{eps} or \textsf{pdf} file(s). The package consists of two parts: the \LaTeXe\ style implementing the document level interface and a command line tool (written in \textsf{Lua}) for generation of external graphics.
+
+\section{Requirements}
+\label{sec:Requirements}
+
+The inclusion of already generated graphics requires only the |cachepic.sty| style file and two standard packages: \textsf{graphicx} (obviously) and \textsf{verbatim} (for its comment environment). Both should be present in every \LaTeX\ distribution.
+
+The graphics generation step requires the full \textsf{cachepic} package, the \textsf{preview} package and a \textsf{Lua} interpreter to execute the conversion script. For Windows platform there is also a batch script wrapper provided for command line use.
+
+\section{Document interface}
+\label{sec:DocInterface}
+
+The package is loaded with the usual |\usepackage{cachepic}|. Currently there are no package specific options available. There are two commands and one environment provided for marking-up document fragments intended for externalization as graphic files.
+
+\DescribeMacro{\cachepic}
+The main command of this package is |\cachepic|\marg{\filename}\marg{\texfrag}. It takes a balanced \LaTeX\ code \meta{\texfrag}, which is typeset and output to a file \meta{\filename} during the post-processing run as described in \secref{sec:CmdTool}.
+
+\DescribeMacro{\cacheinput}
+The second command, |\cacheinput|\marg{\filename}, is just a shorthand for |\cachepic|\marg{\filename}|{\input|\marg{\filename}|}|.
+
+\DescribeEnv{cachepicture}
+Finally, for longer stretches of code there is an environment analogue of the |\cachepic| command:
+
+\begin{displaytext}
+|\begin{cachepicture}|\marg{\filename}\\
+\hspace*{1em}\meta{\texfrag}\\
+|\end{cachepicture}|
+\end{displaytext}
+
+During normal document compilation each \meta{\texfrag} is typeset as usual unless there exists a file \mbox{\meta{\filename}|.eps|} (in \textsf{dvi} mode) or \mbox{\meta{\filename}|.pdf|} (in \textsf{pdf} mode). If such a file exists, it will be included (with the standard |\includegraphics| command) and it will be used in place of the corresponding \meta{\texfrag}.
+
+\section{Graphics generation}
+\label{sec:CmdTool}
+
+\begin{table}
+\centering
+\caption[]{\label{tab:options}
+Options of |cachepic| command line tool.}
+\vspace{1ex}
+\begin{tabular}{l p{0.6\linewidth}}
+\toprule
+\option{option}   & description\\ 
+\midrule
+\option{pdf}      & graphics will be output in
+                    \textsc{(e)pdf} format; this is the
+                    default option\\
+\option{eps}      & graphics will be output in
+                    \textsc{eps} format\\
+\option{all}      & recreate all graphics, already
+                    existing ones will be overwritten\\
+\option{multi}    & keep all graphics in a sigle file 
+                    \meta{\mainfile}|-cachepic.pdf|
+                    rather then produce separate files
+                    (but graphics in separate files take
+                    precedence); this option cannot be 
+                    used together with |-eps|\\
+\option{tight}    & no 0.5\,bp margin around the
+                    graphic\\
+\option{notex}    & don't do any typesetting, only
+                    graphic postprocessing; the typesetting has 
+                    to be done separately and requires the 
+                    \textsf{preview} package with at least 
+                    the |active| and |cachepic| options\\
+\option{nopic}    & generate no graphics, only 
+                    \mbox{\meta{\mainfile}|.cachepic|} file\\
+\option{help,h,?} & display help message\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Graphics files are produced by running a command line tool called (unsurprisingly) |cachepic|. This tool automates the whole process of graphic generation. It can be called from the command line (or through appropriately configured \TeX\ editor) as follows:
+
+\begin{displaytext}
+|cachepic [options] |\meta{\mainfile}
+\end{displaytext}
+
+\noindent All available options are gathered in \tabref{tab:options}. Options start with ``|-|'' or ``|--|'' and can be passed in any order.
+
+Apart from graphic files there is also an auxiliary \mbox{\meta{\mainfile}|.cachepic|} file created. It contains additional information used for graphics inclusion such as the page number (used only in \textsc{pdf} mode with multi-graphics file), margins and the depth of the graphics box. This file is not strictly required but without it some features are not available as explained below.
+
+As mentioned in \secref{sec:Requirements}, the \textsf{preview} package is required for graphics generation but it should not be specified with options in the document preamble or this will likely lead to option clash. To use this package together with \textsf{cachepic}, pass |cachepic| option to the \textsf{preview} package and compile the document separately. Then run the |cachepic| tool with |-notex| option.
+
+Once all the graphics are generated, only the style file |cachepic.sty| is needed to compile the document. If you want to avoid using even this file, you can add the following definitions the document preamble:
+
+\begin{displaytext}
+\begin{verbatim}
+\newcommand\cachepic[2]{\includegraphics{#1}}
+\newcommand\cacheinput[1]{\includegraphics{#1}}
+\newenvironment{cachepicture}[1]{%
+\includegraphics{#1}\comment}{\endcomment}
+\end{verbatim}
+\end{displaytext}
+
+However, since the above definitions don't use the additional information in the \mbox{\meta{\mainfile}|.cachepic|} file, this comes with some limitations. Firstly, information about the graphic's depth, i.e. how much it is lowered below the text baseline, is not preserved. Secondly, graphics stored in a single \textsc{pdf} file cannot be used, because the page number with the graphic is not known. Finally, the default small margin around the graphics is not corrected for, but you can generate the graphics without the margin (see the |-tight| option in \tabref{tab:options}) or use |\includegraphics[trim=0.5bp 0.5bp 0.5bp 0.5bp]{#1}| in the above definitions to correct for that.
+
+\end{document}
+

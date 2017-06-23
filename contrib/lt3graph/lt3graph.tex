@@ -1,0 +1,312 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \iffalse %%%%
+%                                                                              %
+%  Copyright (c) 2017 - Michiel Helvensteijn   (www.mhelvens.net)              %
+%                                                                              %
+%  https://github.com/mhelvens/latex-lt3graph                                  %
+%                                                                              %
+%  This work may be distributed and/or modified under the conditions           %
+%  of the LaTeX Project Public License, either version 1.3 of this             %
+%  license or (at your option) any later version. The latest version           %
+%  of this license is in     http://www.latex-project.org/lppl.txt             %
+%  and version 1.3 or later is part of all distributions of LaTeX              %
+%  version 2005/12/01 or later.                                                %
+%                                                                              %
+%  This work has the LPPL maintenance status 'maintained'.                     %
+%                                                                              %
+%  The Current Maintainer of this work is Michiel Helvensteijn.                %
+%                                                                              %
+%  This work consists of the files lt3graph.tex and lt3graph.sty.              %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \fi %%%%
+
+\documentclass[a4paper]{lt3graph-packagedoc}
+
+\usepackage       {amssymb}
+\usepackage       {tikz}
+
+\usetikzlibrary {matrix}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Setup                                                                        %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+\NoIndentAfterEnv{center} 
+ 
+\moretexcs{
+    \rightsquigarrow,
+	\draw,
+	\node,
+	\cs_generate_variant:Nn,
+	\int_eval:n,
+	\cs_new:Nn,
+	\clist_new:N,
+	\clist_put_right:Nn,
+	\graph_new:N,
+	\graph_put_vertex:Nn,
+	\graph_put_vertex:Nnn,
+	\graph_put_edge:Nnn,
+	\graph_put_edge:Nnnn,
+	\graph_if_cyclic:NTF,
+	\graph_map_edges_inline:Nn,
+	\graph_map_topological_order_inline:Nn,
+	\graph_map_vertices_inline:Nn,
+	\graph_put_vertex:Nnf,
+	\graph_get_degree:Nn,
+	\graph_map_outgoing_edges_inline:Nnn,
+	\graph_get_vertex:NnNT,
+	\graph_put_edge:Nnnf,
+	\graph_display_table:N,
+	\graph_set_transitive_closure:NNNn,
+	\graph_display_table:Nn,
+	\graph_set_transitive_reduction:NN
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Global Changes                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\def\extratitlenote{
+	The prefix \texttt{lt3} indicates that this package
+	is a user-contributed \texttt{expl3} library, in contrast to
+	packages prefixed with \texttt{l3}, which are officially supported
+	by the \LaTeX3 team.
+}
+
+\changes{0.0.1}{2013/10/08}
+  {initial version}
+  
+\changes{0.0.8}{2013/12/01}
+  {a great many untracked changes}
+
+\changes{0.0.9}{2013/12/07}
+  {creation of the documentation}
+
+\changes{0.1.0}{2014/04/13}
+  {fixed a bug in\\
+   \texttt{\textbackslash graph_(g)put_vertex} and\\
+   \texttt{\textbackslash graph_(g)put_edge},
+   which caused their global versions not to work properly}
+
+\changes{0.1.1}{2014/04/14}
+  {fixed a similar bug in\\
+   \texttt{\textbackslash graph_(g)put_edges_from}}
+
+\changes{0.1.2}{2014/04/14}
+  {allowing \texttt{\textbackslash graph_map_topological_order_\ldots}
+   to be nested}
+
+\changes{0.1.3}{2014/04/21}
+  {fixed a bug in \texttt{\textbackslash graph_remove_vertex} and
+   added a \texttt{\textbackslash graph_vertex_count:N} function}
+
+\changes{0.1.4}{2014/08/31}
+  {no longer loading individual l3kernel packages, which leads to
+   an error for recent versions of expl3}
+
+\changes{0.1.8}{2017/01/05}
+  {tracking changes in expl3}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+\section {Introduction}  % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+
+This package provides a data-structure for use in the \LaTeX3 programming
+environment. It allows you to represent a \emph{directed graph}, which
+contains \emph{vertices} (nodes), and \emph{edges} (arrows) to
+connect them.\footnote
+	{ Mathematically speaking, a directed graph is a tuple
+	  \( (V, E) \) with a set of vertices \( V \) and a set of edges
+	  \( E \subseteq V \times V \) connecting those vertices. }
+One such graph is defined below:
+
+\begin{latex-example}
+\ExplSyntaxOn
+    \graph_new:N         \l_my_graph
+    \graph_put_vertex:Nn \l_my_graph {v}
+    \graph_put_vertex:Nn \l_my_graph {w}
+    \graph_put_vertex:Nn \l_my_graph {x}
+    \graph_put_vertex:Nn \l_my_graph {y}
+    \graph_put_vertex:Nn \l_my_graph {z}
+    \graph_put_edge:Nnn  \l_my_graph {v} {w}
+    \graph_put_edge:Nnn  \l_my_graph {w} {x}
+    \graph_put_edge:Nnn  \l_my_graph {w} {y}
+    \graph_put_edge:Nnn  \l_my_graph {w} {z}
+    \graph_put_edge:Nnn  \l_my_graph {y} {z}
+    \graph_put_edge:Nnn  \l_my_graph {z} {x}
+\ExplSyntaxOff
+\end{latex-example}
+
+Each vertex is identified by a \emph{key}, which, to this library, is a string:
+a list of characters with category code 12 and spaces with category code 10.
+An edge is then declared between two vertices by referring to their keys.
+
+We could then, for example, use TikZ to draw this graph:
+
+\begin{latex-example-show}
+\centering
+\begin{tikzpicture}[every path/.style={line width=1pt,->}]
+    \newcommand{\vrt}[1]{ \node(#1){\ttfamily\vphantom{Iy}#1}; }
+    \matrix [nodes={circle,draw},
+             row sep=1cm, column sep=1cm,
+             execute at begin cell=\vrt] {
+        v  &  w  &  x  \\
+           &  y  &  z  \\ };
+    \ExplSyntaxOn
+        \graph_map_edges_inline:Nn \l_my_graph
+            { \draw (#1) to (#2); }
+    \ExplSyntaxOff
+\end{tikzpicture}
+\end{latex-example-show}
+
+Just to be clear, this library is \emph{not about drawing} graphs.
+It does not, inherently, understand any TikZ.
+It is about \emph{representing} graphs. This allows us to perform analysis
+on their structure. We could, for example, determine if there is
+a cycle in the graph:
+
+\begin{latex-example-show}
+\ExplSyntaxOn
+    \graph_if_cyclic:NTF \l_my_graph {Yep} {Nope}
+\ExplSyntaxOff
+\end{latex-example-show}
+
+Indeed, there are no cycles in this graph. We can also list
+its vertices in topological order:
+
+\begin{latex-example-show}
+\ExplSyntaxOn
+    \clist_new:N \LinearClist
+    \graph_map_topological_order_inline:Nn \l_my_graph
+        { \clist_put_right:Nn \LinearClist {\texttt{#1}} }
+\ExplSyntaxOff
+Visiting dependencies first: \( \LinearClist \)
+\end{latex-example-show}
+
+There is a great deal more that can be done with graphs
+(some of which is even implemented in this library). A
+common use-case will be to attach data to vertices and/or
+edges. You could accomplish this with a property map from
+|l3prop|, but this library has already done that for you!
+Every vertex and every edge can store arbitrary token lists.\footnote
+    {This makes the mathematical representation of our graphs
+     actually a 4-tuple \( (V, E, v, e) \), where \( v: V \to T\!L \)
+     is a function that maps every vertex to a token list and
+     \( e: E \to T\!L \) is a function that maps every edge (i.e., pair of vertices)
+     to a token list.}
+
+In the next example we store the \emph{degree} (the number
+of edges, both incoming and outgoing) of each vertex
+inside that vertex as data. We then
+query all vertices directly reachable from \texttt{w}
+and print their information in the output stream:
+
+\begin{latex-example}
+\ExplSyntaxOn
+    \cs_generate_variant:Nn \graph_put_vertex:Nnn {Nnf}
+    \graph_map_vertices_inline:Nn \l_my_graph {
+        \graph_put_vertex:Nnf \l_my_graph {#1}
+        	{ \graph_get_degree:Nn \l_my_graph {#1} }
+    }
+\ExplSyntaxOff
+\end{latex-example}
+
+It's just an additional parameter on the |\graph_put_vertex| function.
+Edges can store data in the same way:
+
+\begin{latex-example}
+\ExplSyntaxOn
+    \graph_map_edges_inline:Nn \l_my_graph {
+        \graph_put_edge:Nnnn \l_my_graph {#1} {#2}
+            { \int_eval:n{##1 * ##2} }
+    }
+\ExplSyntaxOff
+\end{latex-example}
+
+The values |##1| and |##2| represent the data stored in,
+respectively, vertices |#1| and |#2|. This is a feature
+of |\graph_put_edge:Nnnn| added for your convenience.
+
+\needspace{2\baselineskip}
+We can show the resulting graph in a table, which is handy for debugging:
+
+\begin{latex-example-show}
+\ExplSyntaxOn \centering
+    \graph_display_table:N \l_my_graph
+\ExplSyntaxOff
+\end{latex-example-show}
+
+\fboxsep=1pt
+The \fcolorbox{black}{green}{\vphantom{Ig}green} cells represent edges
+directly connecting two vertices. The \fcolorbox{black}{green!40!yellow}{\vphantom{Ig}\tiny (tr)}
+cells don't have edges, but indicate that there is a sequence of edges connecting
+two vertices transitively.
+
+Two vertices can have at most two arrows connecting them:
+one for each direction. If you want to represent a \emph{multidigraph}
+(or \emph{quiver}; I'm not making this up),
+you could consider storing a (pointer to a) list at each edge.
+
+Finally, we demonstrate some transformation functions.
+The first generates the transitive closure of a graph:
+
+\begin{latex-example}
+\ExplSyntaxOn
+    \graph_new:N \l_closed_graph
+    \cs_new:Nn \__closure_combiner:nnn { #1,~#2,~(#3) }
+    \graph_set_transitive_closure:NNNn
+        \l_closed_graph \l_my_graph
+        \__closure_combiner:nnn {--}
+\ExplSyntaxOff
+\end{latex-example}
+\begin{latex-example-show}
+\ExplSyntaxOn \centering
+    \graph_display_table:N \l_my_graph
+    \(\ \ \rightsquigarrow\ \ \)
+    \graph_display_table:Nn \l_closed_graph
+        { row_keys = false, vertex_vals = false }
+\ExplSyntaxOff
+\end{latex-example-show}
+
+There is a simpler version (|\graph_set_transitive_closure:NN|)
+that sets the values of the new edges to the empty token-list.
+The demonstrated version takes an expandable function to determine the new value,
+which has access to the values of the two edges being combined (as |#1| and |#2|),
+as well as the value of the possibly already existing transitive edge (as |#3|).
+If there was no transitive edge there already, the value passed as |#3| is
+the fourth argument of the transformation function; in this case |--|.
+
+The second transformation function generates the transitive reduction:
+
+\begin{latex-example}
+\ExplSyntaxOn
+    \graph_new:N \l_reduced_graph
+    \graph_set_transitive_reduction:NN
+        \l_reduced_graph \l_my_graph
+\ExplSyntaxOff
+\end{latex-example}
+\begin{latex-example-show}
+\ExplSyntaxOn \centering
+    \graph_display_table:N \l_my_graph
+    \(\ \ \rightsquigarrow\ \ \)
+    \graph_display_table:Nn \l_reduced_graph
+        { row_keys = false, vertex_vals = false }
+\ExplSyntaxOff
+\end{latex-example-show}
+
+
+
+\section {API Documentation}  % % % % % % % % % % % % % % % % % % % % % % % % %
+
+Sorry! There is no full API documentation yet. But in the meantime, much of the API
+is integrated in the examples of the previous section, and everything is
+documented (however sparsely) in the implementation below.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}                                                                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

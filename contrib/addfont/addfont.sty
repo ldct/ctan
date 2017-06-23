@@ -1,0 +1,59 @@
+% Copyright 2016 (c) Palle Joergensen
+%
+% This file is part of addfont.
+%
+% addfont is free software: you can redistribute it and/or modify it
+% under the terms of the GNU General Public License as published by
+% the Free Software Foundation, either version 3 of the License, or
+% (at your option) any later version.
+%
+% addfont is distributed in the hope that it will be useful, but
+% WITHOUT ANY WARRANTY; without even the implied warranty of
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+% General Public License for more details.
+%
+% You should have received a copy of the GNU General Public License
+% along with addfont. If not, see <http://www.gnu.org/licenses/>.
+\ProvidesPackage{addfont}%
+  [2016/09/01 v1.0 Easier usage of fonts without LaTeX support.]
+\newif\ifaddfont@fixed
+\addfont@fixedtrue
+\RequirePackage{twoopt}
+\RequirePackage{ifthen}
+\newcommandtwoopt*\addfont@all[5][][]{% scale, sel-cmd, enc, font, cmd
+  \addfont@fixedfalse
+  \def\addfont@latestencoding{#3}%
+  \def\addfont@latestfamily{#4}%
+  \ifthenelse{\equal{#1}{\@empty}}{\let\addfont@latestscale\@empty}{\def\addfont@latestscale{s*[#1]}}
+  \DeclareFontFamily{#3}{#4}{#2}%
+  \DeclareFontShape{#3}{#4}{m}{n}{<->#3}{}%
+  \def#5{\fontencoding{#3}\fontfamily{#4}\mdseries\upshape}}
+
+\newcommandtwoopt*\addfont@fixed[5][][]{% scale, sel-cmd, enc, font, cmd
+  \addfont@fixedtrue
+  \def\addfont@latestencoding{#3}%
+  \def\addfont@latestfamily{#4}%
+  \ifthenelse{\equal{#1}{\@empty}}{\let\addfont@latestscale\@empty}{\def\addfont@latestscale{s*[#1]}}
+  \DeclareFontFamily{#3}{#4}{#2}%
+  \DeclareFontShape{#3}{#4}{m}{n}{%
+    <5><6><7><8><9><10><10.95><12>%
+    <14.4><17.28><20.74><24.88>\addfont@latestscale #4}{}%
+  \def#5{\fontencoding{#3}\fontfamily{#4}\mdseries\upshape}}
+
+\newcommand*\addfont@addshape@fixed[4]{% series, shape, font, sel-cmd
+  \DeclareFontShape{\addfont@latestencoding}{\addfont@latestfamily}{#1}{#2}{%
+    <5><6><7><8><9><10><10.95><12>%
+    <14.4><17.28><20.74><24.88>\addfont@latestscale #3}{#4}}
+
+\newcommand*\addfont@addshape@all[4]{% series, shape, font, sel-cmd
+  \DeclareFontShape{\addfont@latestencoding}{\addfont@latestfamily}{#1}{#2}{%
+    <->\addfont@latestscale #3}{#4}}
+
+\def\addfont{\@ifstar{\addfont@all}{\addfont@fixed}}
+\newcommand*\addshape[4][]{%
+  \ifaddfont@fixed%
+  \addfont@addshape@fixed{#2}{#3}{#4}{#1}%
+  \else%
+  \addfont@addshape@all{#2}{#3}{#4}{#1}%
+  \fi}
+\endinput

@@ -1,0 +1,669 @@
+%
+% treeTeX: a tool for drawing structural formulae
+%
+% by Strokov Igor (strokov@nioch.nsc.ru), Oct.--Nov. 1996
+%
+% WARNING: this package employs emTeX specials
+%          (e.g., \special{em:lineto} for short lines)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This file may be freely distributed.
+% Changes are not welcome unless carefully commented
+% and reported to the author.
+%
+
+\def\treeTeX{stree\kern-0.134em\TeX}
+
+\def\znakf#1{\small #1}
+\newdimen\bondlen \bondlen=6.7mm
+\newcount\ue \newcount\sixue \newcount\dim \newcount\diam
+\newcount\dx \newcount\dy \newcount\tx \newcount\ty \newcount\px \newcount\py
+\newcount\sx \newcount\sy \newcount\rx \newcount\ry \newcount\lx
+\newcount\maxx \newcount\maxy \newcount\minx \newcount\miny
+\newcount\tmp \newcount\tmx \newcount\tmy \newcount\mdx \newcount\mdy
+\newcount\bmode \newcount\umode \newcount\lmode \newcount\pmode
+\newcount\dmode \newcount\wmode \newcount\wemm  \newcount\dpmode
+\newcount\defwmode \defwmode=0
+
+\def\mod#1{\ifnum#1<0#1=-#1\fi}
+\def\advzn#1#2#3{\ifnum#3>0 \advance#1by#2 \else \advance#1by-#2 \fi}
+\def\pozn#1#2{\ifnum#1<0 #1=-#2 \else #1=#2 \fi}
+\def\mudi#1#2#3{\divide#1by5000\multiply#1by#2\divide#1by#3\multiply#1by5000}
+
+\def\vpered{\advance\px by\tmx \advance\py by\tmy \mudi\mdx56 \mudi\mdy56}
+\def\vlevo{\advance\px by-\tmy \advance\py by\tmx}
+\def\vpravo{\advance\px by\tmy \advance\py by-\tmx}
+\newif\ifshort \newif\ifmetka
+\def\linia{%\message{ line(\the\sx,\the\sy,\the\wmode) }
+  \dim=\mdx \ifnum\mdx=0 \dim=\mdy \fi
+  \ifcase\pmode %simple
+    \shortfalse
+    \ifnum\sx=0\else\ifnum\sy=0\else
+      \ifnum\dim<670000 \shorttrue \fi
+      \ifnum\sx<-6 \shorttrue \fi
+      \ifnum\sx>6 \shorttrue \fi
+      \ifnum\sy<-6 \shorttrue \fi
+      \ifnum\sy>6 \shorttrue \fi
+    \fi\fi
+    \ifnum\wmode=2 \shorttrue \fi
+    \ifnum\wemm=\wmode\else %\message{ em=\the\wemm, w=\the\wmode.}
+      \ifcase\wmode
+        \global\thinlines
+        \global\@wholewidth\fontdimen8\tenln
+        \put(\px,\py){\special{em:linewidth 0.4pt}}
+      \or
+        \global\thicklines
+        \global\@wholewidth\fontdimen8\tenlnw
+        \put(\px,\py){\special{em:linewidth 0.8pt}}
+      \or
+        \put(\px,\py){\special{em:linewidth 1.6pt}}
+      \fi
+      \global\@halfwidth .5\@wholewidth
+      \global\wemm=\wmode
+    \fi
+    \ifshort %\message{ short(\the\dim) }
+      \put(\px,\py){\special{em:moveto}}
+      {\advzn\px\mdx\dx \advzn\py\mdy\dy
+      \put(\px,\py){\special{em:lineto}}}
+    \else
+      \put(\px,\py){\line(\sx,\sy)\dim}
+    \fi
+  \or % 1 = dotted
+    \ifnum\mdx>\mdy
+      \tmp=\mdy \divide\tmp2 \advance\tmp\mdx
+    \else
+      \tmp=\mdx \divide\tmp2 \advance\tmp\mdy
+    \fi
+    \divide\tmp140000
+    \pozn\dx\mdx \divide\dx by\tmp \pozn\dy\mdy \divide\dy by\tmp
+    \tmx=\dx \divide\tmx3 \tmy=\dy \divide\tmy3
+    \advance\px\tmx \advance\py\tmy
+    \loop\ifnum\tmp>0
+      \put(\px,\py){\makebox(0,0){\vrule height0.67pt width0.67pt depth0pt}}
+      \advance\px by\dx \advance\py by\dy
+      \advance\tmp-1
+    \repeat
+  \or % 2 = vector
+    \ifnum\wmode=0
+      \put(\px,\py){\vector(\sx,\sy)\dim}
+    \else
+      \pozn\dx\mdx \pozn\dy\mdy
+      \tmx=\px \advance\tmx by\dx
+      \tmy=\py \advance\tmy by\dy
+      \ifnum\wemm=2
+        \tmp=\px \px=\tmx \tmx=\tmp
+        \tmp=\py \py=\tmy \tmy=\tmp
+      \fi
+      \divide\dx by20 \divide\dy by20
+      \advance\tmx by-\dy \advance\tmy by\dx
+      \mudi\dx25 \mudi\dy25
+      \tmp=5
+      \put(\px,\py){\special{em:linewidth 0.4pt}} \wemm=0
+      \loop\ifnum\tmp>0
+        \put(\px,\py){\special{em:moveto}}
+        \put(\tmx,\tmy){\special{em:lineto}}
+        \advance\tmx by\dy \advance\tmy by-\dx
+        \advance\tmp by-1
+      \repeat
+      \ifnum\wemm=2
+        \global\wemm=0
+      \else
+        \put(\px,\py){\special{em:linewidth 1.6pt}}
+        \global\wemm=2
+      \fi
+    \fi
+  \fi
+  \advance\pmode by\dpmode
+  \dpmode=0}
+
+\def\lowbond{%\message{ bond(\the\dx,\the\dy,\the\mdx,\the\mdy)[\the\bmode]}
+  \tmx=\mdx \tmy=\mdy \divide\tmx by2 \divide\tmy by2
+  \tmp=\tmy \ifnum\tmx>\tmy \tmp=\tmx \fi
+  \advance\tmp by\tmx \advance\tmp by\tmy %\message{ perp(\the\tmx,\the\tmy)(\the\ue/\the\tmp)}
+  \mudi\tmx\ue\tmp \ifnum\dx<0 \tmx=-\tmx \fi
+  \mudi\tmy\ue\tmp \ifnum\dy<0 \tmy=-\tmy \fi %\message{->(\the\tmx,\the\tmy)}
+  \ifcase\bmode
+      \ifnum\pmode=2\ifnum\wmode=1\ifnum\wemm=0\ifmetka\else
+        \mudi\mdx{19}{18} \mudi\mdy{19}{18}
+      \fi\fi\fi\fi
+      \linia
+    \or
+      \tmp=\tmx \divide\tmp by3 \advance\px by-\tmp
+      \tmp=\tmy \divide\tmp by3 \advance\py by-\tmp
+      \ifmetka\else
+        \mudi\mdx{19}{18} \mudi\mdy{19}{18}
+      \fi
+      {\vlevo\linia}\vpravo\linia
+    \or
+      \mudi\tmx45 \mudi\tmy45
+      {\linia\vlevo\vlevo\linia}\vpravo\vpravo\linia
+    \or
+      \linia\vlevo\vlevo\vpered\linia
+    \or
+      \linia\vpravo\vpravo\vpered\linia
+  \fi}
+
+\newif\ifresult
+\def\poslednii#1#2{\ifx#2\relax \toks0={#1} \let\next=\relax \else
+  \toks2=\expandafter{\the\toks2 #1} \let\next=\poslednii \fi \next#2}
+\def\lsubst#1{\toks2={}\poslednii#1\relax}
+\def\pervyi#1#2\konez{\toks0={#1}\toks2={#2}}
+\def\rsubst#1{\pervyi#1\konez}
+\def\tsthbox#1\hbox#2\relax{\resultfalse\ifx!#2!\else\resulttrue\fi}
+\def\tstcircle#1\circle#2\relax{\resultfalse\ifx!#2!\else\resulttrue\fi}
+
+\def\putznak#1{%
+  \tstcircle#1\circle\relax
+  \ifresult
+    \put(\tx,\ty){#1}
+  \else
+    \tmx=\tx \advance\tmx by-\lx \tmy=\ty \advance\tmy by\ry
+    \put(\tmx,\tmy){\makebox(0,0)[lt]{#1}}
+  \fi}
+
+\def\spacer#1{\rx=0 \lx=0 \ry=0
+  \tstcircle#1\circle\relax
+  \ifresult\else
+    \ifx!#1!\else %\message{ space(#1)(\the\dx,\the\dy,\the\dmode)}
+      \toks0={#1} \toks2={} \resultfalse
+      \ifnum\dmode=2
+        \resulttrue
+      \else
+        \edef\gum{\the\toks0}\edef\gumx{\gum}
+        \expandafter\tsthbox\gumx\hbox\relax
+      \fi
+      \tmp=\dx \ifnum\tmp=0 \tmp=1 \ifnum\dy=0 \tmp=-1 \fi \fi
+      \ifresult\else
+        \ifnum\dmode=1 \tmp=-\tmp \fi
+        \ifnum\tmp<0 \lsubst{#1} \else \rsubst{#1} \fi %\message{ 02(\the\toks0,\the\toks2)}
+      \fi
+      \if$\the\toks0 \toks0={#1} \toks2={} \fi
+      \setbox0=\hbox{\the\toks0} \lx=\wd0 \divide\lx by2
+      \ry=\ht0 \divide\ry by2
+      \setbox0=\hbox{\the\toks2} \rx=\wd0 \advance\rx by\lx
+      \ifnum\tmp<0 \tmp=\lx \lx=\rx \rx=\tmp \fi %\message{->(\the\ry,\the\lx,\the\rx)}
+    \fi
+  \fi}
+
+\def\short#1{\ifnum\dim=0\else \ifnum\ry=0\else %\message{ short(\the\dx,\the\dy)(\the\mdx,\the\mdy)(\the\ry,\the\lx,\the\rx)}
+  \tmp=\dx \ifnum#1=0 \tmp=-\tmp \fi
+  \ifnum\tmp<0 \tmp=\lx \else \tmp=\rx \fi
+  \tmx=\mdx \divide\tmx by10000 \multiply\tmx by\ry
+  \tmy=\mdy \divide\tmy by10000 \multiply\tmy by\tmp
+  \ifnum\tmx<\tmy
+    \dimen0=1.2\ry \tmx=\mdx \mudi\tmx{\dimen0}\mdy
+    \ifnum\lmode<2
+      \advance\mdy by-\dimen0 \advance\mdx by-\tmx
+    \fi
+    \ifodd#1
+      \advzn\py{\dimen0}\dy
+      \advzn\px\tmx\dx
+    \fi
+  \else
+    \tmy=\mdy \mudi\tmy\tmp\mdx
+    \ifnum\lmode<2
+      \advance\mdx by-\tmp \advance\mdy by-\tmy
+    \fi
+    \ifodd#1
+      \advzn\px\tmp\dx
+      \advzn\py\tmy\dy
+    \fi
+  \fi %\message{->(\the\mdx,\the\mdy)}
+\fi\fi}
+
+\def\chkminx{\ifnum\tmx<\minx \global\minx=\tmx \fi}
+\def\chkmaxx{\ifnum\tmx>\maxx \global\maxx=\tmx \fi}
+\def\chkminy{\ifnum\tmy<\miny \global\miny=\tmy \fi}
+\def\chkmaxy{\ifnum\tmy>\maxy \global\maxy=\tmy \fi}
+\def\adjminmax{\tmx=\tx \advance\tmx by\dx \tmy=\ty \advance\tmy by\dy
+  {\advance\tmx by-\lx \chkminx} \advance\tmx by\rx \chkmaxx
+  {\advance\tmy by-\ry \chkminy} \advance\tmy by\ry \chkmaxy}
+
+\def\trydiv#1#2{\tmp=#1\divide\tmp by#2\multiply\tmp by#2
+  \ifnum\tmp=#1\resulttrue\else\resultfalse\fi}
+\def\odin#1{\ifnum#1=0\else \ifnum#1<0 #1=-1 \else #1=1 \fi \fi}
+
+\newcount\psx \newcount\psy
+\def\ab#1[#2]{%\toks0={#2}\message{ ab(u=\the\ugol, m=\the\toks0, um=\the\umode, b=\the\bmode)}
+  \tmp=#1
+  \ifcase\umode\or
+    \advance\tmp by 18\or
+    \advance\tmp by 31\or
+    \ifnum\tmp=1 \tmp=13 \fi \ifnum\tmp=2 \tmp=13 \fi
+    \ifnum\tmp=4 \tmp=14 \fi \ifnum\tmp=5 \tmp=14 \fi
+    \ifnum\tmp=7 \tmp=15 \fi \ifnum\tmp=8 \tmp=15 \fi
+    \ifnum\tmp=10 \tmp=16 \fi \ifnum\tmp=11 \tmp=16 \fi
+  \fi \tmp=\tmp%\message{ ->(\the\tmp)}
+  \ifcase\tmp
+    \sx=0\sy=6\or  \sx=3\sy=5\or   \sx=5\sy=3\or
+    \sx=6\sy=0\or  \sx=5\sy=-3\or  \sx=3\sy=-5\or
+    \sx=0\sy=-6\or \sx=-3\sy=-5\or \sx=-5\sy=-3\or
+    \sx=-6\sy=0\or \sx=-5\sy=3\or  \sx=-3\sy=5\or
+    \sx=0\sy=6\or
+    \sx=4\sy=4\or \sx=4\sy=-4\or \sx=-4\sy=-4\or \sx=-4\sy=4\or %13--16
+    \sx=0\sy=0 \wemm=\wmode \or %17
+    \sx=0\sy=6\or  \sx=2\sy=6\or   \sx=6\sy=2\or
+    \sx=6\sy=0\or  \sx=6\sy=-2\or  \sx=2\sy=-6\or
+    \sx=0\sy=-6\or \sx=-2\sy=-6\or \sx=-6\sy=-2\or
+    \sx=-6\sy=0\or \sx=-6\sy=2\or  \sx=-2\sy=6\or %18--29
+    \or %30 -- let sx,sy remain
+    \sx=0\sy=6\or  \sx=1\sy=6\or   \sx=6\sy=1\or
+    \sx=6\sy=0\or  \sx=6\sy=-1\or  \sx=1\sy=-6\or
+    \sx=0\sy=-6\or \sx=-1\sy=-6\or \sx=-6\sy=-1\or
+    \sx=-6\sy=0\or \sx=-6\sy=1\or  \sx=-1\sy=6\or %31--42
+  \fi %\message{ SXY(\the\sx,\the\sy)(\the\tmp)}
+  \dx=\sx \multiply\dx by\ue
+  \dy=\sy \multiply\dy by\ue
+  \ifnum\lmode=1 \mudi\dx53 \mudi\dy53 \fi
+  \ifnum\lmode=3 \mudi\dx13 \mudi\dy13 \fi
+  \mdx=\dx \mod\mdx \mdy=\dy \mod\mdy
+  \ifnum\mdx>\mdy \dim=\mdx \else \dim=\mdy \fi
+  \px=\tx \py=\ty %\message{ dxy(\the\dx,\the\dy)|\the\mdx,\the\mdy|\the\dim|}
+  \ifnum\sx=0 \odin\sy \else
+    \ifnum\sy=0 \odin\sx \else
+      \loop \resultfalse
+        \ifodd\sx\else \ifodd\sy\else
+          \divide\sx by2 \divide\sy by2 \resulttrue \fi \fi
+        \ifresult
+      \repeat %\message{ odd(\the\sx,\the\sy)}
+      \trydiv\sx3 \ifresult \trydiv\sy3 \fi
+      \ifresult \divide\sx by3 \divide\sy by3 \fi
+    \fi
+  \fi %\message{ sxy(\the\sx,\the\sy)}
+  \short1
+  \ifnum\lmode=2 %\message{ znak(#2)(\the\dx,\the\dy)}
+    \divide\dx by8 \divide\dy by8
+    \advance\px by\dx \advance\py by\dy
+    \toks0={c} \ifnum\dx>0 \toks0={l} \fi \ifnum\dx<0 \toks0={r} \fi
+    \toks2={c} \ifnum\dy>0 \toks2={b} \fi \ifnum\dy<0 \toks2={t} \fi
+    \edef\poz{[\the\toks0\the\toks2]} \def\mkbox{\makebox(0,0)}
+    \put(\px,\py){\expandafter\mkbox\poz{\znakf{#2}}}
+    \setbox0=\hbox{\znakf{#2}}
+    \ifnum\dy<0 \tmy=\py \advance\tmy by-\ht0 \chkminy \fi
+    \ifnum\dy>0 \tmy=\py \advance\tmy by\ht0 \chkmaxy \fi
+    \ifnum\dx<0 \tmx=\px \advance\tmx by-\wd0 \chkminx \else
+      \ifnum\dx>0 \tmx=\px \advance\tmx by\wd0 \chkmaxx \else
+        \tmp=\wd0 \divide\tmp by2
+        \tmx=\px \advance\tmx by\tmp \chkmaxx
+        \tmx=\px \advance\tmx by-\tmp \chkminx
+      \fi
+    \fi
+  \else
+    \ifnum\bmode=9
+      \tmx=\sx \multiply\tmx by\psy
+      \tmy=\sy \multiply\tmy by\psx
+      \bmode=3 \ifnum\tmx>\tmy \bmode=4 \fi
+    \fi
+    \psx=\sx \psy=\sy
+    \ifnum\lmode=3\else
+      \spacer{#2}
+      \short0
+    \fi
+    \ifx!#2!\metkafalse\else\metkatrue\fi
+    \ifnum\dim>0
+      {\lowbond}
+    \fi
+    \adjminmax
+    \ifnum\lmode=3\else
+      \advance\tx by\dx \advance\ty by\dy
+    \fi
+    \ifmetka
+      \ifnum\bmode=-2\else
+        \putznak{#2}
+      \fi
+    \fi
+  \fi
+  \sx=0 \sy=0
+  \bmode=0 \lmode=0 \pmode=0
+  \umode=0 \dmode=0
+  \wmode=\defwmode
+} %\global for use with commands
+
+\def\b#1{\@ifnextchar[{\ab#1}{\ab#1[]}}
+\def\bt#1{\ifnum\bmode=0 \bmode=#1 \advance\bmode by-1 \fi}
+\def\go{%
+  \ifnum\unitlength=1\else
+    \dimen0=1.3\unitlength \diam=\dimen0
+    \sixue=\unitlength \unitlength=1sp
+    \ue=\sixue \divide\ue by6
+    \global\minx=0 \global\miny=0 \global\maxx=0 \global\maxy=0
+    \wmode=-1
+  \fi
+  \tx=0 \ty=0}
+\def\og{\unitlength=\sixue sp}
+
+\newcount\ang \def\rot#1{\advance\ang by#1 \ifnum\ang>11\advance\ang by-12\fi}
+\def\bb#1{\bt#1\b}
+\def\ph#1{{\ang=#1\rot2 {\bt4\b\ang}\rot8 \b\ang\rot2 \bt5\b\ang\rot2
+  \b\ang\rot2 \bt5\b\ang\rot2 \b\ang}}
+\def\six#1{{\ang=#1\rot2 {\b\ang}\rot8 \b\ang\rot2 \b\ang\rot2
+  \b\ang\rot2 \b\ang\rot2 \b\ang}}
+\def\6{\six}
+\def\CO#1{{\bt2\b{#1}[O]}}
+\def\O{\CO}
+\def\COOH#1{{\ang=#1 \b\ang[C]
+  \ifnum\ang>6 \rot2 {\bt2\b\ang[O]} \rot8 \OH\ang
+    \else \rot2 \OH\ang \rot8 {\bt2\b\ang[O]}
+  \fi}}
+\def\OH#1{{\ifnum#1>6\b{#1}[HO]\else\b{#1}[OH]\fi}}
+\def\Me#1{{\ifnum#1>6\b{#1}[H$_3$C]\else\b{#1}[CH$_3$]\fi}}
+\def\tbx#1{{\ang=#1 \b\ang {\b\ang} \rot3 {\b\ang} \rot6 \b\ang}}
+\def\tbu#1{{\ang=#1 \b\ang \rot2 {\b\ang} \rot8 {\b\ang} \rot1 \b\ang}}
+\def\ip#1{{\ang=#1 \b\ang \rot2 {\b\ang} \rot8 \b\ang}}
+\def\kol#1{\bmode=-1 {\ab#1[\circle\diam]}\bmode=0}
+\def\pho#1{\six#1{\kol#1}}
+
+\def\isdigit#1{\tmp=-1 \ifx#11\tmp=1\else\ifx#12\tmp=2\else\ifx#13\tmp=3\else
+\ifx#14\tmp=4\else\ifx#15\tmp=5\else\ifx#16\tmp=6\else\ifx#17\tmp=7\else
+\ifx#18\tmp=8\else\ifx#19\tmp=9\else\ifx#10\tmp=0 \fi\fi\fi\fi\fi\fi\fi\fi\fi\fi}
+
+%narg: 1=prefix, 2=dir, 3=label, 4=cmd, 6=sx,sy
+\newif\ifminus \newcount\ugol \newcount\narg
+\def\smetkoi{\b\ugol[}
+\def\treelow#1{\toks0={#1}%\message{ 1=(\the\toks0)(\the\narg)}
+  \let\nexttree=\treelow
+  \ifnum\narg=0
+    \ifx#1\konez \let\nexttree=\relax \narg=1 \fi
+    \ifx#1= \advance\bmode by1 \narg=1 \fi
+    \ifx#1< \bmode=3 \narg=1 \fi
+    \ifx#1> \bmode=4 \narg=1 \fi
+    \ifx#1? \bmode=9 \narg=1 \fi
+    \ifx#1: \advance\pmode by1 \narg=1 \fi
+    \ifx#1^ \pmode=2 \narg=1 \fi
+    \ifx#1. \bmode=-1 \lmode=2 \narg=1 \fi
+    \ifx#1~ \advance\bmode by-1 \narg=1 \fi
+    \ifx#1+ \minusfalse \sx=0 \narg=6 \fi
+    \ifx#1- \minustrue \sx=0 \narg=6 \fi
+    \ifx#1[ \begingroup \narg=1 \fi
+    \ifx#1] \endgroup \narg=1 \fi
+    \ifx#1* \advance\wmode by1 \narg=1 \fi
+    \ifx#1/ \advance\umode by1 \narg=1 \fi
+    \ifx#1, \umode=3 \narg=1 \fi
+    \ifx#1_ \lmode=1 \narg=1 \fi
+    \ifx#1' \lmode=3 \narg=1 \fi
+    \ifx#1` \advance\dmode by1 \narg=1 \fi
+    \ifx#1" \dpmode=1 \narg=1 \fi
+    \ifnum\narg=0
+      \ifcat\noexpand#1A
+        \narg=3
+      \else
+        \isdigit#1
+        \ifnum\tmp<0 \narg=4 \else
+          \ugol=\tmp \narg=2
+        \fi
+      \fi
+    \fi
+  \fi
+  \futurelet\nexttok\xnext
+}
+\def\xnext{%\message{ switch(\the\narg)}
+  \ifnum\narg=7
+    \isdigit\nexttok \tmp=\tmp %\message{ tst(\meaning\nexttok)->(\the\tmp (\the\sy))}
+    \ifnum\tmp<0
+      \ifminus \sy=-\sy \fi
+      \ugol=30 \narg=2
+    \else
+      \multiply\sy by10 \advance\sy by\tmp
+    \fi
+  \fi
+  \ifcase\narg
+    \or
+      \narg=0
+    \or %\message{ 2:dir=\the\ugol;}
+      \resultfalse
+      \ifx\nexttok\bgroup\else %\message{ !(}
+        \ifcat A\noexpand\nexttok \narg=3 \else %\message{ !(a}
+          \ifx\nexttok~ \let\nexttok=* \fi
+          \ifcat\relax\noexpand\nexttok \narg=4 \else %\message{ !(ac}
+            \resulttrue
+            \ifnum\ugol=1 %\message{ chk(\meaning\nexttok)}
+              \ifx\nexttok0 \ugol=10 \fi
+              \ifx\nexttok1 \ugol=11 \fi
+              \ifx\nexttok2 \ugol=12 \fi
+              \ifx\nexttok7 \ugol=17 \fi
+              \ifnum\ugol>1 \resultfalse \else
+                \ifnum\lmode=2 \narg=3 \resultfalse \fi
+              \fi
+            \else
+              \ifnum\lmode=2 \narg=3 \resultfalse \fi
+            \fi
+            \ifx\nexttok` \narg=0 \resultfalse \fi
+            \ifx\nexttok" \narg=0 \resultfalse \fi
+      \fi \fi \fi
+      \ifresult
+        \b\ugol[]
+        \narg=0
+      \fi
+    \or %\message{ 3:label=\the\toks0;}
+      \expandafter\smetkoi\the\toks0]
+      \narg=0
+    \or %\message{ 4:cmd;}
+      \edef\komanda{\the\toks0}
+      \ifx\nexttok\bgroup
+        \narg=5
+      \else
+        \komanda\ugol
+        \bmode=0 \lmode=0 \pmode=0 \umode=0 \dmode=0
+        \narg=0
+      \fi
+    \or %5
+      \def\cmdu{\komanda\ugol[}
+      \expandafter\cmdu\the\toks0]
+      \bmode=0 \lmode=0 \pmode=0 \umode=0 \dmode=0
+      \narg=0
+    \or %6 (
+      \ifx\nexttok+
+        \ifminus \sx=-\sx \fi
+        \minusfalse \sy=0 \narg=7
+      \else
+        \ifx\nexttok-
+          \ifminus \sx=-\sx \fi
+          \minustrue \sy=0 \narg=7
+        \else
+          \isdigit\nexttok
+          \multiply\sx by10 \advance\sx by\tmp
+        \fi
+      \fi
+  \fi %\message{->n(\the\narg)}
+  \ifnum\narg=5\else
+    \ifx\nexttok\bgroup\narg=3\fi
+  \fi
+  \nexttree}
+
+\newbox\strbox \newcount\vpos
+\def\tree#1{\treelow17#1 \konez\og}
+\def\astree[#1]#2{\vpos=0 \ifx#1b\vpos=1\fi \ifx#1t\vpos=2\fi
+  \begstr\tree{#2}\endstr}
+\def\stree{%\catcode`~=12
+  \@ifnextchar[{\astree}{\astree[c]}}
+%
+\def\begstr{\unitlength=\bondlen\setbox\strbox=\hbox\bgroup
+\begin{picture}(0,0)\go}
+%
+\def\endstr{\end{picture}\egroup\og %\message{ x(\the\minx..\the\maxx) y(\the\miny..\the\maxy) }
+\advance\maxx by-\minx \advance\maxy by-\miny \tmp=0
+\ifnum\vpos=0 \divide\maxy by2 \dimen0=0.5ex \tmp=\dimen0\fi
+\ifnum\vpos=1\else \advance\miny by\maxy \advance\miny by-\tmp\fi
+\setbox0\hbox to\maxx sp{\kern-\minx sp\lower\miny sp\box\strbox \hss}%
+\advance\maxy by\tmp \ht0=\maxy sp\advance\maxy by-\tmp
+\ifnum\vpos=1 \dp0=0pt\else\advance\maxy by-\tmp \dp0=\maxy sp\fi
+\ifnum\vpos=2 \ht0=0pt\fi
+\leavevmode\box0}
+%\catcode`~=13}
+
+%
+% former sprivate.sty
+%
+% масс-спектры ...
+%
+\newdimen\mzlen \mzlen=0.6pt
+\newcount\@mz \newcount\@int \newcount\mzmax
+\newcount\imax \imax=50 \newcount\msdir \msdir=1
+\newbox\mzbox
+\def\numfnt{\small}
+\def\mzlabel{ $m/z$}
+\def\mzl@w#1{\dy=\@int %\message{ 1=#1; 2=#2; 3=#3 (\the\dy); }
+  \multiply\dy by\imax \divide\dy by100 \pul(\@mz,0,0,\msdir){\dy}
+  \ifodd#1
+    \ifnum\msdir=1 \advance\dy by4 \puz(\@mz,\dy)bc{\numfnt\the\@mz}
+    \else \advance\dy by4 \puz(\@mz,-\dy)tc{\numfnt\the\@mz} \fi
+  \fi
+  \ifnum\@mz>\mzmax \global\mzmax=\@mz \fi}
+\def\pr@ceed#1{\ifx#1\k@nez \mzl@w0 \let\next=\relax \else
+    \ifx#1- \@mz=\@int \@int=0
+      \else\ifx#1, \mzl@w0 \@int=0 \advance\@mz by1
+        \else\ifx#1! \mzl@w1 \@int=0 \advance\@mz by1
+          \else \multiply\@int by10 \advance\@int by#1 \fi\fi\fi
+    \let\next=\pr@ceed \fi
+\next}
+\def\mass#1{\@mz=0 \@int=0
+  \pr@ceed#1\k@nez
+  \setbox0=\hbox{\numfnt99} \tmy=\ht0 \divide\tmy by\mzlen
+  \ifnum\msdir>0
+    \maxy=\imax \advance\maxy by4 \advance\maxy by\tmy
+    \miny=-7 \advance\miny by-\tmy
+  \else
+    \miny=-\imax \advance\miny by-4 \advance\miny by-\tmy
+  \fi
+  \global\miny=\miny \global\maxy=\maxy
+  \msdir=1}
+\def\scale#1#2{%
+  \ifx!#2!
+    \divide\mzmax by10 \advance\mzmax by1 \multiply\mzmax by10
+  \else
+    \mzmax=#1
+  \fi
+  \global\mzmax=\mzmax
+  \pul(-1,0,1,0)\mzmax
+  \@mz=50
+  \loop \ifnum\@mz<\mzmax
+    \pul(\@mz,0,0,-1)6
+    \ifodd#1 \puz(\@mz,-7)tc{\numfnt\the\@mz} \fi
+    \advance\@mz by50
+  \repeat
+  \dy=\mzmax \divide\dy by10
+  \multiput(0,0)(10,0)\dy{\line(0,-1)4}
+  \setbox\mzbox=\hbox{\mzlabel}
+  \puz(\mzmax,0)cl{\box\mzbox}
+  \tmp=\wd\mzbox \divide\tmp by\mzlen
+  \advance\mzmax by\tmp
+}
+\def\begms{\mzmax=0 \maxy=0 \miny=0 \unitlength=\mzlen
+\setbox\strbox=\hbox\bgroup\begin{picture}(0,0)}
+\def\endms{\end{picture}\egroup%\message{ (\the\mzmax, \the\miny, \the\maxy) }
+\advance\maxy by-\miny
+\ifnum\vpos=0 \divide\maxy by2 \advance\miny by\maxy \fi
+\setbox0\hbox to\mzmax\mzlen{\lower\miny\mzlen\box\strbox \hss}%
+\ht0=\maxy\mzlen
+\ifnum\vpos=0 \dp0=\maxy\mzlen \else \dp0=0pt\fi
+\leavevmode\box0}
+\def\@massp[#1]#2{\vpos=0 \ifx#1b \vpos=1 \fi
+  \begms\mass{#2}\scale1{}\endms}
+\def\massp{\@ifnextchar[{\@massp}{\@massp[c]}}
+
+%
+% CNMR
+\newdimen\mdlen \mdlen=0.0013in
+\newcount\md \newcount\mdl \newcount\py \newcount\dht \newcount\moda
+\def\xxx#1#2{\vrule width#1\unitlength height#2\unitlength}
+\def\pik{\tmp=5 \dht=5
+  \loop\ifnum\tmp>0
+    \ifnum\tmp>15 \xxx5\py \dht=-\dht \else \xxx5\tmp \fi
+    \advance\tmp by\dht
+  \repeat}
+\def\onecnmr#1{\let\nextcnmr=\onecnmr %\message{ 1=(#1)(\the\moda)}
+  \ifnum\moda>0
+    \advance\py by10
+    \puz(-\mdl,\py)bc{#1}
+    \moda=0
+  \else
+    \ifx#1\konez
+      \let\nextcnmr=\relax
+    \else
+      \py=0
+      \ifx#1s \py=100 \else
+        \ifx#1d \py=200 \else
+          \ifx#1t \py=300 \else
+            \ifx#1q \py=400 \else
+              \multiply\md by10 \advance\md by#1
+      \fi \fi \fi \fi %\message{ md=\the\md, ht=\the\py.}
+      \ifnum\py>0
+        \puz(-\md,0)bc\pik \mdl=\md \md=0
+      \fi
+    \fi
+  \fi
+  \futurelet\nexttok\tstnext}
+\def\tstnext{\ifx\nexttok\bgroup \moda=1 \fi \nextcnmr}
+
+\def\lineika{\vrule height0.05pt width\tmx\mdlen}
+\def\cnmrs{\@ifnextchar[{\@cnmrs}{\@cnmrs[c]}}
+\def\@cnmrs[#1]#2#3{\unitlength=\mdlen
+\vpos=0 \ifx#1b \vpos=1 \fi
+\setbox0=\hbox{\numfnt99}\tmy=\ht0 \divide\tmy by\mdlen \advance\tmy by35
+\tmx=#2 \advance\tmx by50
+\setbox\strbox=\hbox{\begin{picture}(\tmx,600)(-#2,-\tmy)%
+\md=0 \onecnmr#3\konez
+\tmx=0 \loop\ifnum\tmx<#2
+\pul(-\tmx,0,0,-1){20} \tmp=\tmx \divide\tmp by10
+\puz(-\tmx,-35)tc{\numfnt\the\tmp}%
+\advance\tmx by500\repeat
+\tmx=#2
+\puz(0,100)cl{\numfnt s}\puz(0,100)br{\lineika}
+\puz(0,200)cl{\numfnt d}\puz(0,200)br{\lineika}
+\puz(0,300)cl{\numfnt t}\puz(0,300)br{\lineika}
+\puz(0,400)cl{\numfnt q}%\puz(0,400)br{\lineika}
+\advance\tmx by50
+\put(50,0){\vector(-1,0)\tmx}%
+\end{picture}}%
+\tmy=0 \ifnum\vpos=0 \tmy=250 \fi
+\setbox0\hbox to\tmx\mdlen{\lower\tmy\mdlen\box\strbox \hss}%
+\dp0=\tmy\mdlen \advance\tmy by-550 \ht0=-\tmy\mdlen
+\leavevmode\box0}
+
+%
+% rpic
+\newdimen\picplus \picplus=1em % surrounds a picture
+\newdimen\razmer \newdimen\dive \newdimen\divetwo
+\def\@rpic[#1]#2{\setbox0=\hbox{#2}\setbox2=\hbox to \wd0{#1}%
+\razmer=\ht0 \advance\razmer by\dp0 \advance\razmer by\ht2
+\advance\razmer by\picplus \divetwo=\razmer \advance\divetwo by\baselineskip
+\advance\razmer by\dp2 \advance\razmer by\picplus
+\tmp=\razmer \divide\tmp by\baselineskip \advance\tmp by1
+\razmer=\wd0 \advance\razmer by\picplus
+\hangafter=-\tmp \hangindent=-\razmer
+\razmer=-\razmer \advance\razmer by\hsize
+\advance\razmer by\picplus
+\setbox0=\rlap{\kern\razmer \razmer=\wd0%
+\dive=\ht0\advance\dive by\baselineskip\lower\dive\box0%
+\kern-\razmer\lower\divetwo\box2}%
+\dp0=0pt\ht0=0pt\wd0=0pt%
+{\baselineskip=0pt\lineskip=0pt\box0\penalty10000}%
+}
+\def\rpic{\@ifnextchar[{\@rpic}{\@rpic[]}}
+
+%
+% local settings -- removed
+%\def\рис(#1){рис.~\ref{#1}}
+%\def\табл(#1){табл.~\ref{#1}}
+%\def\CNMR{$^{13}$C ЯМР}
+%\def\MYPC{PC AT 486 DX2-66}
+
+\def\longdown{{\unitlength=1em\begin{picture}(0,2)\put(0,1){\vector(0,-1){1.5}}\end{picture}}}
+\def\pul(#1,#2,#3,#4)#5{\put(#1,#2){\line(#3,#4){#5}}}
+\def\puz(#1,#2)#3#4#5{\put(#1,#2){\makebox(0,0)[#3#4]{#5}}}
+%
+\def\wider#1{\dimen255=#1\advance\hsize by\dimen255
+  \advance\textwidth by\dimen255
+  \divide\dimen255 by2 \advance\hoffset by-\dimen255}
+\def\higher#1{\dimen255=#1\advance\vsize by\dimen255
+  \advance\textheight by\dimen255
+  \divide\dimen255 by2 \advance\voffset by-\dimen255}
+
+%
+%verbatim
+\def\uncatcodespecials{\def\do##1{\catcode`##1=12 }\dospecials\catcode`\ =10}
+\def\sverb{\begingroup\tt\uncatcodespecials\frenchspacing\doverbatim}
+\def\doverbatim#1{\def\next##1#1{##1\endgroup}\next}
+
+% the end

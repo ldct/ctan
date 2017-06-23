@@ -1,0 +1,305 @@
+% \iffalse meta-comment
+%
+% Copyright 2017	Maurice Leclaire <leclaire@in.tum.de>
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either
+% version 1.3 of this license or (at your option) any later
+% version. The latest version of this license is in:
+%
+%   http://www.latex-project.org/lppl.txt
+%
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% This work consists of the files minidocument.dtx and minidocument.ins
+% and the derived file minidocument.sty.
+%
+% \fi
+%
+% \iffalse
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{minidocument}[2017/04/11 v1.0 Mini Documents]
+%
+%<*driver>
+\documentclass{ltxdoc}
+\CheckSum{109}
+\usepackage{minidocument}
+\usepackage{blindtext}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+\DocInput{minidocument.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \changes{v1.0}{2017/01/26}{Initial version}
+%
+% \GetFileInfo{minidocument.sty}
+%
+% %\DoNotIndex{\def,\let,\global,\long,\expandafter}
+% %\DoNotIndex{\csname,\endcsname,\advance,\string}
+% %\DoNotIndex{\if,\else,\fi,\ifdim,\ifodd,\ifvoid,\ifcsname,\@ifnextchar}
+% %\DoNotIndex{\chardef,\count,\dimen,\skip,\box,\setbox,\lastbox,\copy}
+% %\DoNotIndex{\hbox,\vbox,\unhbox,\unvbox,\hskip,\vskip,\hss,\hrule,\vfill}
+% %\DoNotIndex{\the,\ht,\dp,\@ne,\z@,\maxdimen}
+%
+% \title{The \textsf{minidocument} package}
+% \author{Maurice Leclaire\\\texttt{leclaire@in.tum.de}}
+% \date{\fileversion\ -- \filedate}
+% \maketitle
+%
+% \begin{abstract}
+% The \textsf{minidocument} package is used to create miniature documents inside
+% other documents as can be seen in Figure~\ref{fig:example}.
+% \end{abstract}
+%
+% \begin{minidocument}
+% \def\minidocumentscale{0.25}
+% \title{The \textsf{minidocument} package}
+% \author{Maurice Leclaire\\\texttt{leclaire@in.tum.de}}
+% \date{\fileversion\ -- \filedate}
+% \maketitle
+% \Blindtext
+% \end{minidocument}
+%
+% \begin{figure}[!htb]
+% \begin{center}
+% \lastminidocument
+% \end{center}
+% \caption{A minidocument example}
+% \label{fig:example}
+% \end{figure}
+%
+% \tableofcontents
+%
+% \section{Usage}
+%
+% \DescribeEnv{minidocument}
+% A minidocument is created with the \verb|minidocument| environment.
+% The \verb|page| counter is set to one at the beginning of a minidocument and
+% restored afterwards.
+% It is important, that this environment is placed in outer vertical mode.
+% Otherwise, it will not work properly.
+% However, it is of course possible to place the resulting minidocument
+% everywhere. Therefore, the environment itself does not output anything. The
+% example minidocument in Figure~\ref{fig:example} is defined as:
+% \begin{quote}
+% \begin{verbatim}
+%\begin{minidocument}
+%    \maketitle
+%    \Blindtext
+%\end{minidocument}
+% \end{verbatim}
+% \end{quote}
+%
+% \noindent
+% \DescribeMacro{\lastminidocument}
+% To output the minidocument, the command \verb|\lastminidocument| is used,
+% e.\,g.:
+% \begin{quote}
+% \begin{verbatim}
+%\begin{figure}
+%    \lastminidocument
+%\end{figure}
+% \end{verbatim}
+% \end{quote}
+%
+% \noindent
+% \DescribeMacro{\minidocumentscale}
+% By default, the minidocument is scaled down with \verb|\minidocumentscale|,
+% which defaults to 0.333. This can be changed with e.\,g.
+% \begin{quote}
+% \verb|\def\minidocumentscale{0.25}|
+% \end{quote}
+% as it is done in this documentation.
+%
+% \noindent
+% \DescribeMacro{\minidocumentshipout}
+% The macro \verb|\minidocumentshipout| is called for every page in the
+% minidocument. It takes a single argument containing the page and is
+% responsible for postprocessing it. It can be redefined to obtain a different
+% look. The default is defined as
+% \begin{quote}
+% \verb|\scalebox{\minidocumentscale}{\frame{#1}}|
+% \end{quote}
+%
+% \StopEventually{
+%     \begin{thebibliography}{1}
+%         \raggedright
+%         \bibitem{atbegshi}
+%         Heiko Oberdiek.
+%         \newblock The \textsf{atbegshi} package.
+%         \newblock \textsc{ctan}: \url{http://ctan.org/pkg/atbegshi}
+%     \end{thebibliography}
+%     \PrintChanges
+%     \setcounter{IndexColumns}{2}
+%     \PrintIndex
+% }
+%
+% \section{Implementation}
+%
+% The \verb|graphics| package is required for \verb|\scalebox|.
+%    \begin{macrocode}
+\RequirePackage{graphics}
+%    \end{macrocode}
+%
+% \begin{macro}{\minidocument@box}
+% We allocate a box register for temporary storage.
+%    \begin{macrocode}
+\newbox\minidocument@box
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\minidocument@aggrbox}
+% The following box will aggregate the minidocument.
+%    \begin{macrocode}
+\newbox\minidocument@aggrbox
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\minidocument@hold}
+% This box is used to store the current vertical list when entering the
+% minidocument.
+%    \begin{macrocode}
+\newbox\minidocument@hold
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\minidocument@orig@output}
+% We need a token register to store the output routine.
+%    \begin{macrocode}
+\newtoks\minidocument@orig@output
+%    \end{macrocode}
+% \end{macro}
+%
+% \noindent
+% The following method of overloading the shipout procedure is borrowed from
+% the \textsf{atbegshi} package\cite{atbegshi} where it is explained in detail.
+% The problem we face here is that \verb|\shipout| can be called with many
+% different box specifications which can not be catched as macro arguments.
+% Therefore, we use \verb|\setbox| to get the box specification and
+% \verb|\afterassignment| to execute the code that handles the box. However,
+% for direct box specifications the code specified via \verb|\afterassignment|
+% is not executed after the box specification is finished but directly at the
+% beginning of the box. Therefore, we need an additional \verb|\aftergroup| in
+% the case of a direct box. We only have to determine if we are at the
+% beginning of a direct box. We can do this by inspecting \verb|\lastkern| as
+% it is zero at the beginning of a box.
+%
+% \begin{macro}{\minidocument@shipout}
+% This macro is the entry point of our shipout procedure. Inside a new group we
+% assign and start a new box with a specified kerning. This box is only
+% temporary and gives us a reliable environment. We install the
+% \verb|\afterassignment| hook and assign the passed box to a box register. This
+% assignment is global as it must survive the group while the temporary box
+% which is assigned to the same box register is lost.
+%    \begin{macrocode}
+\def\minidocument@shipout{%
+    \begingroup\setbox\minidocument@box\hbox\bgroup\kern\p@%
+    \afterassignment\minidocument@testshipout%
+    \global\setbox\minidocument@box%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\minidocument@testshipout}
+% The following macro is called by \verb|\afterassignment|. It checks via
+% \verb|\lastkern| if it is called at the beginning of a box. In this case an
+% \verb|\aftergroup| is inserted. Either way, when the box is finished the next
+% macro is called.
+%    \begin{macrocode}
+\def\minidocument@testshipout{%
+    \ifdim\lastkern=\z@%
+        \expandafter\aftergroup%
+    \fi%
+    \minidocument@makeshipout%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\minidocument@makeshipout}
+% This macro ends the temporary box and the group. We now have the passed box
+% in the box register. If the box register is not void, we do the virtual
+% shipout. Therefore, we position the box at the right place of a page.
+% Afterwards, we call \verb|\minidocumentshipout| to postprocess the page. We
+% then add the page to the aggregation box.
+%    \begin{macrocode}
+\def\minidocument@makeshipout{%
+    \egroup\endgroup%
+    \ifvoid\minidocument@box\else%
+        \global\setbox\minidocument@box\vbox to \paperheight {
+            \vskip1in%
+            \hbox to \paperwidth {
+                \hskip1in%
+                \box\minidocument@box%
+                \hfill
+            }%
+            \vfill
+        }%
+        \global\setbox\minidocument@aggrbox\hbox{\unhbox\minidocument@aggrbox%
+            \minidocumentshipout{\box\minidocument@box}%
+            \hskip0pt%
+        }%
+    \fi%
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{minidocument}
+% The \verb|minidocument| environment first saves the current vertical list.
+% Therefore, the output routine is changed and a page break is enforced. Then,
+% the shipout procedure is switched and the page counter is set to one. At the
+% end of the environment, the shipout procedure and the page number are
+% restored. Afterwards, the saved vertical list is reinserted.
+%    \begin{macrocode}
+\newenvironment{minidocument}{%
+    \minidocument@orig@output\output%
+    \output{\global\setbox\minidocument@hold\box\@cclv}%
+    \penalty-\@Mi%
+    \output\minidocument@orig@output%
+    \let\minidocument@orig@shipout\shipout%
+    \let\shipout\minidocument@shipout%
+    \edef\minidocument@page{\the\c@page}%
+    \c@page\@ne%
+}{%
+    \clearpage%
+    \let\shipout\minidocument@orig@shipout%
+    \global\c@page\minidocument@page%
+    \unvbox\minidocument@hold%
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\lastminidocument}
+% The macro \verb|\lastminidocument| unboxes the aggregated minidocument so
+% that it can flow into the main document.
+%    \begin{macrocode}
+\def\lastminidocument{%
+    \unhbox\minidocument@aggrbox\unskip%
+}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\minidocumentscale}
+% We set the default scale factor to $1/3$, so that two pages can fit next to
+% each other on a page with appropriate margins.
+%    \begin{macrocode}
+\def\minidocumentscale{0.333}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\minidocumentshipout}
+% The default \verb|\minidocumentshipout| draws a frame around the page and
+% scales the page with \verb|\minidocumentscale|.
+%    \begin{macrocode}
+\newcommand{\minidocumentshipout}[1]{%
+    \scalebox{\minidocumentscale}{\frame{#1}}%
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \iffalse
+\endinput
+% \fi
+%
+% \Finale

@@ -1,0 +1,128 @@
+% draftfigure --%
+%            modifying drafted figures
+% Copyright (c) 2017 Lukas C. Bossert
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+ \def\df@date{2017/05/06}
+ \def\df@version{0.1}
+ \def\df@styid{\df@date\space v\df@version\space draftfigure (LCB)}
+ \let\dfdate\df@date
+ \let\dfversion\df@version
+
+\NeedsTeXFormat{LaTeX2e}[1994/06/01]
+\ProvidesPackage{draftfigure}[\df@styid]
+
+\RequirePackage{graphicx}
+\RequirePackage{etoolbox}
+\RequirePackage{xkeyval}
+\RequirePackage{calc}
+
+\newbool{df@filename}
+\newbool{df@content}
+\newbool{df@noframe}
+
+\newlength\df@height
+\newlength\df@length
+
+\providecommand*\df@size{}
+\providecommand*\df@style{}
+\providecommand*\df@font{}
+\providecommand*\df@position{}
+\providecommand*\df@content{}
+
+
+\patchcmd{\Gin@setfile}{\expandafter\strip@prefix\meaning\@tempa}{\@draftfigure}{}{}
+
+
+\providecommand\df@noframe{% NOT WORKING
+ \patchcmd\Gin@setfile{\vrule\hss}{\vrule\@width\z@\hss}{}{}%left
+ \patchcmd\Gin@setfile{\hss\vrule}{\hss\vrule\@width\z@}{}{}%right
+ \patchcmd\Gin@setfile{\hrule\@width}{\hrule\@height\z@\@width}{}{}%top
+ \patchcmd\Gin@setfile{\vss\hrule}{\vss\hrule\@height\z@}{}{}%bottom
+}
+
+%% Declare a package option
+\DeclareOptionX{content}{\def\df@content{#1}}
+\DeclareOptionX{filename}[true]{\csuse{bool#1}{df@filename}
+
+}
+\DeclareOptionX{size}[small]{\def\df@size{\csname df@size@#1\endcsname}}
+\DeclareOptionX{style}[sf]{\def\df@style{\csname df@style@#1\endcsname}}
+\DeclareOptionX{position}[right]{\def\df@position{\csname df@position@#1\endcsname}}
+\DeclareOptionX{allfiguresdraft}[true]{\setkeys{Gin}{draft=#1}}
+\DeclareOptionX{noframe}[true]{\csuse{bool#1}{df@noframe}\df@noframe
+ \patchcmd\Gin@setfile{\vrule\hss}{\vrule\@width\z@\hss}{}{}%left
+ \patchcmd\Gin@setfile{\hss\vrule}{\hss\vrule\@width\z@}{}{}%right
+ \patchcmd\Gin@setfile{\hrule\@width}{\hrule\@height\z@\@width}{}{}%top
+ \patchcmd\Gin@setfile{\vss\hrule}{\vss\hrule\@height\z@}{}{}%bottom
+}
+
+%% predefined styles
+\providecommand\df@style@normal{\normalfont}
+\providecommand\df@style@sf{\sffamily}
+\providecommand\df@style@sc{\scshape}
+\providecommand\df@style@bf{\bfseries}
+\providecommand\df@style@it{\itshape}
+\providecommand\df@style@tt{\ttfamily}
+\providecommand\df@style@rm{\rmfamily}
+
+\providecommand\df@size@tiny{\tiny}
+\providecommand\df@size@scriptsize{\scriptsize}
+\providecommand\df@size@small{\small}
+\providecommand\df@size@footnotesize{\footnotesize}
+\providecommand\df@size@normal{\normalsize}
+\providecommand\df@size@large{\large}
+\providecommand\df@size@Large{\Large}
+\providecommand\df@size@Large{\LARGE}
+\providecommand\df@size@huge{\huge}
+
+\providecommand\df@position@top{}%% fix me
+\providecommand\df@position@center{\centering}
+\providecommand\df@position@bottom{}%% fix me
+\providecommand\df@position@right{\raggedleft}
+\providecommand\df@position@left{\raggedright}
+
+%% Process the options given to the package
+\ProcessOptionsX
+
+\define@key{draftfigure}{code}{%
+  \def\df@style{#1}}
+\define@key{draftfigure}{noframe}[true]{%
+  \csuse{bool#1}{df@noframe}
+ \df@noframe}
+\define@key{draftfigure}{filename}[true]{%
+  \csuse{bool#1}{df@filename}}
+\define@key{draftfigure}{content}[]{%
+  \def\df@content{#1}}
+\define@key{draftfigure}{style}[normal]{%
+  \def\df@style{\csname df@style@#1\endcsname}}
+\define@key{draftfigure}{position}[left]{%
+   \def\df@position{\csname df@position@#1\endcsname}}
+\define@key{draftfigure}{size}[normal]{%
+  \def\df@size{\csname df@size@#1\endcsname}}
+
+\newcommand\setdf[1]{\setkeys{draftfigure}{#1}}
+
+\def\@draftfigure{%
+\setlength\df@height{\Gin@nat@height}%
+\setlength\df@length{\Gin@req@width}%
+\begin{minipage}[c][\df@height-5pt][c]{\df@length-5pt}%
+ \sffamily%
+  \df@position%
+  \df@size%
+ \df@style%
+  \df@content%
+ \ifbool{df@filename}{%
+   \ifdef{\df@content}%
+   {\mbox{~}\\[\baselineskip]}%
+  {}%
+  \expandafter\strip@prefix\meaning\@tempa}%
+ {}%
+\end{minipage}}%
+\endinput

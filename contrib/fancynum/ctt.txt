@@ -1,0 +1,238 @@
+Some anwsers from comp.text.tex (Nov 99)
+========================================
+
+$Id: ctt.txt,v 1.3 2000/03/15 18:31:04 ap1jjg Exp $
+
+From: oberdiek@ruf.uni-freiburg.de (Heiko Oberdiek)
+Subject: Re: TeX Macros
+Newsgroups: comp.text.tex
+Date: Wed, 03 Nov 1999 12:44:39 GMT
+Organization: Rechenzentrum der Universitaet Freiburg, Germany
+
+john green <ap1jjg@gold.cics.shef.ac.uk> wrote:
+
+>The macro \split should take one argument which
+>may or may not contain an "e". If the argument 
+>contains an e, say 123e45, then \split should  expand 
+>to \a{123}{45}, and if not, say 12345, then \split
+>should expand to \b{12345}.
+>
+>You can probably guess that I want to use TeX to format 
+>floating point numbers. This problem arises since the 
+>C call 
+>
+>  printf("%g",x) 
+>  
+>will write x in exponetial format only for x of large or 
+>small modulus.
+
+%%% cut %%% test.tex %%% cut %%%
+\def\floatsplit#1{\dofloatsplit#1e\END}
+\def\dofloatsplit#1e#2\END{%
+  \ifx\\#2\\%
+    \ReturnAfterElseFi{%
+      \b{#1}%
+    }%
+  \else
+    \ReturnAfterFi{%
+      \RemoveE{#1}#2\END
+    }%
+  \fi
+}
+\def\RemoveE#1#2e\END{\a{#1}{#2}}
+\long\def\ReturnAfterFi#1\fi{\fi#1}
+\long\def\ReturnAfterElseFi#1\else#2\fi{\fi#1}
+
+\def\a#1#2{$#1\cdot10^{#2}$}
+\def\b#1{$#1$}
+[\floatsplit{123e456}][\floatsplit{1}]
+\bye
+%%% cut %%% test.tex %%% cut %%%
+
+Yours sincerely
+  Heiko <oberdiek@ruf.uni-freiburg.de>
+
+=========================================================
+
+From: Norman Gray <ng3j@udcf.gla.ac.uk>
+Subject: Re: TeX Macros
+Newsgroups: comp.text.tex
+Date: 3 Nov 1999 12:01:02 -0000
+Organization: University of Glasgow
+
+Greetings,
+
+john green <ap1jjg@gold.cics.shef.ac.uk> writes:
+
+>The macro \split should take one argument which
+>may or may not contain an "e". If the argument 
+>contains an e, say 123e45, then \split should  expand 
+>to \a{123}{45}, and if not, say 12345, then \split
+>should expand to \b{12345}.
+
+How's about:
+
+\documentclass{article}
+
+\def\a#1#2{(A #1 #2)}
+\def\b#1{(B #1)}
+
+\makeatletter
+\def\@split#1e#2e#3\end@split{%
+  \xdef\@gtempa{#2}%
+  \ifx\@gtempa\@empty
+    \b{#1}%
+  \else
+    \a{#1}{#2}%
+  \fi}
+\def\split#1{\@split#1ee\end@split}
+
+\begin{document}
+
+\tracingmacros=2
+\split{123e45}
+\split{12345}
+\tracingmacros=0
+
+\end{document}
+
+Norman
+
+------------------------------------------------------------------
+Norman Gray               http://www.astro.gla.ac.uk/users/norman/
+
+=========================================================
+
+From: Michael Downes <mjd@epsilon.ams.org>
+Subject: Re: TeX Macros
+Newsgroups: comp.text.tex
+Date: 04 Nov 1999 12:40:21 -0500
+Organization: American Mathematical Society
+
+john green <ap1jjg@gold.cics.shef.ac.uk> writes:
+
+> I used a modifed version of Heikos solution in the end
+> 
+>   \def\frealsplit#1e#2e#3 {%
+>     \xdef\fgtempa{#2}%
+>     \ifx\fgtempa\empty
+>       \fdecimal{#1}%
+>     \else
+>       \fexp{#1}{#2}%
+>     \fi}
+>   \def\freal#1{\frealsplit#1ee }
+
+If you change your definition of \fdecimal slightly so that it takes two
+arguments, but discards the second one, then you could let TeX's
+argument scanning handle the branching and do without \fgtempa and \ifx:
+
+\def\freal#1{\frealsplit#1ee\fexp\fdecimal\empty}
+\def\frealsplit#1e#2e#3#4#5{#4{#1}{#2}}
+
+E.g.:
+
+\def\fdecimal#1#2{Decimal #1}
+\def\fexp#1#2{Exponential #1 E #2}
+
+Regards, Michael Downes
+
+=========================================================
+
+From: oberdiek@ruf.uni-freiburg.de (Heiko Oberdiek)
+Subject: Re: TeX Macros
+Newsgroups: comp.text.tex
+Date: Fri, 05 Nov 1999 04:04:43 GMT
+Organization: Rechenzentrum der Universitaet Freiburg, Germany
+
+On 04 Nov 1999 12:40:21 -0500, Michael Downes <mjd@epsilon.ams.org>
+wrote:
+
+>john green <ap1jjg@gold.cics.shef.ac.uk> writes:
+>
+>>   \def\frealsplit#1e#2e#3 {%
+>>     \xdef\fgtempa{#2}%
+>>     \ifx\fgtempa\empty
+>>       \fdecimal{#1}%
+>>     \else
+>>       \fexp{#1}{#2}%
+>>     \fi}
+>>   \def\freal#1{\frealsplit#1ee }
+>
+>If you change your definition of \fdecimal slightly so that it takes two
+>arguments, but discards the second one, then you could let TeX's
+>argument scanning handle the branching and do without \fgtempa and \ifx:
+>
+>\def\freal#1{\frealsplit#1ee\fexp\fdecimal\empty}
+>\def\frealsplit#1e#2e#3#4#5{#4{#1}{#2}}
+
+Beautiful!
+
+>E.g.:
+>
+>\def\fdecimal#1#2{Decimal #1}
+>\def\fexp#1#2{Exponential #1 E #2}
+
+The second argument of \fdecimal can easily be removed:
+
+\def\freal#1{\frealsplit#1ee\fexp\frealdecimal\empty}
+\def\frealsplit#1e#2e#3#4#5{#4{#1}{#2}}
+\def\frealdecimal#1#2{\fdecimal{#1}}
+
+\def\fdecimal#1{Decimal #1}
+\def\fexp#1#2{Exponential #1 E #2}
+
+Best regards
+  Heiko <oberdiekf@ruf.uni-freiburg.de>
+
+=========================================================
+
+From: asnd@erich.triumf.ca (Donald Arseneau)
+Subject: Re: formatting numbers
+Newsgroups: comp.text.tex
+Date: 10 Nov 1999 16:55 PST
+Organization: TRIUMF: Canada's National Meson Facility
+
+In article <s8xvh7b4vn0.fsf@gold.cics.shef.ac.uk>, john green 
+<ap1jjg@gold.cics.shef.ac.uk> writes...
+>I've almost finished doing just this
+
+  That brings to mind your earlier question about splitting text at
+  an "e" (or E).  There's no real need, and it may not be the best way.
+  Let me put on my \mathcode"8000 hat...
+
+  \newcommand\sn[1]{\ensuremath{\bgroup
+  % \mathcode`e="8000 \mathcode`E="8000   %  Avoid characters ` and "
+    \mathcode 69=32768 \mathcode 101=32768 
+    #1\egroup}}
+
+  \def\SciNotate{\egroup \times 10^\bgroup}
+  {
+  \def\\#1{\global\let#1\SciNotate}
+   \catcode 69=13 \catcode 101=13
+   \\e \\E
+  }
+
+
+  (I din't use one of the "nice" ways to define active characters, 
+  such as \actively\let e=\SciNotate.)
+
+  Maybe you also have niceties like converting E+07 to \times 10^{7},
+  but that too could be added here. 
+
+  I think there is a general benefit form not parsing the text of the
+  argument, but the benefit is small here, as I expect it is intended
+  for automatically typesetting computer output.
+
+  Another thing to look for is the dcolumn package, using "e" as the
+  "decimal" character.  This will align numbers on the exponent in a
+  table.
+
+  Donald Arseneau                         asnd@triumf.ca
+
+End of returned message
+
+
+
+
+
+

@@ -1,0 +1,78 @@
+%\iffalse
+%
+% This is a set of utilities that I have used in London
+% to print large files to an HP 6xx series plotter.
+% At least the way I use it, this plotter handles the top
+% margin in a bizzare way that requires some preprocessing
+% to get things into a predictable location on the physical
+% page.  I don't provide any documentation here, because the
+% chances are good that my problems were one-off problems.
+% But it you, too, have trouble with HP 6xx series plotters
+% and dvips, I will be happy to explain how this stuff works
+% together (if I can remember).
+%
+%\fi
+%
+% \iffalse
+%<*driver>
+\documentclass{ltxdoc}
+%\CodelineIndex
+%\EnableCrossrefs
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{plotutil.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \CheckSum{77}
+%
+%\StopEventually{\PrintIndex}
+%
+%    \begin{macrocode}
+%<*script>
+#!/bin/bash
+JOBNAME=`basename ${*##* } .dvi`
+if [ $# -gt 1 ] ; then
+  OPTIONS=${*% *}
+else
+  OPTIONS=""
+fi
+echo -------------------------------------------------------------------
+echo : Calculating offset value
+HEIGHT=`cat ./$JOBNAME.hps | sed -e s/.*PageSize\ \\\[[0-9]*\ \\\\\([0-9]*\\\\\)\\\].*/\\\1/`
+OFFSET=795
+echo : Offset base figure is ${OFFSET}pt
+PT_OFFSET=`echo $OFFSET $HEIGHT-p|dc|sed s/-/_/`
+echo : Required offset in points is ${PT_OFFSET}pt
+CM_OFFSET=`echo 2k$PT_OFFSET 72.27/2.54*p|dc`
+echo : Setting offset to ${CM_OFFSET}cm
+echo : ...
+echo : God only knows why this process is necessary.
+echo : \$\#\&\^\"\=\$\%\@
+echo -------------------------------------------------------------------
+echo dvips $OPTIONS -P372hpplotq -O 2.1cm,${CM_OFFSET}cm -h ./$JOBNAME.hps -o $JOBNAME.ps $JOBNAME.dvi
+dvips $OPTIONS -P372hpplotq -O 2.1cm,${CM_OFFSET}cm -h ./$JOBNAME.hps -o $JOBNAME.ps $JOBNAME.dvi
+echo Wrote PostScript\(TM\) output to $JOBNAME.ps \(I think\).
+%</script>
+%    \end{macrocode}
+%
+%    \begin{macrocode}
+%<*style>
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesPackage{hpplotsz}
+          [1997/11/07 Custom page sizes with HP 6xx series plotters (Frank Bennett)]
+\newlength\hps@templen
+\newwrite\hps@pagesizeheader
+\newcount\hps@orientation
+\def\hps@@strip#1.#2\end{#1}
+\def\hps@strip#1{\expandafter\hps@@strip\the#1\end}
+\def\sethpplotsize{%
+  \ifnum\hsize>\vsize\hps@orientation=3\else\hps@orientation=0\fi
+  \immediate\openout\hps@pagesizeheader=./\jobname.hps
+  \immediate\write\hps@pagesizeheader{%
+    <</PageSize [\hps@strip\paperwidth\space\hps@strip\paperheight] /Orientation \the\hps@orientation>>setpagedevice}
+  \immediate\closeout\hps@pagesizeheader}
+%</style>
+%    \end{macrocode}
+% \Finale \PrintChanges

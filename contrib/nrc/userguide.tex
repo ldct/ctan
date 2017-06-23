@@ -1,0 +1,2399 @@
+\begin{filecontents}{nrcdoc.sty}
+
+\ProvidesPackage{nrcdoc}[2002/03/14 v2.3 collection of commands for
+                                    NRC documentation]
+%
+\newcommand\checkNRCDOCdate[1]{\@ifl@ter{sty}{nrcdoc}{#1}%
+  {}%
+  {\ClassWarningNoLine{nrcdoc}{An old version of nrcdoc.sty has been detected%
+                         \MessageBreak %
+                         Please *delete* nrcdoc.sty, to allow LaTeX to
+                         \MessageBreak generate a new version}}%
+}
+
+% converted to a 2e package, rf 1998/04/05
+% also added \Status and provision for dealing with pdf output
+%
+% usage:
+%        <processor> "\def\Status{<value>} \input <file>"
+%
+% for example:
+%        pdflatex "\def\Status{1} \input user_guide"
+%
+% (that's un*x syntax, but the intent is (i hope) plain
+\providecommand{\Status}{0}
+\ifcase\Status
+  % default case (0): using ordinary latex
+  \PackageInfo{nrcdoc}{Regular LaTeX run}
+  \def\href#1#2{#2}
+\or
+  % case 1: using pdflatex to generate a copy of the file
+  \PackageInfo{nrcdoc}{Generating hypertext pdf output}
+  \RequirePackage[pdftex]{hyperref}
+\fi
+
+\RequirePackage{url}
+\newcommand{\email}{\begingroup \urlstyle{tt}\Url}
+%
+\def\EmailURL#1{\href{mailto:#1}{\email{#1}}}
+\def\ctanaddr#1{\href{ftp://ctan.tug.org/tex-archive/#1}{\path{#1}}}
+
+
+\def\ps@myheadings{\let\@mkboth\@gobbletwo
+                   \def\@oddhead{{\sl\rightmark}\hfil \rm\thepage}%
+                   \def\@oddfoot{Nov. 2002\hfill}%
+                   \def\@evenhead{\rm \thepage\hfil\sl\leftmark}%
+                   \def\@evenfoot{Oct. 2002\hfill}%
+                   \def\sectionmark##1{}\def\subsectionmark##1{}}
+
+\pagestyle{myheadings}
+
+\markboth{{\rm NRC:} \LaTeX{} User Guide for Journals}
+         {{\rm NRC:} \LaTeX{} User Guide for Journals}
+
+
+%% Dimensions:
+
+%% CT> to get holes at left without touching text, changed 
+%%       a. margins from -3.5pc to -2pc
+%%       b. textheight from 23cm to 24cm
+%% CT> 28 SEP 00: makes no sense to use these margins for the version
+%%                to be posted on CTAN. Dimens now revert to original
+%%                value of  -3.5pc for left/rightmargins. The 
+%%                textheight, however, will remain at 24cm.
+%%
+\setlength{\textwidth}{19cm}
+\setlength{\textheight}{24cm}
+\setlength{\oddsidemargin}{-3.5pc}
+\setlength{\evensidemargin}{-3.5pc}
+\setlength{\headsep}{12pt}
+\setlength{\topmargin}{-3.5pc}
+\setlength{\columnsep}{1.5pc}
+
+
+%% Something Robin doesn't like but it's handy for tables:
+
+%% Spacing commands for {tabular} (from TTN 2,3:10 -- Claudio
+%%                                                    Beccari): 
+
+\newcommand\T{\rule{0pt}{2.6ex}}            % = `top' strut
+\newcommand\B{\rule[-1.2ex]{0pt}{0pt}}      % = `bottom' strut
+
+
+%% Fonts:
+
+\font\bfsl=cmssi17
+\font\sectiontt=cmtt12 scaled\magstep1
+\font\stt=cmtt10 scaled 850
+
+
+%% Macros:
+
+\newcommand{\NRC}{{\small NRC}}
+\newcommand{\blash}{{\stt\char'134}}
+
+\newcommand{\creditline}{{\footnotesize 
+                           Carleton Production Centre (9/00)}}
+
+%% def'n for \LaTeXe taken from TUGboat's tugboat.cmn file:
+\newcount\TestCount     \newbox\TestBox
+\def\La{\TestCount=\the\fam \leavevmode L%
+        \setbox\TestBox=\hbox{$\fam\TestCount\scriptstyle A$}%
+        \kern-.5\wd\TestBox\raise.42ex\box\TestBox}
+\def\LaTeX{\La\kern-.15em\TeX}
+\def\LaTeXe{\LaTeX{}\kern.05em2$_{\textstyle\varepsilon}$}
+
+
+%% \let-statements:
+
+\let\en=\enspace
+\let\nl=\newline
+
+\end{filecontents}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+\usepackage{nrcdoc}
+
+% check we're running against a copy of nrcdoc.sty generated from this
+% copy of userguide.tex.  first we check that we're running against
+% something that's modern enough to have the command for checking
+%
+\expandafter\ifx\csname checkNRCDOCdate\endcsname\relax
+  \typeout{*** An old version of nrcdoc.sty has been detected}
+  \typeout{*** Please *delete* nrcdoc.sty to allow LaTeX to generate a
+    new version}
+\else
+%
+% we are using a recent enough version: use the checking command to
+% compare with the date in the \ProvidePackage command in the package;
+% the date here *must* be updated, in the standard latex format, in
+% parallel with the date in the package.
+%
+  \checkNRCDOCdate{2001/11/15}
+\fi
+
+\begin{document}
+
+%% Titleblock:
+\twocolumn[
+\begin{center}
+       \bfsl National Research Council \\
+       \vspace{.75pc}
+             Research Press \\
+       \vspace{.5pc}
+       \Large\bf \LaTeX{} User Guide for Journals\footnotemark
+\end{center}
+
+\vspace{1pc}
+
+]
+
+\footnotetext{This document is available from your local CTAN site in
+   \texttt{macros/latex/contrib/supported/nrc/} in both \texttt{.ps}
+   and \texttt{.pdf} formats.}
+
+
+%% Section 1:
+\section{Basic coding}
+
+All \LaTeX{} documents must include these three commands:
+
+\begin{verbatim}
+   \documentclass{...}
+    ...                   <-- `preamble'
+   \begin{document}
+    ...                   <-- `body'
+    ...
+   \end{document}
+\end{verbatim}
+
+\begin{enumerate} \itemsep=0pt
+   \item The \verb|documentclass| must be specified, either with a
+         generic package, such as \verb|article| or a specific
+         package, such as \verb|nrc1|).
+
+   \item Between the first two commands comes the material known as
+         the `preamble', which includes additional packages (and their
+         options), as well as any file-specific macros.
+
+   \item Between the 2nd and 3rd commands comes the actual contents of
+         the article --- known as the `body' of the file.
+\end{enumerate}
+
+\noindent Commands are usually of the following types:
+
+\begin{enumerate} \itemsep=0pt
+   \item {\bf control sequences} begin with a backslash ( \blash\ ). 
+
+   \item {\bf environments} use matching \verb|\begin{...}| and\break
+         \verb|\end{...}| commands (i.e., \verb|\begin{document}| must
+         eventually be matched with \verb|\end{document}|).
+
+   \item {\bf optional} arguments are within square brackets \verb|[...]|
+\end{enumerate}
+
+
+%% Section 2:
+\section{Document classes and options}
+
+\NRC{} journals are set either in full-width, using the \texttt{nrc1}
+class, or in 2-column format, using the \texttt{nrc2} document class.
+
+The following represent the options for both document classes. Note
+that most articles will {\bf not} require all of them; as well, some
+options are only for \texttt{nrc2}.
+
+\begin{verbatim}
+   \documentclass[<options here>]{<class here>}
+                  author              nrc1
+            PLUS    usecmfonts     OR nrc2
+             OR     type1rest       
+                  french           
+                  nonumbib
+    nrc1 only:    leqno
+    nrc2 only:    reqno
+
+\end{verbatim}
+
+\newpage
+
+\noindent To combine options, insert a comma between each option:
+
+\begin{verbatim}
+  \documentclass[type1rest,genTeX,nonumbib]{nrc2}
+\end{verbatim}
+
+The following sections describe the options available to both classes,
+and then those options which are specific to \texttt{nrc1} or
+\texttt{nrc2} only. Options specific to in-house production work are
+described separately; see section~\ref{inhouse}.
+
+
+%% Section 2.1:
+\subsection{Options for both classes}
+
+{\bf Note:} Do not load options or packages which are never accessed;
+their presence implies they are required and may cause unnecessary
+searches for coded material which is not, in fact, present.
+
+For the convenience of authors, the publicly available class files for
+authors have a number of options already automated:
+%
+   \begin{verbatim}
+      author,genTeX,type1rest,usecmfonts
+   \end{verbatim}
+%
+Additionally, a number of in-house diagnostic messages are turned off,
+so as not to interfere with processing. Where a default selection is
+not appropriate, the following provides information on these options.
+
+
+\begin{description} \itemsep=0pt
+  \item [\texttt{author}]
+        This option selects a configuration appropriate for author use
+        of the class; it is enabled by default when a
+        publicly distributed copy of the class is loaded.
+
+        The \texttt{author} option automatically invokes the
+        \texttt{genTeX} option, as well as one of the two font
+        options: \texttt{type1rest} or \texttt{usecmfonts}. See below
+        for details.
+
+
+   \item [{\tt genTeX}]
+
+        By use of this option, you declare that you are using a
+        generic/public domain version of \TeX{}; it {\bf must} be
+        used in conjunction with one of \texttt{usecmfonts} and
+        \texttt{type1rest} (see below).
+
+        The \texttt{author} option automatically selects the
+        \texttt{genTeX} option.
+
+
+   \item [{\tt type1rest}] 
+
+        By use of this option, you declare that you have access to a
+        PostScript printer or other interpreter, and may use ``basic''
+        PostScript fonts to make a rough approximation to those that
+        will be used in the published paper. Do not use this option in
+        combination with the \texttt{usecmfonts} option.
+
+        If the \texttt{author} option has been selected, the class
+        will automatically decide whether to use \texttt{usecmfonts}
+        or \texttt{type1rest} by default. The automatic selection may
+        be incorrect, but you may over-ride it by specifying the
+        \texttt{type1rest} option.
+
+
+   \item [{\tt usecmfonts}] 
+
+        By use of this option, you declare that you do not have the
+        ``basic'' PostScript fonts to make a rough approximation to
+        those that will be used in the published paper: the \verb|cm|
+        (\emph{Computer Modern}) fonts that this option selects are
+        available in any generic/public domain \TeX{} distribution, so
+        this option will always be available. Do not use this option
+        in combination with the \texttt{type1rest} option.
+
+        If the \texttt{author} option has been selected, the class
+        will automatically decide whether to use \texttt{usecmfonts}
+        or \texttt{type1rest} by default. The automatic selection may
+        be incorrect, but you may over-ride it by specifying the
+        \texttt{usecmfonts} option.
+
+
+   \item [{\tt french}]
+
+         For French-language articles.\label{frenchclassoption} It
+         configures the \NRC{} document classes to print all the
+         auto\-mated textual ele\-ments (in the author IDbox, for
+         figures, tables, biblio\-graphies, etc.)\ in French as per
+         \NRC{} speci\-fi\-cations. To be used in concert with:
+
+\begin{verbatim}
+   \usepackage[english,french]{babel}
+\end{verbatim}
+
+         See section~\ref{babelinfo} for details on using the
+         \textsf{babel} package in all articles, regardless of
+         language. For two-column bilingual texts, see
+         section~\ref{bilingpream}.
+
+
+   \item [{\tt nonumbib}] 
+
+         This option removes numbers (i.e., `labels') from
+         \verb|\bibitem| entries; material is set with a hanging
+         indent. The default is to have numbered bibliographic
+         entries.
+\end{description}
+
+
+%% Section 2.2:
+\subsection{Options specific to only one class}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt leqno}]  \hfill for \texttt{nrc1} only
+
+         This option puts equation numbers to the left margin;
+         default is to have them on the right.
+
+   \item [{\tt reqno}] \hfill for \texttt{nrc2} only
+
+         This option puts equation numbers to the right margin;
+         default is to have them on the left.
+\end{description}
+
+\noindent One other difference between the packages relates to the
+position of the \verb|\maketitle| command. See
+page~\pageref{maketitle} for details.
+
+
+%% Section 3:
+\section{The preamble}
+
+The preamble area of the file should specify all packages and macros
+definitions (if any) used; macros in particular should not be defined
+within the body of the file.
+
+
+%% Section 3.1:
+\subsection{Useful packages}
+
+The following packages and their options are often necessary (but note
+that \textsf{babel} is necessary at all times). Note that package
+order can be significant, on occasion. In particular, it is
+recommended that graphics packages be loaded immediately after the
+document class.
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash usepackage\char`\{graphicx\char`\}}]
+
+         Graphics (figures, illustrations,\break and so on) should be
+         included using the standard \LaTeX{} \texttt{graphicx}
+         package: use of this package permits portability across
+         different implementations of \TeX{} (which itself has no
+         graphics primitive commands).
+
+         Your \TeX/\LaTeX{} system may offer documentation; otherwise
+         see \textsl{The \LaTeX{} Graphics Companion\/} (see
+         section~\ref{documentation}).
+
+         Remember to specify the printer driver as a package option,
+         if necessary (e.g., \verb|dvips|, \verb|dvipsone|, etc.).
+
+   \item [{\tt \blash usepackage[figuresright]\char`\{rotating\char`\}}]
+
+         \quad The \verb|rotating|\break package\footnote{For the
+         NRC's production use, the standard distribution version of
+         this file is currently under revision. Authors can proceed
+         with the public version of \texttt{rotating.sty}.} is only
+         required when tables or figures need to be placed in
+         landscape (`sideways') position. It must be preceded by the
+         \verb|graphicx| package.
+
+         The \verb|figuresright| option ensures that rotated
+         elements are oriented with the caption at the left margin of
+         the regular page, in accord with \NRC{} style requirements. 
+
+   \item [{\tt \blash usepackage\char`\{amsmath\char`\}}]
+
+         A great deal of additional functionality is provided with
+         this package, and the \NRC{} document classes have been
+         designed to work smoothly with it. Using \texttt{amsmath}
+         automatically loads the following packages: \texttt{amstext},
+         \texttt{amsgen}, and \texttt{amsbsy}. The \texttt{amsmath}
+         package is described in great detail in three documents:
+
+   \begin{enumerate} \itemsep=0pt
+     \item The revised version of chap.~8 of {\sl The \LaTeX{}
+           Companion} is a good guide (see section~\ref{documentation}
+           for details). As printed in the book, chap.~8 is out of
+           date and should not be referenced.
+
+      \item A useful set of documentation is available via the {\small
+            AMS}'s web site. {\small URL}
+            % \texttt text broken so it doesn't run into the margin and
+            % disappear; would be better to use the url package, but...
+            \texttt{http://www.ams.org/tex/ amslatex.html} offers a
+            ``Short Math Guide'', a set of frequently asked questions
+            (with answers), as well as various ``Readme'' files.
+ 
+      \item Current \LaTeX{} installations have a file
+            \texttt{amsldoc}; it is also available via the {\small
+            AMS} web site (see above). The material is essentially the
+            same as the revised chap.~8 mentioned above, but the
+            differences in presentation are sometimes useful to
+            consider.
+\end{enumerate}
+
+   \item [{\tt \blash usepackage\char`\{amssymb\char`\}}]
+
+         This package automatically loads the 
+         \texttt{amsfonts} package. Together, they provide 
+         special characters and symbols frequently used by the
+         mathematics and scientific communities. 
+
+         The \texttt{amsfonts} package provides access to the
+         following font sets: Euler (Fraktur, Roman, Script,
+         extensions); Computer Modern (math bold ital\-ic, symbol,
+         extensions, in the smaller sizes); Cyrillic (lightfact, bold,
+         italic, smallcaps); and the \texttt{msam} and \texttt{msbm}
+         fonts, familiar to Rev\TeX{} users.
+
+
+   \item [{\tt \blash usepackage\char`\{bm\char`\}}] 
+
+         This package simplifies the use of bold symbols and other
+         objects in math mode. It defines a single command,
+         \verb|\bm{...}|, which is used in math mode, and causes its
+         argument to be typeset in the appropriate math bold font.
+         See \verb|bm.sty| documentation for details.\label{bm}
+
+         {\bf Note:} If a warning message about too many math
+         alphabets arises, insert the following code {\bf above} the
+         \verb|\usepackage{bm}| line:
+
+\begin{verbatim}
+   \newcommand\hmmax{0} % default 3
+   \usepackage{bm}
+\end{verbatim}
+%
+         See \verb|bm.sty| documentation for details.
+
+
+   \item [{\tt \blash usepackage\char`\{cite\char`\}}]
+
+         Authors should use this package, which enhances the default
+         options available in \LaTeX{} (e.g., \verb|\citen| prints
+         cross-references without brackets). See \verb|cite.sty|
+         documentation for additional features.
+
+   \item [{\tt \blash usepackage[...,...]\char`\{babel\char`\}}]
+
+         The \textsf{babel}\label{babelinfo} package is used to manage
+         the typesetting requirements of multilingual documents.
+         Different cultures have different typesetting conventions,
+         and \textsf{babel} enables the \LaTeX{} user to apply the
+         appropriate conventions to the different parts of a
+         multilingual document. Since \NRC{} publications are
+         typically multilingual, \textsf{babel} has an important
+         r\^ole to play in their preparation.
+
+   \begin{itemize} \itemsep=0pt
+      \item English-language articles have a French-language
+            `Resum\'e', which requires French hyphenation and
+            punctuation. Insert the following line --- and notice the
+            order of the language options:
+
+\begin{verbatim}
+   \usepackage[french,english]{babel}
+\end{verbatim}
+
+      \item French-language articles have an English-language
+            `Abstract', which requires English hyphenation and
+            punctuation. Insert the following line and again notice
+            the order of the language
+            options:\footnote{\textsf{Babel}, like so many computer
+            programs, believes that the last should be first, and
+            therefore proceeds backwards through its options, thus
+            making the last one typed the one selected first.}
+
+\begin{verbatim}
+  \usepackage[english,french]{babel}
+\end{verbatim}
+
+          \textbf{In addition to} the \textsf{babel} package,
+          French-language articles must \textbf{also} include the
+          \verb|french| option to the document class, as mentioned
+          earlier in section~\ref{frenchclassoption}.
+
+          The \textsf{babel} package invokes French hyphenation
+          patterns\footnote{Use \texttt{\blash-} to signal additional
+          potential hyphenation points.} as well as some of the
+          (European) French typesetting conventions (e.g., space before
+          some punctuation).
+   \end{itemize}
+\end{description}
+
+\noindent These packages and others can be found either on your
+machine or can be acquired from {\small CTAN}, the Comprehensive
+\TeX{} Archive Network; use the search facilities at
+\url{www.ctan.org/search}. The \NRC{} document classes and this
+documentation can be found on {\small CTAN} in
+\url{macros/latex/contrib/supported/nrc/}.
+
+
+%% Section 3.2:
+\subsection{Additional macros}
+
+\begin{enumerate} \itemsep=0pt
+   \item Avoid creating too many personal macros, which may conflict
+         with the \NRC{} document classes (and possibly with other
+         packages) and thereby slow in-house processing of files.
+         Where these are used, macros not actively invoked in the
+         file should be pruned out.
+
+   \item Whenever possible, define your macros using the \LaTeX{}
+         \verb|\newcommand| mechanism, rather than the \TeX{} primitive
+         \verb|\def|; this way, \LaTeX{} itself will detect any name
+         clashes you may innocently introduce. 
+
+   \item Move all non-\NRC{} preamble material, including author
+         macros, to the end of the file (after \verb|\end{document}|),
+         rather than deleting it. Reintroduce only what is needed. 
+
+   \item Where author macros are needed, they should all be gathered
+         at the top of the file in the preamble area, after all
+         packages have been loaded, and clearly marked as being author
+         macros:\label{authmacros}
+
+\begin{verbatim}
+%%%%%%%% Author macros begin:
+...
+... 
+%%%%%%%% Author macros end
+\end{verbatim}
+
+   \item Similarly, move all \verb|\let| statements to the preamble
+         area, where they are immediately visible to the editor. 
+\end{enumerate}
+
+
+%% Section 4:
+\section{The body}
+
+All articles have the following elements:
+
+\begin{enumerate} \itemsep=0pt
+   \item titleblock and author information 
+
+   \item abstract and resum\'e
+
+   \item headings and subheadings
+
+   \item text
+
+   \item bibliography
+\end{enumerate}
+
+\noindent Most articles also include some or all of the following
+elements: 
+
+\begin{enumerate} \itemsep=0pt
+   \item in-line and display mathematics 
+
+   \item enumerated lists
+
+   \item tables
+
+   \item figures and illustrations (e.g., PostScript)
+
+   \item footnotes
+
+   \item offset quoted passages
+
+   \item acknowledgements
+\end{enumerate}
+
+
+%% Section 4.1:
+\subsection{Titleblock and author information}
+
+All elements of the titleblock are taken care of via macros, some of
+which have optional arguments, to allow for variant forms and for
+`labelling' of bits of text (for cross-referencing).
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash title\char`\{...\char`\}}] \mbox{}
+
+         Lines will be broken automatically; line breaks can be forced
+         by using \verb|\\|. 
+
+         For sub- and superscripts, use \verb|\textsubscript| and
+         \verb|\textsuperscript|, respectively.
+
+         Notes on the title may be inserted using the standard \LaTeX{}
+         command \verb|\thanks|. The text will print in the IDbox, and
+         numbering will be synchronised with that of the IDbox notes.
+
+   \item [{\tt \blash author[...]\char`\{Author1\char`\}}] \mbox{}
+
+         {\sl Author1\/}'s name as it will appear in the titleblock
+         and the right running head. The optional argument allows a
+         different form of the author's name to appear in the IDbox at
+         page-bottom (e.g., full first name in titleblock, but
+         initials only in IDbox).
+
+         Each author is specified separately. The document class will
+         automatically insert `and' (Fr.\ `et') between the last and
+         second-last names, both in the titleblock and in the IDbox
+         area.
+
+   \item [{\tt \blash address[label1]\char`\{addr1\char`\}}] \mbox{}
+
+         Address for {\sl Author1\/}; this should be immediately below
+         the \verb|\author| entry. Each author's address is specified
+         separately. If no address is specified before the next author
+         entry, the immediately preceding address is used (an address
+         for the first author {\bf must} therefore be specified).
+
+         The optional \verb|[label1]| argument (any sequence of
+         letters can be used) does not print anything; it makes it
+         possible to relate one address to several authors (this is
+         similar to \LaTeX's \verb|\label| and \verb|\ref| commands).
+\end{description}
+
+Below is an example of using the author-address cross-referencing
+macros. Notice that \verb|\address| always refers to the immediately
+preceding \verb|\author|.
+         
+\begin{description} \itemsep=0pt
+   \item \verb|\author{Author1}|\quad defines first author
+
+   \item \verb|\address[label1]{Address1}|\quad defines an address for
+         {\sl Author1\/} and tags it as \verb|[label1]|
+
+   \item \verb|\author{Author2}|\quad this author doesn't have an
+         address, so the IDbox will use the immediately preceeding
+         author's address (i.e., {\sl Address1}
+
+   \item \verb|\author{Author3}|\quad defines a third author
+
+   \item \verb|\address{Address3}|\quad third author is at an address
+         of their own
+
+   \item \verb|\author{Author4}|\quad defines a fourth author
+
+   \item \verb|\address[label1]|\quad fourth author uses the address
+         associated with \verb|[label1]|, above
+
+         The net result (assuming the \verb|breakaddress| option has
+         been used) is the following:
+
+         {\bf Author1, Author2, and Author4.} \\ 
+         Address1.
+
+         {\bf Author3.} \\ 
+         Address3.
+
+   \item [{\sl IDbox address notes}] \mbox{}
+ 
+         Author addresses can be augmented with additional information
+         via numbered notes, which appear below all the authors' names
+         and main addresses. 
+
+   \begin{description}
+      \item [{\tt \blash correspond\char`\{...\char`\}}] \mbox{}
+
+            Usually one author is selected from all co-authors to deal
+            with correspondence. Insert the author's e-mail address
+            into the argument. The following text will be prepended:
+            `Corresponding author (email: ).' and in French,
+            `Auteur correspondant (courriel\,: )'. 
+
+
+      \item [{\tt \blash present\char`\{...\char`\}}] \mbox{}
+
+            Authors may wish to indicate a temporary or current
+            address, different from the main one provided via
+            \verb|\address|. This note will begin with the text:
+            `Present address:' (Fr.\ `Adresse actuelle\,:'). 
+
+
+      \item [\mbox{}{\tt \blash AddressNote\char`\{...\char`\}}]
+            Obsolete. See \verb|\IDnote|, below.
+
+
+      \item [{\tt \blash IDnote\char`\{...\char`\}}] \mbox{}
+
+            Allows the user to input any information they wish, with
+            no automatic text being added (formerly called
+            \verb|\AddressNote|, which implied a more restricted
+            use). Both macros are available but \verb|\IDnote| gives
+            the user a more generic macro name to remember and use for
+            any type of note within the IDbox. 
+   \end{description}
+
+   \item [{\tt \blash dedication\char`\{...\char`\}}] \mbox{}
+
+         Will print a dedicatory text (in italics) in the IDbox area,
+         between the `Received/Accepted' and the author/address
+         sections.
+
+   \item [{\tt \blash abbreviations\char`\{...\char`\}}] \mbox{}
+
+         Automatic printing of the word `\textit{Abbrevia\-tions: \/}'
+         (Fr. `\textit{Abbr\'eviations\,: \/}'), followed by text
+         input inside the argument (the curly braces). Forced line
+         breaks (via \verb|\\|) can be used to separate entries.
+
+   \item [{\tt \blash shortauthor\char`\{author list\char`\}}]
+         \mbox{} 
+
+         Shortened list of author names for use in the right running
+         header. This macro must be present (its absence generates an
+         error message), and should appear below all the
+         author-address information
+
+\newpage
+
+   \item [{\tt \blash maketitle}] \mbox{}\label{maketitle}
+
+         This command activates the titleblock commands.
+
+         The \verb|nrc1| class requires this command to appear
+         \textbf{before} the abstract/resum\'e block of text.
+
+         The \verb|nrc2| class requires this command to appear
+         \textbf{after} the abstract/resum\'e block of text.
+
+   \item [{\tt \blash maketitle*}] \hfill [an \NRC\ macro]\mbox{}
+
+         With the \verb|nrc2| class only, when Abstracts/Resumes spill
+         over to a second page, a horizontal rule may be needed before
+         the regular article text begins. To generate this rule use
+         \verb|\maketitle*| instead of \verb|\maketitle|.
+\end{description}
+
+
+%% Section 4.2:
+\subsection{Abstracts/R\'esum\'es}
+
+The syntax is the normal one expected for environments: a matched set
+of either \verb|{abstract}| or \verb|{resume}|:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{abstract\char`\}\ ... \blash
+         end\char`\{abstract\char`\}}]  \hfill English
+
+   \item [{\tt \blash begin\char`\{resume\char`\}\ ... \blash
+         end\char`\{resume\char`\}}]    \hfill French
+\end{description}
+
+\noindent Some journals may require the following, which should appear
+\textbf{inside} the abstract environments:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash keywords\char`\{...\char`\}}]  \hfill [an \NRC\
+      macro]\mbox{} 
+
+         Automatically prints `\textit{Keywords:}', followed by
+         whatever text is input inside the argument (the curly
+         braces).
+
+   \item [{\tt \blash motscles\char`\{...\char`\}}]  \hfill [an \NRC\
+      macro]\mbox{} 
+
+         Automatically prints `\textit{Mots cl\'es\,:}', followed by
+         whatever text is input inside the argument (the curly
+         braces).
+
+   \item [{\tt \blash PACS\char`\{...\char`\}}]  \hfill [an \NRC\
+      macro]\mbox{} 
+
+         Automatically prints `PACS Nos.:' (Fr. `PACS
+         N\textsuperscript{os}\,:'), followed by whatever material is
+         input inside the argument.
+
+   \item [{\tt \blash PACS*\char`\{...\char`\}}]  \hfill [an \NRC\
+      macro]\mbox{} 
+
+         Automatically prints `PACS No.:' (Fr. `PACS
+         N\textsuperscript{o}\,:'), followed by whatever material is
+         input inside the argument.
+\end{description}
+
+
+%% Section 4.3:
+\subsection{Headings and subheadings}
+
+Five levels, numbered automatically.\footnote{An alternate set of
+headings commands also exists: \texttt{\blash Asection},
+\texttt{\blash Bsection}, \texttt{\blash Csection}, \texttt{\blash
+Dsection}, and \texttt{\blash Esection}, for levels 1 through 5,
+respectively.} Line breaks can be forced by using \verb|\\|. To
+suppress numbering (e.g., for `Acknowledgements'), use an asterisk
+before the opening curly brace: \verb|\section*{Acknowledgements}|.
+
+For sub- and superscripts in section titles, use the macros
+\verb|\textsubscript| and \verb|\textsuperscript|, respectively.
+
+\begin{enumerate} \itemsep=0pt
+   \item {\tt \blash section\char`\{...\char`\}} Level-1 heading
+
+   \item {\tt \blash subsection\char`\{...\char`\}} Level-2 heading
+
+   \item {\tt \blash subsubsection\char`\{...\char`\}} Level-3
+   heading 
+
+   \item {\tt \blash subsubsubsection\char`\{...\char`\}} Level-4
+   heading \hfill [\NRC]
+
+   \item {\tt \blash paragraph\char`\{...\char`\}} Level-5 heading
+\end{enumerate}
+
+
+%% Section 4.4:
+\subsection{Text}
+
+Same as the default \LaTeX{} commands:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{quote\char`\}\ ... \blash
+         end\char`\{quote\char`\}}]  
+
+   \item [{\tt \blash begin\char`\{enumerate\char`\}\ ... \blash
+         end\char`\{enumerate\char`\}}]  
+
+   \item [{\tt \blash begin\char`\{itemize\char`\}\ ... \blash
+         end\char`\{itemize\char`\}}]  
+
+   \item [{\tt \blash begin\char`\{description\char`\}\ ... \blash
+         end\char`\{description\char`\}}]  
+
+   \item [{\tt \blash footnote\char`\{...\char`\}}] 
+\end{description}
+
+\noindent Where lists must be flushed to the left margin, there are
+two \NRC-specific environments to use:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{flenumerate\char`\}\ ... \blash
+         end\char`\{flenumerate\char`\}}]\hfill [\NRC] \mbox{}
+
+         Generates a numbered list (first level only) with labels
+         flushed to the left margin. No nesting possible.
+
+   \item [{\tt \blash begin\char`\{flitemize\char`\}\ ... \blash
+         end\char`\{flitemize\char`\}}]\hfill [\NRC] \mbox{}
+
+         Generates a bulletted list (first level only) with labels
+         flushed to the left margin. No nesting possible.
+\end{description}
+
+
+%% Section 4.4.1:
+\subsubsection{Column switching in \texttt{nrc2}}
+
+On occasion, material for 2-column journals is best set full-width,
+interrupting the two text columns. For equations, the following
+customized code will achieve this effect:
+
+\begin{verbatim}
+   \begin{FullWidth}[0.5]
+   \LeftColumnBar
+       <equation to span both columns>
+   \RightColumnBar
+   \end{FullWidth}
+\end{verbatim}
+
+The following description provides details of each step:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{FullWidth\char`\}\ ... \blash
+         end\char`\{FullWidth\char`\}}]
+
+         This environment encloses the material which is to span the
+         two columns. The text for the two columns immediately above
+         this environment will be balanced. Text immediately below
+         the environment will resume the 2-column layout. 
+
+         The optional \texttt{[0.5]} argument (`one half' in this
+         example) is an adjustment factor, affecting the split between
+         left and right columns. Default is `1.0', the units are
+         nominal line depths in the default font size; increasing the
+         factor tends to increase the number of lines in the left
+         column.
+
+   \item  [{\tt \blash LeftColumnBar}] \mbox{}
+
+          This draws a rule below the left column of the 2-column text
+          which is above the full-width material. 
+
+   \item  [{\tt \blash RightColumnBar}] \mbox{}
+
+          This draws a rule above the right column of 2-column text
+          which is below the full-width material.
+
+   \item  [{\tt \blash BalanceColumns[0.5]}] \mbox{}
+
+          This command is used at the end of a file, in order to
+          balance the final page. 
+
+          The optional argument serves the same purpose and is used
+          in the same way as that for \verb|\begin{FullWidth}|.
+\end{description}
+
+Where both equations and text must span two columns, the text portions
+must \textit{additionally} be enclosed in the following environment:
+
+\begin{verbatim}
+   ...
+   \begin{WideText}
+       <text material>
+   \end{WideText}
+   ...
+\end{verbatim}
+%
+The text will then be flush left, and indented 3em from the right
+margin, as per \NRC{} requirements, while the equation numbers will be
+flushed to the right (where that is the style). The two combined will
+look like this:
+
+\begin{verbatim}
+   \begin{FullWidth}[0]
+   \LeftColumnBar
+   \begin{equation}
+       <equation material here>
+   \end{equation}
+
+   \begin{WideText}
+       <text material>
+   \end{WideText}
+
+   \begin{equation}
+       <equation material here>
+   \end{equation}
+   \RightColumnBar
+   \end{FullWidth}
+\end{verbatim}
+
+
+%% Section 4.5:
+\subsection{Mathematics}
+
+In addition to default \LaTeX{} commands, the \texttt{amsmath} package
+provides a number of useful enhancements. Consult both the revised
+chap.~8 of \textsl{The \LaTeX{} Companion} and the AMS\LaTeX{}
+documentation for details (see section~\ref{documentation}). See also
+\verb|bm.sty| for enhanced font handling inside math mode
+(section~\ref{bm}).
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{equation\char`\}\ ... \blash
+         end\char`\{equation\char`\}}] \mbox{} 
+
+   \item [{\tt \blash begin\char`\{array\char`\}\ ... \blash
+         end\char`\{array\char`\}}] \mbox{} 
+
+   \item [{\tt \blash begin\char`\{subequation\char`\}\ ... \blash
+         end\char`\{subequation\char`\}}]  \mbox{}
+
+        This is an \verb|amsmath| environment {\bf within which}
+        other environments are used, to achieve lettered sub-equation
+        numbers: e.g., 1.2a, 1.2b, etc. There is a file
+        \texttt{subeqn.tex} on most \TeX{} installations with
+        additional details.
+\end{description}
+
+\noindent In addition to the usual environments, two \NRC\ macros
+allow further customisation of the form of the equation number:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash
+         numberby\char`\{...\char`\}\char`\{...\char`\}}] \hfill [an
+         \NRC\ macro]\mbox{}
+
+         For articles where equation numbers must include section
+         numbers (e.g., equation 3.2 is the second equation in
+         section~3), input the following in the preamble area, after
+         all \verb|\usepackage| commands:\footnote{This avoids having
+         to load the {\tt amsmath} package in order to access the {\tt
+         \blash numberwithin} command, which does the same thing.} 
+
+\begin{verbatim} 
+   \numberby{equation}{section}
+\end{verbatim} 
+
+         The first argument contains what element is being numbered;
+         the second indicates that section numbers should be included
+         in that numbering.
+
+   \item [{\tt \blash eqnoformat}] \hfill [an \NRC\ macro]\mbox{}
+
+         The \verb|nrc2| class default format is for square brackets
+         around equation numbers. Other options (i.e., parenthe\-ses)
+         can be achieved via the following definition (placed in the
+         preamble, after all packages have been loaded):
+
+\begin{verbatim}
+   \renewcommand{\eqnoformat}[1]{(#1)}
+\end{verbatim}
+\end{description}
+
+
+%% Section 4.6:
+\subsection{Tables, Figures, Captions}
+
+The following float parameters are useful to include in the preamble
+area: 
+
+\begin{description} \itemsep=0pt
+   \item [nrc1] 
+\begin{verbatim}
+  \renewcommand{\topfraction}{.95}
+  \renewcommand{\textfraction}{.05}
+  \renewcommand{\floatpagefraction}{.95}
+\end{verbatim}
+
+   \item [nrc2] 
+\begin{verbatim}
+  \renewcommand{\topfraction}{.95}
+  \renewcommand{\floatpagefraction}{.95}
+  \renewcommand{\dbltopfraction}{.95}
+  \renewcommand{\textfraction}{.05}
+  \renewcommand{\dblfloatpagefraction}{.95}
+\end{verbatim}
+\end{description}
+
+
+%% Section 4.6.1:
+\subsubsection{Tables}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{table\char`\}\ ... \blash
+         end\char`\{table\char`\}}]  \mbox{}
+
+         For regular tables, up to same width as text (page-wide or
+         column-wide).
+
+   \item [{\tt \blash begin\char`\{table*\char`\}\ ... \blash
+         end\char`\{table*\char`\}}] \mbox{}
+
+         For tables spanning two columns. 
+
+   \item [{\tt \blash begin\char`\{sidewaystable\char`\}\ ... \blash 
+         end\char`\{sidewaystable\char`\}}] \mbox{}
+
+         For rotating a table sideways. To ensure rotation is in
+         correct direction, remember to add the \verb|figuresright|
+         option to the \verb|rotating| package in the Preamble.
+
+   \item [{\tt \blash begin\char`\{sidewaystable*\char`\}\ ... \blash 
+         end\char`\{sidewaystable*\char`\}}] \mbox{}
+
+         For rotating a table sideways across a 2-column page. As for
+         above, make sure the \verb|figuresright| option has been
+         added to the \verb|rotating| package, loaded in the Preamble.
+
+   \item [{\tt \blash begin\char`\{tabular\char`\}\ ... \blash
+         end\char`\{tabular\char`\}}]  \mbox{}
+
+         {\bf Note:} use \verb|\tabcolsep| to slightly reduce/increase
+         intercolumn space. 
+
+
+   \item [{\tt \blash hline*}]\hfill  [an \NRC\ macro] \mbox{}
+
+         For the thicker lines at top/bottom of tables. Regular 1pt
+         rules accessed via default \verb|\hline| command.
+\end{description}
+
+
+%% Section 4.6.2:
+\subsubsection{Figures}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash begin\char`\{figure\char`\}\ ... \blash
+         end\char`\{figure\char`\}}]  \mbox{}
+
+         For regular figures, up to same width as text (page-wide or
+         column-wide).
+
+   \item [{\tt \blash begin\char`\{figure*\char`\}\ ... \blash
+         end\char`\{figure*\char`\}}] \mbox{}
+
+         For figures spanning two columns.
+\end{description}
+
+
+%% Section 4.6.3:
+\subsubsection{Captions}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash topcaption\char`\{...\char`\}}]  \hfill [an
+         \NRC\ macro]\mbox{} 
+
+         \NRC\ style has all captions at the top of their table or
+         figure. Syntax is the same as for \LaTeX{} default
+         \verb|\caption|.
+
+        Captions will be automatically sized to the width of their
+        table, provided the file is processed at least twice. Should
+        a caption require a different width, the following code, used
+        inside the float environment, will work:
+
+\begin{verbatim}
+   \setlength{\captionwidth}{ ... }
+   \topcaption{ ... }
+\end{verbatim}
+
+   \item [{\tt \blash sepcaption\char`\{...\char`\}}] \hfill [an \NRC\
+         macro]\mbox{} 
+
+         For captions separated from their full-column or full-page
+         tables and figures. Caption will appear at top of next column
+         or next page. Usage is \textbf{different} from regular
+         caption commands in that it must appear in its own separate
+         \texttt{table} environment:
+%
+\begin{verbatim}
+   \begin{table}
+      \sepcaption{.....}
+   \end{table}
+
+   \begin{table}
+      <contents of table>
+   \end{table}
+\end{verbatim}
+\end{description}
+
+
+%% Section 4.6.4:
+\subsubsection{Centering}
+
+To centre any of these elements inside a float, the \verb|\centering|
+command is preferred to the \verb|{center}| environment, which adds
+its own vertical space and hence interferes with \NRC{} spacing
+requirements.
+
+
+%% Section 4.7:
+\subsection{Cross-Referencing}
+
+As with all cross-referencing codes, process file 2 or even 3 times,
+to ensure that all citations and labels have been resolved, until the
+following message no longer appears:\footnote{Note, however, that if
+cross-referencing codes are incomplete, \textbf{[?]} will remain. In
+such cases, the warning message reads: \texttt{LaTeX Warning: There
+were undefined references}.}
+
+\begin{verbatim}
+   LaTeX Warning: Label(s) may have changed. 
+   Rerun to get cross-references right. 
+\end{verbatim}
+
+\noindent Components of an article affected by cross-referencing ---
+and thus requiring several processing runs, include the following:
+
+\begin{itemize} \itemsep=0pt
+   \item cross-refs to tables and figures, and to equations, etc. \\
+         (via \verb|\ref|, \verb|\pageref|, and \verb|\label|)
+
+   \item automatic sizing of caption widths for floats \\
+         (via \verb|\topcaption|)
+
+   \item bibliographies \\
+         (via \verb|\cite| et al., and \verb|\bibitem|)
+\end{itemize}
+
+To ensure that cross-referencing via the \verb|\label| and \verb|\ref|
+commands is correctly associated with the matching tables and figures,
+it is recommended that the \verb|\label| command appear
+\textbf{inside} the closing parentheses of caption commands.
+
+
+%% Section 4.8:
+\subsection{Bibliography} 
+
+The default macros \verb|\cite| and \verb|\bibitem| are usually
+adequate for citations and bibliography entries. Additional
+flexibility can be had by using the \verb|cite| package; for more
+complicated requirements, authors may choose to use the \verb|natbib|
+package. Authors using the latter must remember to submit their
+\verb|.bib| file, and are reminded to use the referencing style and
+order of elements appropriate to the journal to which they are
+submitting.\footnote{As yet, there is no \texttt{nrc.bst} file for the
+NRC.}
+
+The main \verb|cite| commands are:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash cite\char`\{...\char`\}}] \mbox{}
+
+         To produce cross-referencing digit or digits inside square
+         brackets.
+
+   \item [{\tt \blash citen\char`\{...\char`\}}] \mbox{}
+
+         To produce cross-referencing digit with {\bf no} brackets.
+\end{description}
+
+\noindent Further options are described in the \verb|cite|
+documentation. However, one in particular will be noted here, as some
+\NRC{} journals require in-line citations to appear within
+parentheses, rather than square brackets. If this is the case, the
+following code should be added to the preamble (after all packages,
+including \verb|cite|, have been loaded):
+
+\begin{verbatim}
+   \renewcommand{\citeleft}{(}
+   \renewcommand{\citeright}{)}
+\end{verbatim}
+
+The references/bibliography section at the end of the paper uses the
+default \LaTeX{} commands:
+
+\begin{verbatim}
+   \begin{thebibliography}{99}
+     \bibitem[...]{...}
+
+     \bibitem[...]{...}
+
+   \end{thebibliography}
+\end{verbatim}
+
+
+%% Section 4.9:
+\subsection{Appendices}
+
+Where only the word `Appendix' is needed, use the command
+\verb|\section*{Appendix}| (note that the asterisk suppresses any
+section numbering, either by digit or letter). If equations within the
+Appendix are to restart at `1', insert
+
+\begin{verbatim}
+   \setcounter{equation}{0}
+\end{verbatim}
+
+If more than the word `Appendix' is to appear, then the
+\verb|\section| command must be augmented by either \verb|\appendix|
+or \verb|\appendix*|.
+
+The \verb|\appendix| command (unmodified) behaves as in the standard
+\LaTeX{} classes; so, for `A. Title of First Appendix', the following
+code is used:
+%
+\begin{verbatim}
+   \appendix
+   \section{Title of First Appendix}
+\end{verbatim}
+
+For `Appendix A:' + a heading (and then `Appendix B:' + its heading,
+etc.), the following code will do the job (notice that the word
+`Appendix' is \textbf{not} input):
+
+\begin{verbatim}
+   \appendix*
+   \section{A subheading}
+    ...
+   \section{Next subheading}
+\end{verbatim}
+
+Both \verb|\appendix| and \verb|\appendix*| preserve \verb|\numberby|
+commands, as one might expect: equations in appendix~A are numbered
+`A.1', `A.2', etc. To ensure numbering is correctly applied throughout
+all appendices, insert \verb|\numberby| {\bf before} the
+\verb|\section| command.
+
+
+%% Section 5:
+\section{Resources}
+
+The following documentation, newsgroups, and web pages are useful
+source to consult for help, news, and updates. Keep in mind, however,
+that conflicts may arise when 
+
+
+%% Section 5.1
+\subsection{Books and articles\label{documentation}}
+
+\begin{description}  \itemsep=0pt \raggedright \frenchspacing
+   \item [{\sl The \LaTeX{} Companion:}] by Michel Goossens, Frank
+         Mittelbach, and Alexander Samarin (Addison-Wesley, 1994).
+
+         Contains many details to assist users. Caveats:
+
+         Chapter~8 is no longer valid --- a revised version is
+         available in both {\tt .ps} and {\tt .pdf} formats from
+         {\small CTAN}.\footnote{CTAN = Comprehensive \TeX{} Archive
+         Network; a list of site addresses can be found on the {\small
+         TUG} home page {\tt www.tug.org}. Follow the links to {\tt
+         /tex-archive/info/companion-rev}.}
+
+         As well, the sections on graphics and colour have been
+         superseded by material in {\sl The \LaTeX{} Graphics
+         Companion\/}.
+
+   \item [{\sl The \LaTeX{} Graphics Companion:}]{\sl Illustrating
+         Documents\break with \TeX{} and PostScript\/}, by Michel
+         Goossens, Sebastian Rahtz, and Frank Mittelbach
+         (Addison-Wesley, 1997).
+
+   \item [{\sl Math into \LaTeX:}] {\sl An Introduction to \LaTeX{}
+         and AMS\LaTeX{}}, by George Gr\"atzer (Birkh\"auser, Boston
+         and Springer Verlag, New York, 1996).
+
+   \item [{\sl First Steps in \LaTeX:}] by George Gr\"atzer
+          (Birkh\"auser, Boston, 1999).
+
+   \item [{\sl The \TeX book:}] by Donald E.~Knuth (Addison-Wesley,
+         1986). 
+
+   \item [{\sl \LaTeX:}] {\sl A Document Preparation System ---
+         User's Guide and Reference Manual\/}, by Leslie
+         Lamport (Addison-Wesley, 1994, 2nd ed). 
+
+   \item [{\sl A Guide to \LaTeXe:}] by Helmut Kopka and Patrick
+         W.~Daly (Addison-Wesley, 1998, 3rd ed).
+
+   \item [{\rm Michael Downes:}] ``Breaking equations,'' {\sl TUGboat}
+         18,3 (Sept 1997): 182--194.
+
+   \item [{\rm Keith Reckdahl:}] ``Using EPS graphics in \LaTeXe\
+         documents,'' {\sl TUGboat} 17,1 (March 1996): 43--53.
+
+   \item [{\rm Keith Reckdahl:}] ``Using EPS graphics in \LaTeXe\ documents,
+         Part 2: Floating figures, boxed figures, captions, and math
+         in figures,'' {\sl TUGboat} 17,3 (Sept.\ 1996): 288--310.
+
+         The latest version of the Reckdahl material can be found on
+         {\small CTAN} in \texttt{info/epslatex} in both \texttt{.ps}
+         and \texttt{.pdf} formats.
+\end{description}
+
+
+%% Section 5.2
+\subsection{Electronic resources}
+
+\begin{description} \itemsep=0pt
+   \item [\href{http://www.tug.org/}{www.tug.org}:] the most complete
+         stepping-stone to the world-wide \TeX{} community, including
+         the {\small CTAN} archives, user groups, news, and so on.
+
+   \item [comp.text.tex] a general all-purpose newgroup for \TeX{}
+         users. Consult your local technical support group to see
+         if newsgroup access if available via your browser. 
+
+   \item [FAQ:] put together by the UK \TeX{} Users Group; available
+         via the {\small TUG} web page.
+
+   \item [Listserv lists:] there are a great number of specialised
+         lists. Consult the {\small TUG} web pages for details.
+
+   \item [http://groups.google.com/] holds an archive of usenet
+         discussions, and may be used to review current topics of
+         concern, or to search for answers to specific questions.
+         Unfortunately, the service does {\bf not} offer facilities
+         for posting to usenet, at present.
+\end{description}
+
+\newpage
+
+
+%% Section 6:
+\section{In-house Coding for Articles\label{inhouse}}
+
+A template file with all the main preamble lines of code already
+input, is available (see Appendix~B). At the top of the new file,
+insert the contents of:
+%
+\begin{verbatim}
+   nrc-opening.tex
+\end{verbatim}
+%
+and begin to {\bf un}comment those lines which are pertinent for the
+file. There are brief notes in the template, indicating the purpose of
+each macro line, along with cross-references to pages in these
+guidelines. Delete or leave commented those lines which are not
+relevant to the file.
+
+{\bf Note:} Only invoke those packages and/or macros which are present
+in the file; for example, it is misleading to load a graphics package
+if there are no figures in the file.
+
+
+
+%% Section 6.1
+\subsection{Changing class option choices}
+
+Included in the main class options are some which are intended for
+authors only; remove any of the following options before processing
+author files in-house:
+
+\begin{verbatim}
+   author   genTeX   type1rest   usecmfonts   
+\end{verbatim}
+
+\noindent On the other hand, there are a number of class options
+related to various stages of in-house production and thus intended
+only for \NRC{} editorial staff. Below is a list of these options,
+followed by a brief description of their purpose:
+
+\begin{verbatim}
+   \documentclass[<options here>]{<class here>}
+                  breakaddress        nrc1
+  for nrc2 only:  twocolid         OR nrc2
+  for nrc2 only:  twocolid*
+                  preprint      
+                  proof
+                  pagnf
+                  trimmarks
+                  finalverso
+\end{verbatim}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt breakaddress}] 
+%
+         This option affects the author IDbox at the bottom of the
+         titlepage. It inserts a linebreak between the author name and
+         address; the default setting has them print on the same line.
+
+   \item [{\tt twocolid}] 
+%
+         For \texttt{nrc2} only. This option affects author
+         information (the IDbox at page bottom): the text spans both
+         columns.\footnote{The default is to set all IDbox material
+         into the bottom of the left column.}
+
+   \item [{\tt twocolid*}] 
+%
+         For \texttt{nrc2} only. This variation for the IDbox also
+         spans both columns, but the material inside is itself set up
+         in two columns.
+
+   \item [{\tt preprint}] 
+%
+         This affects headers and footers, omitting such items as
+         dates, page numbers, and so on. For any additional text in
+         running heads (e.g., `Rapid Communication'), use
+         \verb|\shortauthor|.
+
+   \item [{\tt proof}] 
+%
+         Prints a centred footer on every page with the following
+         text: `Proof/\'Epreuve'.\label{proof-pagnf}
+
+        {\bf Note:} Comment out when {\small DOI} line must appear at
+        bottom centre of opening page. See section~\ref{filenumber}.
+
+
+   \item [{\tt pagnf}] 
+%
+         Prints a centred footer on every page with the following
+         text: `Pagination not final/Pagination non
+         finale'.
+
+        {\bf Note:} Comment out when {\small DOI} line must appear at
+        bottom centre of opening page. See section~\ref{filenumber}.
+
+
+   \item [{\tt trimmarks}] 
+%
+         Prints cropmarks at all four corners. Note that trimmarks for
+         \texttt{nrc2} are off the regular $8.5 \times 11$-inch paper,
+         but will be visible if oversized paper is used.
+
+
+   \item [{\tt finalverso}] 
+%
+         Specifies that the paper should end on a recto page (creating
+         a blank, unnumbered page if the text doesn't for itself; the
+         blank page does {\bf not} appear in the paper's page count.
+
+\end{description}
+
+
+%% Section 6.2
+\subsection{Additional packages}
+
+A number of additional packages are included in the template file {\tt
+nrc-opening.tex}. Uncomment those packages which will be needed for
+each specific article. 
+
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash usepackage\char`\{color\char`\}}]
+
+         The \verb|color| package is used for in-house production of
+         reversed out text (white on black). Ensure that no driver
+         option is specified here, as it would over-ride the in-house
+         printer set-up. See section \ref{specialtitles} for details.
+
+   \item [{\tt \blash usepackage\char`\{dcolumn\char`\}}]
+
+         At present, this remains commented out as the \NRC's need for
+         left-justified decimal alignment is not possible via
+         \texttt{dcolumn}. Left-justified alignment at present is
+         achieved by using the \verb|\llap|, \verb|\rlap|, and
+         \verb|\phantom| commands.
+
+   \item [{\tt \blash usepackage\char`\{url\char`\}}]
+
+         Inserts line breaks into e-mail and website addresses. The
+         package \textbf{and} its additional line of code must be
+         uncommented.
+
+   \item [{\tt \blash usepackage\char`\{array\char`\}}]
+
+         Allows for raggedright columns in tables. The package
+         \textbf{and} its additional line of code must be uncommented.
+
+   \item [{\tt \blash usepackage\char`\{cases\char`\}}]
+
+         Makes it possible for a left curly brace to span several
+         lines of equations. The package \textbf{and} its additional
+         line of code must be uncommented.
+
+   \item [personal macros] 
+
+         Over time, it may become apparent that some small
+         modifications or shorthands are used in almost all
+         papers. Until such changes are incorporated into the document
+         classes, these should not be inserted into each article file
+         but rather stored in a separate file, loaded via the
+         \verb|\usepackage| command and inserted after all other
+         packages.
+\end{description}
+
+\newpage
+
+
+%% Section 6.3
+\subsection{Package to remove}
+
+If the user has specified
+%
+\begin{verbatim}
+   \usepackage[T1]{fontenc}
+\end{verbatim}
+%
+so as to enable French-language hyphenation to work when using {\small
+CM} or restricted Type~1 fonts, the package invocation should be
+deleted (the \NRC{} classes supply their own \verb|fontenc|
+invocation).
+
+
+%% Section 6.4
+\subsection{Additional macros}
+
+Following the loading of all packages and their options, files may
+contain additional macros from the author (see
+page~\pageref{authmacros} for instructions provided to authors). These
+should be clearly marked off with, for example, a row of
+\verb|%%|~signs both above and below. Keep in mind the potential for
+author definitions to interfere or over-ride journal macros and
+specifications; for example, authors may have commands to specify page
+dimensions, or fonts for sections, or numbering schemes. Where these
+do not collide with journal requirements, they can probably be safely
+retained. However, where there is interference, journal definitions
+take precedence. Ideally, authors will increasingly switch to using
+the \NRC's document classes and reduce the chances of such problems.
+
+
+%% Section 6.5
+\subsection{Other additions in the preamble area}
+
+Some if not all of the following macros are used by the \NRC's
+in-house production team, and not by the author. They are input in the
+file after all packages have been loaded, and before the
+\verb|\begin{document}| statement:
+
+\begin{verbatim}
+   \setcounter{page}{<number>}
+   \journal{<abbrev.>}
+   \journalcode{<acro>}
+   \volyear{<vol no.>}[<copyright year>]{<year>}
+   \filenumber{<file no.>}
+
+   \received{<complete date>}
+   \revreceived{<complete date>}
+   \accepted{<complete date>}
+   \revaccepted{<complete date>}
+   \IDdate or \IDdates{<Addit'nal text + date info>}
+   \webpub{<complete date>}
+   \commdate{<complete date>}
+   
+   \assoced{<name of assoc. ed.>}
+   \corred{<name of correspond. ed.>}
+\end{verbatim}
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash
+         setcounter\char`\{page\char`\}\char`\{...\char`\}}] \mbox{}  
+
+         Insert starting page number for article. The information will
+         be printed on the titlepage (bottom left) and in the running
+         head; the complete page range will be calculated and inserted
+         automatically when the file is run a second time.
+
+\newpage
+
+
+   \item [{\tt \blash journal\char`\{...\char`\}}] \mbox{}
+
+         Specific journal abbreviations must be entered via this macro
+         (e.g., \verb|Can. J. Civ. Eng.|).
+         The \verb|\journal| command records the web address that
+         will be used for this paper when it is published on the web;
+         note that the \verb|\journalcode| command may be used as an
+         alternative to \verb|\journal|.
+
+         See Appendix~A for complete list of journal abbreviations.
+
+
+   \item [{\tt \blash journalcode\char`\{...\char`\}}] \mbox{}
+
+         The argument is the ``journal acronym'' (see table in
+         Appendix~A for a list).  This acronym identifies the journal,
+         and the \verb|\journalcode| command uses it to set the
+         journal abbreviation and the web site addresses; note that
+         the \verb|\journal| command may be used as an alternative to
+         \verb|\journalcode|.
+
+
+   \item [{\tt \blash
+         volyear\char`\{...\char`\}[...]\char`\{...\char`\}}] \mbox{} 
+
+         First argument is for the volume number. The second
+         (optional) argument specifies the copyright year; if the
+         argument is not present, the copyright year is assumed to be
+         the same as the production year. The third argument
+         specifies the publication year, which is used in the
+         titlepage footer and in the left running head.
+
+
+   \item [{\tt \blash filenumber\char`\{...\char`\}}] \mbox{}
+
+         Insert the \NRC's file number here.\label{filenumber} The
+         number will be appended to the canned text \verb|10-1139/|,
+         which appears bottom centre of the
+         opening page. If \verb|\filenumber| is missing, the following
+         will be printed: {\it Zxx-xxx\/}. 
+
+         {\bf Note:} The {\small DOI} line prints in the same location
+         as text for the class options \verb|proof| and
+         \verb|pagnf|. Comment these class options out once it becomes
+         necessary to have the {\small DOI} line print at bottom
+         centre of the opening page. See section~\ref{proof-pagnf}.
+
+
+   \item [{\tt \blash filenumber*\char`\{...\char`\}}] \mbox{}
+
+         Add an asterisk to the \verb|\filenumber| macro when it is
+         necessary for the filenumber to be prefixed to the page
+         numbers, in addition to appearing in the DOI line.
+
+         All page numbers in the headers, and on the opening page at
+         the bottom left will have the filenumber prefixed to them. 
+
+         {\bf Note:} The filenumber will {\bf not} be prefixed to any
+         page cross-references (via the \verb|\pageref| macro).
+
+
+   \item [{\tt \blash received\char`\{...\char`\}}] \mbox{}
+
+         Insert date as per journal style --- e.g., June 6, 2001 ---
+         but without a final period (it is automatically inserted).
+         The word `Received' (Fr.\ `Re\c cu le') will be automatically
+         generated; however, the date must be input in French (e.g., 6
+         juin 2001). This text appears in the author IDbox area.
+         
+\newpage
+
+   \item [{\tt \blash revreceived\char`\{...\char`\}}] \mbox{}
+
+         Same instructions as for \texttt{\blash received}. The text
+         `Revision received' (Fr.\ `R\'evision re\c cue le') will be
+         automatically generated. This text appears in the author
+         IDbox area.
+         
+
+   \item [{\tt \blash accepted\char`\{...\char`\}}] \mbox{}
+
+         Same instructions as for \texttt{\blash received}. The word
+         `Accepted' (Fr.\ `Accept\'e le') will be automatically
+         generated. This text appears in the author IDbox area.
+
+
+   \item [{\tt \blash revaccepted\char`\{...\char`\}}] \mbox{}
+
+         Same instructions as for \texttt{\blash received}. The text
+         `Revision accepted' (Fr.\ `R\'evision accept\'ee le') will be
+         automatically generated. This text appears in the author
+         IDbox area.
+
+
+   \item [{\tt \blash IDdates\char`\{...\char`\}}] \mbox{}
+
+         Unlike \verb|\received| and \verb|\accepted|, no canned text or
+         final punctuation is included, allowing the user to insert 
+         customised text and/or date information, which appears in the
+         author IDbox area.  An alias, \verb|\IDdate|, is also
+         available.
+
+
+   \item [{\tt \blash webpub\char`\{...\char`\}}] \mbox{}
+
+         Insert date of publication at the \NRC{} website as per
+         journal style --- e.g., June 6, 2001 --- but without a final
+         period (it is automatically inserted). The text will appear
+         in the author IDbox area. 
+
+         For English-language articles, the text `Published on the
+         {\small NRC} Research Press Web site at \verb|webaddress| on
+         \verb|date|' will be automatically generated. The website
+         address is generated by using either the \verb|\journal| or
+         \verb|\journalcode| macros.
+
+         For French-language articles, the text `Publi\'{e} sur le
+         site Web des Presses scientifiques du {\small CNRC}, \`a
+         \verb|webaddress|, le \verb|date|' will be automatically
+         generated. Note that the date must be input in French (e.g.,
+         6 juin 2001).
+
+
+   \item [{\tt \blash commdate\char`\{...\char`\}}] \mbox{}
+
+         Insert date as per journal style --- e.g., June 6, 2001 ---
+         but without a final period (it is automatically inserted).
+         The text `Written discussion of this article is welcomed and
+         will be received by the Editor until' (Fr.\ `Les commentaires
+         sur le contenu de cet article doivent \^{e}tre envoy\'{e}s au
+         directeur scientifique de la revue avant le') will be
+         automatically generated; however, the date must be input in
+         French (e.g., 6 juin 2001). This text appears in the author
+         IDbox area.  
+
+
+   \item [{\tt \blash assoced\char`\{...\char`\}}] \mbox{}
+
+         Insert name of associate editor, without a final period.  The
+         text `Paper handled by Associate Editor' (Fr.\ `Production de
+         l'article coordonn\'{e}e par le directeur scientifique
+         associ\'{e}') will be automatically generated. This text
+         appears in the author IDbox area.
+
+\newpage
+
+
+   \item [{\tt \blash corred\char`\{...\char`\}}] \mbox{}
+
+         Insert name of associate editor, without a final period.  The
+         text `Corresponding Editor:' (Fr.\ `Directeur scientifique
+         correspondant\,:') will be automatically generated. This text
+         appears in the author IDbox~area.
+\end{description}
+
+
+%% Section 6.6
+\subsection{Special titleblocks\label{specialtitles}}
+
+Some journal material requires a special heading: a solid black stripe
+with reversed-out white lettering. The white-on-black effect requires
+the presence of a special package in the preamble area, immediately
+below the graphics package, in addition to the special title coding:
+
+\begin{verbatim}
+   \usepackage{color}
+\end{verbatim}
+
+\noindent Since both the \texttt{graphicx} package and \texttt{color}
+share the same option, it is possible to merge them into one line:
+
+\begin{verbatim}
+   \usepackage{graphicx,color}
+\end{verbatim}
+
+\noindent Having added the \texttt{color} package, the actual special
+title command will now work. There are two versions of the command:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash specialtitle}] \mbox{}
+
+         This allows the regular titleblock (\verb|\title|, etc.) to
+         be included with the special title; for example, a review
+         article with its own title.
+%
+\begin{verbatim} 
+\begin{document}
+\specialtitle{REVIEW/SYNTH\`ESE}
+\title{Regular article title}
+\author{Someone's name here}
+\address{Someplace nice and warm}
+   \correspond
+\shortauthor{Review/Synth\`ese}
+\maketitle
+\end{verbatim}
+
+   \item [{\tt \blash specialtitle*}]\mbox{}
+
+         The regular article titleblock cannot be used with this
+         variant; for example, an editorial or other non-article
+         material.
+%
+\begin{verbatim} 
+\begin{document}
+\specialtitle*{EDITORIAL/\'EDITORIAL}
+\shortauthor{Editorial/\'Editorial}
+\maketitle
+\end{verbatim}
+
+         For non-articles, the headers and footers are changed by
+         using the \verb|\pagestyle{nrcplain}| command. The page
+         numbers will appear at bottom centre, the \NRC{} Canada
+         copyright footer is suppressed, and the running heads are
+         suppressed entirely. For further adjustments to pagination, 
+         see `Miscellaneous adjustments'.
+\end{description}
+          
+
+%% Section 6.7
+\subsection{Translations of abstracts/resum\'es}
+
+The following lines are inserted at the end of each abstract or
+resum\'e, before the \verb|\end{...}| statement:
+
+\begin{description} \itemsep=0pt
+   \item [{\tt \blash translation}] generates the text: `[Journal
+         translation]'.
+
+   \item [{\tt \blash traduit}] generates the text: `[Traduit par la
+         r\'edaction]'.
+
+   \item [{\tt \blash Traduit}] generates the text: `[Traduit par la
+         R\'edaction]'.
+\end{description}
+
+\noindent Note that author files will only have one: an abstract or a
+resum\'e. It is useful to insert a suitable \verb|\vspace| to
+represent the approximate space the translation would require, so that
+page breaks will not be unduly affected by the additional text.
+
+
+%% Section 6.8
+\subsection{Miscellaneous adjustments}
+
+\begin{enumerate} \itemsep=0pt
+   \item Journals requiring more space between lines will need the
+         following command inserted into the preamble area:
+%
+\begin{verbatim}
+   \easebaselines
+\end{verbatim}
+
+         This command will also adjust the inter-row spacing within
+         tables (value of \verb|\arraystretch| increases to 1.05).
+
+
+   \item For {\bf roman numerals}, with only page numbers in the
+         footers, insert the following lines at the end of the
+         preamble, just above the \verb|\begin{document}| line (notice
+         that, in this example, pagination will begin with roman iii):
+%
+\begin{verbatim}
+   \pagestyle{nrcplain}
+   \pagenumbering{roman}
+   \setcounter{page}{3}
+\end{verbatim}
+
+   \item To add parentheses (or any other design element) to (roman)
+         page numbers, insert the following just before the
+         \verb|\setcounter{page}{...}| command:
+%
+\begin{verbatim}
+   \renewcommand\thepage{(\roman{page})}
+\end{verbatim}
+
+   \item For full-width text spanning two columns, the default left
+         and right margins can be altered by using the following
+         optional argument to the \verb|{WideText}| environment
+         (recall that the default values are 0em on the left, 3em on
+         the right):
+
+\begin{verbatim}
+\begin{WideText}[<l.margin>][<r.margin>]
+  <text here>
+\end{WideText}
+\end{verbatim}
+\end{enumerate}
+
+
+%% Section 6.9
+\subsection{Two-column bilingual texts}
+
+Special coding at both the top of the file and around the bilingual
+paragraphs is required.
+
+
+%% Section 6.9.1 
+\subsubsection{In the preamble\label{bilingpream}}
+
+First, load the appropriate package and options. These are added after
+the \verb|\documentclass| line in the preamble.
+
+\newpage
+
+\begin{enumerate} \itemsep=0pt
+   \item if main (left column) language is English:
+
+         \verb|\usepackage[french,english]{babel}|
+
+         As English is the default, there is no need to specify it as
+         an option to the document class.
+
+   \item if main (left column) language is French, there is an
+         additional option to add to the document class line:
+
+         \verb|\documentclass[french]{nrc1}|
+
+         \verb|\usepackage[english,french]{babel}|
+
+         See sections~\ref{frenchclassoption} and \ref{babelinfo},
+         which also discuss the \textsf{babel} package.
+\end{enumerate}
+
+
+%% Section 6.9.2
+\subsubsection{In the bilingual text}
+
+The next step is to code the English and French texts so that the tops
+of matching paragraphs align horizontally. One set of codes surrounds
+the entire bilingual set of paragraphs; another set of codes is put
+around each matched set of English-French paragraphs.
+
+\begin{verbatim}
+1.  \begin{par-text}[<language>]
+2.      \begin{par-para}
+3.         ... <English paragraph> ... 
+4.      \othercol
+5.         ... <French paragraph> ... 
+6.      \end{par-para}
+7.
+8.      \begin{par-para}
+9.         ... <English paragraph> ... 
+10.     \othercol
+11.        ... <French paragraph> ... 
+12.     \end{par-para}
+13. \end{par-text}
+\end{verbatim}
+
+\begin{description} \itemsep=0pt
+   \item [lines 1, 13:] The entire 2-column section of matching
+         paragraphs is set inside a \verb|par-text| environment. This
+         separates the parallel text portion of a file from other
+         elements that may not require such formatting: headings or
+         other text, graphics inclusions, etc. The \verb|par-text|
+         command has one required option (language) and two width
+         options (to change from default values).
+
+   \item [line 1: \tt{[<language>]}] When the left-column language
+         is\break English, \verb|[french]| is the right-column
+         `option'.
+
+         When left-column language is French, the right-column
+         language option is \verb|[english]|. {\bf Also required} is
+         the preamble code specified in section~\ref{bilingpream},
+         item~2.
+
+   \item [line 1:] The default column widths, which do {\bf not} need
+         to be specified, are:
+
+   \hspace{1pc}\begin{tabular}{lccc}
+             & left col & inter-col & right col \\ [2pt]
+    \tt nrc1 &  15.5pc  & 1.5pc     & 17pc    \\
+    \tt nrc2 &  20.75pc & 1.5pc     & 20.75pc \\
+   \end{tabular}
+
+         To change left-column width and inter-column space (the right
+         column width is calculated, based on these other two
+         dimensions): 
+
+\begin{verbatim}
+\begin{par-text}[<lang.>][<dimen1>][<dimen2>]
+\end{verbatim}
+
+         where \verb|<dimen1>| is the new left column width, and
+         \verb|<dimen2>| is the new inter-column space. If only the
+         inter-column space, \verb|<dimen2>|, is to change,
+         \verb|<dimen1>| must still be inserted, in order for the
+         program to find the 2nd set of square brackets.
+
+   \item [lines 2 and 6:] matching English/French paragraphs are set
+         inside a \verb|par-para| environment
+
+   \item [lines 3 and 5:] the matched sets of paragraphs (which can of
+         course be longer than one line!) 
+
+   \item [lines 4 and 10:] to signal the end of the left-column
+         paragraph and the start of its matching right column
+         paragraph, use \verb|\othercol|
+
+   \item [line 7:] to make it easier to read the source file, separate
+         each set of \verb|{par-para}| with a blank line or a {\tt \%}
+         sign
+\end{description}
+
+\noindent {\bf Note:} The default vertical space between lines is set
+at 1pc ($\approx$ one blank line). To change this at specific points,
+explicit \verb|\vspace{...}| commands can be inserted between sets of
+\verb|{par-para}|. To change this for the entire file, insert
+\verb|\parallelparsep{<some dimen.>}| before \verb|{par-text}|.
+
+
+%% Section 7:
+\section{Final notes}
+
+\begin{enumerate} \itemsep=0pt
+   \item There is no dotless-j available in Adobe PostScript fonts.  
+         The only dotless-j appears in math mode --- $\jmath$ ---
+         which is accessed by \verb|$\jmath$|.
+
+   \item Only English and French hyphenation are currently set up;
+         English is the default, French is invoked by \textsf{babel},
+         and the class selects French or English hyphenation as
+         necessary, as it goes along (provided the appropriate
+         hyphenation patterns have been installed).
+\end{enumerate}
+
+\clearpage
+
+
+\section*{Appendix A}
+
+\subsection*{Journal reference grid}
+
+{\footnotesize
+\begin{tabular}{@{}lllll@{}}
+\hline \hline 
+Journal name  
+   & Journal abbreviation
+   & Journal 
+   & English website 
+   & French website \T \\ 
+   & & acronym & & \B \\ 
+\hline 
+Biochemistry and Cell Biology\T              
+   & Biochem. Cell Biol.         
+   & bcb                 
+   & http://bcb.nrc.ca                                    
+   & http://bbc.cnrc.ca \\ [2pt]
+%
+Canadian Geotechnical Journal                      
+   & Can. Geotech. J.            
+   & cgj                 
+   & http://cgj.nrc.ca                                    
+   & http://rcg.cnrc.ca \\  [2pt]
+%
+Canadian Journal of Botany                         
+   & Can. J. Bot.                
+   & cjb              
+   & http://canjbot.nrc.ca                                    
+   & http://revcanbot.cnrc.ca    \\  [2pt]
+%
+Canadian Journal of Chemistry                      
+   & Can. J. Chem.               
+   & cjc                 
+   & http://canjchem.nrc.ca                                    
+   & http://revcanchim.cnrc.ca \\  [2pt]
+%
+Canadian Journal of Civil Engineering              
+   & Can. J. Civ. Eng.          
+   & cjce                        
+   & http://cjce.nrc.ca                                    
+   & http://rcgc.cnrc.ca  \\  [2pt]
+%
+Canadian Journal of Earth Sciences                 
+   & Can. J. Earth Sci.          
+   & cjes                   
+   & http://cjes.nrc.ca                                    
+   & http://rcst.cnrc.ca  \\  [2pt]
+%
+Canadian Journal of Fisheries
+   & Can. J. Fish. Aquat. Sci.   
+   & cjfas             
+   & http://cjfas.nrc.ca                                    
+   & http://jcsha.cnrc.ca    \\
+\quad and Aquatic Sciences \\  [2pt]
+%
+Canadian Journal of Forest Research                
+   & Can. J. For. Res.           
+   & cjfr                                     
+   & http://cjfr.nrc.ca                                    
+   & http://rcrf.cnrc.ca  \\  [2pt]
+%
+Canadian Journal of Microbiology                   
+   & Can. J. Microbiol.          
+   & cjm                       
+   & http://cjm.nrc.ca                                    
+   & http://rcm.cnrc.ca \\  [2pt]
+%
+Canadian Journal of Physics                        
+   & Can. J. Phys.               
+   & cjp  
+   & http://cjp.nrc.ca                                    
+   & http://rcp.cnrc.ca \\  [2pt]
+%
+Canadian Journal of Physiology
+   & Can. J. Physiol.            
+   & cjpp                     
+   & http://cjpp.nrc.ca                                    
+   & http://rcpp.cnrc.ca   \\
+\quad and Pharmacology \\  [2pt]
+%
+Canadian Journal of Zoology                        
+   & Can. J. Zool.               
+   & cjz               
+   & http://cjz.nrc.ca                                    
+   & http://rcz.cnrc.ca  \\  [2pt]
+%
+Environmental Reviews                              
+   & Environ. Rev.               
+   & er                                    
+   & http://er.nrc.ca                                    
+   & http://de.cnrc.ca \\  [2pt]
+%
+Genome                                             
+   & Genome
+   & gen   
+   & http://genome.nrc.ca                                    
+   & http://genome.cnrc.ca \\  [2pt]
+%
+Journal of Environmental 
+   & J. Environ. Eng. Sci.
+   & jees                                
+   & http://jees.nrc.ca                                    
+   & http://rgse.cnrc.ca \\
+\quad Engineering and Science \B \\ 
+\hline \hline 
+\end{tabular}
+}
+
+\clearpage
+
+\onecolumn
+
+\section*{Appendix B}
+
+\subsection*{Canned Preamble: \texttt{nrc-opening.tex}}
+
+\begin{verbatim}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Typeset by                  , Research Press, NRC
+%% Date: 
+%% NRC, <name of journal>
+%% 
+%%%%%%%%%%%%%%
+%%
+%% 1. See original preamble material (at bottom of file) for
+%%    details on source of current .tex file: conversion
+%%    from word-processing program or author-generated TeX
+%%    code. 
+%%
+%% 2. This template includes most options and packages used by 
+%%    all the NRC journals. UNcomment those packages and options
+%%    which are REQUIRED. 
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%% 1. Class file (nrc1 or nrc2) + options (see userguide, pp.1-2; p.9):
+\documentclass[%% french,        %% use with \usepackage[french]{babel}
+               %% leqno,         %% only for nrc1 (default is right eqno)
+               %% reqno,         %% only for nrc2 (default is left eqno)
+               %% nonumbib,      %% biblio entries without nos.
+%
+               %% breakaddress,  %% linebreak btwn author(s) + address(es)
+               %% twocolid,      %% IDbox spans 2 cols
+               %% twocolid*,     %% 2-col IDbox
+               %% preprint,      %% removes identifying nos. from headers/footers
+               %% proof,         %% `Proof/Epreuve' in footer
+               %% pagnf,         %% `Pagination not final/Pagination non finale'
+               %% trimmarks,     %% add trimmarks
+               %% finalverso,    %% final blank verso NOT included in pagerange
+]{nrc2}                          %% choose one: nrc1 or nrc2
+
+%% NOTE: authors may use the following options, which should be
+%%       DELETED once the file comes in-house:
+%%      
+%%          usecmfonts    type1rest     genTeX
+
+
+%% 2. Frequently used packages -- see pp.2-3 of userguide: 
+%%    a. graphics-related:
+%%    \usepackage{graphicx}       %% color not usually needed
+%%    \usepackage[figuresright]{rotating} %% for landscape tables
+
+%%    b. math-related: 
+%%    \usepackage{amsmath}        %% math macros in wide use
+%%    \usepackage{amssymb}        %% additional math symbols
+%%    \usepackage{dcolumn}        %% decimal alignment for tables
+%%    \usepackage{bm}             %% `bold math' via \bm command
+
+%%    c. for website addresses:
+%%    \usepackage{url}            %% inserts linebreaks automatically
+%%    \NRCurl{url}
+
+%%    d. biblio-related:
+%%    \usepackage{cite}           %% enhances options for \cite commands
+
+%%    e. for English-language papers:
+%%    \usepackage[french,english]{babel}  
+
+%%    f. for French-language papers: 
+%%    \usepackage[english,french]{babel}  %% remember to add french as a
+                                          %% CLASS option, above
+%%    g. for ragged-right tables:
+%%    \usepackage{array}
+%%    \newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}
+%%    \let\PBS=\PreserveBackslash
+
+%%    h. for left curly brace to span several lines of equations:
+%%    \usepackage{cases}
+%%    \expandafter\let\csname numc@left\expandafter\endcsname\csname 
+%%                 z@\endcsname
+
+
+%% 3. Resetting float parameters: 
+%%    a. in nrc1:
+%%    \renewcommand{\topfraction}{.95}
+%%    \renewcommand{\textfraction}{.05}
+%%    \renewcommand{\floatpagefraction}{.95}
+
+%%    b. in nrc2:
+%%    \renewcommand{\topfraction}{.95}
+%%    \renewcommand{\floatpagefraction}{.95}
+%%    \renewcommand{\dbltopfraction}{.95}
+%%    \renewcommand{\textfraction}{.05}
+%%    \renewcommand{\dblfloatpagefraction}{.95}
+
+
+%% 4. Resetting journal-specific parameters:
+%%    a. eqn nos. with section nos.:
+%%    \numberby {equation}{section}
+%%    \setcounter{equation}{0}
+
+%%    b. in-line citations to use ( ) instead of default [ ]:
+%%   \renewcommand{\citeleft}{(}
+%%   \renewcommand{\citeright}{)}
+
+%%    c. for JEES (to expand inter-line spacing; see p.12 of guide):
+%%    \easebaselines
+
+
+%% 5. Miscellaneous macros to always have available:
+%%    a. shorthands:
+\let\p=\phantom
+\let\mc=\multicolumn
+
+%%    b. struts for vertical spacing above/below rules in tables:
+%%%%%%%%%%%%%%%%%%  beginning of Claudio Beccari's code:
+%% Spacing commands for {tabular} (from TTN 2,3:10 -- Claudio
+%%                                                    Beccari): 
+%% Usage: a. use \T to put space below a line 
+%%           (e.g., at top of a `cell' of text)
+%%        b. use \B to put space above a line 
+%%           (e.g., at bottom of a `cell' of text)
+\newcommand\T{\rule{0pt}{2.6ex}}            % = `top' strut
+\newcommand\B{\rule[-1.2ex]{0pt}{0pt}}      % = `bottom' strut
+%%%%%%%%%%%%%%%%%%  end of Claudio's code 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   end of class and package 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   options, additional macros
+
+
+%% Journal-specific information for opening page -- pp.9-11 of guide:
+%% a. numbers:
+\setcounter{page}{1}             %% replace 1 with starting page no.
+\volyear{XX}{2001}               %% volume, year of journal 
+\journal{}                       %% jrnl. abbrev. (see App.A of guide)
+\journalcode{}                   %% jrnl. acro    (see App.A of guide)
+\filenumber{}                    %% NRC file number
+%% \filenumber*{}                %% prefixes \filenumber to all page nos.
+                                 %% NOTE: COMMENT OUT class options
+                                 %%             pagnf
+                                 %%             proof
+                                 %%       once no longer needed
+
+
+%% b. dates:
+\received{}                      %% insert date, no period
+\revreceived{}                   %% <same>
+\accepted{}                      %% <same>
+\revaccepted{}                   %% <same>
+%% \IDdates{}                       %% <same>. Use for `Revised ...' etc.
+%% \webpub{}                        %% insert date
+%% \commdate{}                      %% <same>
+
+
+%% c. miscellaneous:
+%%   \assoced{}                  %% insert name of Associate ed.
+%%   \corred{}                   %% insert name of Corresponding ed.
+%%   \dedication{}               %% insert text as neede
+%%   \abbreviations{}            %% insert as needed
+
+
+\begin{document}
+
+%% Reversed titlebar -- see p.11 of userguide:
+%% \specialtitle{}      %% for black stripe + text + regular title
+%% \specialtitle*{}     %% black stripe + text only
+
+
+
+
+%% Title, Author(s), Address(es) -- see p.4 of userguide for 
+%%    various options to save time and keyboarding, esp. where
+%%    authors share same address(s). 
+
+\title{} 
+
+%% Author 1:
+\author[J.L. Humar]{John Larry Humar} %% opt. arg. ONLY if IDbox
+                                      %% name is diff. from
+                                      %% titleblock name 
+\address{}                            %% address of 1st author
+
+
+%% Author 2:
+\author{M.A. Rahgozar}
+\address{}
+
+%% Author 3:
+\author{Fred Murray}
+\address{}
+
+
+\shortauthor{Humar, Rahgozar, and Murray} %% for headers
+
+%%%%%%%%
+%% This line goes here in nrc1.
+%% \maketitle			
+%%%%%%%%
+
+
+%% Abstract/Resume area -- see pp.5,12 of userguide:
+\begin{abstract}
+   Abstract text
+%% \keywords{}
+%% \translation 
+\end{abstract}
+
+\begin{resume}
+   Texte du resume
+%% \motscles{}
+%% \Traduit %% or \traduit
+\end{resume}
+
+%%%%%%%%
+%% This line goes here in nrc2.
+%% \maketitle			
+%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%   END OF TEMPLATE   %%%%%%%%%%%%%%%%%%%%%%
+
+%% Ch. -- 11 NOV 02
+
+\end{verbatim}
+
+\end{document}
+
+
+%% END OF FILE

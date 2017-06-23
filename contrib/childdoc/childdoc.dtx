@@ -1,0 +1,1030 @@
+% \iffalse
+%
+% childdoc.dtx Copyright (C) 2017 Niklas Beisert
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Niklas Beisert.
+%
+% This work consists of the files childdoc.dtx and childdoc.ins
+% and the derived files childdoc.def and cdocsamp.tex with
+% cdocsch1.tex, cdocsch2.tex, cdocsdrf.tex, cdocsfn1.tex, cdocsfn2.tex.
+%
+%<package>\ifdefined\childdocmain\endinput\fi
+%<package>\ProvidesFile{childdoc.def}[2017/05/21 v1.5 child document driver]
+%<samplemain>\ProvidesFile{cdocsamp.tex}[2017/05/21 v1.5 sample for childdoc]
+%<*driver>
+%\ProvidesFile{childdoc.drv}[2017/05/21 v1.5 childdoc reference manual file]
+\PassOptionsToClass{10pt,a4paper}{article}
+\documentclass{ltxdoc}
+
+\usepackage[margin=35mm]{geometry}
+\usepackage{hyperref}
+\usepackage[usenames]{color}
+
+\hypersetup{colorlinks=true}
+\hypersetup{pdfstartview=FitH}
+\hypersetup{pdfpagemode=UseNone}
+
+\begin{document}
+
+\title{The \textsf{childdoc} Package}
+\hypersetup{pdftitle={The childdoc Package}}
+\author{Niklas Beisert\\[2ex]
+  Institut f\"ur Theoretische Physik\\
+  Eidgen\"ossische Technische Hochschule Z\"urich\\
+  Wolfgang-Pauli-Strasse 27, 8093 Z\"urich, Switzerland\\[1ex]
+  \href{mailto:nbeisert@itp.phys.ethz.ch}
+  {\texttt{nbeisert@itp.phys.ethz.ch}}}
+\hypersetup{pdfauthor={Niklas Beisert}}
+\hypersetup{pdfsubject={Manual for the LaTeX2e Package childdoc}}
+\date{21 May 2017, \textsf{v1.5}}
+\maketitle
+
+\begin{abstract}\noindent
+\textsf{childdoc} is a \LaTeXe{} package
+that enables the direct compilation
+of document sections included by |\include|
+to individual files.
+\end{abstract}
+
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+\LaTeX{} provides a mechanism to structure a large document (such as a book)
+into a main file and several child files (containing the chapters)
+using the |\include| command.
+This mechanism is beneficial for documents
+which span hundreds of pages in order to
+make the source file(s) more manageable.
+Moreover, compilation can be restricted to
+selected child files by means of the |\includeonly| command.
+The latter feature can be used to reduce the compilation time while editing
+(this was significantly more useful in the earlier days of \LaTeX{})
+or to generate a smaller document which is easier to navigate.
+Another application of |\includeonly| is to generate
+documents consisting of selected parts of the complete document.
+
+However, there are a few drawbacks of the plain |\include| mechanism:
+\begin{itemize}
+\item
+The child files cannot be compiled on their own,
+they can only be compiled via the main file.
+A naive editing environment
+(such as a text editor with an option
+to have the current file processed by \LaTeX)
+may require one to switch to the main file before compiling;
+attempting to compile the child file produces errors.
+\item
+The main file must be modified (each time)
+to adjust the |\includeonly| command
+to the present needs. This easily leaves the main file in a messy state.
+\item
+The generated document will always carry the filename
+of the main document. This is inconvenient if
+several child files are to be compiled and
+to be kept for distribution.
+\end{itemize}
+
+The present package provides a simple interface
+to make child files individually compilable by \LaTeX{}.
+Compiling a child file then has the same effect as compiling
+the main file with an |\includeonly| command
+to select the appropriate child.
+Moreover the generated document will carry the name of the child
+rather than the main file.
+This resolves all three above issues.
+
+This feature is meant to make the editing of books,
+thesis documents and lecture notes somewhat more convenient.
+However, the package can also be used efficiently for
+composing a series of documents (such as exercise sheets)
+which are typically distributed individually.
+It then assists the author in generating the individual documents
+(potentially in different versions)
+as well as a document containing the collected series.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Usage}
+
+The package \textsf{childdoc} is \emph{not} a standard
+\LaTeXe{} |.sty| style file! Therefore it needs to be invoked in
+a non-standard way.
+
+\DescribeMacro{\childdoc}
+To use the package add the commands
+\begin{center}
+\begin{tabular}{l}
+|\input{childdoc.def}|\\
+|\childdocmain{|\textit{main}|}|\\
+\end{tabular}
+\end{center}
+at the very top of your main \LaTeX{} file,
+in particular \emph{before} the |\documentclass| statement!
+Furthermore, you must add the command
+\begin{center}
+\begin{tabular}{l}
+|\input{childdoc.def}|\\
+|\childdocof{|\textit{main}|}|\\
+\end{tabular}
+\end{center}
+at the top of every child file which is included by |\include|
+from within the main file
+(or at least for those files which you would like to compile individually).
+In each case, the argument \textit{main}
+must be the filename of the main file.
+Alternatively, it suffices to start a child file
+with just |\input{|\textit{main}|}|;
+this has the same effect,
+but the nesting of included files is slightly different.
+Note that the closed loop generated by
+this combination of |\input| and |\include| commands
+is broken by |\childdocmain|.
+
+Please note the following restrictions:
+\begin{itemize}
+\item
+The argument \textit{main} of |\childdocmain| must match the
+filename of the file in which it is specified.
+This is necessary because \TeX{} does not store the name
+of files included via |\input|.
+\item
+The filename \textit{main} must be specified without the |.tex| extension.
+\item
+The filename \textit{main} is case sensitive
+(even in case-insensitive file systems)
+due to internal string comparison.
+\item
+The argument \textit{main} should be fully expanded, it cannot be a macro.
+\item
+Subdirectories and special characters should be avoided in filenames.
+\item
+The command |\childdocmain{|\textit{main}|}| must be followed by a whitespace.
+It should not be followed immediately by another command
+or by a comment mark `|%|'.
+This is because the \TeX{} parser reads the token immediately following
+the argument of |\childdocmain| and puts it
+at the beginning of every child section;
+however, a whitespace is ignored.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Considerations}
+
+Let us mentions a couple of
+consideration in setting up the main and child documents:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Content of Main File.}
+
+It is advisable to place all output in the child files included by |\include|.
+Any output contained in the main file will appear in all child documents;
+it cannot be suppressed by the |\includeonly| directive
+and thus should normally be avoided.
+Below we shall describe a method to include some output in the main file
+by means of conditional processing.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Page Numbering.}
+
+When only a part of the document is compiled,
+the appropriate numbering of pages
+(as well as other status parameters)
+is determined from the |.aux| files.
+The latter contain information from previous passes.
+However this information needs to propagate through
+all intermediate child documents.
+Therefore the page numbering in child documents may well
+be inconsistent until the complete document is compiled at least once.
+
+A useful (if unconventional) way to always ensure a consistent
+page numbering is to restart the numbering in each child document
+and denote the pages by `\textit{child}|.|\textit{page}'
+where \textit{child} represents the chapter/section number of the child file.
+This can be achieved by the command
+|\numberwithin{page}{|\textit{child}|}|
+of the \textsf{amsmath} package
+where \textit{child} can be |chapter| or |section|
+depending on the chosen structuring.
+Alternatively, one can modify the macro |\thepage| appropriately
+and reset the counter |page| at the start of each child file.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Conditional Processing}
+
+The package provides a mechanism to compile different versions
+of a document. To customise the versions further some conditional processing
+can come in handy to distinguish which version is being compiled.
+The package provides two macros to describe the compilation context:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\ifchilddoc}
+The conditional |\ifchilddoc| distinguishes between the compilation of
+child documents and the main document:
+%
+\begin{center}
+|\ifchilddoc |\textit{child-code}| |[|\||else |\textit{main-code}]| \||fi|
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\childdocname}
+The macro |\childdocname| contains the filename (without extension)
+of the main or child file being processed.
+Note that |\jobname| will always contain the name of the main file.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Title Page.}
+
+For example,
+conditional processing can be used to include a title or banner page
+in the main document when proper precautions are taken.
+Importantly, the code in the main file should ensure that the page counter
+(as well as other status parameters which are stored in the |.aux| files)
+takes the same value after the conditional processing.
+Otherwise the page numbers may take divergent values
+depending on which part is compiled.
+
+For example, a title page could be declared by:
+%
+\begin{center}
+\begin{tabular}{l}
+|\ifchilddoc\||else|\\
+|\addtocounter{page}{-1}|\\
+\textit{code for title page}\\
+|\newpage|\\
+|\||fi|
+\end{tabular}
+\end{center}
+%
+A banner page for the child documents can be generated by:
+%
+\begin{center}
+\begin{tabular}{l}
+|\ifchilddoc|\\
+|\addtocounter{page}{-1}|\\
+\textit{code for banner page}\\
+|\newpage|\\
+|\||fi|
+\end{tabular}
+\end{center}
+%
+Here one could write a message such as:
+\begin{center}
+|This is the part \childdocname{} of \jobname.|
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Flags and Forwarding}
+
+The package allows to easily generate different versions
+of the main or child documents
+and to (permanently) store these in different files.
+To this end compilation flags can be defined
+and assigned different default values.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Defining Flags.}
+
+Suppose we want to define a flag |\version|
+which can be set to |draft| or |final|.
+The document source will contain some conditional code
+depending on the value of |\version|.
+Suppose further, the flag should default to |final| for the main file
+and to |draft| for child files
+which is a natural assignment for editing the document.
+This is achieved by placing the following code
+in the preamble of the main document
+(below the |\childdocmain| directive):
+%
+\begin{center}
+\begin{tabular}{l}
+|\ifchilddoc|\\
+|\providecommand{\version}{draft}|\\
+|\||else|\\
+|\providecommand{\version}{final}|\\
+|\||fi|
+\end{tabular}
+\end{center}
+%
+By using |\providecommand| we make sure that previous definitions
+are not overwritten.
+We can thus add further statements
+|\providecommand{\version}{...}|
+before the above code to override it.
+
+For the main file, one might add a line
+(between |\childdocmain| and the above block)
+%
+\begin{center}
+|%\ifchilddoc\||else\providecommand{\version}{draft}\||fi|
+\end{center}
+%
+which can be uncommented to produce a draft version.
+Likewise one can add a line to the very top of a child file
+(above the |\childdocof{|\textit{main}|}| directive)
+%
+\begin{center}
+|%\providecommand{\version}{final}|
+\end{center}
+%
+which can be uncommented to produce the final version of this child document.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{Forwarding.}
+
+Once compilation flags are defined, we can permanently set up files
+to produce certain versions of the documents.
+To this end, the package defines a command
+to pass on compilation to a different file:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\childdocforward}
+\DescribeMacro{\childdocforwardprefix}
+The command |\childdocredirect| redirects processing to
+the another source file:
+%
+\begin{center}
+\begin{tabular}{l}
+|\childdocforward[|\textit{main}|]{|\textit{dest}|}|\\
+|\childdocforwardprefix[|\textit{main}|]{|\textit{prefix}|}{|\textit{dest}|}|
+\end{tabular}
+\end{center}
+%
+The argument \textit{dest} is the destination file
+(without extension).
+It should be the main file or one of the child files.
+In the second form,
+the destination file is determined by a pattern
+depending on the current file:
+To make this work, the current file must be called
+`{\textit{prefix}\hspace{0.2em}\textit{suffix}}'
+and processing is passed on to the file
+`{\textit{dest}\hspace{0.2em}\textit{suffix}}'.
+Surely, the same effect is achieved by
+directly specifying the
+argument `{\textit{dest}\hspace{0.2em}\textit{suffix}}'
+in the first form.
+However, that requires to set up a different file
+for each child. With the alternative form of the command
+all these files can have exactly the same content
+which simplifies setting them up and maintaining them.
+Finally, the optional argument \textit{main}
+allows to pass on directly to the main file \textit{main}
+while pretending to compile \textit{dest}.
+
+For example, the following file |draft.tex|
+compiles the main document as a draft:
+%
+\begin{center}
+\begin{tabular}{l}
+|\def\version{draft}|\\
+|\input{childdoc.def}|\\
+|\childdocredirect{|\textit{main}|}|
+\end{tabular}
+\end{center}
+%
+Likewise, the following files |final|\textit{nn}|.tex|
+compile the final version of the child document
+|child|\textit{nn}|.tex|:
+%
+\begin{center}
+\begin{tabular}{l}
+|\def\version{final}|\\
+|\input{childdoc.def}|\\
+|\childdocredirect{final}{child}|
+\end{tabular}
+\end{center}
+%
+
+Note that when several versions of a main file and/or of each child file
+are to be generated, it will be convenient to set up a |Makefile| or
+shell script to automatise the process.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Manual Code}
+
+In case one cannot be certain whether the definitions file |childdoc.def|
+is installed on the target \TeX{} distribution
+and one prefers not to ship it,
+it is conceivable to paste a few relevant commands into the sources.
+
+To that end, drop all statements |\input{childdoc.def}|
+and perform the replacements as outlined below.
+Instead of |\childdocmain{|\textit{main}|}| add the following code
+to the top of the main file:
+%
+\begin{center}
+\begin{tabular}{l}
+|\||ifdefined\childdocname\endinput\||fi\newif\ifchilddoc|\\
+|\edef\childdocname{\scantokens\expandafter{\jobname\noexpand}}|\\
+|\def\childdocmain{|\textit{main}|}\||ifx\childdocmain\childdocname\||else|\\
+|\childdoctrue\includeonly{\childdocname}\let\jobname\childdocmain\||fi|\\
+\end{tabular}
+\end{center}
+%
+Instead of |\childdocof{|\textit{main}|}| just include the main file
+at the top of each child file:
+%
+\begin{center}
+|\input{|\textit{main}|}|
+\end{center}
+%
+A simple redirection |\childdocforward{|\textit{dest}|}| is achieved by:
+%
+\begin{center}
+|\def\jobname{|\textit{dest}|}\input{\jobname}|
+\end{center}
+%
+The redirection with prefix
+|\childdocforwardprefix[|\textit{prefix}|]{|\textit{dest}|}|
+is accomplished by:
+%
+\begin{center}
+\begin{tabular}{l}
+|{\edef\jobname{\scantokens\expandafter{\jobname\noexpand}}|\\
+|\def\redirectjob |\textit{prefix}|#1~~~{\gdef\jobname{|\textit{dest}|#1}}|\\
+|\expandafter\redirectjob\jobname~~~}\input{\jobname}|
+\end{tabular}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Command Line Processing}
+
+The effect of redirection files can also be achieved by invoking
+the \LaTeX{} compiler with a more elaborate command line.
+Most conveniently this should be done as part
+of a shell script or a |Makefile|.
+
+When using \textsf{childdoc} in the main file, the following
+command line effectively performs a redirection
+(note that depending on the shell being used,
+backslashes may have to be doubled: `|\|' $\to$ `|\\|')
+%
+\begin{center}
+|... -jobname "|\textit{target}|" "|[\textit{flags}]%
+|\def\jobname{|\textit{dest}|}\input{|\textit{main}|}"|
+\end{center}
+%
+Here \textit{target} is the name of the output file,
+\textit{main} is the name of the main file
+and \textit{dest} is the name of the main or child file to be processed
+(all filenames without extensions).
+Optionally, compilation \textit{flags} can be defined via |\def| commands.
+
+This command line makes the \TeX{} engine believe
+it is compiling the file \textit{target}
+whose content is specified as the latter parameter.
+The provided code in turn tweaks the definition of |\jobname| to \textit{dest}
+which is later passed on to |\includeonly| by |\childdocmain|
+and then hands over to the main file \textit{main}.
+
+In fact, a similar effect can be achieved
+without the \textsf{childdoc} mechanism
+by using the command line:
+%
+\begin{center}
+|... -jobname "|\textit{target}|" "|[\textit{flags}]%
+|\includeonly{|\textit{dest}|}\input{|\textit{main}|}"|
+\end{center}
+%
+However, some of the functionality of \textsf{childdoc} is lost,
+e.g.\ child documents cannot be processed individually
+and the conditional |\ifchilddoc| is not defined.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Information}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Copyright}
+
+\begingroup
+\parskip1ex
+\parindent0pt
+
+Copyright \copyright{} 2017 Niklas Beisert
+
+This work may be distributed and/or modified under the
+conditions of the \LaTeX{} Project Public License, either version 1.3
+of this license or (at your option) any later version.
+The latest version of this license is in
+  \url{http://www.latex-project.org/lppl.txt}
+and version 1.3 or later is part of all distributions of \LaTeX{}
+version 2005/12/01 or later.
+
+This work has the LPPL maintenance status `maintained'.
+
+The Current Maintainer of this work is Niklas Beisert.
+
+This work consists of the files |childdoc.dtx| and |childdoc.ins|
+and the derived files |childdoc.def| and |cdocsamp.tex|
+with |cdocsch1.tex|, |cdocsch2.tex|,
+|cdocsdrf.tex|, |cdocsfn1.tex|, |cdocsfn2.tex|.
+
+\endgroup
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Files and Installation}
+
+The package consists of the files:
+%
+\begin{center}
+\begin{tabular}{ll}
+    |README|       & readme file \\
+    |childdoc.ins| & installation file \\
+    |childdoc.dtx| & source file \\
+    |childdoc.def| & definition file \\
+    |cdocsamp.tex| & sample main file \\
+    |cdocsch1.tex| & sample include file \\
+    |cdocsch2.tex| & sample include file \\
+    |cdocsdrf.tex| & sample redirection file \\
+    |cdocsfn1.tex| & sample redirection file \\
+    |cdocsfn2.tex| & sample redirection file \\
+    |childdoc.pdf| & manual
+\end{tabular}
+\end{center}
+%
+The distribution consists of the files
+|README|, |childdoc.ins| and |childdoc.dtx|.
+%
+\begin{itemize}
+\item
+Run (pdf)\LaTeX{} on |childdoc.dtx|
+to compile the manual |childdoc.pdf| (this file).
+\item
+Run \LaTeX{} on |childdoc.ins| to create the definitions file |childdoc.def|
+and the sample |cdocsamp.tex| with include files
+|cdocsch1.tex|, |cdocsch2.tex|, |cdocsdrf.tex|, |cdocsfn1.tex|, |cdocsfn2.tex|.
+Copy the file |childdoc.def| to an appropriate directory of your \LaTeX{}
+distribution, e.g.\ \textit{texmf-root}|/tex/latex/childdoc|.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Related CTAN Packages}
+
+There are several other packages which offer a similar functionality:
+%
+\begin{itemize}
+\item
+The packages
+\href{http://ctan.org/pkg/docmute}{\textsf{docmute}},
+\href{http://ctan.org/pkg/includex}{\textsf{includex}} and
+\href{http://ctan.org/pkg/standalone}{\textsf{standalone}}
+provide commands to include only the document body of
+a child file thus allowing both files to be compiled individually.
+\item
+The packages \href{http://ctan.org/pkg/subdocs}{\textsf{subdocs}}
+and \href{http://ctan.org/pkg/subfiles}{\textsf{subfiles}}
+provide structures in which the main and child documents can be
+encapsulated and allowing them to be compiled individually.
+The inclusion mechanism is different from the conventional |\include|.
+\item
+The package \href{http://ctan.org/pkg/combine}{\textsf{combine}}
+is an elaborate solution to combine several documents into one.
+\end{itemize}
+%
+See also the CTAN topic \href{http://ctan.org/topic/subdocs}{\textsf{subdocs}}
+for further related packages.
+The present package differs from the above solutions in that
+a document structure constructed with the conventional |\include| mechanism
+just needs two extra commands at the top of every file
+such that all constituent files can be compiled individually.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{Feature Suggestions}
+%
+%The following is a list of features which may be useful for future
+%versions of this package:
+%%
+%\begin{itemize}
+%\item
+%...
+%\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Revision History}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v1.5:} 2017/05/21
+
+\begin{itemize}
+\item
+more complete structuring introduced
+\item
+|\childdocof| introduced
+\item
+|\childdoc| renamed to |\childdocmain|
+\item
+|\childredirect| renamed to |\childdocforward| and |\childdocforwardprefix|
+and functionality expanded
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v1.0:} 2017/04/27
+
+\begin{itemize}
+\item
+manual and install package
+\item
+first version published on CTAN
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v0.6:} 2017/04/26
+
+\begin{itemize}
+\item
+redirection mechanism added
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v0.5:} 2016/04/26
+
+\begin{itemize}
+\item
+functionality in definition file
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+
+\settowidth\MacroIndent{\rmfamily\scriptsize 000\ }
+\parskip1ex
+\parindent0pt
+
+ \DocInput{childdoc.dtx}
+
+\end{document}
+%</driver>
+% \fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \section{Sample}
+%\iffalse
+%<*samplemain>
+%\fi
+%
+% Here we present a sample document with two chapters, a title page,
+% a compile flag as well as three forwarding files to set the flag.
+% It consists of six |.tex| files:
+% \begin{center}
+% \begin{tabular}{ll}
+% |cdocsamp.tex|&main file\\
+% |cdocsch1.tex|&include file for chapter 1\\
+% |cdocsch2.tex|&include file for chapter 2\\
+% |cdocsdrf.tex|&forwarding file for main file in draft mode\\
+% |cdocsfi1.tex|&forwarding file for final version of chapter 1\\
+% |cdocsfi2.tex|&forwarding file for final version of chapter 2\\
+% \end{tabular}
+% \end{center}
+% Each of the six files can be compiled directly by the \LaTeX{} compiler.
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Main File.}
+%
+% The main file is called |cdocsamp.tex|.
+%
+% Load the \textsf{childdoc} definitions and
+% declare the filename for the main document:
+%    \begin{macrocode}
+\input{childdoc.def}
+\childdocmain{cdocsamp}
+%    \end{macrocode}
+
+% Optional override for |\version| flag:
+%    \begin{macrocode}
+%%\ifchilddoc\else\providecommand{\version}{draft}\fi
+%    \end{macrocode}
+
+% Define the default values for the |\version| flag
+% (|final| for the main file and |draft| for childs):
+%    \begin{macrocode}
+\ifchilddoc
+\providecommand{\version}{draft}
+\else
+\providecommand{\version}{final}
+\fi
+%    \end{macrocode}
+
+% Load the standard document class:
+%    \begin{macrocode}
+\documentclass[12pt]{article}
+%    \end{macrocode}
+
+% Start the document body:
+%    \begin{macrocode}
+\begin{document}
+%    \end{macrocode}
+
+% Declare a title page.
+% Print title, part of document being processed and version flag:
+%    \begin{macrocode}
+\addtocounter{page}{-1}
+\begin{center}
+{\LARGE\bfseries{}childdoc example\par}
+\vspace{1cm}
+part:
+\ifchilddoc
+`\childdocname' of `\jobname'\par
+\else
+main\par
+\fi
+version: \version\par
+\end{center}
+\newpage
+%    \end{macrocode}
+
+% Include the two chapters:
+%    \begin{macrocode}
+\include{cdocsch1}
+\include{cdocsch2}
+%    \end{macrocode}
+
+% End of document body:
+%    \begin{macrocode}
+\end{document}
+%    \end{macrocode}
+%\iffalse
+%</samplemain>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapter Include Files.}
+%
+% The chapter include files are called |cdocsch1.tex| and |cdocsch2.tex|.
+%
+%\iffalse
+%<*samplechap1|samplechap2>
+%\fi
+
+% Optional override for |\version| flag:
+%    \begin{macrocode}
+%%\providecommand{\version}{final}
+%    \end{macrocode}
+
+% Include the main document:
+%    \begin{macrocode}
+\input{childdoc.def}
+\childdocof{cdocsamp}
+%    \end{macrocode}
+
+%\iffalse
+%</samplechap1|samplechap2>
+%\fi
+%
+%\iffalse
+%<*samplechap1>
+%\fi
+% Some text for chapter 1:
+%    \begin{macrocode}
+\section{one}
+some text in chapter one
+%    \end{macrocode}
+
+%\iffalse
+%</samplechap1>
+%\fi
+% Some text for chapter 2:
+%\iffalse
+%<*samplechap2>
+%\fi
+%    \begin{macrocode}
+\section{two}
+more text in chapter two
+%    \end{macrocode}
+
+%\iffalse
+%</samplechap2>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Forwarding for a Complete Draft.}
+%
+% The following forwarding file |cdocsdrf.tex|
+% compiles the main document in draft mode:
+%\iffalse
+%<*sampledraft>
+%\fi
+%    \begin{macrocode}
+\def\version{draft}
+\input{childdoc.def}
+\childdocforward{cdocsamp}
+%    \end{macrocode}
+
+%\iffalse
+%</sampledraft>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Forwarding for Final Version of the Chapters.}
+%
+% The following forwarding files |cdocsfn1.tex| and |cdocsfn2.tex|
+% (with identical content)
+% compile the final versions of the child documents
+% |cdocsch1.tex| and |cdocsch2.tex|, respectively:
+%\iffalse
+%<*samplefinal>
+%\fi
+%    \begin{macrocode}
+\def\version{final}
+\input{childdoc.def}
+\childdocforwardprefix[cdocsamp]{cdocsfn}{cdocsch}
+%    \end{macrocode}
+
+%\iffalse
+%</samplefinal>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \section{Implementation}
+%\iffalse
+%<*package>
+%\fi
+%
+% In this section we describe the definitions file |childdoc.def|.
+
+% The definitions cannot be loaded using |\usepackage| or |\RequirePackage|
+% which has a mechanism to prevent loading a style file more than once.
+% When loading the definitions by means of |\input|
+% we have to prevent multiple instances manually:
+%    \begin{macrocode}
+%\ifdefined\childdocmain\endinput\fi
+%    \end{macrocode}
+%
+% \begin{macro}{\ifchilddoc}
+% The conditional |\ifchilddoc| tells whether a
+% child (true) or main (false) document is being compiled.
+% The definition initialises to false:
+%    \begin{macrocode}
+\newif\ifchilddoc
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocname}
+% The macro |\childdocname| stores the name of the document
+% to be compiled. In modern \TeX{} engines the content of |\jobname|
+% appears to be protected to account for special characters
+% or subdirectories in filenames.
+% This prevents a successful comparison to the name of the main file.
+% The following code stores an expanded version of |\jobname|
+% in |\childdocname|:
+%    \begin{macrocode}
+\edef\childdocname{\scantokens\expandafter{\jobname\noexpand}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocmain}
+% The macro |\childdocmain| is to be called at the top of the
+% main file with the main filename (without extension) as argument.
+% First, it overwrites its own definition to end processing of the
+% present file (|\endinput|) on subsequent calls.
+% It also overwrites the definition of |\childdocof|
+% to prevent further inclusions of the main document.
+% This prevents the main file from being processed more than once.
+% Then the current filename is compared to the main filename
+% and in case of mismatch |\ifchilddoc| is set to true.
+% In that case |\includeonly| is applied to the child file
+% and |\jobname| is set to the main file
+% (for proper handling of |.aux| files):
+%    \begin{macrocode}
+\newcommand{\childdocmain}[1]
+{
+  \def\childdocmain##1{\endinput}
+  \def\childdocof##1{}
+  \begingroup
+    \def\childdoctmp{#1}
+    \ifx\childdocname\childdoctmp
+      \def\childdoctmp{\childdocfalse}
+    \else
+      \def\childdoctmp{\childdoctrue}
+    \fi
+    \expandafter
+  \endgroup
+  \childdoctmp
+  \ifchilddoc
+    \includeonly{\childdocname}
+    \def\jobname{#1}
+  \fi
+}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdoc}
+% The deprecated macro |\childdoc| is a legacy version of |\childdocmain|:
+%    \begin{macrocode}
+\newcommand{\childdoc}{\childdocmain}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocof}
+% The command |\childdocof| redirects
+% compilation to the main file |#1|.
+%    \begin{macrocode}
+\newcommand{\childdocof}[1]
+{
+  \input{#1}
+}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocforward}
+% The command |\childdocforward| redirects
+% compilation to the main or a child file.
+% |\jobname| and |\childdocname| are set to the new filename
+% and compilation is handed over to the new file:
+%    \begin{macrocode}
+\newcommand{\childdocforward}[2][]
+{
+  \def\jobname{#2}
+  \def\childdocname{#2}
+  \begingroup
+    \def\childdoctmp{#1}
+    \def\childdocempty{}
+    \ifx\childdoctmp\childdocempty
+      \def\childdoctmp{\input{#2}}
+    \else
+      \def\childdoctmp{\input{#1}}
+    \fi
+    \expandafter
+  \endgroup
+  \childdoctmp
+  \endinput
+}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocforwardprefix}
+% The command |\childdocforwardprefix| redirects
+% compilation to the main or a child file by means of a pattern.
+% The prefix |#1| in the current filename is replaced by |#2|
+% and the suffix of the current filename is kept
+% (it is assumed that the filename does not contain the substring `|~~~|'
+% which is used as a delimiter).
+% Compilation is handed over to the new file by |\childdocforward|:
+%    \begin{macrocode}
+\newcommand{\childdocforwardprefix}[3][]
+{
+  \begingroup
+    \def\childdocextract #2##1~~~{\def\childdoctmp{\childdocforward[#1]{#3##1}}}
+    \expandafter\childdocextract\childdocname~~~
+    \expandafter
+  \endgroup
+  \childdoctmp
+}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\childdocredirect}
+% The deprecated command |\childdocredirect| is a legacy version
+% of |\childdocforward| and |\childdocforwardprefix|:
+%    \begin{macrocode}
+\newcommand{\childdocredirect}[2][]
+{
+  \begingroup
+    \def\childdoctmp{#1}
+    \def\childdocempty{}
+    \ifx\childdoctmp\childdocempty
+      \def\childdoctmp{\childdocforward{#2}}
+    \else
+      \def\childdoctmp{\childdocforwardprefix{#1}{#2}}
+    \fi
+    \expandafter
+  \endgroup
+  \childdoctmp
+}
+%    \end{macrocode}
+% \end{macro}
+
+%\iffalse
+%</package>
+%\fi
+%
+\endinput
+%
+%% \CheckSum{3381}

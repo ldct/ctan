@@ -1,0 +1,295 @@
+%%
+%% `numspell.sty'
+%%
+%% Package for spelling the non-negative cardinal and ordinal numbers (maximum 66 digits).
+%%
+%% Copyright 2017- by Tibor Tomacs
+%%
+%% This work may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in
+%%   http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2005/12/01 or later.
+%%
+%% This work has the LPPL maintenance status `maintained'.
+%%
+%% The Current Maintainer of this work is Tibor Tomacs.
+%%
+\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+\ProvidesPackage{numspell}[2017/02/09 v1.0 Package for spelling cardinal and ordinal numbers]
+
+\RequirePackage{xstring}
+\RequirePackage{pdftexcmds}
+\RequirePackage{etoolbox}
+
+\newcounter{numspell@counter@tempa}
+\newcounter{numspell@counter@tempb}
+\newcounter{numspell@counter@tempc}
+\newcounter{numspell@groupcount}
+
+%% -------------------------------
+%% \numspell@group@digits{<group>} (<group>=000,001,...,999)
+%% -------------------------------
+%% It generates the following parameters:
+%%
+%% \numspell@group@digit@i   = 1st digit
+%% \numspell@group@digit@ii  = 2nd digit
+%% \numspell@group@digit@iii = 3rd digit
+%% 
+\def\numspell@group@digits#1{%
+    \StrChar{#1}{1}[\numspell@group@digit@i]%
+    \StrChar{#1}{2}[\numspell@group@digit@ii]%
+    \StrChar{#1}{3}[\numspell@group@digit@iii]%
+}
+
+%% --------------------------------
+%% \numspell@groups{<num1>}{<num2>} (<num1>*10^<num2>=0,1,...,999999999999...9 (66 digits)=10^67-1)
+%% --------------------------------
+%% It generates the following parameters:
+%%
+%% \numspell@num                = <num1>*10^<num2>
+%% \numspell@numlength          = number of \numspell@num digits
+%% \numspell@fullnum            = (66-\numspell@numlength) pieces 0, then \numspell@num
+%% \numspell@group@i            = 64th, 65th and 66th digits of \numspell@fullnum --> [group1]
+%% \numspell@group@ii           = 61th, 62th and 63th digits of \numspell@fullnum --> [group2]
+%% \numspell@group@iii          = 58th, 59th and 60th digits of \numspell@fullnum --> [group3]
+%% ...                         ...                                                    ...
+%% \numspell@group@xxii         = 1st, 2nd and 3rd digits of \numspell@fullnum    --> [group22]
+%% \numspell@group@max          = maximum <number>, which such that, [group<number>] is positive
+%% \numspell@group@min          = minimum <number>, which such that, [group<number>] is positive
+%% \numspell@group@<num>@before = number of positive groups, whose serial number is less then <num> (<num>=ii,iii,...,xxii)
+%%
+\def\numspell@groups#1#2{%
+    \def\numspell@num{#1}%
+    \setcounter{numspell@counter@tempa}{0}%
+    \@whilenum\value{numspell@counter@tempa}<#2%
+        \do{%
+            \stepcounter{numspell@counter@tempa}%
+            \g@addto@macro\numspell@num{0}%
+        }%
+    \def\numspell@fullnum{}%
+    \StrLen{\numspell@num}[\numspell@numlength]%
+    \ifnum\numspell@numlength>66\@latexerr{Number too big (\numspell@numlength\space digits). Maximum 66 digits}{}\fi%
+    \setcounter{numspell@counter@tempa}{66}%
+    \addtocounter{numspell@counter@tempa}{-\numspell@numlength}%
+    \setcounter{numspell@counter@tempb}{0}%
+    \@whilenum\value{numspell@counter@tempb}<\value{numspell@counter@tempa}%
+        \do{%
+            \stepcounter{numspell@counter@tempb}%
+            \g@addto@macro\numspell@fullnum{0}%
+        }%
+    \g@addto@macro\numspell@fullnum{\numspell@num}%
+    \StrMid{\numspell@fullnum}{64}{66}[\numspell@group@i]%
+    \StrMid{\numspell@fullnum}{61}{63}[\numspell@group@ii]%
+    \StrMid{\numspell@fullnum}{58}{60}[\numspell@group@iii]%
+    \StrMid{\numspell@fullnum}{55}{57}[\numspell@group@iv]%
+    \StrMid{\numspell@fullnum}{52}{54}[\numspell@group@v]%
+    \StrMid{\numspell@fullnum}{49}{51}[\numspell@group@vi]%
+    \StrMid{\numspell@fullnum}{46}{48}[\numspell@group@vii]%
+    \StrMid{\numspell@fullnum}{43}{45}[\numspell@group@viii]%
+    \StrMid{\numspell@fullnum}{40}{42}[\numspell@group@ix]%
+    \StrMid{\numspell@fullnum}{37}{39}[\numspell@group@x]%
+    \StrMid{\numspell@fullnum}{34}{36}[\numspell@group@xi]%
+    \StrMid{\numspell@fullnum}{31}{33}[\numspell@group@xii]%
+    \StrMid{\numspell@fullnum}{28}{30}[\numspell@group@xiii]%
+    \StrMid{\numspell@fullnum}{25}{27}[\numspell@group@xiv]%
+    \StrMid{\numspell@fullnum}{22}{24}[\numspell@group@xv]%
+    \StrMid{\numspell@fullnum}{19}{21}[\numspell@group@xvi]%
+    \StrMid{\numspell@fullnum}{16}{18}[\numspell@group@xvii]%
+    \StrMid{\numspell@fullnum}{13}{15}[\numspell@group@xviii]%
+    \StrMid{\numspell@fullnum}{10}{12}[\numspell@group@xix]%
+    \StrMid{\numspell@fullnum}{7}{9}[\numspell@group@xx]%
+    \StrMid{\numspell@fullnum}{4}{6}[\numspell@group@xxi]%
+    \StrMid{\numspell@fullnum}{1}{3}[\numspell@group@xxii]%
+    \def\numspell@group@max{0}%
+    \setcounter{numspell@counter@tempa}{0}%
+    \@whilenum\value{numspell@counter@tempa}<22%
+        \do{%
+            \stepcounter{numspell@counter@tempa}%
+            \ifnum\csname numspell@group@\roman{numspell@counter@tempa}\endcsname>0%
+                \edef\numspell@group@max{\thenumspell@counter@tempa}%
+            \fi%
+        }%
+    \def\numspell@group@min{0}%
+    \setcounter{numspell@counter@tempa}{23}%
+    \@whilenum\value{numspell@counter@tempa}>1%
+        \do{%
+            \addtocounter{numspell@counter@tempa}{-1}%
+            \ifnum\csname numspell@group@\roman{numspell@counter@tempa}\endcsname>0%
+                \edef\numspell@group@min{\thenumspell@counter@tempa}%
+            \fi%
+        }%
+    \setcounter{numspell@counter@tempa}{1}%
+    \@whilenum\value{numspell@counter@tempa}<22%
+        \do{%
+            \stepcounter{numspell@counter@tempa}%
+            \setcounter{numspell@counter@tempb}{1}%
+            \setcounter{numspell@counter@tempc}{0}%
+            \@whilenum\value{numspell@counter@tempb}<\value{numspell@counter@tempa}%
+                \do{%
+                    \ifnum\csname numspell@group@\roman{numspell@counter@tempb}\endcsname>0%
+                        \stepcounter{numspell@counter@tempc}%
+                    \fi%
+                    \stepcounter{numspell@counter@tempb}%
+                }%
+                \expandafter\protected@edef\csname numspell@group@\roman{numspell@counter@tempa}@before\endcsname{\thenumspell@counter@tempc}%
+        }%
+}
+
+%% --------------------
+%% \numspell@{<string>}
+%% --------------------
+%% E.g. \def\thenumspell{}\numspell@{one}\numspell@{ hundred}\thenumspell --> 'one hundred'
+%%
+\def\thenumspell{}
+\def\numspell@#1{\g@addto@macro\thenumspell{#1}}
+
+%% ---------------------
+%% \numspellsave{<name>}
+%% ---------------------
+%% E.g. \def\thenumspell{one}\numspellsave{foo}\thenumspellfoo --> 'one'
+%%
+\DeclareRobustCommand*{\numspellsave}[1]{\expandafter\protected@xdef\csname thenumspell#1\endcsname{\thenumspell}\ignorespaces}
+
+%% -------------------------------
+%% \numspelldashspace{<length>}
+%% -------------------------------
+%% It determinates the maximal flexibility of the spaces around the dashes. Default: 2pt
+%% E.g. \numspelldashspace{5pt} --> \numspell@dash@ = \numspell@{\nobreak\hskip0pt plus5pt-\hskip0pt plus5pt}
+%%
+\def\numspell@dash@@#1{\leavevmode\nobreak\hskip0pt plus#1-\hskip0pt plus#1\relax}
+\def\numspelldashspace#1{\def\numspell@dash@{\numspell@{\numspell@dash@@{#1}}}\ignorespaces}
+\numspelldashspace{2pt}
+
+%% -------------------------
+%% \numspell[<num2>]{<num1>} (Default <num2> is 0)
+%% -------------------------
+%% \numspell@num@spell@<lang>{<num1>}{<num2>}\thenumspell
+%%
+%% --------------------------
+%% \numspell*[<num2>]{<num1>}
+%% --------------------------
+%% It works like \numspell, but \thenumspell will not be expanded.
+%%
+\newcommand{\numspell@output}[2][0]{\csname numspell@num@spell@\numspell@langname\endcsname{#2}{#1}\thenumspell}
+\newcommand{\numspell@@output}[2][0]{\csname numspell@num@spell@\numspell@langname\endcsname{#2}{#1}\ignorespaces}
+\DeclareRobustCommand*{\numspell}{\numspell@lang@check\@ifstar{\numspell@@output}{\numspell@output}}
+
+%% -------------------------
+%% \Numspell[<num2>]{<num1>} (Default <num2> is 0)
+%% -------------------------
+%% \numspell@num@spell@<lang>{<num1>}{<num2>}\numspell@uppercase\thenumspell
+%%
+%% --------------------------
+%% \Numspell*[<num2>]{<num1>}
+%% --------------------------
+%% It works like \Numspell, but \thenumspell will not be expanded.
+%%
+\newcommand{\Numspell@output}[2][0]{\csname numspell@num@spell@\numspell@langname\endcsname{#2}{#1}%
+                                    \csname numspell@uppercase@\numspell@langname\endcsname\thenumspell}
+\newcommand{\Numspell@@output}[2][0]{\csname numspell@num@spell@\numspell@langname\endcsname{#2}{#1}%
+                                     \csname numspell@uppercase@\numspell@langname\endcsname\ignorespaces}
+\DeclareRobustCommand*{\Numspell}{\numspell@lang@check\@ifstar{\Numspell@@output}{\Numspell@output}}
+
+%% ----------------------------
+%% \ordnumspell[<num2>]{<num1>} (Default <num2> is 0)
+%% ----------------------------
+%% \numspell@ordnum@spell@<lang>{<num1>}{<num2>}\thenumspell
+%%
+%% -----------------------------
+%% \ordnumspell*[<num2>]{<num1>}
+%% -----------------------------
+%% It works like \ordnumspell, but \thenumspell will not be expanded.
+%%
+\newcommand{\ordnumspell@output}[2][0]{\csname numspell@ordnum@spell@\numspell@langname\endcsname{#2}{#1}\thenumspell}
+\newcommand{\ordnumspell@@output}[2][0]{\csname numspell@ordnum@spell@\numspell@langname\endcsname{#2}{#1}\ignorespaces}
+\DeclareRobustCommand*{\ordnumspell}{\numspell@lang@check\@ifstar{\ordnumspell@@output}{\ordnumspell@output}}
+
+%% ----------------------------
+%% \Ordnumspell[<num2>]{<num1>} (Default <num2> is 0)
+%% ----------------------------
+%% \numspell@ordnum@spell@<lang>{<num1>}{<num2>}\numspell@uppercase\thenumspell
+%%
+%% -----------------------------
+%% \Ordnumspell*[<num2>]{<num1>}
+%% -----------------------------
+%% It works like \Ordnumspell, but \thenumspell will not be expanded.
+%%
+\newcommand{\Ordnumspell@output}[2][0]{\csname numspell@ordnum@spell@\numspell@langname\endcsname{#2}{#1}%
+                                       \csname numspell@uppercase@\numspell@langname\endcsname\thenumspell}
+\newcommand{\Ordnumspell@@output}[2][0]{\csname numspell@ordnum@spell@\numspell@langname\endcsname{#2}{#1}%
+                                        \csname numspell@uppercase@\numspell@langname\endcsname\ignorespaces}
+\DeclareRobustCommand*{\Ordnumspell}{\numspell@lang@check\@ifstar{\Ordnumspell@@output}{\Ordnumspell@output}}
+
+%% --------------------
+%% \numspell@lang@check
+%% --------------------
+%% If english is active, then \numspell@langname will be 'en'.
+%% If magyar is active, then \numspell@langname will be 'hu'.
+%% If german is active, then \numspell@langname will be 'de'.
+%% If french is active, then \numspell@langname will be 'fr'.
+%% Otherwise error.
+%%
+\newif\if@numspell@lang@notsupported@
+\def\numspell@lang@check{%
+    \@numspell@lang@notsupported@true%
+    \ifnum\pdf@strcmp{\languagename}{english}=\z@\@numspell@lang@notsupported@false\def\numspell@langname{en}\fi%
+    \ifnum\pdf@strcmp{\languagename}{magyar}=\z@\@numspell@lang@notsupported@false\def\numspell@langname{hu}\fi%
+    \ifnum\pdf@strcmp{\languagename}{german}=\z@\@numspell@lang@notsupported@false\def\numspell@langname{de}\fi%
+    \ifnum\pdf@strcmp{\languagename}{french}=\z@\@numspell@lang@notsupported@false\def\numspell@langname{fr}\fi%
+    \if@numspell@lang@notsupported@\@latexerr{'numspell.sty' error! Not supported language: \languagename}{}\fi%
+}
+
+%% -------------------------
+%% Loading language packages
+%% -------------------------
+%% If babel or polyglossia loads english, then numspell loads numspell-english.sty.
+%% If babel or polyglossia loads magyar, then numspell loads numspell-magyar.sty.
+%% If babel or polyglossia loads german, then numspell loads numspell-german.sty.
+%% If babel or polyglossia loads german, then numspell loads numspell-french.sty.
+%% Otherwise numspell loads numspell-english.sty.
+%%
+\AtEndPreamble{%
+\newif\if@numspell@lang@loaded@
+\bbl@iflanguage\languagename{\expandafter\ifx\csname dateenglish\endcsname\relax\else\RequirePackage{numspell-english}\@numspell@lang@loaded@true\fi}%
+\bbl@iflanguage\languagename{\expandafter\ifx\csname datemagyar\endcsname\relax\else\RequirePackage{numspell-magyar}\@numspell@lang@loaded@true\fi}%
+\bbl@iflanguage\languagename{\expandafter\ifx\csname dategerman\endcsname\relax\else\RequirePackage{numspell-german}\@numspell@lang@loaded@true\fi}%
+\bbl@iflanguage\languagename{\expandafter\ifx\csname datefrench\endcsname\relax\else\RequirePackage{numspell-french}\@numspell@lang@loaded@true\fi}%
+\if@numspell@lang@loaded@\else\RequirePackage{numspell-english}\fi%
+}
+
+%% ---------------------------------
+%% Instructions for language package
+%% ---------------------------------
+%%
+%% If the language name is <language> in babel or polyglossia,
+%% then the name of the language package file will be numspell-<language>.sty (e.g. numspell-english.sty).
+%%
+%% Extend the following commands in the numspell.sty:
+%% \AtEndPreamble
+%% \numspell@lang@check (Use the \def\numspell@langname{<lang>}, where <lang> is abbreviation of the <language>, e.g. 'en' in case 'english'.)
+%%
+%% Define the following commands in numspell-<language>.sty:
+%% \numspell@uppercase@<lang>
+%% \numspell@group@<num>@<lang>@name
+%% \numspell@ordgroup@<num>@<lang>@name
+%% \numspell@group@spell@<lang>
+%% \numspell@ordgroup@spell@<lang>
+%% \numspell@num@spell@<lang>
+%% \numspell@ordnum@spell@<lang>
+%% (See <lang> at \numspell@lang@check.)
+%%
+%% Put into the \numspell@{...} command the words of the spelling (e.g. \numspell@{one}).
+%%
+%% Type the non-ascii characters as LaTeX-commands: \'{a}, \'{e}, \ss{}, etc.
+%%
+%% If the first character is non-ascii, then place it within braces (see \numspell@uppercase@<lang>) (e.g. {\"{o}}t).
+%%
+%% Do not use \numspell@{-} as dash! Instead of it: \numspell@dash@ (see \numspelldashspace).
+%%
+%% Do not use the following form: \def\foo{text} ... \numspell@{\foo}
+%% Instead of it:                 \def\numspell@foo@<lang>{\numspell@{text}} ... \numspell@foo@<lang>
+
+\endinput

@@ -1,0 +1,426 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{studenthandouts}[2017/03/15 Handouts Package]
+
+%
+%	THE STUDENT HANDOUTS PACKAGE: studenthandouts
+%
+%	Author: James Fennell <jamespfennell@gmail.com>
+%
+%	License: 
+%		This work may be distributed and/or modified under the conditions
+%		of the LaTeX Project Public License, either version 1.3c of this
+%		license or (at your option) any later version. The latest version
+%		of this license is in http://www.latex-project.org/lppl.txt
+%		and version 1.3c or later is part of all distributions of LaTeX
+%		version 2005/12/01 or later.
+%
+
+%
+%	HOW THIS CODE IS ORGANIZED
+%
+% In order:
+%
+%	- Required packages
+%	- The blanks/noblanks option processing
+%	- General Latex code required for the rest of the code
+%
+%	- Then code appears in the order its functionality appears in the documentation.
+%
+
+
+
+%	
+%		REQUIRED PACKAGES
+%
+
+
+\RequirePackage{changepage}
+\RequirePackage{ifthen}
+\RequirePackage{fmtcount}
+\RequirePackage{tocloft}
+\RequirePackage{geometry}
+\RequirePackage{fancyhdr}
+
+
+
+%
+%		THE BLANKS/NOBLANKS OPTION PROCESSING
+%
+
+
+% The blanks/noblanks switch is in @handoutsBlanksFlag
+\newboolean{@handoutsBlanksFlag}
+
+\DeclareOption{blanks}{
+	\setboolean{@handoutsBlanksFlag}{true}
+}
+
+\DeclareOption{noblanks}{
+	\setboolean{@handoutsBlanksFlag}{false}
+}
+
+\ExecuteOptions{blanks}
+
+\ProcessOptions\relax
+
+
+
+%
+%		GENERAL LATEX CODE
+%
+
+% These commands are used to define global variables.
+% They are needed because a lot of the handout output commands are redefined in an if statement scope but need to be defined also outside of this scope.
+\def\gnewcommand{\g@star@or@long\new@command}
+\def\grenewcommand{\g@star@or@long\renew@command}
+\def\g@star@or@long#1{% 
+  \@ifstar{\let\l@ngrel@x\global#1}{\def\l@ngrel@x{\long\global}#1}}
+
+
+%Checks if element #1 is the comma separated list of elements in #2
+%Kudos to Werner on Tex.SE for this modified version: http://tex.stackexchange.com/questions/353559/how-to-convert-macro-output-to-string
+\newcommand\@ifmemberthenelse[2]{%
+  \begingroup
+  \edef\x{\endgroup\noexpand\in@{,#1,}{,#2,}}\x%
+  \ifin@
+    \expandafter\@firstoftwo%
+  \else
+    \expandafter\@secondoftwo%
+  \fi
+}
+
+
+
+%
+%	1	BASIC IMPORT FUNCTIONALITY
+%	
+
+
+
+% Every handout must start with this command, which sets the handout title. If no handout title is required, write \sethandouttitle{}
+\newcommand{\sethandouttitle}[1]{
+	% Set the page style (for the headers and footers)
+	\pagestyle{studenthandout}
+	% Set the handout title
+	\grenewcommand{\thehandouttitle}{#1}
+	
+	% We want the handout's full title to appear in the table of contents.	
+	% However becuase the way Latex handles TOCs we can't use the command \thehandoutfulltitle directly.
+	% So the following just manually adds the full title to the TOC.
+	\ifthenelse{\equal{#1}{}}{
+		\addcontentsline{toc}{subsection}{{\theunitnumber.\thehandoutnumber}}
+	}{
+		\addcontentsline{toc}{subsection}{{\theunitnumber.\thehandoutnumber}: \thehandouttitle}
+	}
+}
+
+
+% This command imports handout #1.#2 - that is, unit #1, handout #2
+\newcommand{\importhandout}[2]{
+
+	% Set the page layout and headers and footers to be that of the handouts
+	% For some reason it's better to do it at this point rather than when the handout is about to be imported.
+	\thehandoutsgeometry
+	\pagestyle{studenthandout}
+
+	% Use the \@ifimporting then command to check if this handout is supposed to be imported.
+	% If it is, continue
+	% The \@ifimporting command is defined below, in section 2
+	\@ifimportingthen{#1}{#2}{
+		% Importing #1.#2!
+
+		%Start new page
+		\clearpage
+
+
+		% The following determines whether or not to insert a blank page.
+		% First, if the handout that just concluded has an odd number of pages then a blank page should be put in.
+		% Actually do this if the blanks option is set.
+		\ifodd\value{@handoutsHandoutPageNumber}
+			\ifthenelse{\boolean{@handoutsBlanksFlag}}{
+				\thispagestyle{empty}
+				\hspace{1cm}
+				\clearpage
+			}{}
+		\else
+		\fi
+
+
+
+		% Set some of the current handout information
+		\grenewcommand{\@handoutsThisUnit}{#1}
+		\grenewcommand{\theunitnumber}{#1}
+		\grenewcommand{\thehandoutnumber}{#2}
+		\setcounter{@handoutsHandoutPageNumber}{0}
+
+		% This next line checks if the unit has changed.
+		% If it has, a unit line will be added to the TOC
+		\ifthenelse{\equal{\@handoutsPrevUnit}{\@handoutsThisUnit}}{}{%
+			% Add the full unit title to the TOC
+			% Because of the way Latex handles TOCs, this is done manually rather than relying on the \thefullunittitle command
+			\ifcsname @handoutsUnitTitle@#1\endcsname%
+				\addcontentsline{toc}{section}{Unit #1: {\csname @handoutsUnitTitle@#1\endcsname}}
+			\else%
+				\addcontentsline{toc}{section}{Unit #1}
+			\fi%
+	
+			%Change some of the unit information
+			\grenewcommand{\theunittitle}{\csname @handoutsUnitTitle@#2\endcsname}
+			\grenewcommand{\@handoutsPrevUnit}{#1}%
+		}
+		% No actually import Handout #1.#2
+		\input{\thehandoutsdirectory handout-#1-#2.tex}
+	}
+
+	% At the conclusion of the handout restore the page layout and headers and footers
+	\restoregeometry
+	\pagestyle{empty}
+
+}
+
+
+
+%
+%	2	HANDOUT IMPORT MANAGEMENT COMMANDS
+%
+
+
+
+
+% PRIVATE VARIABLES
+% All of these are preceded by \@handouts.
+
+\newcommand{\@handoutsUnitsToImport}{all}
+\newcommand{\@handoutsHandoutsToImport}{all}
+\newcommand{\@handoutsPrevUnit}{}
+\newcommand{\@handoutsThisUnit}{}
+
+\newboolean{@handoutsImportFlag}
+\newcounter{@handoutsHandoutPageNumber}
+\setcounter{@handoutsHandoutPageNumber}{0}
+\newcounter{@handoutsPNAtLastHPNChange}
+\setcounter{@handoutsPNAtLastHPNChange}{0}
+
+
+\newcommand{\importall}{
+	\importallunits
+	\importallhandouts
+}
+
+\newcommand{\importnone}{
+	\renewcommand{\@handoutsUnitsToImport}{}
+	\renewcommand{\@handoutsHandoutsToImport}{}
+}
+
+\newcommand{\importonlyunits}[1]{
+	\ifthenelse{\equal{\@handoutsHandoutsToImport}{}}{\renewcommand{\@handoutsHandoutsToImport}{all}}{}
+	\renewcommand{\@handoutsUnitsToImport}{#1}
+}
+
+\newcommand{\importonlyhandouts}[1]{
+	\ifthenelse{\equal{\@handoutsUnitsToImport}{}}{\renewcommand{\@handoutsUnitsToImport}{all}}{}
+	\renewcommand{\@handoutsHandoutsToImport}{#1}
+}
+
+\newcommand{\importallunits}{
+	\renewcommand{\@handoutsUnitsToImport}{all}
+}
+
+\newcommand{\importallhandouts}{
+	\renewcommand{\@handoutsHandoutsToImport}{all}
+}
+
+\newcommand{\theunittitle}
+
+
+
+
+%Given a handout unit #1 and handout number #2, uses the importing rules to determine if #1.#2 is should be imported and if so, runs #3 (via \@firstofone, not directly.)
+\newcommand{\@ifimportingthen}[2]{
+
+	%Checks if the current unit is in the list of units to be imported.
+	%Note that if importing all units this will next line will return False, but this isn't a problem as the all condition is manually considered.
+	\@ifmemberthenelse{#1}{\@handoutsUnitsToImport}{\setboolean{@handoutsImportFlag}{true}}{\setboolean{@handoutsImportFlag}{false}}
+
+	%Checks IF the current unit should be imported THEN continues ELSE stops
+	\ifthenelse
+	{%
+		\equal{\@handoutsUnitsToImport}{all}%	IF importing all units
+		\or%					OR
+		\boolean{@handoutsImportFlag}%		IF importing the current unit
+	}{
+		%The current unit should be imported. Now see if the current handout should be.
+
+		%Checks if the current handout is in the list of handouts to be imported.
+		%Note that if importing all handouts the next line will return False, but this isn't a problem as the all condition is manually considered.
+		\@ifmemberthenelse{#1.#2}{\@handoutsHandoutsToImport}{\setboolean{@handoutsImportFlag}{true}}{\setboolean{@handoutsImportFlag}{false}}
+		
+		\ifthenelse
+		{%
+			\equal{\@handoutsHandoutsToImport}{all}%	IF importing all handouts
+			\or%						OR
+			\boolean{@handoutsImportFlag}%			IF importing the current handout
+		}{
+			%The current handout SHOULD be imported
+		}{
+			%The current handout should not be imported.
+			\expandafter\@gobble%
+		}
+	}{
+		%The current unit should not be imported.
+		\expandafter\@gobble%
+	}%
+}
+
+
+
+
+
+
+%
+%	3.2.1	THE HANDOUTS SUBDIRECTORY
+%
+
+%The directory in which the individual Latex files for each handout are stored
+\newcommand{\thehandoutsdirectory}{handouts/}
+
+
+%
+%	4.1	TABLE OF CONTENTS STYLING
+%
+
+
+% This is the styling for the handouts table of contents.
+% Styling done through the tocloft package.
+
+% Set the TOC page to have empty page style
+\tocloftpagestyle{empty}
+
+% UNIT TOC ENTRIES
+% Unit TOC entries in bold
+\renewcommand{\cftsecfont}{\bfseries}
+% This sets the bit that comes between the unit full title and the page number
+\renewcommand{\cftsecleader}{\hspace{0.25cm}\textbullet\hspace{0.25cm}}
+% Align the page numbers to the left, next to the unit full title
+\renewcommand{\cftsecafterpnum}{\cftparfillskip}
+
+% HANDOUT TOC ENTRIES
+% Handout TOC entries in italic
+\renewcommand{\cftsubsecfont}{\it}
+% This sets the bit that comes between the handout full title and the page number
+\renewcommand{\cftsubsecleader}{\hspace{0.25cm}$\cdot$\hspace{0.25cm}}
+% Align the page numbers to the left, next to the handout full title
+\renewcommand{\cftsubsecafterpnum}{\cftparfillskip}
+
+% Align numbers on the left
+\renewcommand{\cftpnumalign}{l}
+
+
+
+%
+%	4.2	SETTING UNIT TITLES
+%
+
+% This command saves the title #2 of unit #1.
+% It works by saving the title in the command \@handoutsUnitTitle@X, where X is the title. 
+\newcommand{\setunittitle}[2]{
+	\expandafter\def\csname @handoutsUnitTitle@#1\endcsname{#2}
+}
+
+
+
+
+
+%
+%	5.1	HANDOUT OUTPUT COMMANDS
+%
+
+%The following \the_ commands are used to output information about the current handout being handled. These are primarily used to generate the handout header and footer.
+
+\newcommand{\thehandoutslabel}{Handout}		%What `handouts' are referred to in the output. Alternative options include `student worksheets' and 'funsheets'
+\newcommand{\theunitnumber}{}
+\newcommand{\thehandoutnumber}{}
+\newcommand{\thehandouttitle}{}
+\newcommand{\thehandoutscredit}{}
+
+\newcommand{\thehandoutfulltitle}{%
+	\ifthenelse{\equal{\thehandouttitle}{}}{%
+		{{\theunitnumber.\thehandoutnumber}}%
+	}{%
+		{{\theunitnumber.\thehandoutnumber}: \thehandouttitle}%
+	}%
+}
+
+\newcommand{\theunitfulltitle}{%
+	\ifthenelse{\equal{\theunittitle}{}}{%
+		{{\theunitnumber}}%
+	}{%
+		{{\theunitnumber}: \theunittitle}%
+	}%
+}
+
+\newcommand{\thehandoutpage}{%
+	%If the page number has changed since the handout page number last change, change nothing.
+	%Otherwise, increment the handout page number
+	\ifthenelse{\equal{\value{page}}{\value{@handoutsPNAtLastHPNChange}}}{}{%
+		\stepcounter{@handoutsHandoutPageNumber}%
+	}%
+	\arabic{@handoutsHandoutPageNumber}%
+	\setcounter{@handoutsPNAtLastHPNChange}{\value{page}}
+}
+
+
+\newcommand{\@somehandoutinfo}[1]{
+	\texttt{\@backslashchar#1}&\csname #1\endcsname{}	\\
+}
+\newcommand{\allhandoutinfo}{
+	\begin{tabular}{rl}
+		\@somehandoutinfo{thehandoutnumber}
+		\@somehandoutinfo{thehandouttitle}
+		\@somehandoutinfo{thehandoutfulltitle}
+		\@somehandoutinfo{thehandoutpage}
+		\@somehandoutinfo{thepage}
+		\@somehandoutinfo{theunitnumber}
+		\@somehandoutinfo{theunittitle}
+		\@somehandoutinfo{theunitfulltitle}
+		\@somehandoutinfo{thehandoutslabel}
+		\@somehandoutinfo{thehandoutscredit}
+	\end{tabular}
+
+}
+
+
+
+
+
+
+
+
+%
+%	5	CODE RELATED TO THE STYLING
+%
+
+
+
+% The command is executed when the package wants to change to the page layout of the handouts.
+\newcommand{\thehandoutsgeometry}{
+	\newgeometry{top=3cm,left=2cm,right=2cm,bottom=2.5cm}
+}
+
+
+% This defines the default styling of the handout's headers and footers.
+\fancypagestyle{studenthandout}{%
+	\renewcommand{\headrulewidth}{0.5pt}
+	\renewcommand{\footrulewidth}{0.5pt}
+	\fancyhf{}
+	\fancyhead[L]{{\Large \textit{\thehandoutslabel{}  \thehandoutfulltitle}}}
+	\fancyfoot[L]{\thehandoutscredit}
+	\fancyfoot[R]{Page \thehandoutpage}
+	\fancyhead[R]{}
+}
+
+
+
+
+
+

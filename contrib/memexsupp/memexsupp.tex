@@ -1,0 +1,413 @@
+\documentclass[
+a4paper,
+11pt,
+article
+]{memoir}
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[widespace]{fourier}
+\usepackage{memexsupp}
+\pagestyle{headings}
+\setsecnumdepth{part}
+\setlength\cftbeforechapterskip{0pt}
+
+
+\makeatletter
+\newcommand*\Arg@s[1]{\textnormal{\texttt{#1}}}%
+\newcommand*\Arg@n[1]{\textnormal{$\langle$\textit{#1}$\rangle$}}%
+\newcommand*\Arg{\@ifstar{\Arg@s}{\Arg@n}}%
+\newcommand*\marg@s[1]{\textnormal{\texttt{\{#1\}}}}
+\newcommand*\marg@n[1]{%
+  \textnormal{\texttt{\{}$\langle$\textit{#1}$\rangle$\texttt{\}}}%
+}
+\renewcommand*\marg{\@ifstar{\marg@s}{\marg@n}}
+
+\newcommand*\oarg@s[1]{\textnormal{\texttt{[#1]}}}
+\newcommand*\oarg@n[1]{%
+  \textnormal{\texttt{[}$\langle$\textit{#1}$\rangle$\texttt{]}}%
+}
+\renewcommand*\oarg{\@ifstar{\oarg@s}{\oarg@n}}
+\providecommand*\cs[1]{\textnormal{\texttt{\symbol{'134}#1}}}
+\newenvironment{syntax}{%
+  \vskip.5\onelineskip%
+  \begin{adjustwidth}{\parindent}{0pt}
+    \parindent=0pt%
+    \obeylines%
+    \let\\=\relax%
+  }{%
+  \end{adjustwidth}%
+  \vskip.5\onelineskip%
+}
+\newoutputstream{SCS}
+\newenvironment{SCSexample}{%
+  \openoutputfile{\jobname.ex}{SCS}%
+  \begingroup
+  \writeverbatim{SCS}%
+}{%
+  \endwriteverbatim\relax%
+  \endgroup
+  \closeoutputstream{SCS}%
+  \verbatiminput{\jobname.ex}%
+  {\begin{minipage}{\linewidth-4mm}
+      \input{\jobname.ex}\end{minipage}}%
+  \par\bigskip\noindent
+}
+\makeatother
+
+
+\begin{document}
+
+\title{The Memoir Experimental Support package}
+\author{Lars Madsen\thanks{Email: daleif@imf.au.dk}%
+\thanks{Version: 0.1, 2008/03/20}}
+
+\maketitle
+
+\tableofcontents*
+
+
+\chapter{Introduction}
+\label{cha:introduction}
+
+This package is meant as a sort of experimental playing
+ground for code that at some later point might make it into
+the memoir core.
+
+Anyone with an interest in improving the memoir class is
+encouraged to participate.
+
+Whenever Peter Wilson decides to include something from this package
+into the memoir core, this package will be updated and the macros,
+earlier provided here, will be removed. For this reason, we
+have prefixed all user macros with >>\verb+MXS+<<.
+
+It is also the idea that the package by it self does not
+alter anything in memoir by just loading the package. The
+user has to do something actively to use the features in
+this package.
+
+\chapter{Making marks for page styles}
+\label{cha:making-marks-page}
+
+One of memoirs advantages over the standard classes is it much
+improved system of page style. The page styles are often broken out
+over different names, such as >>\verb+chapter+<< for chapter title
+pages or >>\verb+cleared+<< for blank pages before a right-hand-side
+chapter (via \verb+\cleardoublepage+). These styles can easily be
+redefined or \emph{aliased}.
+
+The downside of this improved system is that even though page styles
+are now easy to handle, creating the \verb+\...mark+ commands is still
+hard to understand for a novice, who might just want the standard
+headers but without the uppercase stuff.
+
+In an ealier version of this document we suggested some generic macros
+for helping users to create these \verb+\...mark+ macros. Those older
+macros was not particularly user friendly. In contrast, most users are
+more or less happy with the usual \verb+\...mark+ definitions, though
+they sometimes would like to change them a little bit. To help with
+this we have created the following macros:
+\begin{syntax}
+  \cs{MXScreatesimplemark}\marg{type}\marg{text}
+  \cs{MXScreatemark}\marg{type}\marg{macro-type}\marg{visib.}\marg{prefix}\marg{postfix}
+  \cs{MXSaddtopsmarks}\marg{pagestyle}\marg{before}\marg{after}
+\end{syntax}
+Explanation: 
+\begin{verbatim}
+  \MXScreatesimplemark{toc}{\contentsname}
+\end{verbatim}
+is the same as \cs{tocmark} being equal
+to 
+\begin{verbatim}
+  \markboth{\memUChead{\contentsname}}{\memUChead{\contentsname}}
+\end{verbatim}
+where \verb+\memUChead+ is an internal memoir macro introduced in
+MemPatch version 4.9a. Use the simple mark construction for
+\texttt{toc}, \texttt{lot}, \texttt{lof}, \texttt{bib} and
+\texttt{index}. 
+
+The in pseudo-code the \cs{MXScreatemark} macro corresponds to:
+\begin{syntax}\ttfamily
+  if section or chapter number required
+  \qquad if mainmatter
+  \qquad\qquad if \Arg{visib.} equal \emph{true}
+  \qquad\qquad\qquad\Arg{prefix}\Arg{corresponding sectional number}\Arg{postfix}
+  \qquad\qquad end if
+  \qquad end if
+  end if
+  \Arg{the title given by \cs{chapter} etc.}
+\end{syntax}
+Whether this is given to \verb+\markright+ or \verb+\markboth+,
+depends on the value of \Arg{macro-type}, possible values are:
+\emph{both} or \emph{right}. The \Arg{type} here corresponds to
+\texttt{chapter}, \texttt{section},  \texttt{subsection}, and
+\texttt{subsubsection}. 
+
+Using \cs{MXSaddtopsmarks} one can add code at the beginning or the
+end of an existing ps marks registration. The syntax for the last two
+arguments is the same as for memoirs \verb+\addto+ macro.
+
+Using the constructions above the marks settings for memoirs default
+pagestyle, \emph{headings} can now be written as  (for a twoside setup)
+\begin{verbatim}
+\makeatletter
+\makepsmarks{headings}{
+  \MXScreatemark{chapter}{both}{true}{\@chapapp\ }{. \ }
+  \MXScreatemark{section}{right}{true}{}{. \ }
+  \MXScreatesimplemark{toc}{\contentsname}
+  \MXScreatesimplemark{lof}{\listfigurename}
+  \MXScreatesimplemark{lot}{\listtablename}
+  \MXScreatesimplemark{bib}{\bibname}
+  \MXScreatesimplemark{index}{\indexname}
+}
+\makeatother
+\end{verbatim}
+where \verb+\@chapapp+ is a standard macro which under normal
+circumstances holds the chapter name, but under an appendix holds the
+appendix name. Note the dots and the spaces. Quite clearly a lot
+easier to understand than the actual code in the memoir source.
+
+As one notices the standard \emph{headings} only includes marks for
+chapter and section. But this is easy to fix:
+\begin{verbatim}
+\MXSaddtopsmarks{headings}{}% not adding anything at the beginning
+{
+  \MXScreatemark{subsection}{right}{true}{}{. \ }
+  \MXScreatemark{subsubsection}{right}{true}{}{. \ }
+}
+\end{verbatim}
+And if we just wanted to add the titles, but not the numbers, then
+change \emph{true} to \emph{false}.
+
+
+% Hence enter \verb+\MXSMakeSectionalMarks+:
+% \begin{syntax}
+%   \verb+\MXSMakeSectionalMarks+\oarg{secname}
+% \end{syntax}
+% \Arg{secname} has its usual meaning from \cite{memman}.
+% This macro is meant to be used as in
+% \begin{syntax}
+%   \verb+\makepsmarks{mystyle}{\MXSMakeSectionalMarks[subsection]}+
+% \end{syntax}
+% Which will create \verb+\...mark+ commands for >>\texttt{chapter}<<,
+% >>\texttt{section}<< and >>\texttt{subsection}<<, leaving
+% >>\texttt{subsubsection}<< firing blanks.
+
+% Internally \verb+\MXSMakeSectionalMarks+ will use
+% \begin{syntax}
+%   \verb+\MXSDefineChapterMark+\marg{code}
+%   \verb+\MXSDefineSectionMark+\marg{code}
+%   \verb+\MXSDefineSubsectionMark+\marg{code}
+%   \verb+\MXSDefineSubsubsectionMark+\marg{code}
+%   \verb+\MXSMakeListMarks+
+% \end{syntax}
+% Each of the four first macros provide the normal text for either
+% \verb+\leftmark+ (\verb+\chaptermark+ only) or \verb+\rightmark+. One
+% slight change is that \verb+\chaptermark+ is defined such that it
+% places an identical text in both \verb+\leftmark+ or
+% \verb+\rightmark+, and not just the former, as in the usual case. (The
+% section mark macros, only writes to \verb+\rightmark+ as usual.)
+
+% \verb+\MXSMakeListMarks+ is defined as:
+% \begin{verbatim}
+% \newcommand\MXSMakeListMarks{%
+%   \def\tocmark{\markboth{\MXSMarksFormat{\contentsname}}%
+%     {\MXSMarksFormat{\contentsname}}}%
+%   \def\lofmark{\markboth{\MXSMarksFormat{\listfigurename}}%
+%     {\MXSMarksFormat{\listfigurename}}}%
+%   \def\lotmark{\markboth{\MXSMarksFormat{\listtablename}}%
+%     {\MXSMarksFormat{\listtablename}}}%
+%   \def\bibmark{\markboth{\MXSMarksFormat{\bibname}}%
+%     {\MXSMarksFormat{\bibname}}}%
+%   \def\indexmark{\markboth{\MXSMarksFormat{\indexname}}%
+%     {\MXSMarksFormat{\indexname}}}%
+% }
+% \end{verbatim}
+% The macro \verb+\MXSMarksFormat+ is also used around the code used
+% inside \verb+\chatermark+ throughout \verb+\subsubsectionmark+. By
+% default it does nothing. Should you want the standard uppercase memoir
+% \emph{headings} style marks, simply say
+% \begin{syntax}
+%   \verb+\renewcommand\MXSMarksFormat{\MakeUppercase}+
+% \end{syntax}
+% One word of advice though, do \emph{not} add font changing
+% macros into the \verb+\...mark+ definitions. Macros such as
+% \verb+\bfseries+ or \verb+\small+ belongs in the page style
+% configuration, not in the marks definition.
+
+
+
+% \section{What goes on inside inside the \cs{MSXDefineXMark}?}
+% \label{sec:what-inside-csdef}
+
+% \chapterprecishere{Explanation for novice users}
+
+% The \verb+\chaptermark+ is a bit complicated, so we will
+% leave that for a moment. \verb+\sectionmark+,
+% \verb+\subsectionmark+ and \verb+\subsubsection+ mark is
+% much simpler to understand. In pseudocode it is:
+% \begin{syntax}
+%   if sectional number required
+%   \qquad \Arg{sectional number plus a dot plus some space}
+%   end if
+%   \Arg{the title}
+% \end{syntax}
+% So the code for \verb+\sectionmark+ can be written:
+% \begin{verbatim}
+% \renewcommand\sectionmark[1]{%
+%   \markright{\MXSMarkFormat{%
+%     \ifnum\value{secnumdepth}>0
+%       \thesection. \ %
+%     \fi
+%     #1}}%
+% }
+% \end{verbatim}
+% Here >>\texttt{0}<< is the number representation for >>chapter<<, so
+% if the >>\texttt{secnumdepth}<< is larger than sero, then we need to
+% have section numbers as well. The number sequence goes as
+% \texttt{part=-1}, \texttt{chapter=0}, \texttt{section=1},\dots
+
+% Just remember that we will have to use \verb+##1+ in the
+% code since the above goes inside
+% \verb+\MXSDefineSectionMark+. The code we actually use is
+% slightly different, since we save some memory by writing a
+% few things using \LaTeX\ internals, but it is essentially
+% the same as above. The actual code used for \verb+\DefineSectionMark+
+% is
+% \begin{verbatim}
+% \newcommand\MXSDefineSectionMark{%
+%    \def\sectionmark##1{%
+%      \markright{\MXSMarksFormat{%
+%          \ifnum \c@secnumdepth > \z@
+%            \thesection. \ %
+%          \fi
+%          ##1}}}%
+% }
+% \end{verbatim}
+% But it is equivalent with the code mentioned above (just saves some
+% internal memory).
+
+
+
+% For \verb+\chaptermark+ there are two complications: First
+% we have to write to both \verb+\leftmark+ and
+% \verb+\rightmark+ (we just duplicate the code) and because
+% \verb+\chatermark+ usually includes the word
+% >>\emph{\chaptername}<< we also have to test whether we are
+% inside the front matter, where this text should not be
+% printed. So the pseudocode here becomes
+% \begin{syntax}
+%   if chapter number required
+%   \qquad if mainmatter
+%   \qquad\qquad\Arg{Chapter/Appendix name plus number plus a dot plus some space}
+%   \qquad end if
+%   end if
+%   \Arg{the title}
+% \end{syntax}
+% Automatic distinction between >>\emph{\chaptername}<< and
+% >>\emph{\appendixname}<< is handled through the internal
+% macro \verb+\@chapapp+, so we will have to use
+% \verb+\makeatletter+  and \verb+\makeatother+ if one have to mess with
+%  \verb+\chaptermark+ in the preamble. The code might look like
+% this:
+% \begin{verbatim}
+% \renewcommand\chaptermark[1]{%
+%   \markboth{\MXSMarkFormat{%
+%     \ifnum\value{secnumdepth} > -1
+%       \if@mainmatter
+%         \@chapapp\ \thechapter. \ %
+%       \fi
+%     \fi
+%     #1}}{%
+%    exact copy of the above
+% }}
+% \end{verbatim}
+% Again remember to use >>\verb+##1+<< when using this inside
+% \verb+\MXSDefineChapterMark+. 
+
+\chapter{Chapterprecis in article mode}
+\label{cha:chapt-article-mode}
+
+% In article mode vertical space is not added below the chapter title
+% (which now simply resembles \cs{section}). So when you use
+% \cs{chapterprecishere}, the precis text is listed too high.
+
+% \verb+\MXSArticlePreChapterPrecis+ fixes this by redefining
+% \verb+\prechapterprecis+ to not include
+% \verb+\vspace*{-2\baselineskip}+, see \cite{memman} p. 121.  
+% Just add
+% \begin{syntax}
+% \verb+\MXSArticlePreChapterPrecis+
+% \end{syntax}
+% to the preamble, if you are using the memoir article option.  If used
+% whenever the `article' options is not in effect, a warning is issued.
+
+Removed, fixed in mempatch 4.9.
+
+
+\chapter{Multi page titlingpage}
+\label{cha:mult-titl}
+
+If one does a naive multi page titlingpage in memoir, such as
+\begin{verbatim}
+\documentclass{memoir}
+\begin{document}
+\begin{titlingpage}
+\begin{center}
+  cover page
+\end{center}
+\newpage
+\begin{center}
+  back of cover page
+\end{center}
+\newpage
+\begin{center}
+  title page
+\end{center}
+\newpage
+\begin{center}
+  back of title page
+\end{center}
+\end{titlingpage}
+\end{document}
+\end{verbatim}
+You will soon discover that some of these pages actually have headers
+or footers in contrast to the fact that the \emph{titlingpage}
+environment should use the \emph{titlingpage} page style for its
+pages. There is no easy way around this so the \texttt{MXStitlingpage}
+environment solves this problem by redefining macros such as
+\verb+\newpage+ and \verb+\clearpage+ to locally make sure the
+\emph{titlingpage} page style is used on the next page.
+
+Just remember that if you have the habit of using \verb+\cleartorecto+
+then you might end up with a page where the page style actually used,
+is not \emph{titlingpage} but rather \emph{cleared} (they are
+initially aliased to the same page style).
+
+\begin{quote}
+  \itshape
+  If anyone have better ideas for fixing this problem regarding the
+  \emph{titlingpage} environment, please let me know.
+\end{quote}
+
+
+\begin{thebibliography}{9}
+\bibitem{memman} Peter Wilson, \emph{The Memoir Class for Configurable
+  Typesetting}, The Herres Press, 2004.
+\bibitem{memmanadd}
+Peter Wilson, \emph{Addendum -- The Memoir Class for Configurable Typesetting;
+  User Guide}, 2007. 
+\end{thebibliography}
+
+
+\end{document}
+
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
+
+

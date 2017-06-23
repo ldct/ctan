@@ -1,0 +1,903 @@
+\blx@inputonce{biblatex-sbl.def}{biblatex-sbl definitions and macros}{}{}{}{}
+
+\ProvidesFile{sbl.cbx}[\sbl@abx@cbxid]
+
+\newbool{suppresspostnote}
+\newbool{usevolpostnotedelim}
+
+\newtoggle{cbx:loccit}
+\newtoggle{usingibid}
+\newtoggle{relatedseen}
+\newtoggle{inentrytype}
+\newtoggle{cbx:involcite}
+
+\newbibmacro*{cite}{%
+  \boolfalse{suppresspostnote}%
+  \boolfalse{usevolpostnotedelim}%
+  \global\togglefalse{usingibid}%
+  \global\togglefalse{inentrytype}%
+  \global\toggletrue{blx@testpostnotedelim}%
+  \ifciteseen
+    {\global\toggletrue{relatedseen}}
+    {\global\togglefalse{relatedseen}}%
+  \ifciteseen{}{\iffieldundef{pages}{}{\booltrue{suppresspostnote}}}%
+  \iffieldundef{shorthand}
+    {\ifciteseen{}{\bibhypertarget{\strfield{entrykey}}{}}}
+    {}%
+  \printtext{%
+    \ifboolexpr{%
+        test {\ifciteibid}
+        and
+        not test {\iffirstonpage}
+    }
+      {\usebibmacro{cite:ibid}}
+      {\usebibmacro{ifciteuseshorthand}
+         {\usebibmacro{cite:shorthand}}
+         {\usedriver{}{cite:\thefield{entrytype}}%
+          \ifcsstring{blx@shorthand}{intro}
+            {\usebibmacro{shorthandintro}}
+            {}}}}}
+
+% redefine default loccit tracker so that citations with no postnote also match
+\def\blx@loccit@tracker#1{%
+  \global\csundef{blx@lastnote@#1@\abx@field@entrykey}%
+  \blx@imc@iffieldundef{postnote}
+    {\global\cslet{blx@lastnote@#1@\abx@field@entrykey}\abx@field@entrykey}
+    {\global\cslet{blx@lastnote@#1@\abx@field@entrykey}\abx@field@postnote}%
+  \xifinlistcs\abx@field@entrykey{blx@trackkeys@#1}
+    {}
+    {\listcsxadd{blx@trackkeys@#1}\abx@field@entrykey}}
+
+\def\blx@loccit@check#1{%
+  \blx@imc@iffieldundef{postnote}
+    {\blx@imc@iffieldequalcs{entrykey}{blx@lastnote@#1@\abx@field@entrykey}}
+    {\blx@imc@iffieldequalcs{postnote}{blx@lastnote@#1@\abx@field@entrykey}}}
+
+\newbibmacro*{cite:ibid}{%
+  \usebibmacro{citeindex}%
+  \global\toggletrue{usingibid}%
+  \printtext[bibhyperlink]{\bibstring[\mkibid]{ibidem}}%
+  \ifloccit
+    {\global\booltrue{suppresspostnote}}
+    {}}
+
+\newbibmacro*{cite:shorthand}{%
+  \togglefalse{blx@citeindex}%
+  \global\toggletrue{relatedseen}%
+  \usebibmacro{shorthand}%
+  \iffieldequalstr{entrysubtype}{RIMA}
+    {\restorefield{volume}{\abx@field@number}}
+    {}%
+  \ifboolexpr{
+    test {\ifentrytype{ancienttext}}
+    and
+    not test {\iffieldundef{related}}
+  }
+    {\usebibmacro{setaltpostnotedelim}%
+     \setunit{\postnotedelim}%
+     \printfield{altpostnote}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \usebibmacro{related:init}%
+       \usebibmacro{related}%
+       \usebibmacro{volume+part+postnote}}} 
+    {\ifciteseen
+       {}
+       {\newunit
+        \printfield{pages}}}}
+
+\newbibmacro*{bibentrycite}{%
+  \citereset
+  \global\togglefalse{relatedseen}%
+  \toggletrue{blx@bibliography}%
+  \def\abx@str{abx@lstr}%
+  \renewcommand*{\revsdnamedelim}{\addcomma}%
+  \setcounter{maxnames}{100}%
+  \setcounter{maxitems}{100}%
+  \DeclareNameAlias{author}{sortname}%
+  \DeclareNameAlias{editor}{sortname}%
+  \DeclareNameAlias{translator}{sortname}%
+  \renewcommand*{\newunitpunct}{\addperiod\space}%
+  \sloppy
+  \printtext{\usedriver{}{\thefield{entrytype}}}}
+
+\newbibmacro*{biblistcite}{%
+  \sloppy
+  \hangindent 6em\rlap
+    {\printfield[shorthandwidth]{shortjournal}%
+     \iffieldundef{shorthand}
+       {\printfield[shorthandwidth]{shortseries}}
+       {\iffieldsequal{shorthand}{shorttitle}
+          {\printtext{\mkbibemph{\printfield[shorthandwidth]{shorthand}}}}
+          {\printfield[shorthandwidth]{shorthand}}}}%
+  \renewcommand*{\bibhypertarget}[2]{##2}%
+  \hskip 6em \setunit{}\usedriver{}{abbreviations}\par
+}
+
+\renewrobustcmd*{\volcitecmd}{%
+  \AtNextCite{%
+    \toggletrue{cbx:involcite}%
+    \DeclareFieldAlias{postnote}{volcitenote}}%
+  \begingroup\let\blx@citeargs\blx@volciteargs}
+
+\renewrobustcmd*{\multivolcitecmd}{%
+  \AtNextCite{%
+    \toggletrue{cbx:involcite}%
+    \DeclareFieldAlias{postnote}{volcitenote}}%
+  \def\blx@hook@mcite@before{%
+    \global\undef\blx@hook@mcite@before
+    \let\blx@citeargs\blx@volmciteargs}}
+
+\newbibmacro*{cite:postnote}{%
+  \iffieldundef{shorthand}
+    {}
+    {\iftoggle{usingibid}
+       {}
+       {\usebibmacro{ifneedsetpostnotedelim}
+          {\usebibmacro{setpostnotedelim}}
+          {}}}%
+  \ifbool{suppresspostnote}{}{%
+    \ifboolexpr{%
+      not test {\iffieldundef{postnote}}
+      or
+      not test {\iffieldundef{pages}}
+    }
+      {\ifbool{usevolpostnotedelim}
+         {\setunit{\volpostnotedelim}}
+         {\setunit{\postnotedelim}}%
+       \usebibmacro{postnote}}
+      {}}%
+  \ifboolexpr{
+    togl {relatedseen}
+    or
+    not togl {bbx:related}
+    or
+    test {\iffieldundef{related}}
+  }
+    {}
+    {\setunit{\addsemicolon\space}%
+     \usebibmacro{related:init}%
+     \usebibmacro{related}}}
+
+\DeclareCiteCommand{\smartcite}[\iffootnote\mkbibparens\mkbibfootnote]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\cite}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\bibentrycite}
+  {}
+  {\usebibmacro{bibentrycite}}
+  {\multicitedelim}
+  {}
+
+\DeclareCiteCommand{\biblistcite}
+  {}
+  {\usebibmacro{biblistcite}}
+  {}
+  {}
+
+\DeclareCiteCommand{\parencite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\footcite}[\mkbibfootnote]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\footcitetext}[\mkbibfootnotetext]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\fullcite}
+  {\usebibmacro{prenote}}
+  {\def\blx@shorthand{false}%
+   \let\ifciteseen\@secondoftwo
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\footfullcite}[\mkbibfootnote]
+  {\usebibmacro{prenote}}
+  {\def\blx@shorthand{false}%
+   \let\ifciteseen\@secondoftwo
+   \usebibmacro{cite}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citeseries}
+  {}
+  {\usebibmacro{shortseries}}
+  {}
+  {}
+
+\DeclareCiteCommand{\citejournal}
+  {}
+  {\usebibmacro{shortjournal}}
+  {}
+  {}
+
+\DeclareCiteCommand{\citeshorthand}
+  {}
+  {\usebibmacro{shorthand}}
+  {}
+  {}
+
+\newbibmacro*{textcite}{%
+  \ifnameundef{labelname}
+    {\printfield[citetitle]{labeltitle}}
+    {\printnames{labelname}}}
+
+\newbibmacro*{textcite:init}{%
+  \citetrackerfalse%
+  \pagetrackerfalse%
+  \iffirstcitekey
+    {\global\undef\cbx@lasthash}
+    {}}
+
+\newbibmacro*{textcite:count}{%
+  \stepcounter{textcitetotal}%
+  \ifnumgreater{\value{uniquelist}}{\value{maxnames}}
+    {\ifnumgreater{\value{uniquelist}}{\value{textcitemaxnames}}
+       {\setcounter{textcitemaxnames}{\value{uniquelist}}}
+       {}}
+    {\ifnumless{\value{labelname}}{\value{maxnames}}
+       {\ifnumgreater{\value{labelname}}{\value{textcitemaxnames}}
+          {\setcounter{textcitemaxnames}{\value{labelname}}}
+          {}}
+       {\ifnumgreater{\value{maxnames}}{\value{textcitemaxnames}}
+          {\setcounter{textcitemaxnames}{\value{maxnames}}}
+          {}}}}
+
+\DeclareCiteCommand{\cbx@textcite}
+  {\usebibmacro{textcite:init}}
+  {\iffieldequals{namehash}{\cbx@lasthash}
+     {}
+     {\iffirstcitekey
+        {}
+        {\textcitedelim}%
+      \stepcounter{textcitecount}%
+      \usebibmacro{textcite}%
+      \savefield{namehash}{\cbx@lasthash}}}
+  {}
+  {}
+
+\DeclareCiteCommand{\textcite}[\cbx@textcite@init\cbx@textcite\footcite]
+  {\usebibmacro{textcite:init}%
+   \gdef\cbx@savedkeys{}%
+   \DeferNextCitekeyHook}
+  {\ifthenelse{\iffirstcitekey\AND\value{multicitetotal}>0}
+     {\protected@xappto\cbx@footcite@args{%
+        (\thefield{multiprenote})(\thefield{multipostnote})}}
+     {}%
+   \xappto\cbx@savedkeys{\thefield{entrykey},}%
+   \iffieldequals{namehash}{\cbx@lasthash}
+     {}
+     {\usebibmacro{textcite:count}%
+      \savefield{namehash}{\cbx@lasthash}}%
+   \ifnumequal{\value{citecount}}{\value{citetotal}}
+     {\protected@xappto\cbx@textcite@args{{\cbx@savedkeys}}%
+      \protected@xappto\cbx@footcite@args{%
+        [\thefield{prenote}][\thefield{postnote}]{\cbx@savedkeys}}%
+      \iflastcitekey
+        {\protected@xappto\cbx@textcite@args{\thefield{postpunct}}%
+         \protected@xappto\cbx@footcite@args{\nopunct}}
+        {}}
+     {}}
+  {}
+  {}
+
+% textcite has nested \DeclareCiteCommand definitions for textcite and we want to use
+% the normal textcite context
+\DeclareDelimcontextAlias{cbx@textcite}{textcite}
+
+\newrobustcmd{\cbx@textcite@init}[3]{%
+  \setcounter{textcitetotal}{0}%
+  \setcounter{textcitecount}{0}%
+  \setcounter{textcitemaxnames}{0}%
+  \def\cbx@textcite@args{#1}\def\cbx@footcite@args{#2}#3%
+  \cbx@textcite@args\empty\cbx@footcite@args\empty}
+
+\DeclareMultiCiteCommand{\cbx@textcites}{\cbx@textcite}{}
+\DeclareMultiCiteCommand{\textcites}
+  [\cbx@textcites@init\cbx@textcites\footcites]{\textcite}{}
+
+\let\cbx@textcites@init\cbx@textcite@init
+\pretocmd{\cbx@textcites@init}{%
+  \UseNextMultiCiteHook%
+  \AtNextMultiCite{%
+    \renewbibmacro{multiprenote}{}%
+    \renewbibmacro{multipostnote}{}}}{}{}
+
+% ------------------------------------------------------------------
+% CITE DRIVERS
+% ------------------------------------------------------------------
+
+\DeclareBibliographyDriver{cite:set}{%
+  \booltrue{bbx@inset}%
+  \ifciteseen
+    {\let\abx@field@setkey\abx@field@entrykey
+     \let\ifciteseen\@firstoftwo}
+    {}%
+  \entryset{}{}%
+  \newunit\newblock
+  \printfield{postnote}%
+  \finentry
+  \global\booltrue{suppresspostnote}}
+
+\DeclareBibliographyDriver{cite:ancienttext}{%
+  \usebibmacro{citeindex}%
+  \togglefalse{blx@citeindex}%
+  \usebibmacro{begentry}%
+  \usebibmacro{author}%
+  \newunit
+  \usebibmacro{title}%
+  \newunit
+  \printfield{altpostnote}%
+  \newunit
+  \ifciteseen
+    {}
+    {\usebibmacro{byauthor/byeditor+others/bytranslator+others}}%
+  \ifboolexpr{
+    test {\iffieldequalstr{entrysubtype}{ANRW}}
+    or
+    test {\ifboolexpr{
+            test {\ifciteseen}
+            and
+            test {\iffieldequalstr{entrysubtype}{COS}}
+         }}
+  }
+    {\newunit
+     \usebibmacro{related:init}%
+     \usebibmacro{related}%
+     \usebibmacro{volume+part+postnote}}
+    {\setunit{\addspace}%
+     \printtext[parens]{%
+       \usebibmacro{related:init}%
+       \usebibmacro{related}%
+       \usebibmacro{volume+part+postnote}}}%
+  \global\toggletrue{relatedseen}
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:classictext}{%
+  \usebibmacro{citeindex}%
+  \togglefalse{blx@citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author}%
+  \newunit
+  \usebibmacro{shorttitlenohyperlink}%
+  \iffieldequalstr{entrysubtype}{churchfather}
+    {\setunit{\addspace}%
+     \printfield{altpostnote}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \usebibmacro{related:init}%
+       \usebibmacro{related}%
+       \usebibmacro{volume+part+postnote}}%
+     \global\toggletrue{relatedseen}}
+    {\usebibmacro{volume+part+postnote}%
+     \usebibmacro{classic:translator+series}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:article}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firtoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\newunit
+     \usebibmacro{byauthor}%
+     \newunit
+     \usebibmacro{bytranslator+others}%
+     \newunit
+     \usebibmacro{inissuetitle}%
+     \newunit
+     \printfield{version}%
+     \newunit
+     \printlist{organization}%
+     \newunit
+     \printfield{note}%
+     \newunit
+     \usebibmacro{shortjournal+issue}%
+     \usebibmacro{pages}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{issn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:book}{%
+  \clearfield{booktitle}%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {\newunit
+     \usebibmacro{volume+part}}
+    {\usebibmacro{byauthor/byeditor+others/bytranslator+others}%
+     \newunit
+     \usebibmacro{chapter+pagesin}%
+     \usebibmacro{volume+partof}%
+     \usebibmacro{maintitle}%
+     \newunit
+     \usebibmacro{event+venue+date}%
+     \newunit
+     \usebibmacro{bymainauthor/bymaineditor+others/bymaintranslator+others}%
+     \newunit
+     \printfield{edition}%
+     \newunit
+     \printfield{volumes}%
+     \newunit
+     \ifentrytype{report}
+       {\printfield{type}%
+        \clearfield{type}%
+        \setunit*{\addspace}%
+        \printfield{number}}
+       {\usebibmacro{shortseries+number}}%
+     \newunit
+     \printfield{type}%
+     \newunit
+     \printfield{version}%
+     \newunit
+     \printfield{note}%
+     \iflistundef{institution}
+       {\usebibmacro{parens+publisher+location+date}}
+       {\setunit{\addspace}%
+        \printtext[parens]{\usebibmacro{institution+location+date}}}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{volume+part+pages}%
+     \newunit
+     \usebibmacro{isbn}%
+     \newunit
+     \usebibmacro{isrn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:suppbook}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \ifciteseen
+    {\iffieldundef{type}
+       {\usebibmacro{title}}
+       {\printfield{type}}}
+    {\iffieldundef{type}
+       {\toggletrue{inentrytype}%
+        \usebibmacro{title}%
+        \setunit{\addspace}%
+        \usebibmacro{in}}
+       {\printfield{type}%
+        \usebibmacro{language}%
+        \setunit{\addspace}%
+        \usebibmacro{to}}%
+     \usebibmacro{booktitle}%
+     \usebibmacro{bybookauthor/bybookeditor+others/bybooktranslator+others}%
+     \clearfield{booktitle}%
+     \newunit
+     \usebibmacro{chapterin}%
+     \usebibmacro{volume+partof}%
+     \usebibmacro{maintitle}%
+     \newunit
+     \usebibmacro{bymainauthor/bymaineditor+others/bymaintranslator+others}%
+     \newunit
+     \printfield{edition}%
+     \newunit
+     \printfield{volumes}%
+     \newunit
+     \usebibmacro{shortseries+number}%
+     \newunit
+     \printfield{note}%
+     \usebibmacro{parens+publisher+location+date}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{pages}%
+     \newunit
+     \usebibmacro{isbn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:commentary}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\usebibmacro{byauthor/byeditor+others/bytranslator+others}%
+     \newunit
+     \printfield{edition}%
+     \newunit
+     \printfield{volumes}%
+     \newunit
+     \usebibmacro{shortseries+number}%
+     \newunit
+     \printfield{note}%
+     \usebibmacro{parens+publisher+location+date}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{pages}%
+     \newunit
+     \usebibmacro{isbn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:incommentary}{%
+  \iffieldundef{volume}
+    {\usedriver{}{cite:incollection}}
+    {\usebibmacro{citeindex}%
+     \usebibmacro{begentry}%
+     \iftoggle{blx@usefullcite}
+       {}
+       {\let\ifciteseen\@firstoftwo}%
+     \iffieldundef{xref}{}{\addskipentry{\thefield{xref}}}%
+     \cbx@opt@citepages@omit
+     \usebibmacro{author/translator+others}%
+     \newunit
+     \ifciteseen
+       {\usebibmacro{xrefshortmaintitle}%
+        \iffieldundef{volume}
+          {}
+          {\setunit{\addspace}%
+           \printfield{volume}%
+           \setunit*{\addperiod}%
+           \printfield{part}%
+           \global\booltrue{usevolpostnotedelim}}}
+       {\printfield{note}%
+        \newunit
+        \usebibmacro{xrefshortmaintitle}%
+        \newunit
+        \usebibmacro{volume+pages}%
+        \newunit
+        \printfield{addendum}}%
+     \usebibmacro{finentry}}}
+
+\DeclareBibliographyDriver{cite:incollection}{%
+  \ifentrytype{seminarpaper}
+    {}
+    {\toggletrue{inentrytype}}%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\usebibmacro{byauthor/byeditor+others/bytranslator+others}%
+     \newunit
+     \usebibmacro{chapter+pagesin}%
+     \iffieldundef{booktitle}
+       {}
+       {\usebibmacro{booktitle}%
+        \newunit
+        \usebibmacro{event+venue+date}%
+        \newunit
+        \usebibmacro{bybookauthor/bybookeditor+others/bybooktranslator+others}%
+        \newunit}%
+     \usebibmacro{volume+partof}%
+     \iffieldundef{maintitle}
+       {}
+       {\usebibmacro{maintitle}%
+        \newunit
+        \usebibmacro{event+venue+date}%
+        \newunit
+        \usebibmacro{bymainauthor/bymaineditor+others/bymaintranslator+others}}%
+     \newunit
+     \printfield{edition}%
+     \newunit
+     \printfield{volumes}%
+     \newunit
+     \usebibmacro{shortseries+number}%
+     \newunit
+     \printfield{note}%
+     \usebibmacro{parens+publisher+location+date}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{volume+part+pages}%
+     \newunit
+     \usebibmacro{isbn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:inlexicon}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/translator+others}%
+  \newunit
+  \ifciteseen
+    {\usebibmacro{xrefshortmaintitle+xrefshortbooktitle}%
+     \iffieldundef{volume}
+       {}
+       {\setunit{\addspace}%
+        \printfield{volume}%
+        \setunit*{\addperiod}%
+        \printfield{part}%
+        \global\booltrue{usevolpostnotedelim}}}
+    {\usebibmacro{title}%
+     \newunit
+     \printfield{note}%
+     \newunit
+     \usebibmacro{xrefshortmaintitle+xrefshortbooktitle}%
+     \newunit
+     \usebibmacro{volume+pages}%
+     \newunit
+     \printfield{addendum}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:inreference}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \iffieldundef{xref}{}{\addskipentry{\thefield{xref}}}%
+  \usebibmacro{author/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {\newunit
+     \iffieldundef{volume}
+       {}
+       {\newunit
+        \global\booltrue{usevolpostnotedelim}%
+        \printfield{volume}%
+        \setunit*{\addperiod}%
+        \printfield{part}}}
+    {\newunit
+     \printfield{note}%
+     \newunit
+     \usebibmacro{xrefshortmaintitle+xrefshortbooktitle}%
+     \newunit
+     \usebibmacro{volume+pages}%
+     \newunit
+     \printfield{addendum}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:review}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/translator+others}%
+  \newunit
+  \iffieldundef{title}
+    {}
+    {\usebibmacro{title}%
+     \newunit
+     \ifciteseen
+       {}
+       {\usebibmacro{byauthor}%
+        \newunit
+        \usebibmacro{bytranslator+others}%
+        \newunit}}%
+  \usebibmacro{revdtitle}%
+  \newunit
+  \ifciteseen
+    {\setunit{\addspace}%
+     \printtext[parens]{\usebibmacro{revdauthor/revdeditor}}}
+    {\usebibmacro{revdauthor/revdeditor}%
+     \newunit
+     \usebibmacro{inissuetitle}%
+     \newunit
+     \printfield{version}%
+     \newunit
+     \printlist{organization}%
+     \newunit
+     \printfield{note}%
+     \newunit
+     \usebibmacro{shortjournal+issue}%
+     \usebibmacro{pages}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{issn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:thesis}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\newunit
+     \printfield{chapter}%
+     \newunit
+     \printfield{note}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \renewcommand*{\newunitpunct}{\addsemicolon\space}%
+       \printfield{type}%
+       \setunit{\addcomma\addspace}%
+       \usebibmacro{institution+location+date}}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{pages}%
+     \newunit
+     \printfield{isbn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:misc}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author/editor+others/translator+others}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\usebibmacro{byauthor/byeditor+others/bytranslator+others}%
+     \newunit
+     \printfield{type}%
+     \newunit
+     \printfield{version}%
+     \newunit
+     \printfield{note}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \usebibmacro{publisher+location+date}}%
+     \newunit
+     \usebibmacro{ebook}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{pages}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:conferencepaper}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firstoftwo}%
+  \usebibmacro{author}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\newunit
+     \printfield{note}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \usebibmacro{eventtitle}%
+       \newunit
+       \printfield{organization}%
+       \newunit
+       \usebibmacro{venue+eventdate}}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:periodical}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firtoftwo}%
+  \usebibmacro{editor+others}%
+  \newunit
+  \ifciteseen
+    {\usebibmacro{shorttitle}}
+    {\usebibmacro{issuetitle}%
+     \usebibmacro{language}%
+     \newunit
+     \printfield{note}%
+     \newunit
+     \usebibmacro{shortjournal+issue}%
+     \usebibmacro{pages}%
+     \newunit
+     \printfield{addendum}%
+     \newunit
+     \usebibmacro{issn}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\DeclareBibliographyDriver{cite:patent}{%
+  \usebibmacro{citeindex}%
+  \usebibmacro{begentry}%
+  \iftoggle{blx@usefullcite}
+    {}
+    {\let\ifciteseen\@firtoftwo}%
+  \usebibmacro{author+holder}%
+  \newunit
+  \usebibmacro{title}%
+  \ifciteseen
+    {}
+    {\newunit
+     \printfield{note}%
+     \setunit{\addspace}%
+     \printtext[parens]{%
+       \printfield{type}%
+       \setunit*{\addspace}%
+       \printfield{number}%
+       \iflistundef{location}
+         {}
+         {\setunit*{\addspace}%
+          \printtext[parens]{\printlist{location}}}%
+       \newunit
+       \printfield{version}%
+       \newunit
+       \usebibmacro{patentdate}%
+       \newunit
+       \printfield{addendum}}%
+     \newunit
+     \usebibmacro{doi+eprint+url}}%
+  \usebibmacro{finentry}}
+
+\endinput

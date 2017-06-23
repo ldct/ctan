@@ -1,0 +1,535 @@
+#! /bin/sh
+# This is a shell archive, meaning:
+# 1. Remove everything above the #! /bin/sh line.
+# 2. Save the resulting text in a file.
+# 3. Execute the file with /bin/sh (not csh) to create the files:
+#	README
+#	Makefile
+#	grafig.1
+#	object.h
+#	grafig.c
+# This archive created: Wed Mar 15 16:57:30 1989
+export PATH; PATH=/bin:$PATH
+if test -f 'README'
+then
+	echo shar: will not over-write existing file "'README'"
+else
+cat << \SHAR_EOF > 'README'
+GraFig 0.0 is a "trial balloon" program which creates very simple
+graphs from numerical data.  It is completely rigid in its operation,
+with NO options or features.  I am distributing it for several reasons:
+
+	1) To find out whether there is a need for a fancier
+	   version of such a program in the user community.
+
+	2) To find out what the important features of such
+	   a program would be.
+
+	3) To demonstrate how easy it is to write a small
+	   program which produces graphics in the form of Fig code.
+	   (GraFig 0.0 took only several hours to write).
+
+I am interested in hearing back from ANY user who is interested in
+this program, even (especially) if you cannot use it because of lack
+of features.  I am considering development of a much fancier tool
+for the analysis/plotting of data, with an interactive graphical
+interface.
+
+Please note: the output of GraFig can be edited using any of the
+existing versions of Fig, so you can do a lot of pretty-ing up
+of the graphs by hand.  This program is meant to be minimal, in 
+order to get design suggestions for a more mature version.
+-------
+Update 3/15/89
+
+The GnuTeX version of the GnuPlot numerical plotting program can now 
+generate Fig code.  Thus, it has many features one would want in a more
+mature version of GraFig.  GnuTeX is available via anonymous TFP
+from duke.cs.duke.edu.  For more information about GnuTeX, contact
+David Kotz (dfk@cs.duke.edu).
+SHAR_EOF
+fi # end of overwriting check
+if test -f 'Makefile'
+then
+	echo shar: will not over-write existing file "'Makefile'"
+else
+cat << \SHAR_EOF > 'Makefile'
+SHAR = ../../shar/shar
+SHARFILES = README Makefile grafig.1 object.h grafig.c
+
+grafig: object.h grafig.c
+	cc -O -o grafig grafig.c -lm
+
+
+shar: ${SHARFILES}
+	${SHAR} ${SHARFILES} >../grafig.shar
+SHAR_EOF
+fi # end of overwriting check
+if test -f 'grafig.1'
+then
+	echo shar: will not over-write existing file "'grafig.1'"
+else
+cat << \SHAR_EOF > 'grafig.1'
+.TH GRAFIG 1 "1 Februrary 1989"
+
+.SH NAME
+grafig \- generates numerical graphs in Fig code
+
+.SH SYNOPSIS
+.B grafig <data_stream >fig_code
+
+.SH DESCRIPTION
+.I Grafig
+transforms a stream of data points on its standard input to
+a numerical graph on its standard output.
+The input is in the form of pairs of numbers representing
+x and y coordinates, seperated by white space.
+Thus, the set of points {(x1, y1), (x2, y2), ...} could represented
+by the input file
+.sp
+x1 y1
+.br
+x2 y2
+ ...
+.sp
+The output is in the form of
+.I Fig
+code, which can be viewed and edited with the fig(1) graphics editor,
+and can be incorporated into TeX(1) troff(1), or PostScript documents
+using the TransFig(1) translation package.
+.PP
+This early version of grafig takes NO options or flags.
+The output has only one possible form.
+
+.SH "SEE ALSO"
+fig(1),
+tex(1),
+transfig(1),
+troff(1),
+.SH AUTHOR
+Micah Beck (beck@svax.cs.cornell.edu)
+SHAR_EOF
+fi # end of overwriting check
+if test -f 'object.h'
+then
+	echo shar: will not over-write existing file "'object.h'"
+else
+cat << \SHAR_EOF > 'object.h'
+/* 
+ *	FIG : Facility for Interactive Generation of figures
+ *
+ *	(c) copy right 1985 by Supoj Sutanthavibul (supoj@sally.utexas.edu)
+ *      January 1985.
+ *	1st revision : Aug 1985.
+ *	2nd revision : Feb 1988.
+ *
+ *	%W%	%G%
+*/
+#define					DEFAULT			(-1)
+
+typedef		struct f_pattern {
+			int			w, h;
+			int			*p;
+			}
+		F_pattern;
+
+typedef		struct f_pen {
+			int			x, y;
+			int			*p;
+			}
+		F_pen;
+
+typedef		struct f_point {
+			int			x, y;
+			struct f_point		*next;
+			}
+		F_point;
+
+typedef		struct f_pos {
+			int			x, y;
+			}
+		F_pos;
+
+typedef		struct f_arrow {
+			int			type;
+			int			style;
+			double			thickness;
+			double			wid;
+			double			ht;
+			}
+		F_arrow;
+
+typedef		struct f_ellipse {
+			int			type;
+#define					T_ELLIPSE_BY_RAD	1
+#define					T_ELLIPSE_BY_DIA	2
+#define					T_CIRCLE_BY_RAD		3
+#define					T_CIRCLE_BY_DIA		4
+			int			style;
+			int			thickness;
+			int			color;
+#define					BLACK			0
+			int			depth;
+			int			direction;
+			double			style_val;
+			double			angle;
+			struct f_pen		*pen;
+			struct f_pattern	*area_fill;
+#define		       			UNFILLED	(F_pattern *)0
+#define		       			BLACK_FILL	(F_pattern *)1
+#define		       			DARK_GRAY_FILL	(F_pattern *)2
+#define		       			MED_GRAY_FILL	(F_pattern *)3
+#define		       			LIGHT_GRAY_FILL	(F_pattern *)4
+#define		       			WHITE_FILL	(F_pattern *)4
+			struct f_pos		center;
+			struct f_pos		radiuses;
+			struct f_pos		start;
+			struct f_pos		end;
+			struct f_ellipse	*next;
+			}
+		F_ellipse;
+
+typedef		struct f_arc {
+			int			type;
+#define					T_3_POINTS_ARC		1
+			int			style;
+			int			thickness;
+			int			color;
+			int			depth;
+			struct f_pen		*pen;
+			struct f_pattern	*area_fill;
+			double			style_val;
+			int			direction;
+			struct f_arrow		*for_arrow;
+			struct f_arrow		*back_arrow;
+			struct {double x, y;}	center;
+			struct f_pos		point[3];
+			struct f_arc		*next;
+			}
+		F_arc;
+
+typedef		struct f_line {
+			int			type;
+#define					T_POLYLINE	1
+#define					T_BOX		2
+#define					T_POLYGON	3
+			int			style;
+			int			thickness;
+			int			color;
+			int			depth;
+			double			style_val;
+			struct f_pen		*pen;
+			struct f_pattern	*area_fill;
+			struct f_arrow		*for_arrow;
+			struct f_arrow		*back_arrow;
+			struct f_point		*points;
+			struct f_line		*next;
+			}
+		F_line;
+
+typedef		struct f_text {
+			int			type;
+#define					T_LEFT_JUSTIFIED	0
+#define					T_CENTER_JUSTIFIED	1
+#define					T_RIGHT_JUSTIFIED	2
+			int			font;
+#define					DEFAULT_FONT		0
+#define					ROMAN_FONT		1
+#define					BOLD_FONT		2
+#define					ITALIC_FONT		3
+#define					MODERN_FONT		4
+#define					TYPEWRITER_FONT		5
+			int			size;	/* point size */
+			int			color;
+			int			depth;
+			double			angle;	/* in radian */
+			int			style;
+#define					PLAIN		1
+#define					ITALIC		2
+#define					BOLD		4
+#define					OUTLINE		8
+#define					SHADOW		16
+			int			height;	/* pixels */
+			int			length;	/* pixels */
+			int			base_x;
+			int			base_y;
+			struct f_pen		*pen;
+			char			*cstring;
+			struct f_text		*next;
+			}
+		F_text;
+
+typedef		struct f_control {
+			double			lx, ly, rx, ry;
+			struct f_control	*next;
+			}
+		F_control;
+
+#define		int_spline(s)		(s->type & 0x2)
+#define		normal_spline(s)	(!(s->type & 0x2))
+#define		closed_spline(s)	(s->type & 0x1)
+#define		open_spline(s)		(!(s->type & 0x1))
+
+typedef		struct f_spline {
+			int			type;
+#define					T_OPEN_NORMAL		0
+#define					T_CLOSED_NORMAL		1
+#define					T_OPEN_INTERPOLATED	2
+#define					T_CLOSED_INTERPOLATED	3
+			int			style;
+			int			thickness;
+			int			color;
+			int			depth;
+			double			style_val;
+			struct f_pen		*pen;
+			struct f_pattern	*area_fill;
+			struct f_arrow		*for_arrow;
+			struct f_arrow		*back_arrow;
+			/*
+			For T_OPEN_NORMAL and T_CLOSED_NORMAL points
+			are control points while they are knots for
+			T_OPEN_INTERPOLATED and T_CLOSED_INTERPOLTED
+			whose control points are stored in controls.
+			*/
+			struct f_point		*points;
+			struct f_control	*controls;
+			struct f_spline		*next;
+			}
+		F_spline;
+
+typedef		struct f_compound {
+			struct f_pos		nwcorner;
+			struct f_pos		secorner;
+			struct f_line		*lines;
+			struct f_ellipse	*ellipses;
+			struct f_spline		*splines;
+			struct f_text		*texts;
+			struct f_arc		*arcs;
+			struct f_compound	*compounds;
+			struct f_compound	*next;
+			}
+		F_compound;
+
+#define		ARROW_SIZE		sizeof(struct f_arrow)
+#define		POINT_SIZE		sizeof(struct f_point)
+#define		CONTROL_SIZE		sizeof(struct f_control)
+#define		ELLOBJ_SIZE		sizeof(struct f_ellipse)
+#define		ARCOBJ_SIZE		sizeof(struct f_arc)
+#define		LINOBJ_SIZE		sizeof(struct f_line)
+#define		TEXOBJ_SIZE		sizeof(struct f_text)
+#define		SPLOBJ_SIZE		sizeof(struct f_spline)
+#define		COMOBJ_SIZE		sizeof(struct f_compound)
+
+/**********************  object codes  **********************/
+
+#define		O_ELLIPSE		1
+#define		O_POLYLINE		2
+#define		O_SPLINE		3
+#define		O_TEXT			4
+#define		O_ARC			5
+#define		O_COMPOUND		6
+#define		O_END_COMPOUND		(-O_COMPOUND)
+#define		O_ALL_OBJECT		99
+
+/************  object styles (except for f_text)  ************/
+
+#define		SOLID_LINE		0
+#define		DASH_LINE		1
+#define		DOTTED_LINE		2
+
+#define		CLOSED_PATH		0
+#define		OPEN_PATH		1
+SHAR_EOF
+fi # end of overwriting check
+if test -f 'grafig.c'
+then
+	echo shar: will not over-write existing file "'grafig.c'"
+else
+cat << \SHAR_EOF > 'grafig.c'
+/*
+ * GraFig 0.0 - Generates Numerical Graphs in Fig Code
+ *
+ * Author:	Micah Beck
+ *		(email: beck@cs.cornell.edu)
+ *		Dept. of Computer Science
+ *		Cornell University
+ *
+ * Version 0.0:	February 1, 1989
+ */
+#include <stdio.h>
+#include "object.h"
+
+#define FIG_MAGIC	"#FIG 1.4"
+#define RES	80
+#define COORD_SYS	2
+
+#define MAX_DATA	1000
+
+#define MARK_SIZE	.05
+#define TIC_SIZE	.1
+#define NUM_OFF_X	.5
+#define NUM_OFF_Y	.25
+
+#define orig_x		1.0
+#define orig_y		9.0
+#define length_x	5.0
+#define length_y	5.0
+
+extern double pow(), floor(), log10();
+
+struct datapt {double x, y} dataset[MAX_DATA], *datasort[MAX_DATA];
+
+main(argc,argv)
+int argc;
+char **argv;
+{
+  int i, c, data_size, datacmp();
+  double tic();
+  double max_x, max_y, min_x, min_y;
+  double dx, dy;
+  double tic_x, tic_y, w;
+
+  /* read data */
+  for (data_size=0, c=2; data_size<MAX_DATA-1 && c == 2; data_size++)
+	c = scanf("%lf %lf", &dataset[data_size].x, &dataset[data_size].y);
+
+  if (c == EOF)
+	--data_size;
+  else
+    	if (c != 2)
+	    error("bad data format");
+	else
+	    error("data set truncated");
+
+  if (data_size == 0) error("no data!");
+
+  /* calculate maxima */
+  max_x = max_y = dataset[0].x;
+  for (i=1; i<data_size; i++) {
+	if (max_x < dataset[i].x) max_x = dataset[i].x;
+	if (max_y < dataset[i].y) max_y = dataset[i].y;
+  }
+
+  /* calculate scaling factors */
+  dx = length_x / max_x;
+  dy = length_y / max_y;
+
+  /* print FIG header */
+  printf("%s\n", FIG_MAGIC);
+  printf("%d %d\n", RES, COORD_SYS);
+
+  /* draw axes */
+  fig_comment("Graph Axes");
+  fig_line(orig_x, orig_y, orig_x+length_x, orig_y);
+  fig_line(orig_x, orig_y, orig_x, orig_y-length_y);
+
+  /* plot data points */
+  fig_comment("Data Points");
+  for (i=0; i<data_size; i++) {
+
+	dataset[i].x = orig_x + (dataset[i].x * dx);
+	dataset[i].y = orig_y - (dataset[i].y * dy);
+
+	fig_line(dataset[i].x-MARK_SIZE, dataset[i].y,
+		 dataset[i].x+MARK_SIZE, dataset[i].y);
+	fig_line(dataset[i].x, dataset[i].y-MARK_SIZE,
+		 dataset[i].x, dataset[i].y+MARK_SIZE);
+  }
+
+  fig_comment("Data Curve");
+  qsort((char *)dataset, data_size, sizeof(struct datapt), datacmp);
+  fig_plot(dataset, data_size);
+
+  /* draw tic marks with numbering */
+  fig_comment("Axis Numbering");
+  tic_x = tic(max_x);
+  tic_y = tic(max_y);
+
+  for (i=1; (i*tic_x)<=max_x; i++) {
+	w = orig_x + i*tic_x*dx;
+	fig_line(w, orig_y, w, orig_y+TIC_SIZE);
+	fig_number(w, orig_y+NUM_OFF_Y, i*tic_x);
+  }
+  for (i=1; (i*tic_y)<=max_y; i++) {
+	w = orig_y - i*tic_y* dy;
+	fig_line(orig_x, w, orig_x-TIC_SIZE, w);
+	fig_number(orig_x-NUM_OFF_X, w, i*tic_y);
+  }
+}
+
+error(s)
+char *s;
+{
+  fprintf(stderr, "grafig: %s\n", s);
+  exit(1);
+}
+
+double tic(r)
+double r;
+{
+  double t;
+
+  t = pow(10.0, floor(log10(r)));
+  if (2*t>r)	return t/10;
+  else		return t;
+}
+
+datacmp(a, b)
+struct datapt *a, *b;
+{
+  if (a->x < b->x) return -1;
+  if (a->x > b->x) return 1;
+  return 0;
+}
+
+/*
+ *  Fig Code Generating Routines 
+ */
+fig_comment(str)
+char *str;
+{
+  printf("#\n# %s\n#\n", str);
+}
+
+fig_line(ax, ay, bx, by)
+double ax, ay, bx, by;
+{
+  printf("%d %d %d %d %d %d %d %d %6.3f  %d %d\n",
+	 O_POLYLINE, T_POLYLINE,
+	 SOLID_LINE, 1, DEFAULT, DEFAULT, DEFAULT, DEFAULT, 0.0,
+	 0, 0);
+  printf("%.0f %.0f %.0f %.0f 9999 9999\n",
+	 ax*RES, ay*RES, bx*RES, by*RES);
+}
+
+fig_plot(dp, ds)
+struct datapt *dp;
+int ds;
+{
+  int i;
+
+  printf("%d %d %d %d %d %d %d %d %6.3f  %d %d\n",
+	 O_POLYLINE, T_POLYLINE,
+	 SOLID_LINE, 1, DEFAULT, DEFAULT, DEFAULT, DEFAULT, 0.0,
+	 0, 0);
+  for (i=0; i<ds; i++)
+	printf("%.0f %.0f ", dp[i].x*RES, dp[i].y*RES);
+
+  printf("9999 9999\n");
+}
+
+fig_number(x, y, num)
+double x, y, num;
+{
+  char buf[10];
+
+  sprintf(buf, "%6lg", num);
+  printf("%d %d %d %d %d %d %d %6.3f %d %d %d %.0lf %.0lf %s\01\n",
+	O_TEXT, T_LEFT_JUSTIFIED,
+	DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, 0.0, DEFAULT,
+	16, 8*strlen(buf), x*RES, y*RES, buf);
+}
+SHAR_EOF
+fi # end of overwriting check
+#	End of shell archive
+exit 0

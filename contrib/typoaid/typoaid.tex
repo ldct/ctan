@@ -1,0 +1,241 @@
+\documentclass{article}
+\usepackage[marginparwidth=80pt]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{metalogo}
+\usepackage[makeindex]{imakeidx}
+\usepackage{microtype}
+\usepackage{varioref}
+\usepackage{hyperref}
+\usepackage{typoaid}
+\usepackage{url}
+\author{Daniele Ratti}
+\makeindex[intoc]
+\title{The Typo Aid Package (v.0.4.7)}
+\makeatletter
+\let\@@oldmpar\marginpar
+\renewcommand{\marginpar}[1]{\@@oldmpar{\small#1}}
+\makeatother
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The typoaid package provides some useful tools in order to provide data regarding the used fonts, and some hints about typesetting them. This manual is divided in two parts, the first mainly concerned with the end-user commands and usage, the second is a collection of notes regarding future development and code
+\end{abstract}
+\tableofcontents
+\part{User manual}
+\section{Introduction}
+Since \texttt{typoaid} comes as a set of diagnostic tools to decide on how to set the type area,  in a manner that can hopefully be typographically pleasant and equilibrate, and that takes in consideration the typographic tradition.
+
+The set of macros, though, are not meant to give a single \emph{directive} on how big should be the measure of the text, or something like that: the tools only give tips and give common used guidelines to decide upon the correct measure for a given font.
+
+Each one of the package commands comes with:
+\begin{itemize}
+\item an \emph{unstarred} version (e.g.)  \verb|\tychperwidth{}|, which types out the calculations to the page
+\item a \emph{starred} vesion (e.g.) \verb!\tychperwidth*{}!, which outputs the calculation \emph{to the terminal}
+\item a copy of the output data \emph{to the log file} (both starred and unstarred commands do log)
+\item the possibility to accept, a series of  one or more\emph{font switches}, such as \verb|\bfseries\itshape|, in order to provide calculation for the specific switch or combination. Please note that \emph{also font-family switches from} \texttt{fontspec} \emph{are supported.}
+\end{itemize}
+\subsection{Compatibility}
+The package is compatible with pdf{}\LaTeX, Lua\LaTeX and \XeLaTeX, and will accept a font family switch defined via the \texttt{fontspec} package.
+\section{Simple commands}\label{simpleforem}
+
+The\marginpar{\texttt{\textbackslash typrintalph}} \verb|\typrintalph| \index{\textbackslash typrintalph}\index{Alphabet} is used to calculate the alphabet length, given the font switches. The length is computed \emph{without kerning,} that is: using the pure letter widths.
+
+The \marginpar{\texttt{\textbackslash typrintex}} \verb!\typrintex!\index{\textbackslash typrintex} command is used to calculate the ex-height\index{Ex-height} of the font, given the switches. 
+
+The\marginpar{\texttt{\textbackslash typrintem}}  \verb!\typrintem!\index{\textbackslash typrintem} command, computes the em-width\index{Em-width} of the current font. Namely this is the same as the font body size, but may yield different results for different font switches, especially with \texttt{T1} fonts, where each family could have its em-width; this is proven not to be the case for OpenType fonts.
+
+ The\marginpar{\texttt{\textbackslash tyallsimple}} \verb!\tyallsimple!\index{\textbackslash tyallsimple} command simply calls internally the aforementioned commands, and returns their outputs. Its starred version calls the starred version of the same commands.
+
+\section{Char per width commands}
+The package provides two commands that calculate the \emph{char per width} and \emph{width given a number of characters} desired in a line. The calculations are based on the algorithm in section~\vref{calc}. Please note that the calculations are bound to be approximated estimates only, and do not imply that the result will produce \emph{exactly} what it’s asked of it (being it the char per width, or the width for a given number of chars); again, refer to section~\vref{calc} to have further information.
+
+\subsection{Characters fitting a given width}\label{chperwidth}
+The \marginpar{\texttt{\textbackslash tychperwidth}} \verb!\tychperwidth!\index{\textbackslash tychperwidth} command syntax extends the \emph{standard} \verb|\typoaid| syntax, since this commands accepts an optional parameter which should be a dimension. If given the calculation will be performed on that length, otherwise they will be performed on the \verb|\columnwidth|. 
+\subparagraph{Note:} the number of char is given as a rounded integer, so it’s bound to be an approximate number.
+\paragraph{Examples} here are two examples on how to use the command:
+\begin{verbatim}
+\tychperwidth*[17pc]{}
+\end{verbatim}
+Will produce:
+\begin{itemize}
+\item an output to the terminal (since the starred version is used) and the log
+\item a calculation on the current font with no extra switches (since the mandatory argument is empty)
+\item a calculation on how many characters will fit into \verb|17pc|
+\end{itemize}
+
+\begin{verbatim}
+\tychperwidth{\itshape}
+\end{verbatim}
+Will instead:
+\begin{itemize}
+\item an output to the page and the log (unstarred version)
+\item a calculation on the italic alphabet of the current font family
+\item a calculation on how many characters of the aforementioned alphabet will fit into the current \verb|\columnwidth|
+\end{itemize}
+
+\subsection{Width for a given number of characters}\label{widthgivenchar}
+Conversely on what is discussed in section~\vref{chperwidth}, it may be desirable to obtain the length of a column that will accommodate a specific number of characters. This is done using the\marginpar{\textbackslash tywidthgivchar}\verb|\tywidthgivchar|\index{\textbackslash tywidthgivchar} command.
+
+The command usage is somewhat different from the other commands of the package, since the font switches are accepted \emph{as an optional argument,} while the mandatory argument is the number of characters for the calculations.
+\paragraph{Examples} here are two examples of the command usages:
+\begin{verbatim}
+\tywidthgivchar*{68}
+\end{verbatim}
+will output in terminal (starred version) and log the width to typeset 68 characters with the current font.
+
+\begin{verbatim}
+\tywidthgivchar[\bfseries]{35}
+\end{verbatim}
+Will instead output -- in the page and the log -- the width of the column that will accommodate 35 characters of the bold version of the current font.
+
+\section{Height commands}
+To determine the height of a given text, usually \cite{bib:bringhurst} one can determine a \emph{form factor} to which its text will comply, and then will tweak it in order to accommodate an \emph{integer number of lines.}
+
+The  \marginpar{\texttt{\textbackslash tyheight}} \verb!\tyheight!\index{\textbackslash tyheight} command gives an hint to the user, outputting the number of lines. The command comes with the two usual \texttt{typoaid} starred scheme, but its parameters are a bit more complex since:
+\begin{itemize}
+\item it accepts a first optional parameter (in square brackets) which indicates a font switch
+\item it accepts two ``mandatory’’  (i.e. curly braces-delimited) arguments, indicating resp:
+\begin{enumerate}
+\item the height to be used (if no parameter is given, the current value of  \texttt{textheight} is used)
+\item the baseline skip to be used (if no parameter is given, the current  value of \texttt{baselineskip} is used
+\end{enumerate}
+\item accepts also a trailing optional parameter (square brackets) which has the optional 
+\end{itemize}
+
+\paragraph{Examples} 
+The command syntax may appear complex, but it’s actually modeled around what I think it would be its more common usage. Anyway here are some examples:
+\begin{verbatim}
+\tyheight{}{}
+\end{verbatim}
+gives the height and number of lines for current data.
+
+\begin{verbatim}
+\tyheight{538pt}{13pt}
+\end{verbatim}
+gives the number of rows in $538$pt using a $13$pt baselineskip.
+
+\begin{verbatim}
+\tyheight[\bfseries]{}{13pt}
+\end{verbatim}
+will output the number of lines in \texttt{bfseries} with $13$ pt baselineskip and current height
+
+\begin{verbatim}
+\tyheight[\itshape]{540pt}{13.6pt}[11pt]
+\end{verbatim}
+will add the condition of the $11$ pt size. Of course one can use other values and data.
+
+\subparagraph{Note:} The other width command currently included are tabular ones, thus given in section~\vref{heighttables}.
+
+\section{Tabular data}
+The package provides two diagnostic commands, which will output tables when used in the unstarred version -- they will output a list of things in the terminal for the starred version; and also for the log in any ``version’’.
+\subsection{Font tables}
+The \marginpar{\textbackslash tyfonttable} \verb|\tyfonttable|\index{\textbackslash tyfonttable} typesets a table containing
+\begin{itemize}
+\item alphabet length
+\item ex-height
+\item em-width
+\end{itemize}
+for the following font-shapes:
+\begin{itemize}
+\item roman
+\item bold
+\item italic
+\item small case
+\item slanted
+\item sans-serif
+\end{itemize}
+
+The command, nevertheless accepts a switch, which is conceived to printout the data for a font family defined by the \texttt{fontspec} package, via \verb|\newfontfamily|; but any font-family changing command that behaves the same way is just as suitable.
+
+\subsection{Width tables}\label{widthtables}
+The main purpose of the package is the use of the \marginpar{\textbackslash tywidthtable}\verb!\tywidthtable!\index{\textbackslash tywidthtable} command, which will output some suggested widths, which are commonly used \cite{bib:bringhurst,bib:felici} in the professional typesetting world. The starred version, as usual, prints a long list into the terminal.
+
+There are a few remarks:
+\begin{itemize}
+\item where no name is given in parenthesis, the calculation are either provided for reference, or are the author’s personal estimates of useful lengths;
+\item the name in parenthesis refers to methods or calculations given in \cite{bib:bringhurst,bib:felici};
+\item all of the calculations are done on the \emph{em width,} instead of the font \emph{body size,} since they’re almost always the same (see section~\vref{simpleforem}), and when they’re not, I think it would lead to better results
+\item \emph{multicol} means that a setting is most suited for multiple columns 
+\item the number of characters for width is the result of a rounding (as most quantities here reported are) so all of the numbers are to be taken as approximates.
+\end{itemize}
+
+\subsection{Height tables}\label{heighttables}
+The \marginpar{\textbackslash tyformfactorheight} \verb|\tyformfactorheight|\index{\textbackslash tyformfactorheight} is the main \emph{vertical} command and is used to have a guideline on how tall the text should be. 
+
+In common practice (at least the author’s), the design tends to have a specific \emph{form factor,} i.e., a given ratio between text height and width. This will have to be matched with the need to have an integer number of lines in the text height. 
+
+The command, then, will come in two flavours (starred and unstarred) and will always accept the following parameters, given in order:
+\begin{itemize}
+\item an optional font family switch (in square brackets)
+\item a mandatory dimension for the text height, in curly braces; if not given the package will assume \texttt{columnwidth}
+\item a mandatory \emph{form factor} parameter which \emph{cannot be empty}
+\item an optional square bracketed parameter, to specify the baseline skip to be used, defaulting to the current one.
+\end{itemize}
+
+Upon executing, the command will output (either in the page or the terminal, plus log) three rows containing the height, the number of lines and the form factor; these will be:
+\begin{enumerate}
+\item the \emph{strict} result obtained multiplying the width by the form factor. Could result in non-integer number of lines per height
+\item the \emph{truncated number of lines} resulted from the previous calculation, with the updated form factor and height.
+\item the \emph{up rounded number of lines} resulted from the first calculation, with the updated form factor and height
+\end{enumerate}
+
+This way the user can specify some form-factor guidelines, and see which form factors are the nearest which accommodate an integer number of lines.
+
+\part{Notes, details, licensing}
+\section{Calculations}\label{calc}
+The calculations performed by this package are only indicative. The calculations are based on two concepts:
+\begin{description}
+\item[Alphabet length:] this is calculated by measuring the sum of the whole letters without considering specific kernings.
+\item[Mean character width:] this calculation is tricky. In fact using the typefitting table in \cite{bib:bringhurst}, I messed around with the data and found out that the mean char width used there is $\approx 1/(26.5+1\%\cdot \alpha)$ where $\alpha$ is the alphabet length. 
+\item[Use of em:] as it is said before, every calculation uses the \emph{em width} (where applicable) instead of the \emph{character size.}
+\end{description}
+Regarding the mean char width, I don’t know whether the calculation are correct for all languages or just for English. I just found out that since the calculations cannot be other than approximations, these give consistent results, even in Italian.
+\section{Known issues}
+The code works hopefully, and should do fine. Despite that it needs to be worked on, both from the functionality and code prettyness. I will go on and work on these issues. Please mark that I already know them, so don’t be scared by the code
+
+\paragraph{Let’s go global} Also I struggled a bit with the sense of \emph{local} and \emph{global} in \texttt{expl3} language. The code has all the variables set to be global. This is highly undesirable and an urgent step will be to refactor these in order to make them global only if needed. Unfortunately the problem became more and more apparent from v.0.4.0, but I’m not capable of doing it any other way
+
+\paragraph{Required packages} I don’t like depending upon too many packages. Currently I depend on table typesetting packages such as \texttt{array, booktabs}. Since the package could possibly be used without any typeset output, I will consider to introduce a package-wide option to enable the aforementioned packages and functionalities.
+
+
+\section{Future implementations and roadmap}
+As seen in the previous section, the package is far from complete. I set up a little roadmap:
+\begin{enumerate}
+\item Rework and make good outputs in log and terminal
+\item Introduce Lua\TeX{} specific commands and functionalities 
+\end{enumerate}
+\section{Changelog}
+This is a stub and will be until version 1.0 will be released, since the package is still in continuous development. The minor revisions indicate a refactoring or a new functionalities. Subminor revision track tests and tunings
+\begin{description}
+\item[v0.0.7] First release
+\item[v0.1.0]  Completed the \emph{simple commands}
+\item[v0.2.0] Introduced the \emph{fonts table}
+\item[v0.3.0] Introduced the \emph{width table}
+\item[v0.3.8] Fixed various issues, second release
+\item[v0.4.7] Fixed and prettied all the code, introduced vertical commands
+\end{description}
+\section{Acknowledgments}
+Special thanks to Enrico Gregorio, which, apart from helping me -- especially for the Lua\TeX{} safe no-kerning code -- also tried to teach me \texttt{expl3} and some of its nuisances. I’m a bit ashamed to be such an awful student.
+I would also like to thank very much: \TeX nician, Joseph Wright, David Carlisle and Barbara Beeton for their support and kind remarks. 
+\textbf{Please mark that none of the people mentioned above have any idea on how I chose to implement (and typeset) the code inside the package, but they nevertheless provided many useful tips and tools for me to develop this. They cannot be blamed for anything that can be wrong in this package.}
+\section{License and contacts}
+This package is released under the \emph{\LaTeX{} Project Public License,} version 1.3c or later. See \url{http://www.latex-project.org/lppl.txt}.\smallskip
+
+The package is maintained by \textsc{Daniele Ratti.} 
+
+Email: \texttt{ilfuria+tya at gmail dot com}
+
+Repository: \url{https://github.com/ilFuria/typoaid/tree/master}
+
+\begin{thebibliography}{9}
+\addcontentsline{toc}{section}{\bibname}
+\bibitem{bib:bringhurst} R.~Bringhurst, \emph{The elements of typographic style}, version~4.1, 2015.
+\bibitem{bib:felici} J.~Felici, \emph{The complete manual of typography}, second edition, 2012.
+\end{thebibliography}
+
+\printindex
+\end{document}

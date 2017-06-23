@@ -1,0 +1,1066 @@
+% shapepar.ltx   Manual for shapepar.sty
+%
+% Version 2.2  (Mar 2013)
+%
+% Copyright (c) 1993,2002,2006,2013    Donald Arseneau
+% This software may be freely used, transmitted, shared, copied, sold,
+% or modified, provided that any modifications are clearly identified 
+% and this notice is left intact.
+%
+
+\documentclass{article}
+\usepackage{shapepar}
+\usepackage{varioref}
+
+\renewcommand{\topfraction}{.85} 
+\renewcommand{\bottomfraction}{.7}
+\renewcommand{\textfraction}{.15} 
+\renewcommand{\floatpagefraction}{.66}
+\renewcommand{\dbltopfraction}{.66} 
+\renewcommand{\dblfloatpagefraction}{.66}
+
+\sloppy
+\raggedbottom
+\addtolength{\topskip}{0pt plus 8pt}
+
+\newcommand\configpar[6]{\par\penalty-50
+ \vskip 0pt plus 12pt \penalty 50 \vskip 0pt plus -12pt
+ \begingroup\samepage
+ \paragraph*{\textbackslash #1} #2\unskip\strut\\*
+ \begin{tabular}{@{}p{.15\linewidth}@{}p{.85\linewidth}@{}}
+ Type: \ & \rightskip\fill #3\\
+ Default: \ & \rightskip\fill #4\\
+ Set with: \ & \rightskip\fill #5\\
+ Example: \ & \rightskip\fill #6
+ \end{tabular}
+ \par \endgroup
+}
+
+% Code from: underscore.sty     12-Oct-2001   Donald Arseneau   asnd@triumf.ca
+% Make the "_" character print as "\textunderscore" in text.
+
+\makeatletter
+\begingroup
+ \catcode`\_=\active
+ \gdef_{% \relax % No relax gives a small vulnerability in alignments
+   \ifx\if@safe@actives\iftrue % must be outermost test!
+      \string_%
+   \else
+      \ifx\protect\@typeset@protect
+         \ifmmode \sb \else \BreakableUnderscore \fi
+      \else
+         \ifx\protect\@unexpandable@protect \noexpand_%
+         \else \protect_%
+      \fi\fi
+    \fi}
+\endgroup
+
+% At begin: set catcode; fix \long \ttdefault so I can use it in comparisons; 
+\AtBeginDocument{%
+  {\immediate\write\@auxout{\catcode\number\string`\_ \string\active}}%
+  \catcode\string`\_\string=\active
+  \edef\ttdefault{\ttdefault}%
+}
+
+\newcommand{\BreakableUnderscore}{\leavevmode\nobreak\hskip\z@skip
+ \ifx\f@family\ttdefault \string_\else \textunderscore\fi
+ \usc@dischyph\nobreak\hskip\z@skip}
+
+\DeclareRobustCommand{\_}{%
+  \ifmmode \nfss@text{\textunderscore}\else \BreakableUnderscore \fi}
+
+\let\usc@dischyph\@dischyph
+\makeatother
+%  end of underscore.sty extract  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\title{shapepar.sty}
+\author{Donald Arseneau\\ Vancouver, Canada\\ asnd@triumf.ca}
+\date{v 2.2 \ March 2013}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%  Active character definitions:
+
+\def\Meaningless#1>{}
+\catcode`\"=\active
+\def\startV{\leavevmode\begingroup
+  \ifdim 0pt=\lastskip\penalty200 \fi
+  \catcode`\{11 \catcode`\}11 \catcode`\%11
+  \moreV}
+\long\def\moreV#1"{%
+  \def\LtxCode{#1}%
+  \texttt{\ignorespaces
+      \expandafter\Meaningless\meaning\LtxCode
+      \unskip}%
+  \endgroup}
+\let"\startV
+
+\catcode`\<=\active
+\def<#1>{\ensuremath{\langle\mbox{\textsl{#1}}\rangle}}
+
+%%%%%%%%%%%%%%%  End active character definitions
+
+\maketitle
+
+%\begin{abstract}
+\noindent
+"\shapepar": a macro to typeset paragraphs in a specific shape. The
+size is adjusted automatically so that the entire shape is filled
+with the provided text.  This package is for Plain \TeX, \LaTeX, or similar.
+%\end{abstract}
+
+\section{\textbackslash shapepar and \textbackslash Shapepar}
+
+The "\shapepar" macro (or `command') is used to typeset paragraphs
+of a specified shape, where
+the total size is adjusted automatically so that the entire shape is
+filled with text, and the shape may include separate pieces and 
+holes.  This is distinct from the normal "\parshape" command
+which specifies a simple shape \emph{and} a size that may be partially
+filled, or over-filled, from top to bottom. In a "\shapepar" there
+can be no displayed math, and no `"\vadjust"' material, (including
+"\vspace"). This style is mainly
+intended for cards, invitations etc., not for whole books!  Although
+short paragraphs process much faster, only long paragraphs accurately
+fill complex shapes.
+
+These macros work for both \LaTeX\ and Plain \TeX.  For \LaTeX, specify
+"\usepackage""{shapepar}", or for Plain, "\input" "shapepar.sty".
+
+The command "\shapepar" should be used at the beginning of a paragraph,
+and it applies to the entire paragraph.  There is one optional length
+parameter: a fixed scale, <scale_len>; and one required parameter:
+a description of the shape, <shape_spec>.
+
+\begin{flushleft}
+"\shapepar" "["<scale_len>"]""{"<shape_spec>"}" Text of the paragraph
+\end{flushleft}
+
+The text of the paragraph is delimited by a blank line or "\par", but
+is not literally a \emph{parameter}, so verbatim macros will work there.
+If you want to typeset two paragraphs in one shape, then use
+"\endgraf" or "\\" to split them.
+
+Ordinarily, the scale is calculated automatically so the pargaraph
+best fills the shape.  If a scale length is given, then the shape is
+reproduced so one unit of the <shape_spec> equals the <scale_len>, and
+the shape is filled with white space after the paragraph text.
+The <scale_len> is much like "\unitlength" for the picture environment.
+For an application of a fixed scale, see the "\CDlabel" macro.
+
+With the "\shapepar" command, the text will be typeset centered on the
+page using the specified shape (specifically, the shape's <h_center>
+will be centered on the page; see below). A "\shapepar" should not
+break across pages (due to inter-line penalties) but that feature is
+not guaranteed.
+
+The "\Shapepar" macro (capital~S) typesets the shaped paragraph in a box
+("\vtop" or "\parbox""[t]") without extra horizontal padding. If it occurs
+in vertical mode, special care is taken with the line-spacing around
+this box, but the line-spacing might be better with plain "\shapepar".
+"\Shapepar" is particularly useful for "\fbox" or "\put".
+
+\section{\textbackslash cutout}
+
+A shaped paragraph can be incorporated with the page in a third way:
+nestled in a cut-out at the side of the running text.
+
+\begin{flushleft}
+"\cutout" "{"<side>"}" "("<h_offset>","<v_offset>")" <settings> "\shapepar" \dots
+\end{flushleft}
+The <side> argument is required, and must be `l' or `r', indicating
+which margin (left or right) the shape should occupy.  By default (in
+the absence of other parameters) the shaped paragraph will be placed so
+its center-line (<h_center>) is at the specified edge of the running
+text, and its first line is level with the first line of the ensuing
+text. This position may be changed by specifying the optional horizontal
+and vertical offset distances "("<h_offset>","<v_offset>")" in
+parentheses.  A positive <h_offset> moves the shape further right, and a
+positive <v_offset> moves it down. A negative <v_offset> will move the
+shape upwards, where it might overlap preceding text, which will
+\emph{not} be cut away to accommodate.
+
+Yes, the text coming after the "\cutout" "\shapepar" is cut out (surprise!)
+to fit the shape, leaving a gap of \mbox{`"\cutoutsep"'}.  This length (dimen)
+parameter is initialized to 12\,pt; you may set it as you please.
+The cutout separation is applied by looking at the paragraph shape
+expanded by "\cutoutsep" in all directions, to give the same gap at
+every slope. The cutout only lasts for one paragraph.\footnote
+{Re-defining \texttt{\string\p ar} for the extent of the cutout is an
+attractive feature, but has conflicts with various \TeX\ formats.
+It seems best to leave the paragraph control in the hands of the user.
+This will likely change in the future.}
+To extend the effect further, divide paragraphs with
+`"\\[\parskip""]" "\indent"' (\LaTeX) or `"\hfill" "\break" "\indent"'
+so \TeX\ does not treat them as separate paragraphs.
+Furthermore, the cut-out paragraph should not end in a local
+group, so make sure there is an explicit "\par" or blank line
+there, outside of braces.
+
+\font\cmsybig=cmsy10 at 1.2in
+\newcommand\BigO{{\cmsybig \char10}}
+\cutout{r}(-1cm,2\baselineskip)
+\setlength\cutoutsep{6pt}
+\shapepar[1.7cm]{\circleshape}%
+\setlength\unitlength{1cm}%
+\begin{picture}(0,0)%
+\put(1.0,-1.3){\makebox[0pt]{\BigO}}
+\end{picture}
+\par
+
+
+
+\indent The combination of "\cutout" with fixed scale allows an
+entirely different application: producing cutouts for graphics.  First,
+produce a rough <shape_spec> for the image to delineate its left and
+right borders (you can ignore all internal detail) or use an appropriate
+pre-defined shape.  Then use "\includegraphics" as the text of the
+shaped paragraph.  There is a difficulty though: we want the image
+to take the place of the entire paragraph, not to stand up on the
+top line.  There are a number of methods for lowering the graphic
+appropriately (and some methods that will not work with "\shapepar");
+three that work are:
+
+\begin{flushleft}
+"\hfill\makebox[0pt][c]{""\raisebox""{1ex-\height}" \% requires calc.sty  \\*
+\qquad" {\includegraphics{"<file>"}}}" \\*
+or \\
+"\hfill"\\*
+"\begin""{minipage}""[t]{0pt}"\\*
+"  \vspace {-1ex} % \vspace works here only"\\*
+"  \centerline{ \includegraphics{"<file>"} }"\\*
+"\end{minipage}%"\\*
+"\hfill"\\*
+and, most general,\\
+"\begin""{picture}""(0,0)"\\*
+"\put("$x,y$"){\includegraphics{"<file>"}}"\\*
+"\end{picture}"
+\end{flushleft}
+The first two adjust the height automatically, but assume the
+top line of the shape is horizontally centered.  The picture
+environment handles positioning more flexibly, but requires
+you to provide parameters $x,y$. Just try approximate values,
+make a test run, measure the offset, and correct. This should
+only require one trial, not an endless cycle. Because the 
+reference point for the shaped paragraph is based on the \emph{text} 
+it contains, and not just the specified shape, some adjustment
+will usually be needed to position a shaped paragraph precisely.
+
+% For example,
+%this paragraph begins with
+%\begin{verbatim}
+%\cutout{r}(-1cm,\baselineskip)
+%\setlength\cutoutsep{6pt}
+%\shapepar[1cm]{\circleshape}%
+%\setlength\unitlength{1cm}%
+%\begin{picture}(0,0)
+%\put(-2,-2){\BigO}
+%\end{picture}
+%\end{verbatim}
+%(I used a big symbol rather than including a graphics file
+%with this manual.)
+
+
+\section{Shapes}
+
+There are some shapes predefined in shapepar.sty (square, rectangle, circle,
+circle-with-hole, diamond, heart, star, hexagon and hex-nut) which are used as
+examples in the instructions below. Each of these shapes is stored in
+a macro, and there is a command to use that shape:
+\begin{flushleft}
+\begin{tabular}{lll}
+"\squareshape"& "\squarepar"& Square \\
+"\circleshape"& "\circlepar"& Circle \\
+"\CDshape"    & "\CDlabel"  & Circle with circular hole ("\CDlabel" uses\\
+              &             & a fixed scale to fit a compact disc)\\
+"\diamondshape" & "\diamondpar" & Rhomboid `diamond' ($\diamondsuit$)\\
+"\heartshape" & "\heartpar" & Heart (symbolic shape $\heartsuit$)\\
+"\starshape"  & "\starpar"  & Five-point star\\
+"\hexagonshape"&"\hexagonpar"& Hexagon\\
+"\nutshape"   & "\nutpar"   & Nut for bolt (hexagon with circular hole)\\
+\multicolumn{2}{l}{"\rectangleshape"\texttt{\string{<height>\string}\string{<width>\string}}} &
+    Rectangle shapes
+\end{tabular}
+\end{flushleft}
+For example, "\heartpar{"<text>"}" performs
+"\shapepar" "{\heartshape}" <text>"\ \ $""\heartsuit""$""\par"
+(ending the text with a heart symbol). 
+
+More shape definitions are provided in separate files named
+$*$shape.def.  Look on your disk to be sure, but the
+list should include:
+\begin{flushleft}
+\begin{tabular}{ll}
+dropshape    & Rain drop\\
+triangleshapes & Triangles in different orientations\\
+candleshape  & A burning candle\\
+TeXshape     & The \TeX\ logo\\
+Canflagshape & The Canadian flag
+%\\
+% USAshape     & The American flag
+\end{tabular}
+\end{flushleft}
+Please contribute your shapes!
+
+Although defining shapes by hand can be difficult, there are
+programs to aid you.
+
+\subsection{ShapePatch by Christian Gollwitzer}
+
+\def\faceshape{%
+{36.8512}%
+{-0.519031}b{36.8512}\\%
+{-0.259516}t{33.391}{6.92042}\\%
+{0.432526}t{30.1038}{13.4948}\\%
+{1.55709}t{26.8166}{20.0692}\\%
+{3.11419}t{23.7889}{26.1246}\\%
+{5.10381}t{21.0208}{31.6609}\\%
+{7.43945}t{18.5121}{36.6782}\\%
+{10.1211}t{16.3495}{41.0035}\\%
+{11.5917}t{15.4412}{11.2024}st{26.6436}{20.5017}st{47.1453}{11.1159}\\%
+{11.6782}t{15.3877}{10.6503}t{27.2491}{19.2907}t{47.7509}{10.5638}\\%
+{11.7647}t{15.3343}{10.0117}t{27.9412}{17.9066}t{48.4429}{9.9252}\\%
+{12.0242}t{15.174}{9.56646}t{28.5467}{16.6955}t{49.0484}{9.47995}\\%
+{12.2837}t{15.0137}{9.12121}t{29.1522}{15.4844}t{49.654}{9.0347}\\%
+{12.6298}t{14.8}{8.8159}t{29.6713}{14.4464}t{50.173}{8.72939}\\%
+{13.0623}t{14.5329}{8.72261}t{30.0317}{13.7255}t{50.5334}{8.6361}\\%
+{13.1488}t{14.4968}{8.68656}t{30.1038}{13.5813}t{50.6055}{8.60006}\\%
+{13.5813}t{14.3166}{8.43426}t{30.5363}{12.7163}t{51.0381}{8.34775}\\%
+{14.1869}t{14.0643}{8.34054}t{30.8824}{12.0242}t{51.3841}{8.25404}\\%
+{14.7924}t{13.812}{8.33333}t{31.1419}{11.5052}t{51.6436}{8.24683}\\%
+{15.3979}t{13.5597}{8.41263}t{31.3149}{11.1592}t{51.8166}{8.32612}\\%
+{16.0035}t{13.3074}{8.57843}t{31.4014}{10.9862}t{51.9031}{8.49193}\\%
+{16.1765}t{13.2353}{8.65052}t{31.4014}{10.9862}t{51.9031}{8.56401}\\%
+{16.6955}t{13.085}{8.80077}t{31.4014}{10.9862}t{51.9031}{8.71426}\\%
+{17.301}t{12.9098}{9.06256}t{31.3149}{11.1592}t{51.8166}{8.97605}\\%
+{17.9066}t{12.7345}{9.41085}t{31.1419}{11.5052}t{51.6436}{9.32435}\\%
+{18.5121}t{12.5592}{9.84566}t{30.8824}{12.0242}t{51.3841}{9.75915}\\%
+{19.1176}t{12.3839}{10.367}t{30.5363}{12.7163}t{51.0381}{10.2805}\\%
+{19.4637}t{12.2837}{10.8131}t{30.1903}{13.4083}t{50.692}{10.7266}\\%
+{19.5502}t{12.2726}{10.9107}t{30.1038}{13.5813}t{50.6055}{10.8242}\\%
+{20.0692}t{12.2061}{11.4098}t{29.6713}{14.4464}t{50.173}{11.3233}\\%
+{20.4152}t{12.1617}{11.9732}t{29.1522}{15.4844}t{49.654}{11.8867}\\%
+{20.6747}t{12.1285}{12.612}t{28.5467}{16.6955}t{49.0484}{12.5255}\\%
+{20.9343}t{12.0952}{13.2508}t{27.9412}{17.9066}t{48.4429}{13.1643}\\%
+{21.0208}t{12.0841}{13.954}t{27.2491}{19.2907}t{47.7509}{13.8674}\\%
+{21.1073}t{12.073}{14.5706}jt{26.6436}{20.5017}jt{47.1453}{14.4841}\\%
+{22.8374}t{11.8512}{50}\\%
+{26.2976}t{11.8512}{50}\\%
+{29.6713}t{12.2837}{49.1349}\\%
+{30.7093}t{12.5842}{41.049}st{53.6332}{7.48497}\\%
+{30.7093}t{12.5842}{7.48498}t{53.6332}{7.48497}\\%
+{31.0554}t{12.6844}{7.50517}t{53.5001}{7.51789}\\%
+{31.0554}t{12.6844}{7.50517}jt{20.1896}{40.8285}\\%
+{31.0937}t{12.6955}{7.5074}st{20.2029}{40.804}\\%
+{31.1067}t{12.6993}{7.50816}t{20.2189}{33.2615}st{53.4804}{7.52278}\\%
+{32.1799}t{13.0099}{7.57079}t{21.5398}{30.5544}t{53.0676}{7.62489}\\%
+{32.699}t{13.1602}{7.60107}t{22.3183}{29.1054}t{52.868}{7.67427}\\%
+{32.9585}t{13.2353}{7.66652}t{22.7076}{28.3809}t{52.7682}{7.69896}\\%
+{33.1315}t{13.3074}{7.68815}t{22.9671}{27.8979}t{52.6782}{7.71684}\\%
+{34.083}t{13.7039}{7.80709}t{24.3945}{24.8054}t{52.1834}{7.81517}\\%
+{34.7751}t{13.9922}{7.8936}t{25.9007}{22.0881}t{51.8235}{7.88668}\\%
+{34.8616}t{14.0283}{7.91397}t{26.0889}{21.7484}t{51.7785}{7.89562}\\%
+{35.1211}t{14.1364}{7.97509}t{26.6538}{20.5262}t{51.6436}{7.92243}\\%
+{35.5536}t{14.3166}{8.07695}t{27.5952}{18.489}t{51.329}{8.05678}\\%
+{36.0727}t{14.5329}{8.19919}t{29.1123}{15.657}t{50.9516}{8.21799}\\%
+{36.1592}t{14.5863}{8.20217}t{29.3652}{15.185}t{50.8886}{8.22748}\\%
+{36.6782}t{14.9069}{8.2201}t{30.8824}{11.4187}t{50.5112}{8.28437}\\%
+{36.7647}t{14.9603}{8.22308}t{31.4446}{10.4815}t{50.4483}{8.29386}\\%
+{36.9377}t{15.0672}{8.28058}t{32.5692}{8.60727}t{50.3224}{8.31282}\\%
+{37.0242}t{15.1206}{8.30933}t{33.1315}{7.37024}t{50.2595}{8.32231}\\%
+{37.1972}t{15.2275}{8.36683}t{34.2561}{4.89619}t{50.0952}{8.37981}\\%
+{37.3702}t{15.3343}{8.42433}e{37.8028}t{49.9308}{8.43731}\\%
+{38.4948}t{16.0289}{8.79809}t{48.8625}{8.81106}\\%
+{38.7543}t{16.1892}{8.94057}t{48.6159}{8.89732}\\%
+{39.0138}t{16.3495}{9.08304}t{48.2953}{9.0576}\\%
+{40.0519}t{17.1866}{9.45697}t{47.013}{9.50277}\\%
+{40.2249}t{17.3262}{9.60168}t{46.7993}{9.57696}\\%
+{41.263}t{18.1633}{10.4699}t{45.0198}{10.5194}\\%
+{41.436}t{18.3028}{10.7393}t{44.7232}{10.6764}\\%
+{41.6955}t{18.5121}{11.1434}t{44.1334}{11.0569}\\%
+{42.2145}t{19.0696}{11.8128}t{42.9538}{11.6791}\\%
+{42.3875}t{19.2554}{12.1892}t{42.5606}{11.8865}\\%
+{42.9066}t{19.8129}{13.3186}t{40.5586}{13.331}\\%
+{42.9931}t{19.9058}{13.8096}t{40.2249}{13.5717}\\%
+{43.2526}t{20.1845}{15.2826}t{37.8893}{15.6286}\\%
+{43.2526}t{20.1845}{15.2826}jt{35.4671}{18.0508}\\%
+{44.0311}t{21.0208}{31.6609}\\%
+{46.0208}t{23.7889}{26.1246}\\%
+{47.5779}t{26.8166}{20.0692}\\%
+{48.7024}t{30.1038}{13.4948}\\%
+{49.3945}t{33.391}{6.92042}\\%
+{49.654}e{36.8512}%
+}
+
+\hyphenation{trans-fig shape-patch}
+
+\shapepar\faceshape
+ShapePatch is an amazing utility written by Christian Gollwitzer.  It
+allows you to simply draw the shape you want with Xfig, and then
+convert it to a shapepar shape definition, either by manually running
+fig2dev (a component of transfig), or by choosing `Export/Shape' in
+Xfig.  Its odd name is indicative of its implementation: it is an
+upgrade or `patch' to both the Xfig program and the transfig tool-set.
+ShapePatch is included with transfig, or can be found on \textsc{ctan} under
+"graphics/""trans""fig-shape""patch", which includes instructions
+(\textsc{readme}) and sample shapes besides the patch itself.  This
+smiley face is one of the sample shapes.  Besides enabling a graphical utility
+(Xfig) to produce shapepar specifications, the ShapePatch upgrade
+opens up great libraries of existing Fig clip-art to be used for
+paragraph shapes.  For example, a Canadian flag taken from the Xfig
+flag library is one of the examples provided with ShapePatch, for
+comparison with the hand-coded one bundled with shapepar.sty. (I
+prefer my own version because there is an error in the maple leaf
+shape on the Xfig flag library version.  The error is not the fault of
+ShapePatch, but ShapePatch faithfully reproduces the faulty shape!)
+
+
+\vspace{0pt plus 5cm}
+\penalty 0
+\vspace{0pt plus -5cm}
+\vspace{5cm}
+\penalty 9999
+\vspace{-5cm}
+
+\subsection{proshap.py by Man\-uel Gu\-ti\-er\-rez Al\-ga\-ba}
+\gdef\bassshape{{9.4}{0}b{9.4}
+\\{0}t{7.6}{6.8}
+\\{0.8}t{5.2}{11.6}
+\\{1.6}t{4.4}{13.2}
+\\{2.4}t{4.0}{14.0}
+\\{3.2}t{3.6}{4.933333}st{8.533333}{4.933333}st{13.46666}{4.933333}
+\\{4.0}t{3.6}{2.4}t{9.6}{2.8}t{16.4}{2.4}
+\\{6.4}t{3.6}{2.0}t{10.0}{2.0}t{16.8}{2.0}
+\\{8.8}t{3.6}{2.4}t{9.6}{1.4}st{11.0}{1.4}t{16.4}{2.0}
+\\{11.2}t{3.6}{3.4}jt{7.0}{3.4}t{11.6}{3.4}jt{15.0}{3.4}
+\\{12.8}t{4.0}{6.0}t{12.0}{6.0}
+\\{14.4}t{4.4}{5.2}t{12.4}{5.2}
+\\{16.0}t{4.8}{6.0}jt{10.8}{6.0}
+\\{16.8}t{5.2}{5.6}st{10.8}{5.6}
+\\{17.6}t{5.6}{0.8}t{14.8}{1.2}
+\\{19.2}t{6.0}{2.4}t{12.0}{3.6}
+\\{20.8}t{6.4}{4.4}jt{10.8}{4.4}
+\\{22.4}e{9.4}}
+
+
+\shapepar\bassshape
+proshap.py (ver 1.1) is a python script written by Man\-uel
+Gu\-ti\-er\-rez Al\-ga\-ba to produce shape definitions from rough
+`ascii art'.  There is no instruction manual, so here are Donald
+Arseneau's observations. There is not much of a user interface; look
+in proshap.py (which is a plain text file) and see how the various
+`test' shapes are defined (note the triple-double quotes).  Choose
+one of them, or add a new one, then change the line `test = test3' to select
+the desired picture.  Execute `python proshap.py' which will output a
+definition of "\bassshape" to the screen and to the file `result.tex'.
+The goul\-ish face you see here is the test3 shape.  You should be
+aware that the characters in the ascii input are treated as square,
+even though they are taller than they are wide, so the output shape
+specification will be taller and thinner than the input text.  There
+also seems to be a problem with all `bottoms': flat bottoms of text
+blocks and of holes are expanded downwards to end at a point.  Compare
+this face to the original face in proshap.py.  Warning: These
+instructions and observations are probably wrong; the author does not
+program in python so can't even read the code properly.  For now, look
+for proshap.py bundled with shapepar.sty.
+
+\vspace{0pt plus 5cm}
+\penalty 0
+\vspace{0pt plus -5cm}
+\vspace{5cm}
+\penalty 9999
+\vspace{-5cm}
+
+
+
+\section{Shape Syntax}
+
+The syntax rules for <shape_spec> are very specific, and must be
+followed closely.  In these rules, "{ }" mean explicit braces, [~]
+denote optional parts, <~> surround a keyword that is defined (perhaps
+loosely), and $|$ means `or'; do not type [~] <~> or~$|$, but do type "{ }".
+
+\begin{flushleft}
+<shape_spec> = "{"<h_center>"}" <lines>  \\[\topsep]
+<lines> = <line_spec> [ "\\"<lines> ]
+\end{flushleft}
+
+That is, the shape is specified as a single number in braces, followed
+by the specifications for the lines, with the lines separated by "\\". The
+resulting paragraph will have its <h_center> position centered on the page,
+or used as a reference point.  It is a number like 10.5, without explicit
+units, but using the same length scale as the
+lengths and positions in the <lines>.  Ordinarily, shapepar will
+determine the unit length that best fits the text, but will use
+a fixed scale when specified for "\shapepar".
+
+The lines in the spec are not lines of text, nor are they the lines
+that you would use to draw the shape itself.  They are horizontal
+scans across the shape at regular or irregular intervals.  Complex
+curved shapes need
+many scan lines for accurate rendering, while simple shapes need only
+a few.  To determine the line specifications, start by drawing the
+shape on paper, then draw a series of horizontal lines across it,
+including lines that just touch the top and the bottom of the figure,
+and, preferably, lines through each sharp corner.
+Each line crosses over pieces of the figure in some region.  These 
+intersections of line and figure define a <line_spec>.
+
+\begin{flushleft}
+<line_spec> = "{"<v_pos>"}" <segment> [ other <segment>s ]
+\end{flushleft}
+
+\noindent
+The <v_pos> is the vertical position of the line, increasing from top to
+bottom.  Each <line_spec> usually has a position greater than or equal
+to that of the previous line, and with all <v_pos>${} > -1000$. The
+exception is that between consecutive lines relating to completely
+disconnected parts of the figure the <v_pos> may decrease (backspacing).
+This allows text to flow from one disconnected area to another in
+sequence (see the Canadian flag shape). Each <segment> represents a
+region where text will go in the final paragraph; it is the segment of
+the horizontal scan line that overlaps the body of the figure.  There
+are five types of segment:
+
+\begin{flushleft}
+<segment> \ = \ "t{"<pos>"}{"<len>"}" \ $|$ \ "b{"<pos>"}" \ $|$ \ 
+          "e{"<pos>"}" \ $|$ \ "s" \ $|$ \ "j"        \\[\topsep]
+\begin{tabular}{ll}
+  "b{"<pos>"}" & begin text block at a point at horizontal position <pos>\\
+  "e{"<pos>"}" & end text at a point at horizontal position <pos>\\
+  "t{"<pos>"}{"<len>"}"  & text segment at position <pos> with length <len>\\
+  "s"          & split text block (begin a gap)\\
+  "j"          & join two text blocks (end a gap)
+\end{tabular}
+\end{flushleft}
+
+The most common type of segment is "t" (text).  The other types are
+degenerate in that they are single points rather than finite segments.
+Types "s" and "j" have no explicit position, but they must appear between
+text segments, and those texts should abut; e.g.,  "t{3}{2}st{5}{4}"
+(text from 3 to 5 and text from 5 to 9).
+
+\bigskip
+%\subsection{Diamond shape example}
+Let's jump right into a simple example, and the meanings will be
+clearer.  
+A rhombus `diamond' shape can have the four vertices, with
+coordinates shown in figure~\vref{fig:diamond}.
+%
+\begin{figure}[htbp]
+\centering
+\begin{picture}(250,160)
+\setlength\unitlength{1pt}
+%%%%%%%%%%%%%%%%%%%
+\thinlines
+\put(20,120){\vector(1,0){35} \ $_{\textstyle x}$}
+\put(20,120){\vector(0,-1){35}}
+\put(27,85){$y$} 
+%%%%%%%%%%%%%%%%%%%
+\thicklines
+\put(120,80){\line(3,4){42}}
+\put(120,80){\line(3,-4){42}}
+\put(204,80){\line(-3,4){42}}
+\put(204,80){\line(-3,-4){42}}
+%%%%%%%%%%%%%%%%%%%
+\thinlines
+\put(162,136){\circle*{3}}
+\put(120,80){\circle*{3}}
+\put(204,80){\circle*{3}}
+\put(162,24){\circle*{3}}
+%%%%%%%%%%%%%%%%%%%
+\put(162,144){\makebox[0pt]{$(x=3,\ y=0)$}}
+\put(117,87){\makebox[0pt][r]{$(0,4)$}}
+\put(206,87){\makebox[0pt][l]{$(6,4)$}}
+\put(162,10){\makebox[0pt]{$(3,8)$}}
+%%%%%%%%%%%%%%%%%%%
+\put(105,80){\line(1,0){114}}
+\put(105,24){\line(1,0){114}}
+\put(105,136){\line(1,0){114}}
+%%%%%%%%%%%%%%%%%%%
+\end{picture}
+%
+%                   (x=3,y=0)
+%                       .
+%
+%  +---> x
+%  !          (0,4) .       . (6,4)
+%  !
+%  V y
+%                       .
+%                     (3,8)
+%
+\vspace{-10pt}
+\caption{Diamond shape, showing vertex locations and scan lines.}
+\label{fig:diamond}
+\end{figure}
+%
+This shape can be exactly specified by just three scan lines passing
+through the vertices.  The intersections of the scan lines with the
+shape's edges occurs at the vertices and so the shape specification is:
+\begin{flushleft}
+\begin{tabular}{@{}ll}
+"{3}"          &  <h_center>: $x = 3$\\
+"{0}b{3}\\"    &  text block begins at point $y=0, x=3$\\
+"{4}t{0}{6}\\" &  scan (at $y=4$) crosses text (len~6) starting at $x=0$\\
+"{8}e{3}"      &  text block ends at point $y=8, x=3$
+\end{tabular}
+\end{flushleft}
+Other specification lines, such as
+\begin{flushleft}
+"{6}t{1.5}{3}\\"
+\end{flushleft}
+could be inserted, but would make no difference~-- the shape is
+interpolated linearly between scan lines.
+
+\medskip
+%\subsection{Valid specs}
+
+Every block of text must start with a "b" specifier and end with an "e"
+spec on some line below.  Every segment specified by "t" must have a
+length greater than zero. If two blocks of text merge to form one (like
+at the notch of a heart shape) there should be a "j" spec at the point of
+junction.  If one block bifurcates or splits (like at the top of a hole in
+a doughnut) there should be an "s" spec.
+
+Thus, the first line for any valid shape description must consist
+of only "b" segment descriptors; the last line can only have "e" type
+descriptors.  Although the definition of the units is arbitrary, the
+numbers should range in magnitude from ${\sim}\,0.1$ to 100 to avoid
+numeric overflows and underflows.
+
+If there are errors in the format of the specification, "\shapepar"
+might complain with the error message
+\begin{flushleft}
+Shaped Paragraph Error:  Error in specification.  Check carefully!
+\end{flushleft}
+At this point you may as well type "x" or "e", to exit from \TeX,
+as there is very little chance that {\TeX} will continue successfully.
+You might also get one of \TeX's regular error messages, like
+\begin{flushleft}
+Illegal unit of measure (pt inserted).\\[3pt]
+or\\[3pt]
+Missing number, treated as zero.
+\end{flushleft}
+or you might get no error message at all, just ridiculous formatting.
+Check shape syntax carefully against the rules and the examples before
+running them through \TeX.
+
+\medskip
+%\subsection{Square example}
+
+What to do if the figure does not start at a point~-- if it has a flat
+top?  It can start at a single point, but have the next scan line at
+the same vertical position!  A square paragraph is specified by:
+\begin{flushleft}
+\begin{tabular}{@{}ll}
+  "{1}"          &  centerline is at $x=1$\\
+  "{0}b{0}\\"    &  begin at $(0,0)$\\
+  "{0}t{0}{2}\\" &  text at $y=0$, width${}=2$\\
+  "{2}t{0}{2}\\" &  text at $y=2$, width${}=2$\\
+  "{2}e{1}"      &  end at $(1,2)$
+\end{tabular}
+\end{flushleft}
+
+
+%\subsection{Heart example}
+
+Now let's get more ambitious.  A heart shape must have two simultaneous
+beginnings, a short stretch where there are two separated text areas
+ending with a join,
+whereafter there is just one block of text leading to the final
+bottom point.  Figure \vref{fig:heart} shows the heart-shape
+specification.
+Find the two "b" specifiers at the beginning, and find the "j" a few
+lines below; notice that above the "j" there are two segments per line,
+but only one below it~-- the two lobes join at the "j"
+point: 20.  I drew this heart freehand, and  measured
+lengths from the sketch, so you should be able to do better! The spec
+has many scan lines so that the smooth curves are preserved, but there
+are probably more lines than necessary.
+
+\begin{figure}[p]
+\small
+\begin{minipage}[b]{21em}
+\renewcommand{\baselinestretch}{.9}\selectfont
+\begin{verbatim}
+\newcommand\heartshape{ {20}
+{0}   b{13.32}         b{26.68} \\
+{.14} t{10.12}{4.42}   t{25.46}{4.42} \\
+{.7}  t{9.14}{7.16}    t{23.7}{7.16} \\
+{1.4} t{8.4}{9.02}     t{22.58}{9.02} \\
+{2.1} t{7.82}{10.42}   t{21.76}{10.42} \\
+{2.8} t{7.36}{11.58}   t{21.06}{11.58} \\
+{3.5} t{6.98}{12.56}   t{20.46}{12.56} \\
+{4.2} t{6.68}{13.32} j t{20}{13.32} \\
+{4.9}   t{6.48}{27.04} \\
+{5.6}   t{6.34}{27.32} \\
+{6.3}   t{6.28}{27.44} \\
+{7}     t{6.26}{27.48} \\
+{7.7}   t{6.27}{27.46} \\
+{8.4}   t{6.32}{27.36} \\
+{9.1}   t{6.4}{27.2}   \\
+{9.8}   t{6.52}{26.96} \\
+{10.5}  t{6.68}{26.64} \\
+{11.9}  t{7.12}{25.76} \\
+{13.3}  t{7.72}{24.56} \\
+{14.7}  t{8.51}{22.98} \\
+{16.1}  t{9.5}{21}    \\
+{17.5}  t{10.69}{18.62} \\
+{18.9}  t{12.08}{15.84} \\
+{20.3}  t{13.7}{12.6}  \\
+{21.7}  t{15.62}{8.76} \\
+{22.4}  t{16.7}{6.6}   \\
+{23.1}  t{17.87}{4.26} \\
+{24.6}  e{20}
+}
+\end{verbatim}
+\end{minipage}%
+\hspace*{0pt plus 1fill minus \linewidth}%
+\addtolength{\linewidth}{-13em}
+\begin{minipage}[b]{\linewidth}
+\footnotesize
+\def~{\,}
+\heartpar{%
+\mbox{ }In faith, I do not love thee with mine eyes,
+~For they in thee a thousand errors note,
+~But is my heart that loves what they despise,
+~Who in despite of view is pleased to dote;
+~Nor are mine ears with thy tongue's tune delighted,
+~Nor tender feeling to base touches prone,
+~Nor taste nor smell, desire to be invited
+~To any sensual feast with thee alone;
+~But my five wits nor my five senses can
+~Dissuade one foolish heart from serving thee,
+~Who leaves unswayed the likeness of a man,
+~Thy proud heart's slave and vassal wretch to be;
+~Only my plague thus far I count my gain,
+~That she that makes me sin awards me pain.}
+~~~~
+
+\end{minipage}
+\vspace{-8pt}
+\caption{Specification for the heart shape, and an example.}
+\label{fig:heart}
+\end{figure}
+\begin{figure}[p]
+\begin{minipage}{0.7\linewidth}
+\small
+\renewcommand{\baselinestretch}{.9}
+\begin{verbatim}
+\newcommand\nutshape{ {0}
+{0}     b{0}\\
+{0}     t{-12.5}{25}\\
+{11.65} t{-19.23}{19.23} s t{0}{19.23}\\
+{11.99} t{-19.42}{16.835}  t{2.59}{16.835}\\
+{12.99} t{-20}{15}         t{5}{15}\\
+{14.58} t{-20.92}{13.85}   t{7.07}{13.85}\\
+{16.65} t{-22.11}{13.45}   t{8.66}{13.45}\\
+{19.06} t{-23.51}{13.85}   t{9.66}{13.85}\\
+{21.65} t{-25}{15}         t{10}{15}\\
+{24.24} t{-23.51}{13.85}   t{9.66}{13.85}\\
+{26.65} t{-22.11}{13.45}   t{8.66}{13.45}\\
+{28.72} t{-20.92}{13.85}   t{7.07}{13.85}\\
+{30.31} t{-20}{15}         t{5}{15}\\
+{31.31} t{-19.42}{16.835}  t{2.59}{16.835}\\
+{31.65} t{-19.23}{19.23} j t{0}{19.23}\\
+{43.3}  t{-12.5}{25}\\
+{43.3}  e{0} }
+\end{verbatim}
+\end{minipage}\hspace{10pt minus 300pt}%
+\begin{minipage}{0.4\linewidth}
+\scriptsize \spaceskip=1pt plus 1pt minus .5pt
+\Shapepar\nutshape o o o o o o o o o o o o o o o o o o o o o o 
+ o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o 
+ o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o 
+ o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o o 
+ o o o o o o o o o o o o o o 
+\par
+\end{minipage}\par
+\caption{Specification for the nut shape, and an example.}
+\label{fig:nut}
+\end{figure}
+
+\medskip
+%\subsection{Holes -- nut shape}
+
+Text shapes can have holes.  For example, a doughnut-shape would have a "b"
+on the first line, followed by some lines with a single "t",  then a line with
+"t s t" at the start of the hole. The hole is represented by lines with two
+"t" specs~-- the gap between them is the hole.  A line with  "t j t" ends the
+hole.  There are more lines with single "t", and then an "e" line to end
+with.  Such a doughnut is used by the "\CDlabel" shape, but the
+example given in Figure~\vref{fig:nut} is a nut --- not a doughnut, 
+but a hex-nut (for a machine screw or bolt): a regular hexagon with a 
+circular hole in the center.
+The hexagon is flat on top and bottom so the specification begins and
+ends like the square shape. The circle is rendered as a 24-gon, beginning
+with a split ("s") of the surrounding text and ending with a join ("j").
+If the vertical spacing of the scan lines looks odd, it is because the 
+hexagon alone would need just 5 scan lines (at only 3 distinct locations), 
+but the circle needs many; the points on the circle are at 15-degree 
+intervals.
+
+\section{Configuration}
+
+There are several parameters that control details of how "\shapepar"
+functions, varying from those that will be set often, to some that
+are unusual and cryptic, and some that require editing shapepar.sty 
+itself.  Here we will explain some of those operational details and 
+the parameters that control them.
+
+\subsection{Cut-out separation}
+
+The cutout separation is applied by looking at the paragraph shape
+expanded by "\cutoutsep" in `all' directions, to give the same gap at
+every slope.  This is the parameter that the user is most likely to 
+change.  
+
+In reality, the cutout calculation has some messy details.
+The shape's \mbox{`"\parshape"'} is regenerated at a finer line-spacing 
+(but the same scale factor as for the shaped paragraph), and the 
+leftmost (or rightmost) position of each finer-parshape line is 
+used to exclude (cut out) an octagon (as an approximation to a 
+circle) centered on that position. The octagon is not even regular, 
+but is extended vertically by
+$\hbox{"\cutoutsepstretch"}\times\hbox{"\baselineskip"}$ to allow
+for the height and depth of characters.  Figure~\vref{fig:cutoutsep}
+illustrates these parameters.
+
+\begin{figure}[htbp]
+\small
+\setlength\cutoutsep{53pt}
+\renewcommand\cutoutsepstretch{1.0}
+\cutout{r}(-\cutoutsep,7\baselineskip)
+\shapepar[1pt]\squareshape
+\setlength\unitlength{1pt}\thinlines
+\begin{picture}(0,0)
+\put(0,0){\makebox[1pt]{A}}
+%
+ \xdef\CUa{\Pointless\cutoutsep}
+ \lineskiplimit=.414\cutoutsep
+ \xdef\CUb{\Pointless\lineskiplimit}
+ \advance\lineskiplimit\cutoutsepstretch\baselineskip
+ \xdef\CUc{\Pointless\lineskiplimit}
+ \advance\lineskiplimit .586\cutoutsep
+ \xdef\CUd{\Pointless\lineskiplimit}
+ \lineskiplimit=.586\cutoutsep
+ \xdef\CUe{\Pointless\lineskiplimit}
+ \lineskiplimit=\cutoutsep
+ \advance\lineskiplimit -5pt
+ \xdef\CUf{\Pointless\lineskiplimit}
+ \advance\lineskiplimit\cutoutsepstretch\baselineskip
+ \xdef\CUg{\Pointless\lineskiplimit}
+%
+% Outer Octagon
+\put(-\CUa,-\CUc){\line(0,1){\CUc}}
+\put(-\CUa,0){\line(0,1){\CUc}}
+\put(\CUa,-\CUc){\line(0,1){\CUc}}
+\put(\CUa,0){\line(0,1){\CUc}}
+\put(-\CUa,\CUc){\line(1,1){\CUe}}
+\put(-\CUa,-\CUc){\line(1,-1){\CUe}}
+\put(\CUa,\CUc){\line(-1,1){\CUe}}
+\put(\CUa,-\CUc){\line(-1,-1){\CUe}}
+\put(-\CUb,\CUd){\line(1,0){\CUb}}
+\put(0,\CUd){\line(1,0){\CUb}}
+\put(-\CUb,-\CUd){\line(1,0){\CUb}}
+\put(0,-\CUd){\line(1,0){\CUb}}
+%
+% Inner Octagon
+\put(-\CUa,\CUb){\line(1,1){\CUe}}
+\put(-\CUa,-\CUb){\line(1,-1){\CUe}}
+\put(\CUa,\CUb){\line(-1,1){\CUe}}
+\put(\CUa,-\CUb){\line(-1,-1){\CUe}}
+\put(-\CUb,\CUa){\line(1,0){\CUb}}
+\put(0,\CUa){\line(1,0){\CUb}}
+\put(-\CUb,-\CUa){\line(1,0){\CUb}}
+\put(0,-\CUa){\line(1,0){\CUb}}
+%
+% Distance arrows
+\put(-10,0){\vector(0,1){\CUd}}
+\put(-10,0){\vector(0,-1){0}}
+\put(10,0){\vector(0,1){\CUa}}
+\put(10,0){\vector(0,-1){0}}
+\put(0,0){\vector(-1,0){\CUa}}
+\put(0,0){\vector(1,0){0}}
+\put(0,-\CUf){\vector(-1,0){\CUb}}
+\put(0,-\CUf){\vector(1,0){\CUb}}
+\put(\CUf,0){\vector(0,1){\CUc}}
+\put(\CUf,0){\vector(0,-1){\CUc}}
+%
+% Distance labels
+\put(\CUf,0){\makebox[0pt]{$c$ \ \ }}
+\put(0,-\CUf){\makebox[0pt]{\shortstack{$b$\\~}}}
+{
+ \unitlength=.5pt % half-distances for centered labels
+ \put(-\CUa,-15){\makebox[0pt]{$a$}}
+ \put(-12,\CUd){$d$}
+ \put(28,\CUa){$a$}
+}
+\end{picture}
+\par
+\refstepcounter{figure}\label{fig:cutoutsep}%
+Figure \thefigure: This is an example with a tiny (unrecognizable)
+square shaped `paragraph' and a large cutout separation.  Here "\cutoutsep" is
+set to \the\cutoutsep, and "\cutoutsepstretch" is \cutoutsepstretch. Since the
+`paragraph' is so small (`A'), and the separation so great, the cutout
+is dominated by the octagonal expansion of the shape which
+is drawn for "\cutoutsep" alone and for the full exclusion zone
+including "\cutoutsepstretch".  The labelled distances are
+as follows:
+$a={}$"\cutoutsep"; $b=0.828$\,"\cutoutsep";
+$c=b+2\times\mbox{"\cutoutsepstretch"}\times\mbox{"\baselineskip"}$;
+$d=a+\mbox{"\cutoutsepstretch"}\times\mbox{"\baselineskip"}$.
+The exclusion zone (outer octagon) applies to the baseline position
+of each paragraph line, so the characters do intrude into the octagon
+from above and below.  The vertical expansion factor "\cutoutsepstretch"
+should be chosen to just counteract this effect, leaving a symmetric
+border of white space (inner octagon).
+In ordinary use, with a larger shaped paragraph and a smaller
+separation, the expansion of the shape should appear equal in all directions
+(circular); it is only in this contrived example that it is revealed
+as an octagon. 
+\par
+\end{figure}
+
+A good place to set these parameters is between "\cutout"
+and "\shapepar" so they apply locally to just that instance.
+
+\configpar{cutoutsep}
+ {Distance separating shaped paragraph and the surrounding cut-out text.}
+ {length (dimen register)}
+ {12\,pt}
+ {"\setlength"}
+ {"\setlength{\cutoutsep}{1cm}" \ or \ "\cutoutsep= 5pt"}
+
+\configpar{cutoutsepstretch}
+ {Vertical extension of cutout gap, given as a fraction of "\baselineskip",
+  which accounts for the height and depth of characters.  Note that,
+  even with a good setting for "\cutoutsepstretch", the separation
+  above and below the shaped paragraph may not match the side spacing
+  simply because the cutout text has rigid baseline skips.
+  \interlinepenalty 1000\nopagebreak[0]}
+ {macro (`command', but really `data')}
+ {.5}
+ {"\renewcommand" or "\def"}
+ {"\renewcommand{\cutoutsepstretch}{.75}"}
+
+\configpar{RefineBaselines}
+ {Fineness of cut-out matching to lines (number of reference points
+  per line of cut-out text).}
+ {integer constant (not a \LaTeX\ counter)}
+ {3}
+ {"\renewcommand", "\def", "\chardef", "\mathchardef" etc.}
+ {\rightskip\fill"\renewcommand{\RefineBaselines}{2}" \ or \ 
+        \hbox{"\chardef\RefineBaselines= 4"}}
+
+
+\subsection{Scale length optimization}
+
+When "\shapepar" is used without an explicit scale length, it must
+determine a scale that allows the given text to fill the shape.
+It makes a first guess by comparing the length of the text with
+the area of the shape specification, and then typesets the paragraph
+at that scale. If the text does not fit well, then "\shapepar"
+changes the scale and tries again.  It will make as many as
+"\ScaleMaxTries" trial paragraphs:
+
+\configpar{ScaleMaxTries}
+ {How many times will "\shapepar" try to get the size of the paragraph?}
+ {integer constant (not a \LaTeX\ counter)}
+ {9}
+ {"\renewcommand", "\def", "\chardef", "\mathchardef" etc.}
+ {"\renewcommand{\ScaleMaxTries}{7}" \ or \ 
+    \hbox{"\chardef\ScaleMaxTries= 5"}}
+
+\medskip
+It is quite common that text will not esaily fit a shape even when
+the best scaling is chosen, so it is counter-productive to set a very
+high value for "\ScaleMaxTries".
+
+There are many other numbers explicitly coded into shapepar.sty that
+control the scale-optimization process: choosing the initial guess,
+choosing the initial step size (`dscale'), changing dscale by different
+factors (`fac'), fitting the text to the paragraph shape, and more.
+These are accompanied by the comment `optimize', and they can be
+changed by editing shapepar.sty.
+
+\subsection{Applying the shape}
+
+"\shapepar" cheats a bit when the horizontal gap between two bits of text
+is small (like down in the notch of "\heartpar").  When the gap is less
+than an interword space it is eliminated, and the texts are joined; when
+it is somewhat larger it is expanded to give it more visibility.  Likewise,
+when a segment of text is too small, it is eliminated.  There are three
+parameters to control this behavior. Although they are lengths, they are
+all macros (commands) rather than dimen registers in order to use
+font-size-based length units (em).
+
+\configpar{SmallestGap}
+ {Smallest gap size allowed; smaller gaps will be eliminated (text joined).}
+ {macro (command) giving a length}
+ {.4\,em}
+ {"\renewcommand" or "\def"}
+ {"\renewcommand{\SmallestGap}{.5em}"}
+
+\configpar{SmallGap}
+ {Small gap size; smaller gaps will be enlarged.}
+ {macro (command) giving a length}
+ {1\,em}
+ {"\renewcommand" or "\def"}
+ {"\renewcommand{\SmallGap}{2em}"}
+
+\configpar{SmallestSegment}
+ {Smallest segment allowed; smaller will be omitted.}
+ {macro (command) giving a length}
+ {.2\,em}
+ {"\renewcommand" or "\def"}
+ {"\renewcommand{\SmallestSegment}{10pt}"}
+
+\subsection{Feedback}
+
+Since the processing is slow, some messages will be displayed to show how
+things are going.  \LaTeX\ users can disable this feedback by loading
+shapepar with
+"\usepackage""[quiet]""{shapepar}", or they can get more verbose
+messages by requesting "\usepackage""[noisy]""{shapepar}".  There are
+even more verbose messages that can be activated by removing the \%
+that hides them, but they are only useful for debugging shapepar.sty
+itself.
+
+% Kludge strike-through because I don't want to load more packages
+
+\section[Future improvements]%
+ {\begin{tabular}[t]{l}Deficiencies\\[-1.5ex]\hline\end{tabular}
+  Future Improvements}
+
+\begin{itemize}
+\item The shape is followed by the text baselines, and this makes the
+shaped paragraph marginally taller; mis-fitting of baselines makes the
+paragraph squatter.
+
+\item Exact placement of CD-labels on label stock and of graphics in a
+cut-out requires a box reference-point defined by the shape alone, 
+not the text.  But portions of the text spill out of the shape and 
+might go off the label.  How to handle best?
+
+\item The restriction to a single paragraph is a pain, especially
+for fixed-scale shapes.  The pre-boxing and un-boxing of the text 
+forces a single paragraph without displays.  Omitting pre-boxing is
+easiest with fixed-scale, but even then there may be multiple
+typesettings.  Global assignments will accumulate and my register
+re-use will cause conflicts.
+
+\item The restrictions in cut-out text are likewise a problem.
+Should upgrade wrapfig.sty and merge some code.
+
+\item Discrete segments and fixed-scale suggest an application to 
+magazine or poster layout.  For this to be useful, excess text 
+should be able to overflow onto the next page, and complex text 
+(multiple paragraphs, lists, and displays) must be accepted.
+
+\end{itemize}
+
+\end{document}
+

@@ -1,0 +1,343 @@
+% arara: pdflatex
+% !arara: biber
+% !arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the CNTFORMATS package
+% 
+%   A different way to read counters
+% 
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://github.com/cgnieder/cntformats/
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% Copyright 2012-2014 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+\documentclass[load-preamble+]{cnltx-doc}
+\usepackage{cntformats}
+
+\setcnltx{
+  package  = {cntformats} ,
+  authors  = Clemens Niederberger ,
+  email    = {contact@mychemistry.eu} ,
+  url      = {https://github.com/cgnieder/cntformats/} ,
+  info     = {A different way to read counters} ,
+  add-cmds = {
+    @cntfmts@parsed@pattern, AddCounterPattern, 
+    eSaveCounterPattern,  
+    NewCounterPattern, NewPatternFormat,
+    ReadCounterFrom, ReadCounterPattern, ReadCounterPatternFrom,
+    SaveCounterPattern
+  } ,
+  add-silent-cmds = {
+    alphalph,
+    cs,
+    ExplSyntaxOff, ExplSyntaxOn,
+    int,
+    myoddnumber,
+    numexpr, ordinalnum,
+    relax,
+    somesetupcommand,
+    tmpa, tmpb, the
+  }
+}
+
+\defbibheading{bibliography}[\bibname]{\addsec{#1}}
+
+\newcommand*\at{\cnltxat}
+
+\usepackage[biblatex]{embrac}[2012/06/29]
+  \ChangeEmph{[}[,.02em]{]}[.055em,-.08em]
+  \ChangeEmph{(}[-.01em,.04em]{)}[.04em,-.05em]
+
+\usepackage{booktabs,array,ragged2e}
+\usepackage{subcaption}
+
+% ----------------------------------------------------------------------------
+% example definitions that have to be done in the preamble:
+\usepackage{alphalph}
+\NewPatternFormat{aa}{\alphalph}
+\usepackage{fmtcount}
+\NewPatternFormat{o}{\ordinalnum}
+\newcommand*\myoddnumber[1]{\the\numexpr2*(#1)-1\relax}
+\NewPatternFormat{x}{\myoddnumber}
+\NewCounterPattern{test}{t}
+
+\begin{document}
+
+\section{Motivation}
+\cntformats\ provides a way to format counters with what I will call patterns.
+This does not in any way effect the usual \LaTeXe\ way of treating counters
+and does not use \cs*{the\meta{counter}} nor is it affected by the
+redefinition of them.
+
+This package is aimed at package or class authors and probably not very useful
+for document authors.
+
+When I first had the idea for this package the idea of what it does already
+existed as part of the \pkg{exsheets}~\cite{bnd:exsheets} package.  I can't
+recall why I came up with the idea in the first place or why I originally
+wanted a new syntax for formatting the \code{question} counter.  I am also not
+convinced any more that it is a good idea.  Anyway, here we are.
+
+Until and including v0.6\changedversion{0.7} \cntformats{} used to be part of
+the \pkg{exsheets} bundle.  Since version 0.7 it is distributed as a package
+of its own.
+
+\section{License and Requirements}\label{sec:license}
+\license
+
+\cntformats\ requires the \needpackage{etoolbox} package~\cite{pkg:etoolbox}
+and the \pkg*{cnltx-base}\footnote{\CTANurl{cnltx}} package~\cite{bnd:cnltx}.
+
+\section{Example}
+A use case typically looks as follows:
+\begin{example}[side-by-side]
+  \ReadCounterPattern{se.sse}
+\end{example}
+where the key \code{se} stands for the current value of the \code{section}
+counter and \code{sse} for \code{subsection}, respectively. \code{se.sse} is
+an example for what will be called \emph{pattern}. The keys for the counters
+can have optional arguments that specify the format:
+\begin{example}[side-by-side]
+  \stepcounter{subsection}
+  \ReadCounterPattern{se[A](sse[r])}
+\end{example}
+\code{A} stands for \cs*{Alph} and \code{r} for \cs*{roman}.  A complete list
+can be found in table~\ref{tab:predefined:formats} on
+page~\pageref{tab:predefined:formats}.  As you can see you can insert
+arbitrary other tokens in a pattern that won't be changed. It is important to
+notice, though, that the patterns are only replaced if they're \emph{not}
+placed in a braced group!
+
+\begin{example}[side-by-side]
+  \ReadCounterPattern{{se[A](sse[r])}}
+\end{example}
+
+I would imagine that the argument to \cs{ReadCounterPattern} is usually
+supplied by a user setting an option \ldots
+\begin{sourcecode}
+  \somesetupcommand{
+    counter-format = se[A](sse[r])
+  }
+\end{sourcecode}
+\ldots{} and then internally used by the corresponding package or class.
+
+
+\section{Usage}
+In the following description of the available commands the symbol
+\textcolor{expandable}{\expandablesign} means that the command is expandable.
+
+In order to make counters known to \cntformats\ the following commands are used:
+\begin{commands}
+  \command{AddCounterPattern}[\sarg\oarg{module}\marg{counter}\marg{pattern}]
+    This command will make the (existing) counter \meta{counter} known to
+    \cntformats\ and assign the pattern \meta{pattern} to it.
+  \command{NewCounterPattern}[\sarg\oarg{module}\marg{counter}\marg{pattern}]
+    This command will create a new counter \meta{counter}, make it known to
+    \cntformats\ and assign the pattern \meta{pattern} to it.
+  \command{ReadCounterFrom}[\oarg{module}\marg{counter}\marg{internal cmd}]
+    If you use one of the commands above with the starred version the number
+    for the pattern is \emph{not automatically fetched} from the internal
+    \cs*{c@\meta{counter}}.  This can (and must) now be assigned with
+    \cs{ReadCounterFrom}  where \meta{internal cmd} is the macro that holds
+    the number.
+\end{commands}
+The commands above can only be used in the document preamble.
+
+After the creation of these pattern markers one wants to be able to use them.
+There are a number of macros that allow different aspects of usage.
+\begin{commands}
+  \command{ReadCounterPattern}[\oarg{module}\marg{pattern}]
+    Reads, interprets and prints a pattern.
+  \expandable\command{\at cntfmts\at parsed\at pattern}
+    After \cs{ReadCounterPattern} has been used the current pattern
+    interpretation is stored in this macro.  The \emph{interpretation} is
+    \emph{not} what is printed.  See the examples below for details.
+  \command{ReadCounterPatternFrom}[\oarg{module}\marg{macro that holds
+    pattern}]
+    Reads, interprets and prints a pattern that's stored in a macro.\\
+    Otherwise the same as \cs{ReadCounterPattern}.
+  \command{SaveCounterPattern}[\marg{cmd a}\marg{cmd b}\marg{pattern}]
+    Saves the \meta{pattern} in \meta{cmd a} and the interpreted pattern in
+    \meta{cmd b}.
+  \command{eSaveCounterPattern}[\oarg{module}\marg{cmd a}\marg{cmd
+    b}\marg{pattern}]
+    Saves the \meta{pattern} in \meta{cmd a} and the expanded pattern in
+    \meta{cmd b}.
+  \command{SaveCounterPatternFrom}[\oarg{module}\marg{cmd a}\marg{cmd
+    b}\marg{macro that holds pattern}]
+    Like \cs{SaveCounterPattern} but reads the pattern from a macro.
+  \command{eSaveCounterPatternFrom}[\oarg{module}\marg{cmd a}\marg{cmd
+    b}\marg{macro that holds pattern}]
+    Like \cs{eSaveCounterPattern} but reads the pattern from a macro.
+\end{commands}
+
+The optional argument \meta{module} should be specific for a package, say, so
+that different patterns for the \code{section} counter for example don't
+interfer with each other.  This means: \cs{ReadCounterPattern} and friends
+\emph{only} read the patterns known to the specified module!  If you leave the
+argument the default module \code{cntfmts} is used.
+
+The \pkg{exsheets} package uses the commands with the module \code{exsheets}.
+You can find the following lines in \pkg{exsheets}' code:
+\begin{sourcecode}
+  \AddCounterPattern*[exsheets]{section}{se}
+  \ReadCounterFrom[exsheets]{section} \l__exsheets_counter_sec_int
+  \NewCounterPattern*[exsheets]{question}{qu}
+  \ReadCounterFrom[exsheets]{question} \l__exsheets_counter_qu_int
+\end{sourcecode}
+
+Another example would be the \pkg{tasks} package~\cite{pkg:tasks}:
+\begin{sourcecode}
+  \NewCounterPattern*[tasks]{task}{tsk}
+  \ReadCounterFrom[tasks]{task} \g__tasks_int
+\end{sourcecode}
+
+In fact \pkg{exsheets} loads the \pkg{tasks} package and also does the
+following
+\begin{sourcecode}
+  \AddCounterPattern*[tasks]{question}{qu}
+  \ReadCounterFrom[tasks]{question}\l__exsheets_counter_qu_int
+\end{sourcecode}
+so \pkg{tasks} knows about the question counter and uses the same pattern as
+\pkg{exsheets} does.
+
+Now let's see a short example that hopefully explains what the other macros
+do:
+\begin{example}
+  % preamble
+  % \NewCounterPattern{test}{t}
+  \setcounter{test}{11}
+  \ReadCounterPattern{t}
+  \ReadCounterPattern{t[a]} \\
+  \ttfamily\makeatletter
+  \meaning\@cntfmts@parsed@pattern
+  
+  \bigskip
+  \SaveCounterPattern\tmpa\tmpb{t[a]}
+  \meaning\tmpa \\
+  \meaning\tmpb
+  
+  \bigskip
+  \eSaveCounterPattern\tmpa\tmpb{t[a]}
+  \meaning\tmpa \\
+  \meaning\tmpb
+\end{example}
+You can see that somehow an additional \cs*{@empty} found its way into the
+interpreted pattern. This is due to the fact that reading optional arguments
+expandably isn't easy and must have some safety net.  In this case looking for
+an optional argument is done by reading the token following the command as
+argument.  If there is no option then \cs*{@empty} is found so no other tokens
+provided by users get read which might otherwise lead to strange
+effects/outcome/errors\footnote{Imagine for example there would be \emph{no}
+  token following the command -- nasty error messages could follow.}.  On the
+other hand the grabbing of the next token can lead to spaces after the pattern
+being ignored, see the next example: if there is no optional argument then the
+next token is grabbed ignoring the spaces as is normal for a \TeX{} macro.
+The next example demonstrates this.
+
+A word of caution: although I used a one-letter pattern in the above example I
+would not recommend this.  The pattern should consist of two or more
+characters otherwise it might get inconvenient hiding the characters that you
+\emph{don't} want replaced:
+\begin{example}
+  \setcounter{test}{3}
+  Where is the first space: \ReadCounterPattern{t t[r] t}?\par
+  \ReadCounterPattern{every instance of the letter t{} is replaced}
+\end{example}
+
+\section{Predefined and New Patterns and Format Keys}
+\subsection{Predefined Patterns and Format Keys}
+\cntformats\ predefines a number of pattern keys. These are listed in
+table~\ref{tab:predefined:patterns}.
+
+\subsection{New Patterns and Format Keys}
+Table~\ref{tab:predefined:formats} lists the predefined formats.  If you want
+you can add own formats.
+\begin{commands}
+  \command{NewPatternFormat}[\marg{pattern}\marg{format}]
+    \meta{format} is a number presentation command like \cs*{@alph}, \ie,
+    it needs a mandatory argument that takes a number.  It is used in
+    \meta{format} \emph{without} its argument.  This command can only be used
+    in the preamble.
+\end{commands}
+
+\begin{table}
+  \centering
+  \caption{Predefined Patterns and Format Keys.}
+  \addtocounter{table}{-1}% necessary fix for subcaption and KOMA
+  \begin{minipage}{.48\linewidth}
+    \centering
+    \subcaption{Predefined Patterns for the module \code{cntfmts}.}
+    \label{tab:predefined:patterns}
+    \begin{tabular}{>{\ttfamily}l>{\ttfamily}l}
+      \toprule
+        \normalfont\bfseries counter & \normalfont\bfseries pattern \\
+      \midrule
+        chapter       & ch \\
+        section       & se \\
+        subsection    & sse \\
+        subsubsection & ssse \\
+        paragraph     & pg \\
+     \bottomrule
+    \end{tabular}
+  \end{minipage}
+  \begin{minipage}{.48\linewidth}
+    \centering
+    \subcaption{Predefined Format Keys}
+    \label{tab:predefined:formats}
+    \begin{tabular}{>{\ttfamily}ll}
+      \toprule
+        \normalfont\bfseries key & \normalfont\bfseries format \\
+      \midrule
+        1 & \cs*{arabic} \\
+        a & \cs*{alph} \\
+        A & \cs*{Alph} \\
+        r & \cs*{roman} \\
+        R & \cs*{Roman} \\
+     \bottomrule
+    \end{tabular}
+  \end{minipage}
+\end{table}
+
+Here are now a few examples of possible new patterns. Suppose the following code
+in the preamble:
+\begin{sourcecode}
+  \usepackage{alphalph,fmtcount}
+  \newcommand*\myoddnumber[1]{\the\numexpr2*(#1)-1\relax}
+
+  \NewPatternFormat{aa}{\alphalph}
+  \NewPatternFormat{o}{\ordinalnum}
+  \NewPatternFormat{x}{\myoddnumber}
+
+  \newcounter{test}
+  \NewCounterPattern{test}{t}
+  \setcounter{test}{4}
+\end{sourcecode}
+
+Then we can use the new pattern and the new formats as
+follows:\setcounter{test}{4}
+\begin{example}
+  \ReadCounterPattern{t[aa]}
+  \ReadCounterPattern{t[o]}
+  \ReadCounterPattern{t[x]}
+\end{example}
+
+\end{document}

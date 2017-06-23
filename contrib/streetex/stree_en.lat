@@ -1,0 +1,959 @@
+%
+% \documentstyle[12pt,stree]{article} % if LaTeX 2.09
+%
+\documentclass[12pt]{article}
+\usepackage{stree}
+%
+% WARNING: `stree' employs emTeX specials (em:lineto, etc.)
+%
+\begin{document}
+
+\def\<#1>{$\langle$#1$\rangle$}
+\def\UPSILON{\char'7}
+\def\XyM{X\kern-.30em\smash{\raise.50ex\hbox{\UPSILON}}\kern-.30em{M}}
+\def\XyMTeX{\XyM\kern-.1em\TeX}
+\def\ChemTeX{Chem\kern-0.1em\TeX}
+%\def\verb{\sverb}
+\def\CNMR{$^{13}$C NMR}
+
+\def\topfraction{.9}
+\def\bottomfraction{.9}
+\def\textfraction{.1}
+
+\font\twelvett=cmtt12
+%\def\tt{\twelvett}
+\def\0{\twelvett\symbol{92}}
+\def\1{\twelvett\symbol{123}}
+\def\2{\twelvett\symbol{125}}
+\def\4{\twelvett\symbol{36}}
+\def\5{\twelvett\symbol{95}}
+
+\pagestyle{myheadings}
+\thispagestyle{empty}
+
+\markright{macropackage for typesetting structural formulas with LaTeX}
+
+\begin{center}
+\LARGE
+One more macropackage for typesetting structural formul\ae\
+with \LaTeX
+
+\bigskip
+\bigskip
+\normalsize Igor Strokov$^*$
+
+\bigskip
+\small Novosibirsk Institute of Organic Chemistry, Siberian Division of
+Russian Academy of Sciences,\\
+Lavrentiev avenue~9, Novosibirsk~90, Russia
+\end{center}
+
+\bigskip
+\noindent
+A new macropackage for \LaTeX\ provides a high quality, easy and uniform
+typesetting of structural formulas of almost any complexity. The use of the
+new package called \treeTeX\ implies a depth-in traversal of a
+structure and description of bonds and vertex labels being passed. Additional
+features of \treeTeX\ include input of mass spectra and simple flow charts.
+
+\bigskip
+\noindent
+keywords: TeX, LaTeX, chemical structures
+
+\insert\footins{\small\rm $^*$ Tel: (3832) 354745,
+E-mail: strokov@nioch.nsc.ru}
+
+\clearpage
+
+\section{Introduction}
+
+The choice of tools for scientific publishing is not very wide: most often it
+is MS Word$^{\rm TM}$ or \TeX\ --- a typesetting language and system,
+developed in the beginning of 80--th by Knuth (Knuth, 1984). Briefly saying,
+\TeX\ is eminent because of the detailed account of aspects affecting
+document appearance and, therefore, the perfect quality, practically
+unreachable by modern word processors. From the other side, \TeX\ is not very
+comfortable for working with graphics, though it lets to import either
+various bitmaps (with sacrifice of device independence) or PostScript
+images.  The last decision can lead to almost any visual effect but it
+requires special soft-- and/or hardware understanding PostScript. At the same
+time, \TeX\ itself is quite a powerful program language allowing to compose
+simple charts with the aid of pseudographical fonts. The most popular format
+of \TeX, \LaTeX\ (Lamport, 1984), can be said to establish a standard on the
+pseudographics use. Although most structural formulas of organic compounds
+can be fully typeset in this way, doing it by the direct use of \LaTeX\
+drawing commands is too laborious. There are at least three macros designed
+especially for chemical structures typesetting. Ramek's package (Ramek, 1990)
+is rather compact and easy in use, but it is distinctive by a
+formulas style which is rare in contemporary literature.
+More complex packages of Haas--O'Kane (Haas \& O'Kane, 1987) and Fujita
+(Fujita, 1994) are free from this drawback. Both of them have similar design
+based on a set of different macrocommands, each for a specific chemical
+fragment.  Usually a command defines some ring system, whose inner bond types
+and substituents can be altered by means of command parameters. For example,
+in Fujita's \XyMTeX\ 5,5-dimethylcyclohexen-2-on-1 is entered as
+\verb"\cyclohexanev[b]{1D==O;5Sb==;5Sa==}", where {\tt[b]} specifies the C=C
+double bond, {\tt 1D==O} --- the carbonyl group, and {\tt 5Sb==;5Sa==} ---
+two methyl substituents. Here, like in other cases, a command name
+correlates to a compound's systematic notation, which facilitates
+understanding of a command meaning. From the other side, description of
+structures on the level of characteristic fragments has some disadvantages.
+First of all, such fragments are that numerous, so any significant covering
+of their set is practically unreacheable. This task is not fulfilled in both
+\ChemTeX\ and \XyMTeX, nevertheless the complete description of each one forms
+quite a volume book. Additionally, in cases when a formula consists of many
+fragments, their disposal on one figure becomes a tiresome task of
+coordinates calculation for nodes to be linked.
+
+Therefore, making a description on a lower level of distinct bonds (after
+Ramek's steps) seems to be more appropriate. Bonds diversity compared to
+that of characteristic fragments is drastically lower, therefore formulas
+typesetting in terms of bonds promises to be more simple and universal. On
+the back side there is a possible loss of input speed and convenience.
+However, author's experience gave no such evidences. To support
+this statement let us examine how exactly structural formulas are entered
+in a new macropackage called {\em\treeTeX.}
+
+Following the \TeX\ programmers' tradition, the new package name receives the
+common logo. The other part of the notation reflects the new approach
+essense: a chemical \underline{s}tructure is regarded as a bond
+\underline{tree} which is
+traversed in a depth-first order. The complete \treeTeX\ constitutes single
+file {\tt stree.sty}, whose usage is common to other style files in \LaTeX.
+
+%Thus, the first line in this document looks like:
+%\begin{verbatim}
+%\documentstyle[12pt,stree]{article}
+%\end{verbatim}
+
+\section{Basics}
+
+All the input in \treeTeX\ is held through single command \verb"\stree{}". A
+formula description containing inside brackets is composed in the following
+way:  starting from any vertex
+one have to traverse all the structure moving along bonds and describing both
+the passing bonds and verteces labels met on the route. For example, the
+formula of 1-hydroxy-4-methylpyridine
+$$
+\stree{{HO}20>242\Me>68N>10}
+$$
+is entered as \verb"\stree{{HO} 2 0 >2 4 [2{CH$_3$}] >6 8N >10}".
+Starting the traversal with vertex OH one have to first input
+its label: \verb"{HO}". A label is embraced in figure
+brackets if it contains more than one token. The next character {\tt 2}
+means: draw a bond in a direction at 2 o'clock on a 12-hours
+clockface.  A traversal always has a current point (vertex). Setting a
+direction of a bond causes the current point to be shifted to the next vertex
+of this bond.  E.\ g.,\ after character {\tt2} a ring vertex becomes current.
+Character {\tt0} refers to the next bond at 0 o'clock (or upward). Then goes
+a double bond at 2 o'clock.  If a bond is not single, then one or more tokens
+(so called {\em prefixes\/}) are put before its direction to specify
+bond features. A double bond may be displayed in several ways. In our case it
+is desirable to draw the second line to the right from the main one. This
+very effect is achieved by prefix {\tt>} (the right angle bracket).
+
+The next single bond at 4 hours leads to a substituted vertex of the ring.
+Let us describe the substituent first. Construction \verb"[2{CH$_3$}]"
+fulfills this goal as follows: opening bracket {\tt[} marks a current
+vertex, 2-hours bond goes to vertex CH$_3$ (\verb"{CH$_3$}" is the label
+description), finally closing bracket {\tt]} retrieves the marked
+vertex. A methyl group is quite common although sequence
+\verb"{CH$_3$}" is not very easy to input. A shorter command
+\verb"\Me" may be used instead, so that \verb"2\Me" is equivalent to
+\verb"[2{CH$_3$}]" (any other number designating a bond direction may take
+place of digit {\tt2} here).
+
+After setting a substituent the traversal may be continued. Three bonds
+remain: at 6, 8, and 10 hours. The 6 and 10-hours bonds are double, drawn
+inside a cycle, which is indicated by prefix {\tt>}. The 8-hours bond leads
+to a vertex labelled ``N'', therefore {\tt N} follows immediately
+after {\tt8}. Figure brackets are needless here because the label is composed
+of a single token.
+
+In this example token groups related to different
+bonds are separated by spaces. Though spaces are not obligatory
+(\verb"\stree{{HO}20>242\Me>68N>10}" is also correct), one may use them to
+make an input more readable. However, a space is illicit before a
+label or a command. In our example writing \verb"8 N" (also \verb"2 {CH$_3$}"
+or \verb"2 \Me") would cause an error. In one position, however, a {\sl
+binding\/} space is required: between digit {\tt1} designating a 1-hour
+direction and following another digit (it prevents missing, say, two ones
+with eleven).
+
+\section{Formal description}
+
+Now let us try to state more rigorously the basic rules just introduced. An
+argument of \verb"\stree" is composed of descriptions of distinct bonds. To
+describe a bond one have to specify at least its direction --- most often it
+is a number of hours on a clockface. One or more prefix(es) modifying a bond
+length, degree, appearance, etc.,\ may precede a direction. If a bond leads
+to a labelled vertex, then the label must follow the direction. A command (in
+\TeX's terms --- something starting with {\tt\0}) may take place of a label,
+allowing to shorter set the same structural fragment.
+Here a label or a command is regarded as a bond attribute called {\em a
+suffix\/} due to its terminal position. In contrast to prefixes, a bond may
+have only one suffix. Besides, suffix is never preceded by a space.  The form
+\<possible prefix(es)>\<direction>\<possible suffix> may resemble a common
+verbal explanation of a traversal:  {\sl such-and-such\/} bond at {\sl
+that\/} o'clock leads to {\sl so-and-so\/} label (only words like {\sl
+such-and-such\/} are substituted by conditional tokens).
+
+\def\is{$\longrightarrow$ }
+\def\ili{\vrule{} }
+
+A question may arise: how to distinguish the current bond suffix from a prefix
+(or a direction) of the next bond? Spaces generally affect
+only a visual perception, while a computer most often ignores them obeying the
+following syntax rules given below. (The Backus--Naur form, where an arrow
+\is\ means ``is defined as'' and token \ili\ means ``or'', is used.) Let us
+start from definition of \<structure>, i.\ e.,\ of an argument of command
+\verb"\stree".
+
+\begin{description}
+\item[]
+\<structure> \is \<none> \ili \<bond>\<structure> \ili\\
+ \<structure>{\tt[}\<structure>{\tt]}\<structure>
+\end{description}
+%
+It is just a formal way to say an argument to be composed from distinct
+bonds descriptions and to contain coupled and possibly nested square
+brackets. Then a definition of \<bond> itself follows:
+
+\begin{description}\frenchspacing
+
+\item[]
+\<bond> \is \<possible prefix(es)>\<direction>\<possible suffix>%
+\<possible space(s)>
+
+\item[]
+\<possible prefix(es)> \is
+\<prefix>\<possible prefix(es)> \ili \<none>
+
+\item[]
+\<prefix> \is {\tt / \ili , \ili = \ili >
+\ili < \ili \_ \ili ' \ili ` \ili \verb"~" \ili " \ili . \ili : \ili
+* \ili \verb"^"}
+
+\item[]
+\<possible suffix> \is \<command> \ili \<label> \ili \<none>
+
+\item[]
+\<label> \is {\1}\<any sequence of tokens>{\2} \ili
+\<any character other than digit or prefix>
+
+\item[]
+\<direction> \is
+\<hours direction> \ili \<offsets direction>
+
+\item[]
+\<hours direction> \is {\tt 0 \ili
+1\<{\rm delimiter}> \tt \ili 2 \ili
+3 \ili 4 \ili 5 \ili 6 \ili 7
+\ili 8 \ili 9 \ili 10 \ili 11 \ili 12}
+
+\item[]
+\<{\rm delimiter}> \is \<space>, if the next token is a digit,
+otherwise \<none>.
+
+\item[]
+\<offsets direction> \is \<sign>\<cardinal number>%
+\<sign>\<cardinal number>
+
+\item[]
+\<plus or minus> \is {\tt +} \ili {\tt -}
+
+\end{description}
+%
+These rules eventually expand
+syntax elements in angular brackets either to definite tokens or something
+seemingly requiring no further explanation. Nothing is said, however, on
+meaning of prefixes or what \<offsets direction> means. Semantics of
+distinct syntax elements is systematically explored in the following three
+sections.
+
+\subsection{Prefixes}
+
+\begin{table}[tbh]\centering
+{\bf Table 1.} Prefixes.\par
+\medskip
+\begin{tabular}{c|c|c|c}
+prefix&feature&view&category\\ \hline\hline
+\tt /&skew&\stree{/2}&\\ \cline{1-3}
+\tt //&very skew&\stree{//2}&direction\\ \cline{1-3}
+\tt ,&at 45$^\circ$&\stree{,2}&prefixes\\ \cline{1-3}
+{\tt+} {\tt-}&\<sign> in offsets directions&&\\
+\hline\hline
+\tt =&double centered&\stree{=3}\\ \cline{1-3}
+\tt >&double right&\stree{>3}&\\ \cline{1-3}
+\tt <&double left&\stree{<3}&bond\\ \cline{1-3}
+\tt ==&triple &\stree{==3}&degrees\\ \cline{1-3}
+\tt ">&right delocalized&\stree{">3}&\\ \cline{1-3}
+\tt "<&left delocalized&\stree{"<3}&\\
+\hline\hline
+\tt \_&long ($5/3$ normal)&\stree{_3}&bond\\ \cline{1-3}
+\tt '&short ($1/3$ normal)&\stree{'3}&length\\
+\hline\hline
+\verb"~"&invisible &\\ \cline{1-3}
+\verb"~~"&invisible label&\\ \cline{1-3}
+\tt :&dotted&\stree{:3}&visual\\ \cline{1-3}
+\tt *&bold&\stree{*3}&effects\\ \cline{1-3}
+\verb"^"&arrow&\stree{^3}\\ \cline{1-3}
+\verb"^*"&sphenoid&\stree{^*3}\\
+\hline\hline
+\tt .&short invisible&\stree{C.2*}&used for marks
+\end{tabular}
+\end{table}
+
+Previously we already used prefix {\tt>} to specify double
+bonds. The full list of prefixes is given in Table 1. All the prefixes are
+divided into four categories due to their effect
+on a bond direction, type, length, or appearance.
+Prefixes of different categories can be combined with each other. For
+example, a result of \verb"\stree{_/:=4}" is a long skew dotted double bond
+at 4 o'clock: \stree{_=:/4}\ Let us consider, however, more helpful cases of
+prefixes use.
+
+Prefix {\tt.}\ (point) is especially designed to set numbers or similar
+symbols of vertices. E. g.,\ to obtain the following formula
+with numbered vertices \stree{{HO}.01 2.02 4.03 2{OH}.04}\ one have to
+enter \0stree\1\1HO\2 .01 2 .02 4 .03 2\1OH\2 .04\2\rm\ (all spaces are
+dispensable here). In the full agreement with the form
+\<prefix>\<direction>\<suffix> a construction like {\tt.01} means the
+following:  put a {\sl short invisible\/} bond at {\sl 0 hours\/} and set
+label ``1''.  Meantime, use of this prefix has two features: 1)
+a current vertex is not changed, and 2) a direction preceded
+by a point {\sl must\/} be followed by a label.  Moreover, {\sl any\/}
+character at this place is necessarily regarded as a label. It allows not to
+take, say, digit ``1'' in figure brackets without risk of missing it with a
+1-hour direction.{\sloppy\par}
+
+Symbols of vertices are usually smaller than other characters.
+A corresponding font definition is hold in macro \verb"\numfnt"
+which normally equals to \verb"\small". By changing it to, say,
+\verb"\mit" one can further mark vertices with math symbols
+just writing something like {\tt.0a} (evidently, a font for every label can
+be specified also explicitly, e.\ g.,\ \verb".0{\bf 9}").
+
+%{\samepage
+\rpic{\stree{:1:3:5^*7**9*^11}}
+Three other prefixes were used to typeset the dummy
+stereoformula in this paragraph: \verb"\stree{:1 :3 :5 *^7 **9 *^11}" (a
+result of a clockwise traversal starting from the left vertex).  Here the
+use of colon {\tt:} to draw dotted bonds is quite transparent. It is worth to
+note the same combination \verb"*^" to produce first time a widening sphenoid
+bond and second time --- a narrowing one according to a previous bond
+thickness.  Such a program acumen is welcome until one need to explicitly
+specify a bond shape. The simplest way to get control over it is to
+insert a void bond of a complementary thickness.  Thus, the isolated
+narrowing bond \stree{**17 *^3}\ is input as \verb"\stree{**17 *^3}", where
+17 means an ``unexistent'' direction corresponding to a void bond of a null
+length.
+
+Please note also the lower bond to be {\sl very\/} bold (input with
+two {\tt*}).  Merely bold bonds (introduced with one {\tt*}) are twice as
+thin, and doubly bolder than common ones. The normal thickness ({\tt 0.4 pt})
+is enough for paper documents. However, such output might look too pale
+on a transparent film. To obtain a more bold formula one may either use
+{\tt*} before every bond or say \verb"\defwmode=1" in the beginning of a
+document (\verb"\defwmode=0" returns the normal thickness).
+
+Prefix {\tt'} (apostrophe) allows to input short ``dashes''
+usually denoting free valences in fragments. For example,
+\verb"\stree{'8'0 4'6 2N '0'4}" gives formula
+\stree{'8'0 4'6 2N '0'4}. A short bond, like
+short invisible one, do not alter a current vertex.
+
+A pure invisibility can be achieved by prefix \verb"~"
+(a tilde). Invisible bonds well conform to unconnected formulas.
+E. g., reaction scheme
+$$\stree{{H$_2$C} =3{CH$_2$} ~6{CH$_2$} =9{H$_2$C}}
+\quad\longrightarrow\quad \stree{3690}$$ can be input as
+\begin{verbatim}
+\stree{{H$_2$C}=3{CH$_2$} ~6{CH$_2$}=9{H$_2$C}}
+\quad\longrightarrow\quad \stree{3690}
+\end{verbatim}
+The invisibility is also helpful for alignment purposes. The main idea is to
+poise beetling substituents with their invisible counterparts. Let the
+following three isomers be placed in a row: $$ \stree{O =2 [~0] 4 [~6] 2
+4{Cl}}\quad\stree{4 6\O 2 ~~0\O 4{Cl}}\quad\stree{4 ~~6\O 2 0\O 4{Cl}}$$
+Since formulas base lines pass through their
+geometric centers, the right decision is
+\begin{verbatim}
+\stree{O =2 [~0] 4 [~6] 2 4{Cl}} \quad
+\stree{4 6\O 2 ~~0\O 4{Cl}} \quad
+\stree{4 ~~6\O 2 0\O 4{Cl}}"
+\end{verbatim}
+A small
+explanation is required here. First, the new command \verb"\O" is intended
+for a carbonyl group.  Second, two tildes at once in clauses \verb"~~0\O" and
+\verb"~~6\O" extend invisibility to both a bond and a label which ends a bond
+(one tilde would leave hanging ``O'').
+
+Thus the combined use of prefixes gives a variety of useful effects within a
+limited set of tokens. Absence of digits and letters in this set
+allows to easy distinguish prefixes from other syntax elements.
+Only tokens {\tt+} and {\tt-} do not suit this picture: they are used to set
+\<offset directions> whose meaning will be discussed in the following
+section.
+
+\subsection{Directions}
+
+\rpic{\stree{0,23,56,89,11}}
+Let us systematically consider all different ways to specify bond directions.
+In addition to twelve {\em straight\/} directions (agreeing with numbers of
+hours) one can derive about twice as more of them with the aid of prefixes
+{\tt/} or {\tt,} (see fig.\ 1). A comma applied to one of the four numbers
+({\tt2}, {\tt5}, {\tt8}, or {\tt11}) produces four {\em median\/} directions
+at 45$^\circ$ to the horizon (they usually appear in 8-member cycles
+like one in this paragraph).
+
+\begin{figure}\centering
+\def\znakf#1{\tt #1}
+\begin{tabular}{cccc}
+\stree{[0.00][1.1 1][2.22][3.33][4.44][5.55][6.66][7.77][8.88][9.99]%
+[10.10{10}][11.11{1\rlap1}]}&
+\stree{[,2.,2{,2}][,5.,5{,5}][,8.,8{,8}][,11.,11{,11}]}&
+\stree{[:1][:2][:4][:5][:7][:8][:10][:11]%
+[/1./1{/1}][/2./2{/2}][/4./4{/4}][/5./5{/5}][/7./7{/7}][/8./8{/8}]%
+[/10./10{/10}][/11./11{/11}]}&
+\stree{[:1][:2][:4][:5][:7][:8][:10][:11]%
+[//1.//1{//1}][//2.//2{//2}][//4.//4{//4}][//5.//5{//5}][//7.//7{//7}]%
+[//8.//8{//8}][//10.//10{//10}][//11.//11{//11}]}\\
+straight&median&skew&very skew
+\end{tabular}\par\medskip
+{\bf Figure 1.} Bond directions (dotted lines show straight directions for a
+comparison with skew ones).
+\end{figure}
+
+The other prefix {\tt/} (a slash) can precede all non-orthogonal
+directions making them to decline toward the nearest
+coordinate axis by $\simeq10^\circ$. These directions (let them be called
+{\em skew\/}) well conform to 5-membered cycles. A pentagon is usually drawn
+with one strictly vertical or horizontal side. If two bonds adjacent to that
+side are made skew, then the figure becomes almost right:
+$$
+\stree{/1124/79}\quad\tabcolsep=0pt
+\begin{tabular}{l}\0stree\1\\\tt/11 2 4 /7 9\2\end{tabular}
+\qquad
+\stree{0/257/10}\quad\tabcolsep=0pt
+\begin{tabular}{l}\0stree\1\\\tt0 /2 5 7 /10\2\end{tabular}
+$$
+
+An irregular 5-membered ring
+{\bondlen3.5mm\stree{0_36810}}
+may also appear in formulas. Here are no skew directions, but one bond is
+$2/3$ longer than others. The extra length is set by prefix \verb"_"
+(an underscore),
+and the whole formula is input as
+\verb"{\bondlen3.5mm\stree{0 _3 6 8 10}}" (here assignment
+\verb"\bondlen3.5mm" answers for the reduced size of the formula, while the
+figure brackets bound the diminution).
+
+To look decent, 7-membered rings require another eight directions which lie
+even closer than skew ones to coordinate axes. These directions hold
+notation of {\em very skew\/} and require one more slash. Their use is
+illustrated below:
+$$
+\stree{1//2468//1011}\quad\tabcolsep=0pt
+\begin{tabular}{l}\0stree\11 //2\\\tt4 6 8 //10 11\2\end{tabular}
+\qquad
+\stree{531//11108//7}\quad
+\begin{tabular}{l}\0stree\15 3 1\\\tt//11 10 8 //7\2\end{tabular}
+$$
+
+Thus twelve numbers 0--11 optionally prefixed with {\tt,} or {\tt/} can
+compose $12 + 4 + 8 + 8 = 32$ different directions. Although it seems to
+cover a majority of formulas, in some cases a more general device is
+required.  Due to it a direction is set by means of {\sl two\/} numbers
+denoting horizontal and vertical bond offsets. The offset unit (called {\em
+a quad\/}) equals $1/6$ of the default bond length. Each offset is a cardinal
+number starting with a {\sl binding\/} sign {\tt+} or {\tt-} (the
+sign allows not to miss offsets from numbers of hours) and finishing by some
+non-digit.  Let us comment the following example of offset directions use:
+
+$$
+\begin{tabular}{cc}
+\stree{202/4-5-6//8-2+2 02[+1+5[=01042]+1-7]/428+2-2}&
+\begin{tabular}{l}
+\verb"\stree{202/4-5-6//8-2+2 "\\
+\verb"02[+1+5[=01042]+1-7]/428+2-2}"
+\end{tabular}
+\end{tabular}
+$$
+
+Having a figure of a formula is always helpful. Moreover, if it contains
+bonds of nonstandard length and/or direction, one should prefer a
+grid paper, one quad per a grid cell. Meanwhile preparing of such a figure
+requires a bit of skill, the further description in \verb"\stree" is rather a
+mechanical procedure. One should only keep in mind that bonds with the
+short to long side proportion $0:6$ and $3:5$ correspond to straight,
+$2:6$ --- to skew, and $1:6$ --- very skew directions and thus can be
+specified via numbers of hours.
+
+Let us start from the left methyl group
+and traverse the adjacent 5-membered ring clockwise. The first three bonds on
+this way are straight (at 2, 0, and 2 hours), the next one is skew at 4
+hours. The next bond (5 quads left and 6 down) does not conform to any
+``clock'' proportion and thus is wrote as {\tt-5-6}. For the last bond (6 left
+and 1 down) we use notation {\tt//8}, though {\tt-6-1} is also acceptable.
+The next object is the distorted hexagon around the just completed ring. Here
+sequence {\tt-2+2 02} leads to the bridge across the two rings (the bridge
+description is given in square brackets). The remained path to the first ring
+is described by {\tt/428+2-2}, where pair {\tt28} corresponds to the methyl
+group (a more general way {\tt[2]} fits too).
+
+In this example all optional spaces were omitted. The single space
+is required only between {\tt-2+2} and {\tt02[}. Indeed, with no space
+{\tt-2+202} would mean 2 quads down and 202 right --- a very long bond! The
+necessity to bind numbers is not the only specialty of
+offset directions. They also can not be used
+before commands which draw more than one bond (an explanation of this
+feature is leaved on section ``commands'').
+
+\subsection{Labels}
+
+However, before coming to commands one should stay on simpler suffixes, i.\
+e.,\ labels. Let us repeat the most significant rules. If a bond leads to a
+labelled vertex, then this label must be wrote immediately after the bond
+direction. No spaces are allowed before a label or a command\footnote{Since
+neither label nor command can start with a digit, this rule could not
+contradict with the necessity to separate numbers of quads or digit 1
+denoting a 1-hour direction.}.  If a label consists of many characters, or
+is a digit, or any character reserved for prefixes, then it must be taken
+in figure brackets. If a label is just a letter (e.\ g.,\ C, N, O, H) then
+brackets are needless (however it would not be an error to put them).
+
+A vertex label requires all adjacent bonds to become shorter to avoid the
+mutual superposition.  The main duty of \treeTeX\ just lies in
+proper calculation of label dimensions to update coordinates of lines
+which depict bonds.  Because \TeX\ has no arrays, only one current label (its
+metrics) is remembered each moment. A complete traversal of a structure
+may require some vertices to be met twice. Each time a vertex is met, its
+label has to be specified again. E. g.,\ if formula
+$$\stree{{HO}3N3\6}$$ is traversed from vertex OH to N and along the ring
+back to N, then the nitrogen label should be set twice:
+\verb"\stree{{HO}3N 1 3 5 7 9 11N}".  Absence of last {\tt N} would result in
+crossing the first label N by the last 11-hours bond (since the fact of a
+label presence here is already forgotten). Meantime, square brackets allow
+almost always to avoid plural coming at a label.  In our case, for example,
+the following construction will do:  \verb"\stree{{HO}3N [5] 1 3 5 7 9}".
+Everything inside square brackets passes as if unnoticed:  the closing
+bracket makes vertex N to be reminded so that the next 1-hour bond is drawn
+correctly.
+
+A careful reader may note many formulas (e.\ g.,\ the last one) to begin
+just from a label instead of a prefix or a direction as the formal syntax
+implies. Here a tiny trick works: number {\tt17} (i.\ e.,\ a void direction)
+is always inserted at the very beginning of an argument of \verb"\stree"
+before its processing. If an argument begins with a prefix or a direction,
+then {\tt17} does nothing, otherwise {\tt17}\<label> will set this \<label>
+in a current point.
+
+Another formal syntax violation belongs to justification of long labels.
+Evidently a label with more than one character allows diverse
+dispositions relative a vertex center. The default rule states: if a bond goes
+left (i.\ e.,\ has negative horizontal offset) then the vertex center
+coincides with the center of the most right character, otherwise (a
+bond is vertical or goes right) --- the left one. Although it works
+perfectly with most terminal moieties, ``internal'' labels may require
+additional devices.
+
+%{\samepage
+\rpic[pyrrole]{\stree{~'8/>13/>58`{NH}10}}
+For example, the habitual clockwise traversal of the pyrrole structure
+would imply label NH to be justified by H instead of N as it
+should be. The default orientation may be altered by prefix
+{\tt`} (back apostrophe):  \verb"\stree{/>1 3/>5 8`{NH} 10}". Since
+{\tt`} controls a behavior of a label (on contrary with the others
+answering for bonds), this prefix is the only exception allowed to stay
+before a label (of course, construction \verb"`8{NH}" is also true though not
+as logical as \verb"8`{NH}").
+%\par}
+
+%{\samepage
+\rpic{\stree{/>13/>58``{NH}10}}
+But let us return to the pyrrole. One may find the centered label (in this
+paragraph) to be more appropriate. Here the vertex center coincides with
+the center of the whole label, that is achieved by doubling the same
+prefix: \verb"8``{NH}". However, one can get more fine effects by means of
+\TeX\ boxes, kerns, and glue (the next paragraph implies a reader to
+be familiar with these things).
+%\par}
+
+\rpic{\stree{/>1 3/>5 8``{\vtop{\baselineskip=0pt \hbox{N}\hbox{H}}}10}}
+Indeed, both pyrrole formulas are not perfect, and one may try the vertical
+form of label NH by means of the following long construction:
+\0stree\1/>1 3/>5
+8``\1\0vtop\1\0baselineskip=0pt \0hbox\1N\2\0hbox\1H\2\2\2
+10\2\rm. Let us comment it. Two {\tt``}
+before the label prevent an ``automatic'' alignment by some marginal
+token --- evidently it is undesirable here. \TeX\ primitive \verb"\vtop"
+makes a vertical box aligned by the topmost of contained boxes. In our case
+base lines of \verb"\hbox{N}" and whole \verb"\vtop" coincide, or, in
+other words, the height of \verb"\vtop" equals to the height of
+\verb"\hbox{N}". As \treeTeX\ ignores a box depth while setting a label, the
+vertex center will just coincide with the center of N\@. Without assignment
+\verb"\baselineskip=0pt" N and H would stand from each other as far as lines
+in a common paragraph. Funny, but almost the same result is achievable via a
+short invisible bond at 3 quads down:
+\verb"\stree{/>1 3/>5 8N [~-0-3H] 10}")
+(however, in this case a gap between N and H is dependable on fonts
+used for labels). {\sloppy\par}
+
+\subsection{Commands}
+
+\begin{table}\centering
+{\bf Table 3.} The available commands.\par\bigskip
+\begin{tabular}{rl|rl|rl}
+\verb"\ph"&\stree{3\ph'9}&\verb"\tbu"&\stree{3\tbu}&{\tabcolsep=0pt
+\begin{tabular}{r}\verb"\O"\\\verb"\CO"\end{tabular}}&\stree{3\O'11'7}\\
+&&&&\\ \hline &&&&\\
+\verb"\pho"&\stree{3\pho'9}&\verb"\tbx"&\stree{3\tbx}&\verb"\OH"&\stree{3\OH}\\
+&&&&\\ \hline &&&&\\ {\tabcolsep=0pt
+\begin{tabular}{r}\verb"\six"\\\verb"\6"\end{tabular}}&\stree{3\6'9}&
+\verb"\ip"&\stree{3\ip}&\verb"\COOH"&\stree{3\COOH}\\
+&&&&\\ \hline &&&&\\
+&&\verb"\Me"&\stree{3\Me}&
+\end{tabular}
+\end{table}
+
+A command may substitute a label in the role of a suffix. We mean a
+regular \TeX\ command composed from signal character \verb"\" and either
+one non-letter or a sequence of several letters. Specific commands
+may be used {\sl inside\/} command \verb"\stree" to facilitate input of some
+fragments (see Table 3). All the available commands do not
+change a current vertex (though it is not a rule to obey).  The reason of
+such behavior is evident for one-valence moieties, constituting columns 2 and
+3 in Table 3.  Cyclic fragments allow more flexible use.  Terminal cycles
+require an additional bond before a command in the same direction (e.\ g.,\
+biphenyl is input as \verb"\stree{9\ph 3 3\ph}"). It might seem not very
+comfortable unless it allowed to easy input condensed cycles and simple
+heterocycles:  $$
+\begin{tabular}{ccccc}
+\stree{10\6 2\6}&\begin{tabular}{l}\verb"\stree{"\\
+\verb"10\6 2\6}"\end{tabular}& &
+\stree{N3\6 9\Me}&\begin{tabular}{l}\verb"\stree{"\\
+\verb"N3\6 9\Me}"\end{tabular}
+\end{tabular}
+$$
+
+A fragment is drawn in a direction which precedes a command (all figures
+in table 3 correspond to 3 o'clock). Sometimes a direction affects a label
+view or a whole fragment ``chirality''.
+An example is command \verb"\COOH" which always places the carbonyl oxygen on
+top (try to ascertain in it).
+The definition of \verb"\COOH" worth to be considered fully:
+%
+\begin{verbatim}
+\def\COOH#1{{  % argument #1 = direction in hours
+  \ang=#1      % remember the initial direction
+  \b\ang[C]    % draw a bond ending with label C
+  \ifnum\ang>6 % if more than 6 hours then
+    \rot2           % turn 2 hours right,
+    {\bt2\b\ang[O]} % put the carbonyl =O,
+    \rot8           % turn 8 hours right (= 4 left),
+    \OH\ang         % draw -OH
+  \else        % otherwise
+    \rot2           % turn 2 hours right,
+    \OH\ang         % draw -OH,
+    \rot8           % turn 8 hours right,
+    {\bt2\b\ang[O]} % draw =O
+  \fi}}
+\def\OH#1{{\ifnum#1>6\b{#1}[HO]\else\b{#1}[OH]\fi}}
+\end{verbatim}
+%
+Let us explain three new commands used in this listing. The most important
+one is \verb"\b" which does draw a bond in a given direction (the first
+binding parameter) and set an optional label taken in square brackets. Use
+of variable \verb"\ang" instead of an absolute value makes a description
+dependable on an initial direction handed via the first parameter. After
+assignment \verb"\ang=#1" this variable undergoes only relative increment
+corresponding to a rotation on a cardinal number of hours.  Use of special
+command \verb"\rot" for this purpose guarantees the resulting value to be
+kept within 11 hours. Evidently, that simple arithmetic is applicable only to
+directions expressed in numbers of hours. It explains why offset directions
+are not allowed before commands drawing more than one bond.
+
+Command \verb"\bt2" changes the character of a bond to double
+centered (equivalent to the action of prefix {\tt=}). Other
+bond attributes (visibility, thickness, etc.)\ can be altered too by means
+of some control variables which however are not listed here. These
+specific data, if required, can be obtained from the source file {\tt
+stree.sty}.
+
+Additional figure brackets in definitions of \verb"\COOH" and \verb"\OH"
+involve the common grouping mechanism of \TeX\ to restore a current vertex
+after the command action. Let us
+also note a simpler command \verb"\OH" to be used inside
+\verb"\COOH".  The logic of \verb"\OH" itself is limited to the choice of
+either label OH or HO depending on a bond direction.
+
+The set of commands to draw fragments may seem poor and inrepresentative. Its
+further extension, however, is in question, since the description on the
+level of bonds and labels is laconic enough to expect big advantages
+from broad use of internal commands. The optimal case assumes a few simple
+commands, easy to be used and kept in mind. It does not mean, however, that
+defining of new commands is always senseless. So, authors of math papers
+often draw graphs with ``shot'' vertexes, e.\ g.
+$$
+\def\*#1{\b{#1}[$\bullet$]}
+\stree{\*5\*[7\*]3\*1\*3\*5\*7\*9\*11\*}
+$$
+Bearing in mind \TeX\ notation \verb"$\bullet$", one might honestly
+input the graph as \verb"{$\bullet$} 5{$\bullet$} [7{$\bullet$}" \ldots\ but
+there is no better way: to define command \verb"\*" for setting a bullet in
+a given direction (\verb"\def\*#1{\b{#1}[$\bullet$]}") and then describe
+everything much shorter as \verb"\stree{\*5\*[7\*]3\*1\*3\*5\*7\*9\*11\*}".
+
+Indeed, suffix commands may have an additional parameter which must
+immediately follow a command and be in figure brackets. Accidentally this
+feature can be applied for input of flow charts composed from standard
+polygons, e.\ g.,
+
+$$
+\def\(#1,#2){\sx#1\sy#2\ab30[]}
+\def\com#1[#2]{\(15,0)\(0,-6)\(-3,-3)\(-27,0)\(0,6)\(3,3)\(12,0)
+ \bmode-1 \dmode2 \sy-5 \ab30[#2]\bmode-1 \(0,-4)}
+\stree{0\com{sugar}-0-3+20-0[+20-0-0+3~-0+9 0\com{milk}]
+::-0-3 0\com{coffee}::-0-3}
+$$
+
+After defining a polygon by means of command \verb"\com"
+%
+\begin{verbatim}
+\def\(#1,#2){\sx#1\sy#2\ab30[]} % draw a bond offset (#1,#2)
+\def\com#1[#2]{\(15,0)\(0,-6)\(-3,-3)\(-27,0)\(0,6)\(3,3)
+ \(12,0)\bmode-1 \dmode2 \sy-5 \ab30[#2]\bmode-1 \(0,-4)}
+\end{verbatim}
+%
+one can input the whole scheme as kind of a chemical formula:
+\begin{verbatim}
+\stree{0\com{sugar}-0-3+20-0
+[+20-0-0+3~-0+9 0\com{milk}]
+::-0-3 0\com{coffee}::-0-3}
+\end{verbatim}
+
+Let us make necessary comments. Variables \verb"\sx" and \verb"\sy" contain
+offsets used for a bond if its direction equals a conditional value of 30
+hours.  Assignment \verb"\bmode-1" makes a bond invisible while
+\verb"\dmode2" answers for a centered label (equivalent to {\tt``}).
+
+This example completes
+the systematic consideration of
+all the components in a bond description.
+Now a bit else remains: how to use \verb"\stree" inside other \LaTeX\
+constructions, i.\ e.,\ alignment modes.
+
+\section{Alignment}
+
+By default, \verb"\stree" with the aid of \LaTeX\ environment \verb"picture"
+produces \verb"\hbox" whose height slightly (by {\tt1ex}) exceeds its depth.
+This small difference makes structures to conform with math symbols in
+displayed formulas. E.~g.,\ the following equation
+$$
+\stree{9\6 3\OH}+\stree{9\OH 1\O
+5\Me}\longrightarrow\ \stree{9\6 3O 3 1\O 5\Me}+\stree{{H$_2$O}}
+$$
+is input just as
+\begin{verbatim}
+\stree{9\63\OH}+\stree{9\OH1\O5\Me}\longrightarrow
+\stree{9\63O31\O5\Me}+\stree{{H$_2$O}}
+\end{verbatim}
+
+Vertical alignment may also be specified explicitly with the aid of a token
+in square brackets put immediately after \verb"\stree". In agreement with
+the \LaTeX\ conventions {\tt[t]} means top alignment and {\tt[b]} --- bottom
+(a centered box is obtained by default, making use of {\tt[c]}
+obsolete).  Parameter {\tt[u]} (no alignment) leads to a box with null
+dimensions at the place of a starting vertex. This is useful if \verb"\stree"
+itself is a part of another picture whose elements are bind to vertices.
+Since all vertices are situated in nodes of a one quad sized grid, knowing of
+exact coordinates of one vertex allows all the others to be easy
+calculated. Use of {\tt[u]} guarantees this knowledge for a starting vertex,
+whereas other parameters --- do not, since a box produced by \verb"\stree" in
+these cases accurately bounds everything found in a formula: labels, marks,
+etc.
+
+On the other hand, variant {\tt[u]} makes a user himself to monitor
+sizes of a formula. There is still a way deprived of this drawback:
+instead of \verb"\stree{" \<description> {\tt\2} one can write
+\verb"\begstr \tree{" \<description> \verb"} \endstr".
+Before \verb"\endstr" or after \verb"\begstr" any \LaTeX\
+commands for \verb"\picture" environment are allowed as if
+coordinates (0,0) belong to a starting vertex and
+unit of measure \verb"\unitlength" equals
+the standard bond length \verb"\bondlen".
+In the following example this method is used to
+mark a fragment with a dashed box:
+$$\begstr
+\tree{9\OH1//2[~/7{$R_1$}]4[0~2][6]/2539>760/108[-4-5/118~9{$F_1$}]//1011}
+\put(-2,-2){\dashbox{0.2}(4.8,3.8){}}
+\endstr
+$$
+This figure is input as
+\begin{verbatim}
+\begstr
+\tree{9\OH1//2[~/7{$R_1$}]4[0~2][6]/2539>760/108
+ [-4-5/118~9{$F_1$}]//1011}
+\put(-2,-2){\dashbox{0.2}(4.8,3.8){}}
+\endstr
+\end{verbatim}
+
+\section{Additional features}
+
+Chemical character of this work allows us to note also the
+ability to input mass and \CNMR\ spectra with \treeTeX. For example, the
+spectrum
+$$
+\massp{220-18!187-33!135-26!133-25,121-100!14,2,107-38!43-35,41-41!}
+$$
+is obtained in result of
+\begin{verbatim}
+\massp{220-18!187-33!135-26!133-25,121-100!14,2,
+ 107-38!43-35,41-41!}
+\end{verbatim}
+Here is just a sequence of numbers divided by punctuation marks:
+a mass number is ended by a dash, a relative intensity (in percents) --- by
+either comma or exclamation. The last makes an $m/z$ value to be
+set over a peak. Several intensities following one mass number (e.\ g.,\ {\tt
+121-100!14,2,}) correspond to neighbor peaks with increasing
+$m/z$. A comma may be omitted if it is the last token in a \verb"\massp"
+argument.
+
+The four parameters control a mass spectrum view:
+\begin{itemize}
+\item
+\verb"\mzlen" --- the horizontal distance corresponding to 1 $m/z$\\
+(default \verb"\mzlen=0.6pt"),
+\item
+\verb"\imax"  --- the height of the maximal peak in units of \verb"\mzlen"\\
+(default \verb"\imax=50"),
+\item
+\verb"\numfnt" --- the font used to set numbers on a figure\\
+(default \verb"\def\numfnt{\small}"),
+\item
+\verb"\msdir" --- the direction of peaks.
+\end{itemize}
+%
+The last parameter is rarely used. Default \verb"\msdir=1" means the common
+direction --- upward; any other value make peaks to be oriented downward. The
+last case may be useful for visual comparison of two spectra:
+$$
+\begms
+\mass{39-11,0,21,51-5,7,15,64-5,35,7,77-10,5,91-4,74!27,104-6,
+119-26,132-42,4,159-26,81!8,176-15,187-93!12,204-4,232-100!14}
+\put(-1,0){\line(1,0){250}}\msdir=-1
+\mass{39-16,51-7,6,15,65-11,8,77-5,92-73!24,104-9,119-15,
+132-21!159-26,100!14,176-16,187-83!14,204-3,232-70!}\vpos=1
+\endms
+$$
+This figure is input in the following way:
+%
+\begin{verbatim}
+\begms
+\mass{39-11,0,21,51-5,7,15,64-5,35,7,77-10,5,91-4,74!27,104-6,
+119-26,132-42,4,159-26,81!8,176-15,187-93!12,204-4,232-100!14}
+\put(-1,0){\line(1,0){250}}\msdir=-1
+\mass{39-16,51-7,6,15,65-11,8,77-5,92-73!24,104-9,119-15,
+132-21!159-26,100!14,176-16,187-83!14,204-3,232-70!}\vpos=1
+\endms
+\end{verbatim}
+%
+By analogy with \verb"\stree", instead of
+\verb"\massp{" \<argument> \verb"}" one can write
+\verb"\begms \mass{" \<argument> \verb"} \scale1{} \endms" and insert
+any commands from the \LaTeX\ {\tt picture} environment
+after \verb"\begms" or before \verb"\endms". In our example a common scale
+drawn by \verb"\scale1{}" is substituted by the plain horizontal (its length
+is the rounded maximal mass number in the spectrum), and then another
+spectrum is drawn contrariwise since it is preceded by \verb"\msdir=-1".
+Finally, assignment \verb"\vpos=1" switches on the bottom alignment (i.\ e.,\
+the box depth equals zero). Though command \verb"\massp" itself presumes the
+common alignment control with the aid of parameters {\tt[b]}, {\tt[c]}, or
+{\tt[t]}, on the lower level there acts variable \verb"\vpos" (it is true
+also for the decomposition of \verb"\stree" onto \verb"\begstr",
+\verb"\tree", and \verb"\endstr").  Value 0 means center alignment (same as
+parameter {\tt[c]}), 1 --- bottom ({\tt[b]}), 2 --- top ({\tt[t]}), and 3 ---
+no alignment (valid only for structural formulas and corresponds to {\tt[u]}).
+
+\treeTeX\ also allows to input simple figures of \CNMR\ spectra like the
+following (a peak height reflects its multiplicity):
+$$
+\cnmrs{2000}{1912s1645s354d1041s{\llap{$^b\searrow$}}%
+901s138q1576s1703s575q912d1047d{$*$}566q1696s1956s571q953s395t}
+$$
+The corresponding text is:
+%
+\begin{verbatim}
+\cnmrs{2000}{1912s1645s354d1041s{\llap{$^b\searrow$}}%
+901s138q1576s1703s575q912d1047d{$*$}%
+566q1696s1956s571q953s395t}
+\end{verbatim}
+%
+Command \verb"\cnmrs" has two binding parameters: first is the scale length
+(in $\hbox{p.\,p.\,m.}*10$), and second --- a spectrum description which
+contains for each signal its chemical shift value (multiplied by 10) and
+multiplicity, where {\tt s} means singlet, {\tt d} --- doublet, {\tt t} ---
+triplet, and {\tt q} --- quartet. A peak label may be set in figure brackets
+after a multiplicity token (in our case construction
+\verb"\llap{$^b\searrow$}" is used to shift the label left and prevent its
+interference with the neighbor doublet marked by a star).
+
+Both kinds of spectra are input in quite a similar way: as a
+sequence of numbers with delimiters. However, there are small differences. So,
+long command \verb"\massp" can be broken in strings at any places, though in
+\verb"\cnmrs" end of line should be commented by \verb"%".
+Besides, in \verb"\cnmrs" the scale (and so whole figure) length is set
+implicitly, while for a mass spectrum the total length depends on a largest
+$m/z$ value (to obtain a mass spectrum with a given length one could
+just specify a void peak with null intensity and corresponding $m/z$).
+
+\section{Conclusion}
+
+An apparent question might arise during acquaintance with this work: does
+somebody need to study another ``bird language'' to input chemical
+formulas if a plenty of convenient programs for visual
+editing exist? Essentially it is an old
+dispute {\sl pro et contra\/} a command interface vs.\ graphic one.
+Professional programmers know very well that a command language provides a
+faster and more flexible control though it requires more time for studying.
+Indeed there is no contradiction between these modes of interaction, and the
+optimal case should include both abilities. Anyhow, in preparation of
+scientific manuscripts words do play the main role, i.\ e.,\ a writer
+basically remains in the verbal mode of thinking. If numerous
+chemical formulas in a text are input by a graphic editor then a
+writer will frequently switch from one program to another. Even if the
+switching is fast and elegant (a case rarely met in practice), the change of
+the interface mode will still require some psychological adaptation. In this
+case an ability to input a formula just in text without tackling a mouse and
+becoming a designer could save you a lot of time and mind energy.
+
+\section*{References}
+\frenchspacing\parindent=0pt
+\parskip=2ex
+
+Knuth D. (1984)
+\sl The \TeX book.\/
+\rm Addison-Wesley, Reading.
+
+Lamport L. (1984)
+\sl \LaTeX: A Document Preparation System.\/
+\rm Addison-Wesley, Reading.
+
+Ramek M. (1990)
+\sl \TeX: Applications, Uses, Methods.
+\rm ed. Clark M., p. 227.
+Ellis Horwood, London.
+%227--258
+
+Haas R. T. \& O'Kane K. C. (1987)
+%Typesetting Chemical Equations Using \LaTeX.
+\sl Comput. Chem.\/,\bf\ 11,\rm\ 251
+%251--271
+
+Fujita S. (1994)
+%Typesetting Structural Formulas with the Text Formatter \TeX/\LaTeX.
+\sl Comput. Chem.\/,\bf\ 18,\rm\ 109
+%109--116
+
+\end{document}

@@ -1,0 +1,272 @@
+########################################################################
+# Creating a installed version of pdfcprot
+# Copyright (c) Carsten Schurig, 2001, taken and modified from the
+# KOMA-Script bundle: (c) Markus Kohm, 1999-2001
+#
+#>>>> USE THIS ONLY, IF THERE IS A TDS-COMPATIBLE TEX-INSTALLATION! <<<<
+#>>>>     DO NOT CHANGE ANYTHING BUT THE CUSTOMIZATION SECTION!     <<<<
+#>>>>                 YOU NEED GNU-MAKE TO RUN THIS!                <<<<
+#
+# Defined rules for users:
+#
+#   default   default rule if make is called without parameter,
+#             generates all pdfprot including the documentation
+#   all       same as default but without TEXMF-test
+#   install   installs all files in a TDS-tree
+#
+#   docu      makes the documentation
+#
+#   implementation changes \OnlyDescription to %\OnlyDescription in
+#             `pdfcprot.dtx' so that next docu run will include the
+#             documentation of the implementation
+#
+#   description changes %\OnlyDescription to \OnlyDescription in
+#             `pdfcprot.dtx' so that next docu run will only include
+#	      description of the package
+#
+#   srcclean  deletes all generated files (but *tar.gz)
+#   distclean deletes all generated files (but *tar.gz) not part of 
+#             the distribution
+#   clean     deletes all temporary files
+#
+#   dist      generates a tar file pdfcprot-<date>.tar.gz with all
+#             files of the distribution
+########################################################################
+
+########################################################################
+#   Start of customization section
+########################################################################
+
+# The texmf-directory, where to install new stuff (see texmf.cnf)
+# If you don't know what to do, search for directory texmf at /usr.
+# With teTeX and linux often one of following is used:
+#TEXMF=/usr/TeX/texmf
+#TEXMF=/usr/local/TeX/texmf
+#TEXMF=/usr/share/texmf
+#TEXMF=/usr/local/share/texmf
+# user tree:
+#TEXMF=$(HOME)/texmf
+# Try to use the local tree known by kpsewhich:
+TEXMF=`kpsewhich --expand-var '$$TEXMFLOCAL'`
+# But you may set TEXMF to every directory you want. Maybe TEXMF is
+# already set by the environment.
+# Use following, if you only want to test the installation:
+#TEXMF=/tmp/texmf
+
+# If texhash must run after installation, you can invoke this:
+TEXHASH=texhash
+
+######### Edit following only, if you want to change defaults!
+
+# The directory, where to install *.sty and *.cpa
+STYDIR=$(TEXMF)/tex/latex/pdfcprot
+
+# The directory, where to install documentation
+DOCDIR=$(TEXMF)/doc/latex/pdfcprot
+
+# The directory, where to install the sources
+SRCDIR=$(TEXMF)/source/latex/pdfcprot
+
+########################################################################
+#   End of customization section                     
+########################################################################
+
+# Used command:
+LATEX      = latex
+PDFLATEX   = pdflatex
+  NONSTOPMODE = \\nonstopmode\\input
+  BATCHMODE   = \\batchmode\\input
+RM         = rm -f
+RMDIR      = rm -fr
+CP         = cp -f
+CPALL      = cp -af
+CD         = cd
+MV         = mv -f
+INSTALL    = install -m 644
+MKDIR      = install -m 755 -d
+MAKEINDEX  = makeindex -g -r -s gind.ist
+MAKECHANGE = makeindex -g -r -s gglo.ist -o 
+MAKEIDX    = makeindex -g
+BIBTEX     = bibtex
+DVIPS      = dvips -Pwww
+ECHO       = echo
+TARCREATE  = tar -zcvf
+DIRNAME    = dirname
+LL         = ls -l
+SED        = sed
+CUT        = cut
+GREP       = grep
+PSSELECT   = psselect
+PSBOOK     = psbook
+PSTOPS     = pstops
+EVAL       = eval
+
+LOGMESSAGE = 'pdfcprot was made at '`date`'.'
+ENGREADME  = 'Please read README.txt and INSTALL.txt.'
+
+########################################################################
+
+RMEXT       = *.log *.aux *.toc *.lot *.lof *.out *.ilg *.idx *.ind \
+              *.blg *.bbl *.glg *.glx *.glo *.gls
+
+RMOUT       = *.pdf *.dvi *.ps
+
+RMSTY       = *.cpa *.sty
+
+DTX_FILES   = pdfcprot.dtx
+
+INS_FILES   = pdfcprot.ins
+
+SRC_FILES   = $(DTX_FILES) $(INS_FILES)
+
+TEXT_FILES  = README.txt     \
+	      LEGAL.txt      \
+              INSTALL.txt
+
+MISC_FILES  = Makefile.unx
+
+DIST_SRC    = $(TEXT_FILES)  \
+              $(DTX_FILES)   \
+	      $(INS_FILES)   \
+              $(MISC_FILES)
+
+XDIST_FILES = 00README  \
+              $(DIST_SRC) 
+
+DIST_FILES  = 00CONTEN \
+              $(XDIST_FILES)
+
+STY_FILES   = pdfcprot.sty
+
+CPA_FILES   = pplmnT1.cpa \
+	      pplmnOT1.cpa \
+              pplmnTS1.cpa \
+              pplmnT2A.cpa
+
+DOC_FILES   = pdfcprot.dvi  \
+              $(TEXT_FILES) \
+              $(MISC_SRC)
+
+IDOC_FILES  = ${DTX_FILES:.dtx=.dvi}
+
+ILOG_FILES  = ${DTX_FILES:.dtx=.log}
+
+########################################################################
+ 
+default:
+	@if test "x" = "x$(TEXMF)" -o ! -d "$(TEXMF)"; then \
+	  $(ECHO) "Destination directories not there." ; \
+	  $(ECHO) "Please edit TEXMF at the Makefile first!"; \
+	  exit 1 ; \
+	else \
+	   $(MAKE) all ; \
+	fi
+
+all: pdfcprotins.log $(IDOC_FILES)
+
+docu: docuclean $(IDOC_FILES)
+
+pdfcprotins.log: $(SRC_FILES)
+	$(LATEX) pdfcprot.ins
+	$(ECHO) $(LOGMESSAGE) > pdfcprotins.log
+
+########################################################################
+
+install: pdfcprotins.log
+	if test `pwd` = $(STYDIR) -o `pwd` = $(SRCDIR) -o `pwd` = $(DOCDIR); \
+	then \
+	  $(CPALL) ./ /tmp/pdfcprot.tmp; \
+	  $(CD) /tmp/pdfcprot.tmp; \
+	  $(MAKE) install; \
+	  $(RMDIR) /tmp/pdfcprot.tmp; \
+	else \
+	  $(MKDIR) $(STYDIR); \
+	  $(INSTALL) $(STY_FILES) $(STYDIR); \
+	  $(INSTALL) $(CPA_FILES) $(STYDIR); \
+	  $(MKDIR) $(DOCDIR); \
+	  $(INSTALL) $(DOC_FILES) $(DOCDIR); \
+	  for file in $(DIST_FILES); do \
+	    dir=`dirname $$file`; \
+	    if test "x$$dir" = "x"; \
+	      then $(INSTALL) $$file $(SRCDIR); \
+	      else $(MKDIR) $(SRCDIR)/$$dir; \
+	        $(INSTALL) $$file $(SRCDIR)/$$dir; \
+	    fi; \
+	  done; \
+	  $(INSTALL) pdfcprotins.log $(DOCDIR); \
+	fi
+	@if test -z "$(TEXHASH)" ; then \
+          $(ECHO) ;\
+          $(ECHO) '>>> Maybe you have to run texhash or something else, now. <<<';\
+          $(ECHO) ;\
+        else \
+          $(EVAL) $(TEXHASH); \
+	fi
+
+########################################################################
+
+srcclean: distclean
+	$(RM) $(RMOUT) 00*
+
+distclean: clean
+	$(RM) $(RMSTY)
+
+docuclean: clean
+	$(RM) $(RMOUT)
+
+clean:
+	$(RM) $(RMEXT)
+
+implementation:
+	@for src in $(DTX_FILES);do \
+	  $(CP) $${src} $${src}.bak; \
+	  $(SED) 's/^\\OnlyDescription/%\\OnlyDescription/1' \
+	     <$${src}.bak >$${src}; \
+	  $(RM) $${src}.bak; \
+	done
+
+description:
+	@for src in $(DTX_FILES);do \
+	  $(CP) $${src} $${src}.bak; \
+	  $(SED) 's/^%\\OnlyDescription/\\OnlyDescription/1' \
+	     <$${src}.bak >$${src}; \
+	  $(RM) $${src}.bak; \
+	done
+
+########################################################################
+
+.SUFFIXES: .dtx .dvi .log
+
+.dtx.dvi:
+	$(LATEX) $(BATCHMODE) $<
+	$(LATEX) $(BATCHMODE) $<
+	$(MAKEIDX) -r -s gind.ist $(<:.dtx=.idx)
+	$(MAKEIDX) -r -s gglo.ist $(<:.dtx=.glo) -o $(<:.dtx=.gls)
+	$(LATEX) $(NONSTOPMODE) $<	
+
+.dtx.log:
+	$(LATEX) $(BATCHMODE) $<
+	$(LATEX) $(BATCHMODE) $<
+	$(MAKEIDX) -r -s gind.ist $(<:.dtx=.idx)
+	$(MAKEIDX) -r -s gglo.ist $(<:.dtx=.glo) -o $(<:.dtx=.gls)
+	$(LATEX) $(NONSTOPMODE) $<
+
+dist: pdfcprotins.log $(DIST_FILES) $(ILOG_FILES) $(IDOC_FILES)
+	@if $(GREP) "Checksum not passed" *.log; then \
+	  $(ECHO) "Cannot create tar because of checksum error" >&2; \
+	else \
+	  $(TARCREATE) pdfcprot-`date -I`.tar.gz $(DIST_FILES); \
+	fi
+
+00CONTEN: $(XDIST_FILES)
+	$(LL) $(XDIST_FILES) > 00CONTEN
+	$(LL) 00CONTEN >> 00CONTEN
+	$(LL) $(DIST_FILES) > 00CONTEN.TMP
+	$(CUT) -b 35- 00CONTEN.TMP > 00CONTEN
+	$(RM) 00CONTEN.TMP
+
+00README:
+	$(ECHO) $(GERMREADME) > 00README
+	$(ECHO) $(ENGREADME) >> 00README
+
+######################################################################## 

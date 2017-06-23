@@ -1,0 +1,597 @@
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++%
+% This is file 'skeyval-pokayoke1.tex', version 1.3, 2013/05/15.           %
+%                                                                          %
+% This package and accompanying files may be distributed and/or            %
+% modified under the conditions of the LaTeX Project Public License,       %
+% either version 1.3 of this license or any later version. The latest      %
+% version of this license is in http://www.latex-project.org/lppl.txt      %
+% and version 1.3 or later is part of all distributions of LaTeX           %
+% version 2005/12/01 or later.                                             %
+%                                                                          %
+% The LPPL maintenance status of this software is 'author-maintained'.     %
+%                                                                          %
+% This software is provided 'as it is', without warranty of any kind,      %
+% either expressed or implied, including, but not limited to, the          %
+% implied warranties of merchantability and fitness for a particular       %
+% purpose.                                                                 %
+%                                                                          %
+% The following files constitute the skeyval bundle and must be            %
+% distributed as a whole:                                                  %
+%                                                                          %
+%  README, skeyval.sty, skeyval-core.tex, skeyval-for.tex,                 %
+%  skeyval-view.sty, skeyval-ltxpatch.sty, skeyval-ltxcmds.tex,            %
+%  skeyval-pstkey.sty, skeyval-pstkey.tex, skeyval-testclass.cls,          %
+%  skeyval-testpkg.sty, skeyval-pokayoke1, skeyval-pokayoke2,              %
+%  skeyval-view-pokayoke1.                                                 %
+%                                                                          %
+% Copyright (c) 2010-2013 Ahmed Musa (amusa22@gmail.com).                  %
+%++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++%
+
+\makeatletter
+\RequirePackage{skeyval-ltxpatch}
+
+% With 'skeyval-ltxpatch' loaded, class options will not be zapped and
+% expandable commands can be passed as options.
+
+\documentclass[
+  text style=\ttfamily,
+  show author=true,
+  insertwatermark,
+  watermarktext={skeyval-test1\\[.25ex]Page~\thepage},
+  watermarkcolor=brown!80!yellow
+]{skeyval-testclass}
+
+\skvifpackageloadedTF{xcolor}{}{\usepackage[dvipsname]{xcolor}}
+\usepackage{lipsum}
+
+% The command \cmdalign is just for illustrating how key values
+% may be expanded at key setting time:
+\def\cmdalign{justified}
+
+\usepackage[
+  author=Albert X\"avier Einstein,
+  align=.expanded{\cmdalign},
+  show author=true,
+  unknown-option,
+]{skeyval-testpkg}
+
+%+++++++++++ Keys whose names are zapped internally ++++++++++++++%
+
+\skvzcmdkeys[KV]{fam}[mp@]{provide value,give value}[some value]{}
+\skvzboolkeys[KV]{fam}[mp@]{provide value,give value}[true]{}
+
+%++++++++++++++++++++++ Parenthesized keys +++++++++++++++++++++++%
+
+% Parenthesized keys are keys with names that have parentheses
+% The following is a key of 3 arguments. The default values are
+% \x, \y, and \numexpr\x*2 - since there are 3 arguments.
+%
+\skvpntkey[KV]{fam}{evaluate (?) as (?) using (?)}[{\x}{\y}{\numexpr\x*2}]{%
+  \def\argone{#1}\def\argtwo{#2}\def\argthree{#3}%
+  % '\detokenize{\pgfmath}' won't work here!
+  \skvxifinTF{\relax\string\pgfmath}{\relax\detokenize{#3}}{%
+    #3%
+  }{%
+    \edef#2{#3}%
+  }%
+}
+
+% The above parenthesized key can be set as follows:
+%
+\def\cmda{2}
+\skvsetkeys[KV]{fam}{%
+  evaluate (\cmda) as (\cmdb) using (\pgfmathsetmacro\cmdb{\cmda*10})
+}
+%\show\argthree
+
+\newcommand*\vgap{\endgraf\medskip}
+\def\keycval{xx}
+
+%% +++++++++++++++ Examples of using \directkeys command ++++++++++%
+
+% Note: When the value of a handler contains equality sign (=) or
+% comma (,), it should be enclosed in braces.
+
+\directkeys*{
+  .exec=\skvtestcnt\z@,
+  .prefix = KV1,
+  .family = fam1,
+  .holder prefix = mp@,
+  .add paths={KV2/fam2,KV3/fam3},
+  .ignore paths={KV2/fam2,KV3/fam3},
+  .restore paths={KV2/fam2,KV3/fam3},
+  .save initial values of keys,
+  .initialize keys after define=false,
+  .new keys = {
+    .ord/keya/{dfta,dftb}/
+      %\def\skvhp{my@}
+      \def\cmda##1{#1*##1*#2}\logsetting
+    ,
+    .arg/keya/{#1,#2},
+    % See argument of keyb below:
+    .cmd/keyb/{1cm,2cm}/
+      \edef\boxht{\the\dimexpr#1*2\relax}
+      \edef\boxwd{\the\dimexpr#2*2\relax},
+    .choice/keyc/center/{right,left,center,justified},
+    .bool/keyd/true,
+    .cmd/keye/dfte/\def\cmde##1{##1#1},
+    .cmd/keyf/dftf/\def\cmdf##1{##1#1},
+    .ord/.need value{keyg}/dftg,
+    .ord/.forbid value{keyh}/dfth,
+  },
+  .args={
+    keyb={#1,#2}
+  },
+  .set={
+    keya={val1,val2},keyb={2.5cm,5cm}
+  },
+  .get value={KV1}{fam1}{keya}\cmda,
+  .ignore keys={
+    keyd,keye
+  },
+  .set with defaults={
+    keyd,keye,keyf,keyg
+  },
+  .restore keys = keye,
+  .link={keye2/keye},
+  % Choices for keye can be declared directly:
+  .state pattern expanded={keye,keye2}/{
+    center.do=\def\curralign##1{\hfil##1\hfil},
+    right.do=\def\curralign##1{\hfill##1},
+    left.do=\def\curralign##1{##1\hfill},
+    justified.do=\let\curralign\@iden
+  },
+  .exec code={
+    \def\leftval{left}\def\rightval{right}
+    \def\rrightval{\rightval}
+  },
+  % key1 and key2 are undefined. They will be defined internally
+  % with the default values of keyc and keyd:
+  .prepend slots={
+    key1/{keyc=.expanded{\rightval}},key2/{keyd=false}
+  },
+  .append slots={
+    key1/{keye=right,keyf=valf}
+  },
+  % When key3 and key4 are set, use their expanded values to set keye:
+  .elink={
+    {key3,key4}/keye
+  },
+  .slot expand twice={
+    key5/{keyf=#1,keyg=#1}
+  },
+  .set keys={
+    key3=.expand once{\leftval},
+    key5=.expand twice{\rrightval}
+  },
+  .prepend links={
+    {key6,key7}/{keye,keyf},
+    {key8,key9}/{keye,keyg}
+  },
+  .exec code=\skvsetkeys[KV1]{fam1}{key6=center},
+  % Set keya and keyb on previously declared and the following paths.
+  % Enter known keys in \mysuccesslist. Try 14 families; stop when
+  % 12 families have been hit (ie, keys have been set in them
+  % successfully):
+  .exec code=\def\flukepaths{},
+  .search also set keys={
+    .paths={KX/famx,KV1/fam1,KV3/fam3,KV3/fam4,KV4/fam3,KV4/fam4},
+    .ignore keys={keyc},
+    .try=14,
+    .min success=10,
+    .max success=12,
+    .success list=\mysuccesslist,
+    .if any path fails={%
+      \edef\flukepaths{\skvaddlist,\flukepaths\skvcurrentpath}
+    },
+    .if hits less than goal={\skvsetkeys[KV1]{fam1}{keyc=center}},
+    .kv={keya={val1,val2},keyb={1cm,2cm},keyc}
+  },
+%  .exec code={\show\mysuccesslist},
+  \directkeys*{
+    .exec=\skvtestcnt\z@\def\mysuccesslist{},
+    .paths={KUA/fam1,KUA/fam2,KUB/fam1,KUB/fam2},
+    .define ordinary keys={
+      {keya,keyb,keyc}/.na/
+        \def\y##1{#1*##1}
+        \typeout{***}\logsetting
+        \skvsetkeys[KV1]{fam1}{keyc=center}
+      ,
+    }
+  },
+  % '.try set keys' works independent of previously declared paths:
+  .try set keys={
+    .paths={
+      KUA/fam1,KUA/fam2,KUA/fam3,KUA/fam4,
+      KUB/fam1,KUB/fam2,KUB/fam3,KUB/fam4,
+      KUC/fam1,KUC/fam2,KUC/fam3,KUC/fam4
+    },
+    .try=8,
+    .upper goal=4,
+    .lower goal=2,
+    .ignore keys={keyb,keyc},
+    .success list=\mysuccesslist,
+    .kv={keya=vala,keyb=valb,keyc=valc}
+  },
+%.exec code={\show\mysuccesslist},
+}
+
+\directkeys*{
+  .exec=\skvtestcnt\z@\def\mysuccesslist{},
+  .paths={KUA/fam1,KUB/fam2},
+  .hp=mp@,
+  .ignore keys={keyd},
+  .define keys={
+    .initialize keys after define=true,
+    .save initial values of keys,
+    .exec code/\skvtestcnt\z@,
+    % keya has no default but has a complex callback:
+    .ord/keya/.na/{
+        \skvtestcnt\z@\def\mysuccesslistb{}
+        \directkeys{
+          .path={KVX/famx},
+          .search also set keys={%
+            .paths={KUA/fam1,KUA/fam2,KUB/fam1,KUB/fam2},
+            .try=8,
+            .upper goal=4,
+            .lower goal=1,
+            .success list=\mysuccesslistb,
+            .kv={keyb=valb}
+          },
+%         .exec code=\show\mysuccesslistb,
+        }
+      }
+    ,
+    % No default:
+    .ord/{keyb,keyc,keyd}/.na/\def\x##1{#1*##1}\logsetting,
+    .exec code=\def\cmda#1{\if0#1\fi},
+    % No callback:
+    .choice/keye/center/{center,left,right},
+    .choice/keye2/center/{
+        center.do=\def\giv@c{#1},
+        left.do=\def\giv@l{#1},
+        right.do=\def\giv@r{#1}
+      }/.na/\@@warning{Invalid value '\detokenize{#1}' for keye2},
+  },
+  .try set keys={%
+    .paths={
+      KUA/fam1,KUA/fam2,KUA/fam3,KUA/fam4,
+      KUB/fam1,KUB/fam2,KUB/fam3,KUB/fam4
+    },
+    .try=1,
+    .upper goal=1,
+    .lower goal=1,
+    .ignore keys={keyc,keyd},
+    .success list=\mysuccesslist,
+    .kv={keya=vala,keyc=valc,keyd=vald}
+  },
+%  .exec code={\show\mysuccesslist},
+  % Defining new handlers that can't be overloaded.
+  % '.resd handler' and '.resd handlers' are reserved handlers.
+  % They can be used to define new handlers (see below).
+  .new reserved handlers={
+    {.resd handler,.resd handlers}=\dirkeysdefhandlers{00}{#1},
+  },
+  .resd handlers={
+    .example handler1=\def\val{#1}, .example handler2=\edef\val{#1}
+  },
+%  .exec=\skvshowcs{dirkeys@handler@.example handler1},
+}
+
+\makeatother
+
+\begin{document}
+
+\title{The \texttt{\textcolor{blue}{skeyval}} Package\\[1ex]
+  Version 1.1a\\[1ex]
+  \textsf{Test document 1}}
+\author{Ahmed Musa}
+\maketitle
+
+%%+++++++++++++++++++ Producing arbitrary texts +++++++++++++++++++++%%
+
+\noindent
+An author writing an article for publication in \textsc{TUGboat} is
+encouraged to create it on a computer file and submit it on magnetic tape.
+\par
+\hfill{\small Barbara Beeton, 1981}
+\par\bigskip
+
+\begin{\mpfalign}
+\skvxifstrcmpTF\mpfalign{justified}{\noindent}{}
+\mpftextstyle
+The printer should refuse to employ wandering men, foreigners who,
+after having committed some grievous error, can easily disappear and
+return to their own country.
+\hfill{\small Hieronymus Hornschuch (1608)}\endgraf
+\end{\mpfalign}
+
+\begingroup
+\par\bigskip
+\noindent
+If you want to find out anything from the theoretical physicists
+about the methods they use, I advise you to stick closely to
+one principle: don't listen to their words, fix your mind
+on their deeds.
+\ifmpfshowauthor
+  \nobreak
+  \quad\hskip\fill\finalhyphendemerits0\relax
+  \textcolor{red}{\mpfauthor}
+\fi
+\endgroup
+
+
+%%++++++++++++++++++++++ Shadow boxes ++++++++++++++++++++++++%%
+
+\par\bigskip
+\begin{center}
+\hrule
+\par\bigskip
+
+\newshadowbox{test 1}
+\newshadowbox[framecolor=magenta,shadecolor=cyan,shadowsize=8pt,
+  align=left]{test 2}
+\newshadowbox[shadow=false,boxwidth=1cm]{test 3}
+\newshadowbox[framesize=2pt,framecolor=red,shadowcolor=green]{test 4}
+\newshadowbox[put frame=false,shadow,shadowsize=9pt,shadecolor=yellow,
+  shadowcolor=violet!50,align=right]{test 5}
+\par\bigskip
+\hrule
+\end{center}
+
+
+%%++++++++++++++++++++++++++ Citation ++++++++++++++++++++++++%%
+
+\par\bigskip
+\noindent
+\newcitation[
+    author=George Bernard Shaw (1856--1950),
+    show author,
+    leftmargin=0pt,
+    rightmargin=0pt,
+    put frame,
+    framecolor=blue,
+    shadecolor=yellow!25!green!14,
+    frame thickness=1pt,
+]{%
+    A man of great common sense and good taste; meaning thereby
+    a man without originality and/or moral courage.
+}
+
+\par\bigskip
+\noindent
+\newcitation[
+    author=George Bernard Shaw (1856--1950),
+    show author,
+    leftmargin=0pt,
+    rightmargin=0pt,
+    put frame=false,
+    framecolor=yellow!30!blue,
+    shadecolor=yellow!25,
+    frame thickness=5pt,
+    width=.8\textwidth,
+]{%
+    A man of great common sense and good taste; meaning thereby
+    a man without originality and/or moral courage.
+}
+
+\par\bigskip
+\noindent
+\newcitation[
+    author=Mohammed Ali,
+    show author,
+    leftmargin=0pt,
+    rightmargin=0pt,
+    put frame,
+    framecolor=red!70!green,
+    shadecolor=magenta!5!red!4,
+    frame thickness=10pt,
+]{%
+    I always say I was `the greatest'; I have never said I was the smartest.
+    \vgap
+    At home I am a nice, quiet guy, but I don't want the world to know.
+    Humble people, I have found, don't get very far.
+    \vgap
+    To win, you must have the skill and the will. But the will must be
+    stronger than the skill.
+    \vgap
+    I'm the best golfer; I just haven't played it yet.
+}
+
+
+%++++++++++++++++++ Collecting body of environment +++++++++++++++++++%
+
+\bigskip
+\begin{collectbody}[
+  title=Example of collect body,
+  title scale=.8,
+  title text style=\ttfamily\color{red}
+]
+\lipsum[1]
+\end{collectbody}
+
+\end{document}
+
+
+%%+++++++++++++++++++++ Assigning arguments to keys +++++++++++++++++%%
+
+\skvsetdefaultprefix{myprefix}
+\skvordkey{fam}{key1}[deafult1]{}
+\skvcmdkey{fam}[mp@]{key2}[deafultx,defaulty]{%
+  \def\cmd##1{#1+#2+##1}%
+}
+\skvassignargs{fam}[.expanded]{key2}{#1,#2}
+\def\valuex{valuex}
+\def\valuey{valuey}
+\skvsetkeys[myprefix]{fam}{key1=value1,key2={\valuex,\valuey}}
+
+%%+++++++++++++++++++++ Examples of \skvmakekeys +++++++++++++++++++%%
+
+\skvmakekeys[
+  .prefix=KVA,
+  .families={fam1,fam2},
+  .hp=thp@,
+  .all new,
+  .define in all families,
+  .initialize=true
+]{%
+  .ord/{keya,keyb}/default-a,
+  .cmd/{keyc,keyd}/.na/\def\y##1{#1**##1},
+  .choice/keyf/center/{center.do=\def\x##1{#1*##1},left,right},
+  .zbool/show center/true/\edef\cmd{\ifthp@showcenter Yes\else No\fi},
+}
+%\skvshowcs{KVA/fam2/keyf.@cbk}
+%\skvshowcs{KVA/fam1/keyb.@defa}
+\def\keybval{xx}
+\skvsetkeys[KVA]{fam1}{keyb=.expand once{\keybval}}
+
+
+%%+++++++++++++++++++++ Examples of \skvusekeys +++++++++++++++++++%%
+
+\skvmakekeys[
+  .prefix=KVA,
+  .families={fam1,fam2},
+  .hp=thp@,
+  .all new
+]{%
+  .ord/keya/{default-a}/\def\y##1{##1*#1*##1},
+  .ord/keyb/defa-b,
+}
+
+\def\keybval{xx}
+
+\skvusekeys[
+  .prefix=KVA,
+  .families={fam1,fam2},
+  .set in all families,
+  .save unknown keys
+]{%
+  keya,
+  keyb=.expand once{\keybval}
+}
+
+% Families fam3 and fam4 aren't defined. Hence, with 'save unknown keys'
+% set to 'true' by default, keys keya and keyb are saved as rm keys with
+% their default values.
+\skvusekeys[
+  .prefix=KVA,
+  .families={fam3,fam4},
+  .set in all families,
+  .save unknown keys
+]{%
+  keya,keyb=.expand once{\keybval}
+}
+%\skvshowcs{KVA/fam3/.@rmkeys}
+%\skvshowcs{KVA/fam4/.@rmkeys}
+
+
+%%+++++++++++++++ Key values with unbalanced conditionals ++++++++++++%%
+
+\skvcmdkey[SKVT]{fam}[mpf]{keya}[keya-defa]{\def\keyaval{#1}}
+\skvsetkeys[SKVT]{fam}{keya=\fi}
+
+%%+++++++++++++++++++++ Examples of \skvkeyslet +++++++++++++++++++%%
+
+\skvsaveinitialvaluekeys[KV]{fam}{keya,keyb,keyc}
+%\skvshowcs{KV/fam/.@needini}
+\skvmakekeys[
+  .prefix=KV,
+  .family=fam,
+  .hp=thp@,
+  .all new,
+  .initialize,
+  .save initial values
+]{%
+  .ord/keya/defa-a/\def\keyay##1{##1*#1*##1},
+  .cmd/{keyb,keyc}/defa-b/\def\keyby##1{##1*#1*##1},
+  .cmd/keyd,
+}
+%\skvshowcs{KV/fam/.@inikv}
+\skvignorekeys[KV]{fam}{keyb,keyc}
+\skvkeyslet[KV]{fam}{keyA=keya,keyB=keyb,keyC=keyc}
+\skvshowcs{KV/fam/.@needini}
+
+
+%++++++++++++++++++ Evaluating boolean expressions +++++++++++++++++++%
+
+\skvifexprTF{%
+  not ( expr { \skvifdefTF\xa } and expr { \skvifemptyTF\xa } )
+  or ( expr { \skvifdefTF\xb } or expr { \skvifxTF\xa\xb } )
+}{%
+  \def\x{T}%
+}{%
+  \def\x{F}%
+}
+
+%++++++++++++++++++++++++++++ \cicadaloop +++++++++++++++++++++++++++%
+
+\makeatletter
+\skvtestcnt\z@
+\def\blist{{X};\fi;{Y};Z}
+\def\stack{}
+\let\romn\romannumeral
+\cicadaloop{{a},\if,{b},c}\if01\fi{%
+  \advance\skvtestcnt by\@ne
+  \@tempcntb\z@\@tempswafalse
+  \cicadaloop*[;]\blist\if@tempswa\fi{%
+    \advance\@tempcntb by\@ne
+    \typeout{Doing \romn\skvtestcnt, \romn\@tempcntb:
+      \detokenize{#1, ##1}}%
+    \edef\stack{%
+      \unexpanded\expandafter{\stack}\noexpand\do
+      {\romn\skvtestcnt,\romn\@tempcntb}{\unexpanded{#1;##1}}%
+    }%
+    \ifnum\@tempcntb>\tw@\@tempswatrue\fi
+  }%
+}
+\makeatother
+
+%++++++++++++++++++++++++ \ifcases ++++++++++++++++++++++++++++++%
+
+\skvifcases b\then
+  case{a}{\def\x{do a}}
+  case{b}{\def\x{do b}}
+  case{c}{\def\x{do c}}
+ %   default{\def\x{no match}}
+\fi
+
+\skvifcasse{x}
+  case{a}{\def\x{do a}}
+  case{b}{\def\x{do b}}
+  case{c}{\def\x{do c}}
+\elsedo
+  \def\x{no match}
+\endif
+
+\skvifcasse{x}
+  case{a}{\def\x{do a}}
+  case{b}{\def\x{do b}}
+  case{c}{\def\x{do c}}
+%\elsedo
+% \def\x{no match}
+\endif
+
+%++++++++++++ Processing a key's value as a comma list +++++++++++%
+
+\skvordkeys[KV]{fam}{key1,key2}[default]{%
+  .arg{#1/#2}%
+  \def\x##1{##1*#1*#2}%
+}
+\def\aval{val1a/val1b}
+\def\bval{val2a/val2b,val2c/val2d}
+\skvsetkeys[KV]{fam}{%
+  key1=\aval,
+  key2=.eprocess list{\bval}
+}
+
+\skvordkeys[KV]{fam}{key1}[default]{\def\x##1{##1*#1}}
+\def\aval{val1a,val1b,val1c,val1d}
+\def\bval{\aval}
+\def\cval{\bval}
+\skvsetkeys[KV]{fam}{%
+  key1=.expand once process list{\aval},
+  key1=.expand twice process list{\bval},
+  key1=.expand process list{\cval}
+}
+
+% End of file skeyval-pokayoke1.tex

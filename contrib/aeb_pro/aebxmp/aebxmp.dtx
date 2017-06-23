@@ -1,0 +1,812 @@
+%\iffalse
+% makeindex -s gglo.ist -o web.gls web.glo
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% aebxmp.sty package,                  2016-05-29      %%
+%% Copyright (C) 2006--2016 D. P. Story                 %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1.2 of    %%
+%% the License, or (at your option) any later version.  %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+%<package>\ProvidesPackage{aebxmp}
+%<package> [2017/02/17 v2.5a Populate advanced metadata (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\OnlyDescription  % comment out for implementation details
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{aebxmp}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{aebxmp}{aebdocfmt.def cannot be found}}
+\begin{document}
+\def\CMD#1{\textbackslash#1}
+  \GetFileInfo{aebxmp.sty}
+  \title{AeBXMP: Updating XMP using E4X and {\LaTeX}}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \DocInput{aebxmp.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o aebxmp.ind aebxmp.idx} on the command line and recompile
+    \texttt{aebxmp.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o aebxmp.gls aebxmp.glo} on the command line and recompile
+    \texttt{aebxmp.dtx}.}
+\end{document}
+%</driver>
+% \fi
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{aebxmp}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{aebxmp}{cannot find aebdonotindex.def}}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+% \changes{v2.5}{2016/05/20}{Moved DJLS from \string\texttt{addScript} in \string\texttt{insDLJS} env.}
+% \changes{v2.3c}{2012/09/20}{Changed \cs{copyrightNotice} and a
+%    added \cs{Title} and \cs{Subject}, and . These now accept multiple entries with a required
+%    language specification.Also defined the JavaScript arrays \texttt{aTitle}, \texttt{aSubject}
+%    \texttt{aRights}. Added \cs{sourceFile} to save the name of the source file in the
+%    DC packet. Added \cs{metaLang}, also to the DC packet.}
+% \changes{v2.3a}{2012/01/12}{Set the \texttt{lang} attribute to a value of \texttt{x-default}
+% for \cs{copyrightNotice}. Added a choice key to \cs{copyrightStatus} to force an
+% acceptable argument.}
+% \changes{v2.3}{2012/01/09}{All XMP elements now is inserted by E4X.}
+% \changes{v2.2}{2012/01/04}{Added the \cs{Keywords} command for creating an array
+%       of keywords that can be accessed individually using the JavaScript function
+%       \texttt{aKeyWords}, also defined in this package.}
+% \changes{v2.1a}{2011/12/30}{More code efficiencies}
+% \changes{v2.1}{2011/12/30}{Cleaned up the code, fixed a bug.}
+% \changes{v2.0}{2011/12/30}{Defined commands to producing custom document properties,
+%   defined the \cs{Authors} command.}
+% \changes{v1.0}{2011/12/29}{Made a proper DTX file for this package; added
+% \cs{authortitle} and \cs{descriptionwriter}; support for \texttt{xmp:CreateDate}.}
+% \changes{v0.2}{2007/03/13}{Added support for unicode escape sequences in the
+%      \cs{copyrightNotice} and \cs{copyrightInfoURL} fields.}
+% \changes{v0.1}{2006/12/01}{Original distribution}
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+\@ifpackageloaded{insdljs}{\let\execjs=y}
+%    \end{macrocode}
+%    (2017/02/17) Require 2016/07/31 for insdljs to make colon syntax available.
+%    \changes{v2.5a}{2017/02/17}{Require 2016/07/31 for insdljs}
+%    \begin{macrocode}
+    {\RequirePackage[execJS]{insdljs}[2016/07/31]} % incls conv-xkv
+%    \end{macrocode}
+%    \section{Utility commands and switches}
+%    \begin{macrocode}
+\newif\if@xmp@several \@xmp@severaltrue
+%    \end{macrocode}
+% The following is a utility command used in \cs{copyrightStatus}, \cs{Title},
+% and \cs{Subject}.
+%    \begin{macrocode}
+\def\xmp@testBrace#1{\@ifnextchar\bgroup
+    {\@xmp@severaltrue#1}{\@xmp@severalfalse#1}}
+%    \end{macrocode}
+% \cs{xmpLangAndArg} is used by the same commands listed above. These are the ones
+% that have a language attribute.
+%    \begin{macrocode}
+\newcommand{\xmpLangAndArg}[1][]{%x-default
+    \edef\xmpLang{#1}\xmpGetNextArg}
+\def\xmpGetNextArg#1\@nil{\edef\xmpArg{#1}}
+%    \end{macrocode}
+% A major utility command used by \cs{copyrightStatus}, \cs{Title},
+% and \cs{Subject}. \texttt{\#1} is the arguments of the calling command,
+% and \texttt{\#2} is the ``array'' macro.
+%    \begin{macrocode}
+\edef\xmp@dquoteCat{\the\catcode`\"}
+\catcode`\"=12\relax
+\def\xmp@ProcessArgs#1#2{%
+    \if@xmp@several
+        \@tfor\xmpArg:=#1\do{%
+            \expandafter\xmpLangAndArg\xmpArg\@nil
+            \ifnum\count0=0\relax
+                \xdef#2{#2^^J%
+                \xmp@insItem[\the\count0]="\xmpArg";^^J%
+                \xmp@insItem[\the\count0].@xml::lang="x-default";}%
+                \ifx\xmpLang\@empty\else
+                    \advance\count0by1\relax
+                    \xdef#2{#2^^J%
+                    \xmp@insItem[\the\count0]="\xmpArg";^^J%
+                    \xmp@insItem[\the\count0].@xml::lang="\xmpLang";}%
+                \fi
+            \else
+                \xdef#2{#2^^J%
+                \xmp@insItem[\the\count0]="\xmpArg";^^J%
+                \xmp@insItem[\the\count0].@xml::lang="\xmpLang";}%
+            \fi
+            \advance\count0by1\relax
+        }%
+    \else
+        \@tfor\xmpArg:={#1}\do{%
+            \expandafter\xmpLangAndArg\xmpArg\@nil
+            \xdef#2{#2^^J%
+            \xmp@insItem[\the\count0]="\xmpArg";^^J%
+            \xmp@insItem[\the\count0].@xml::lang="x-default";}%
+            \ifx\xmpLang\@empty\else
+                \advance\count0by1
+                \xdef#2{#2^^J%
+                \xmp@insItem[\the\count0]="\xmpArg";^^J%
+                \xmp@insItem[\the\count0].@xml::lang="\xmpLang";}%
+            \fi
+        \advance\count0by1\relax
+        }%
+    \fi
+}
+\bgroup\obeyspaces
+\gdef\tabiv{    }%
+\egroup
+%    \end{macrocode}
+%
+% \section{Top-level Interface to Metadata}
+% Through this package, the author can specify certain ``Advanced Metadata''
+% items: copyright notice; copyright notice; copyright url; author title;
+% and writer description.
+%
+% \subsection{Dublin Core Properties}
+%
+%    \begin{macro}{\copyrightNotice}
+% The argument \texttt{\#1} is the text of the \textsf{Copyright Notice},
+% multiple languages supported. The first copyright notice is also tagged
+% as the default, \texttt{x-default}.
+%\begin{verbatim}
+%\copyrightNotice{%
+%    {[lang_1] Copyright notice}
+%    {[lang_2] Copyright notice}
+%    ...
+%}
+%\end{verbatim}
+%    \begin{macrocode}
+\let\arrayOfRights\@empty
+\newcommand{\copyrightNotice}[1]{\def\xmpcopyrightNotice{#1}%
+    \xmp@testBrace{\xmp@cont@CopyRightNotice}#1\@nil}%
+\let\xmpcopyrightNotice\@empty
+%    \end{macrocode}
+% \cs{copyrightNotice} continues with \cs{xmp@cont@CopyRightNotice}
+%    \begin{macrocode}
+\def\xmp@cont@CopyRightNotice#1\@nil{%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\xmp@insItem{p.aebdc::rights.aebrdf::Alt.aebrdf::li}%
+    \ifx\xmpcopyrightNotice\@empty\else
+        \xmp@ProcessArgs{#1}{\arrayOfRights}%
+    \fi
+    \endgroup
+}
+%    \end{macrocode}
+%    \begin{macro}{\Authors}
+% Enter multiple authors using a token list
+%\begin{verbatim}
+%\Authors
+%{%
+%   {D. P. Story}
+%   {A. P. Story}
+%   ...
+%}
+%\end{verbatim}
+% We use \cs{@tfor} to build an array of authors, and use the simple mechanism
+% of \texttt{this.info.Authors} to set the multiple authors.
+%    \begin{macrocode}
+\let\arrayOfAuthors\@empty
+\let\xmpAuthors\@empty
+\newcommand{\Authors}[1]{\def\xmpAuthors{#1}%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\insSeqItem{p.aebdc::creator.aebrdf::Seq.aebrdf::li}%
+    \ifx\xmpAuthors\@empty\else
+        \let\arrayOfAuthors\@gobble
+        \@tfor\xmpAuthor:=#1\do{%
+            \xdef\arrayOfAuthors{\arrayOfAuthors^^J%
+            \insSeqItem[\the\count0]="\xmpAuthor";}%
+            \advance\count0by1
+        }%
+    \fi
+    \endgroup
+}
+\def\insertAuthors{\ifx\arrayOfAuthors\@empty\else
+    ^^J\arrayOfAuthors\fi}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\Title}
+% Allow multiple Titles, with language specification; syntax
+%\begin{verbatim}
+%\Title{%
+%    {[lang_1] Title}
+%    {[lang_2] Title}
+%    ...
+%}
+%\end{verbatim}
+% Begin \cs{Title}
+%    \begin{macrocode}
+\let\arrayOfTitles\@empty
+\newcommand{\Title}[1]{\edef\xmpTitle{#1}%
+    \xmp@testBrace{\xmp@cont@Title}#1\@nil}
+%    \end{macrocode}
+% continuation of \cs{Title}
+%    \begin{macrocode}
+\def\xmp@cont@Title#1\@nil{%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\xmp@insItem{p.aebdc::title.aebrdf::Alt.aebrdf::li}%
+    \ifx\xmpTitle\@empty\else
+        \xmp@ProcessArgs{#1}{\arrayOfTitles}%
+    \fi
+    \endgroup
+}
+\def\insertTitles{\ifx\arrayOfTitles\@empty\else
+    ^^J\arrayOfTitles\fi}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\Subject}
+% Allow multiple subjects, with language specification.
+% Begin \cs{Subject}
+%    \begin{macrocode}
+\let\arrayOfSubjects\@empty
+\newcommand{\Subject}[1]{\edef\xmpSubject{#1}%
+    \xmp@testBrace{\xmp@cont@Subject}#1\@nil}%
+%    \end{macrocode}
+% Continue \cs{Subject}
+%    \begin{macrocode}
+\def\xmp@cont@Subject#1\@nil{%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\xmp@insItem{p.aebdc::description.aebrdf::Alt.aebrdf::li}%
+    \ifx\xmpSubject\@empty\else
+        \xmp@ProcessArgs{#1}{\arrayOfSubjects}%
+    \fi
+    \endgroup
+}
+\def\insertSubjects{\ifx\arrayOfSubjects\@empty\else
+    ^^J\arrayOfSubjects\fi}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\metaLang}
+% A list of languages used in this document.
+%    \begin{macrocode}
+\let\arrayOfLangs\@empty
+\newcommand{\metaLang}[1]{\def\xmplangOfDoc{#1}%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\insBagItem{p.aebdc::language.aebrdf::Bag.aebrdf::li}%
+    \ifx\xmpLangs\@empty\else
+        \let\arrayOfLangs\@gobble
+        \@for\xmpLang:=#1\do{%
+            \xdef\arrayOfLangs{\arrayOfLangs^^J%
+            \insBagItem[\the\count0]="\xmpLang";}%
+            \advance\count0by1
+        }%
+    \fi
+    \endgroup
+}
+\def\insertLangs{\ifx\arrayOfLangs\@empty\else
+    ^^J\arrayOfLangs\fi}
+%    \end{macrocode}
+%    \end{macro}
+% \DescribeMacro{\sourceFile} is used to insert the name of the source file
+% in to the Dublin Core. By default \cs{jobname.tex} is used. If this command
+% is not executed, \cs{jobname.tex} is used. If executed with
+% an empty argument, no \texttt{dc:source} is not inserted at all. If executed
+% with a nonempty argument, that argument is assumed to be a file name and is
+% inserted as the value of the \texttt{dc:source}.
+%    \begin{macrocode}
+\newcommand{\sourceFile}[1]{\let\xmp@bSourcefile=1
+    \def\xmp@sourcefile{#1}}
+\let\xmp@bSourcefile=0
+\let\xmp@sourcefile\@empty
+\def\insertSource{%
+    \if\xmp@bSourcefile0
+    ^^Jp.aebdc::source="\jobname.tex"\else
+    \ifx\xmp@sourcefile\@empty\else
+    ^^Jp.aebdc::source="\xmp@sourcefile"\fi\fi}
+%    \end{macrocode}
+%    \begin{macro}{\Keywords}
+% We try to implement keywords in a manner similar to \cs{Authors}; that is,
+% we want to reference each key word. The individual keywords are listed in
+% \texttt{dc:subject}, in a \texttt{Bag}, an unordered array.
+%    \begin{macrocode}
+\let\arrayOfKeywords\@empty
+\let\aKeywords\@empty
+\let\xmpKeywords\@empty
+\newcommand{\Keywords}[1]{\def\xmpKeywords{#1}%
+    \begingroup\let\u\relax\count0=0\relax
+    \def\insBagItem{%
+    p.aebdc::subject.aebrdf::Bag.aebrdf::li}%
+    \ifx\xmpKeywords\@empty\else
+        \let\arrayOfKeywords\@gobble
+        \let\aKeywords\@gobbletwo
+        \@for\xmpKeyword:=#1\do{%
+            \xdef\arrayOfKeywords{\arrayOfKeywords^^J%
+            \insBagItem[\the\count0]="\xmpKeyword";}%
+            \xdef\aKeywords{\aKeywords;\space\xmpKeyword}%
+            \advance\count0by1
+        }%
+        \xdef\aKeywords{"\aKeywords"}%
+    \fi
+    \endgroup
+}
+%    \end{macrocode}
+% \cs{insertKeywords} does what the other ``insert'' commands do, insert the
+% code, we use the \texttt{dc:subject} tag, which corresponds to keywords.
+% Used in the disposable code below.
+%    \begin{macrocode}
+\def\insertKeywords{\ifx\arrayOfKeywords\@empty\else
+    ^^J\arrayOfKeywords\fi}
+%    \end{macrocode}
+%    \end{macro}
+% We set the keywords using the JavaScript property \texttt{Doc.info}, rather
+% than a pdfmark. We also optionally include document-level JS so the document
+% user can access individual keywords. \DescribeMacro{\xmpDoNotInsKWScript}\cs{xmpDoNotInsKWScript}
+% optionally turns off the insertion of the function \texttt{aKeywords()}.
+%    \begin{macrocode}
+\let\xmpInsScript\@empty
+\newcommand{\xmpDoNotInsKWScript}{\let\xmpInsScript\null}
+%    \end{macrocode}
+%\subsection{XMP Rights Management Properties}
+%    \begin{macro}{\copyrightStatus}
+%If \texttt{\#1} is \texttt{True}, the \textsf{Copyright Status} is set to
+%\texttt{Copyrighted}; if \texttt{False}, \textsf{Copyright Status} is set
+%to \textsf{Public Domain}. If left empty, the status is set to
+%\textsf{Unknown}.
+%    \begin{macrocode}
+\newcommand{\copyrightStatus}[1]{%
+    \setkeys{aebxmp}{copyrightstatus=#1}}
+%    \end{macrocode}
+% We offer choices of \texttt{true}, \texttt{false}, or \texttt{unknown} (case insensitive)
+% for the argument of \cs{copyrightStatus}
+%    \begin{macrocode}
+\define@choicekey*+{aebxmp}{copyrightstatus}[\val\nr]%
+    {true,false,unknown}[unknown]{%
+    \ifcase\nr\relax
+        \def\xmpcopyrightStatus{True}\or
+        \def\xmpcopyrightStatus{False}\else
+        \let\xmpcopyrightStatus\@empty\fi
+}{\PackageWarning{aebxmp}{%
+    Bad choice for \string\copyrightStatus,\MessageBreak
+    you entered '#1'.\MessageBreak
+    Permissible values are true, false, or unknown\MessageBreak
+    (or an empty argument). Setting status to 'unknown'.\MessageBreak
+    Try again,}}
+\let\xmpcopyrightStatus\@empty
+%    \end{macrocode}
+%    \end{macro}
+% \cs{insertMarked} inserts the copyright status and is used in the
+% disposable code. It only if one has been declared. If none is declared,
+% the copyright notice will be \texttt{Unknown}.
+%    \begin{macrocode}
+\def\insertMarked{\ifx\xmpcopyrightStatus\@empty
+    \else^^Jp.aebxapRights::Marked="\xmpcopyrightStatus";\fi}
+%    \end{macrocode}
+%    \begin{macrocode}
+\def\insertCopyrightNotice{\ifx\arrayOfRights\@empty\else
+    \arrayOfRights\fi}
+%    \end{macrocode}
+% Insert copyright notice and specify the language attribute, which is
+% \texttt{x-default}. Used in the disposable code below.
+%    \begin{macro}{\copyrightInfoURL}
+% The argument \texttt{\#1} is the \textsf{URL} to the copyright information
+%    \begin{macrocode}
+\newcommand{\copyrightInfoURL}[1]{\def\xmpcopyrightInfoURL{#1}}
+\let\xmpcopyrightInfoURL\@empty
+%    \end{macrocode}
+% Insert the web statement. Used in the disposable code below.
+%    \begin{macrocode}
+\def\insertWebStatement{\ifx\xmpcopyrightInfoURL\@empty
+    \else^^Jp.aebxapRights::WebStatement="\xmpcopyrightInfoURL";\fi}
+%    \end{macrocode}
+%    \end{macro}
+%\subsection{Acrobat Custom Properties}
+%    \begin{macro}{\customProperties}
+%\begin{verbatim}
+%\customProperties
+%{
+%   {name=dps,value=5}
+%   {name=jg,value=good}
+%   ...
+%}
+%\end{verbatim}
+%    \begin{macrocode}
+\let\insertCusProps\@empty
+\newcommand\customProperties[1]{\def\pdfx@cusProps{#1}%
+    \begingroup\let\u\relax
+    \@tfor\thisproperty:=#1\do{%
+    \edef\tmp@exp{\noexpand
+%    \end{macrocode}
+%    (2017/02/17) Values of \texttt{customProperties} can use the colon notation
+%    \changes{v2.5a}{2017/02/17}{Values of customProperties can use the colon notation}
+%    \begin{macrocode}
+    \cxkvsetkeys{pdfx@cusPropKV}{name,value,\thisproperty}}\tmp@exp
+    \xdef\insertCusProps{\insertCusProps^^J%
+%    \end{macrocode}
+% We permit the use of \cs{u} the the value of the custom property,
+% the name of the custom property should be a restricted XML name, basically
+% \texttt{A-Z},\texttt{a-z}, and \texttt{0-9}.
+%    \begin{macrocode}
+        p.aebpdfx::\pdfx@KName="\pdfx@VValue";}
+    }%
+    \endgroup
+}
+%    \end{macrocode}
+% The \texttt{pdfx@cusPropKV} family has two keys, \texttt{name} and \texttt{value}.
+% These keys are used in the command \cs{customProperties} defined above.
+%    \begin{macrocode}
+\define@key{pdfx@cusPropKV}{name}[]{\def\pdfx@KName{#1}}
+\define@key{pdfx@cusPropKV}{value}[]{\def\pdfx@VValue{#1}}
+%    \end{macrocode}
+%    \end{macro}
+% We define a simple tabbing command \cs{tabiv} to use within the JavaScript.
+%
+% \subsection{XMP Core Properties}
+% These are some helper macros that conditionally fill in metadata when it exists.
+% All these commands are used internally; the document author has no reason to use them.
+% \changes{v2.5}{2016/05/20}{Added the \string\texttt{ModifyDate} property}
+%    \begin{macrocode}
+\def\insertCreateDate{^^Jp.@aebxap::CreateDate=createDateStr;%
+^^Jp.@aebxap::ModifyDate=createDateStr;}
+\def\xmpnEOL{\string\n\string\^^J}
+%    \end{macrocode}
+% \subsection{Adobe Photoshop Properties}
+%    \begin{macro}{\authortitle}
+% The \texttt{<text>} (argument \texttt{\#1}) appears in the
+% \textsf{Author Title} line on the \textsf{Advanced Metadata} dialog box.
+% This is a \textbf{Photoshop} property. (See the Advanced category in the left
+% panel.)
+%    \begin{macrocode}
+\newcommand{\authortitle}[1]{\def\xmpauthortitle{#1}}
+%    \end{macrocode}
+% \DescribeMacro{\authorTitle} is an alias for \cs{authortitle}.
+%    \begin{macrocode}
+\let\authorTitle\authortitle
+\let\xmpauthortitle\@empty
+%    \end{macrocode}
+% Insert the author title. Used in the disposable code below.
+%    \begin{macrocode}
+\def\insertAuthorTitle{\ifx\xmpauthortitle\@empty
+    \else^^Jp.aebphotoshop::AuthorsPosition="\xmpauthortitle";\fi}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\descriptionwriter}
+% The \texttt{<text>} (argument \texttt{\#1}) appears in the
+%\textsf{Description Writer} line on the \textsf{Advanced Metadata} dialog box.
+%This is a \textbf{Photoshop} property. (See the Advanced category in the left
+%panel.)
+%    \begin{macrocode}
+\newcommand{\descriptionwriter}[1]{\def\xmpdescriptionwriter{#1}}
+%    \end{macrocode}
+% \DescribeMacro{\descriptionWriter} is an alias for \cs{descriptionwriter}.
+%    \begin{macrocode}
+\let\descriptionWriter\descriptionwriter
+\let\xmpdescriptionwriter\@empty
+%    \end{macrocode}
+% Insert the description writer. Used in the disposable code below.
+%    \begin{macrocode}
+\def\insertDescriptionWriter{\ifx\xmpdescriptionwriter\@empty
+    \else^^Jp.aebphotoshop::CaptionWriter="\xmpdescriptionwriter";\fi}
+%    \end{macrocode}
+%    \end{macro}
+%
+% \section{Disposable JavaScript}
+% Most of this package consists of a few new commands to populate the ``disposable''
+% JavaScript that is input as an \textsf{FDF} when the PDF file is first opened after distilling.
+% This code does all the work.
+% \par\medskip\noindent
+% \cs{insertKWJS} expands to a JavaScript property assignment if there are \cs{aKeywords}
+% is nonempty.
+%    \begin{macrocode}
+\def\insertKWJS{\ifx\aKeywords\@empty\else
+    this.info.Keywords=\aKeywords;^^J\fi}
+%    \end{macrocode}
+%    When \textsf{pdflatex} is used (MiKTeX version), the package fails
+%    when \texttt{p.@xmlns::pdfx} is included. This seems to because the
+%    \textsf{pdflatex} version defines its own custom property. Haven't figured
+%    how to detect the presence of a custom property yet.
+%    \begin{macrocode}
+%\edef\insertPDFX{\ifpdf\else p.@xmlns::pdfx=aebpdfx.uri;^^J\fi}
+%    \end{macrocode}
+% Some namespace definitions
+%    \begin{macrocode}
+\def\xNNS{new Namespace}
+\def\xAdbNS{http://ns.adobe.com}
+\def\xWiiiNS{http://www.w3.org}
+\begin{execJS}{execXMP}
+%    \end{macrocode}
+% Get the metadata from the current document.
+%    \begin{macrocode}
+var meta=this.metadata;
+var aebXMPData=new XML(meta);
+%    \end{macrocode}
+% Define the needed namespaces
+%    \begin{macrocode}
+var aebx=\xNNS("x","adobe:ns:meta/");
+var xmlns=\xNNS("xmlns","\xWiiiNS/2000/xmlns/");
+var xml=\xNNS("xml", "\xWiiiNS/XML/1998/namespace");
+var aebrdf=\xNNS("rdf","\xWiiiNS/1999/02/22-rdf-syntax-ns#");
+var aebdc=\xNNS("dc","http://purl.org/dc/elements/1.1/");
+var aebpdf=\xNNS("pdf","\xAdbNS/pdf/1.3/");
+var aebxap=\xNNS("xmp","\xAdbNS/xap/1.0/");
+var aebxapRights=\xNNS("xmpRights","\xAdbNS/xap/1.0/rights/");
+var aebphotoshop=\xNNS("photoshop","\xAdbNS/photoshop/1.0/");
+var aebpdfx=\xNNS("pdfx","\xAdbNS/pdfx/1.3/");
+%    \end{macrocode}
+%    \begin{macrocode}
+var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+%    \end{macrocode}
+% The MiKTeX version of \textsf{pdflatex} places a custom property at the creation
+% of the PDF. We detect whether any custom properties already exist, if they do,
+% don't emit \texttt{p.@xmlns::pdfx=aebpdfx.uri}, otherwise, an exception it thrown
+% when the metadata is updated at the end of this code.
+%    \begin{macrocode}
+if ( p.@aebpdfx::*.toString() == "" ) p.@xmlns::pdfx=aebpdfx.uri;
+p.@xmlns::photoshop=aebphotoshop.uri;
+p.@xmlns::xmpRights=aebxapRights.uri;
+%    \end{macrocode}
+% The creation date shall be the time this \textsf{FDF} is imported into the document.
+%    \begin{macrocode}
+var d=new Date();
+var createDateStr=util.printd("yyyy-mm-ddTHH:MM:ss",d);
+%    \end{macrocode}
+% We delete the element, in case it already has a value (unlikely), the  we
+% assign it our value.
+%    \begin{macrocode}
+delete p.@aebdc::rights.aebrdf::Alt.aebrdf::li;
+%    \end{macrocode}
+% \paragraph*{Dublin Core Properties
+% (\texttt{dc}, \begin{NoHyper}\url{http://purl.org/dc/elements/1.1/}\end{NoHyper})}\strut\\
+% Core properties include \texttt{dc:format}, \texttt{dc:title},
+% \texttt{dc:rights}, \texttt{dc:creator}, and \texttt{dc:subject} (aka, keywords).
+% Here, we set \texttt{dc:rights}, called \textsf{Copyright Notice} in the user interface.
+%    \begin{macrocode}
+/*
+    Dublin Core Properties
+*/%
+\insertTitles%
+\insertAuthors%
+\insertSubjects%
+\insertKeywords%
+\insertLangs%
+\insertSource%
+\insertCopyrightNotice%
+
+%    \end{macrocode}
+% We delete all old values of \texttt{xapRights:Marked} and \texttt{xap:WebStatement},
+% and replace them with the new values.
+%    \begin{macrocode}
+/*
+    XMP Rights Management Properties
+*/
+delete p.@aebxapRights::Marked;
+delete p.@aebxapRights::WebStatement;%
+%    \end{macrocode}
+% Now we insert additional properties, if there are any
+%    \begin{macrocode}
+%    \end{macrocode}
+% \paragraph*{XMP Rights Management}\strut\\(\texttt{xmpRights},
+% \begin{NoHyper}\url{http://ns.adobe.com/xap/1.0/rights/}\end{NoHyper})\\
+% These include \texttt{xmpRights:Marked} and \texttt{xmpRights:WebStatement}, both of which
+% are set.
+%    \begin{macrocode}
+\insertMarked%
+\insertWebStatement%
+
+%    \end{macrocode}
+% \paragraph*{Adobe Photoshop Properties}\strut\\(\texttt{photoshop},
+% \begin{NoHyper}\url{http://ns.adobe.com/photoshop/1.0/}\end{NoHyper})\\
+% These include \texttt{photoshop:AuthorsPosition} and \texttt{photoshop:CaptionWriter}, both of which
+% are set.
+%    \begin{macrocode}
+delete p.@aebphotoshop::AuthorsPosition;
+delete p.@aebphotoshop::CaptionWriter;
+delete p.@aebxap::CreateDate;
+/*
+    Adobe Photoshop Properties
+*/%
+\insertAuthorTitle%
+\insertDescriptionWriter%
+
+%    \end{macrocode}
+% \paragraph*{Acrobat Custom Properties} (\texttt{pdfx},
+% \begin{NoHyper}\url{http://ns.adobe.com/pdfx/1.3/}\end{NoHyper})\\
+% Adobe allows the creation of custom properties that are accessible
+% through the \texttt{Doc.info} object.
+%    \begin{macrocode}
+/*
+    Acrobat Custom Properties
+*/%
+\insertCusProps%
+
+%    \end{macrocode}
+% \paragraph*{XMP Core Properties} (\texttt{xmp},
+% \begin{NoHyper}\url{http://ns.adobe.com/xap/1.0/}\end{NoHyper})\\
+% These properties include \texttt{xmp:CreatorTool},
+% \texttt{xmp:ModifyDate}, \texttt{xmp:CreateDate}, and \texttt{xmp:MetadataDate}.
+% Here we set only \texttt{CreateDate}.
+%    \begin{macrocode}
+/*
+    XMP Core Properties
+*/%
+\insertCreateDate%
+
+%    \end{macrocode}
+% Convert \texttt{aebXMPData} into a string
+%    \begin{macrocode}
+/*
+    Convert aebXMPData into an XML String
+    and save is as this.metadata
+*/
+var aebNewXMPStr=aebXMPData.toXMLString();
+%    \end{macrocode}
+% and assign it to the document metadata
+%    \begin{macrocode}
+try { this.metadata=aebNewXMPStr; }
+    catch(e) {console.println(e.toString());}
+%    \end{macrocode}
+%    Insert a JavaScript assignment for keywords.
+%    \begin{macrocode}
+\insertKWJS%
+\end{execJS}
+%    \end{macrocode}
+%
+% \section{Document JavaScript}
+%
+% This definition environment defines four functions and four arrays.
+% The functions are used to build the arrays. The arrays are user accessible,
+% they are \texttt{aKeywords}, \texttt{aTitle}, \texttt{aSubject}, and \texttt{aRights}.
+%    \begin{macrocode}
+\ifx\xmpInsScript\@empty
+\begin{insDLJS}{xmpjs}{Access to Title, Subject, and Keywords}
+function getKeywordsXMP(i) {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriDc="http://purl.org/dc/elements/1.1/";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var aebrdf=new Namespace(uriRdf);
+    var aebdc=new Namespace(uriDc);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    return p.aebdc::subject.aebrdf::Bag.aebrdf::li[i];
+}
+var i=0;
+var aKeywords=new Array();
+while ( typeof getKeywordsXMP(i)!="undefined" ) {
+    aKeywords[i]=getKeywordsXMP(i).toString(); i++;
+}
+function getTitleXMP(i) {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriDc="http://purl.org/dc/elements/1.1/";
+    var uriXML="http://www.w3.org/XML/1998/namespace";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var aebrdf=new Namespace(uriRdf);
+    var aebdc=new Namespace(uriDc);
+    var xml=new Namespace("xml",uriXML);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    var retnStr;
+    try { retnStr="[" + p.aebdc::title.aebrdf::Alt.aebrdf::li[i].%
+@xml::lang.toString()+"]: "
+        + p.aebdc::title.aebrdf::Alt.aebrdf::li[i].toString();
+        } catch(e) { retnStr="undefined" };
+    return retnStr;
+}
+var i=0;
+var aTitle=new Array();
+while ( getTitleXMP(i)!="undefined" ) {
+    aTitle[i]=getTitleXMP(i); i++;
+}
+function getSubjectXMP(i) {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriDc="http://purl.org/dc/elements/1.1/";
+    var uriXML="http://www.w3.org/XML/1998/namespace";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var aebrdf=new Namespace(uriRdf);
+    var aebdc=new Namespace(uriDc);
+    var xml=new Namespace("xml",uriXML);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    var retnStr;
+    try { retnStr="[" + p.aebdc::description.aebrdf::Alt.aebrdf::li[i].%
+@xml::lang.toString()+"]: "
+        + p.aebdc::description.aebrdf::Alt.aebrdf::li[i].toString();
+        } catch(e) { retnStr="undefined" };
+    return retnStr;
+}
+var i=0;
+var aSubject=new Array();
+while ( getSubjectXMP(i)!="undefined" ) {
+    aSubject[i]=getSubjectXMP(i); i++;
+}
+function getRightsXMP(i) {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriDc="http://purl.org/dc/elements/1.1/";
+    var uriXML="http://www.w3.org/XML/1998/namespace";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var aebrdf=new Namespace(uriRdf);
+    var aebdc=new Namespace(uriDc);
+    var xml=new Namespace("xml",uriXML);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    var retnStr;
+    try { retnStr="["+ p.aebdc::rights.aebrdf::Alt.aebrdf::li[i]%
+.@xml::lang.toString()+"]: "
+        + p.aebdc::rights.aebrdf::Alt.aebrdf::li[i].toString();
+        } catch(e) { retnStr="undefined" };
+    return retnStr;
+}
+var i=0;
+var aRights=new Array();
+while ( getRightsXMP(i)!="undefined" ) {
+    aRights[i]=getRightsXMP(i); i++;
+}
+function getCopyrightStatus() {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriXAP="http://ns.adobe.com/xap/1.0/rights/";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var xmlns=new Namespace("xmlns","http://www.w3.org/2000/xmlns/");
+    var aebrdf=new Namespace(uriRdf);
+    var aebxapRights=new Namespace("xmpRights",uriXAP);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    p.xmlns::xmpRights=aebxapRights.uri;
+    var copyrightStatus = p.@aebxapRights::Marked;
+    if ( copyrightStatus=="True" )
+        return "Copyrighted";
+    else if ( copyrightStatus=="False" )
+        return "Public Domain";
+    else return "Unknown";
+}
+function getCopyrightInfoURL() {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriXAP="http://ns.adobe.com/xap/1.0/rights/";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var xmlns=new Namespace("xmlns","http://www.w3.org/2000/xmlns/");
+    var aebrdf=new Namespace(uriRdf);
+    var aebxapRights=new Namespace("xmpRights",uriXAP);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    p.xmlns::xmpRights=aebxapRights.uri;
+    var copyrightInfoURL=(p.@aebxapRights::WebStatement.toString()!="")?
+        (p.@aebxapRights::WebStatement):"Not provided";
+    return copyrightInfoURL;
+}
+function getAuthorTitle() {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriPhotoshop="http://ns.adobe.com/photoshop/1.0/";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var xmlns=new Namespace("xmlns","http://www.w3.org/2000/xmlns/");
+    var aebrdf=new Namespace(uriRdf);
+    var aebPhotoshop=new Namespace("photoshop",uriPhotoshop);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    p.xmlns::photoshop=aebPhotoshop.uri;
+    var authorTitle=(p.@aebPhotoshop::AuthorsPosition.toString()!="")?
+        (p.@aebPhotoshop::AuthorsPosition):"Not provided";
+    return authorTitle;
+}
+function getDescriptionWriter() {
+    var uriRdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    var uriPhotoshop="http://ns.adobe.com/photoshop/1.0/";
+    var meta=this.metadata;
+    var aebXMPData=new XML(meta);
+    var xmlns=new Namespace("xmlns","http://www.w3.org/2000/xmlns/");
+    var aebrdf=new Namespace(uriRdf);
+    var aebPhotoshop=new Namespace("photoshop",uriPhotoshop);
+    var p=aebXMPData.aebrdf::RDF.aebrdf::Description;
+    p.xmlns::photoshop=aebPhotoshop.uri;
+    var captionWriter=(p.@aebPhotoshop::CaptionWriter.toString()!="")?
+        (p.@aebPhotoshop::CaptionWriter):"Not provided";
+    return captionWriter;
+}
+\end{insDLJS}
+\fi
+\catcode`\"=\xmp@dquoteCat
+%    \end{macrocode}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+\endinput
+
+p.aebdc::description.aebrdf::Alt.aebrdf::li[0]="Euro \u20AC";
+p.aebdc::description.aebrdf::Alt.aebrdf::li[0].@xml::lang="x-default";

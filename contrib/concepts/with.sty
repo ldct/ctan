@@ -1,0 +1,309 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \iffalse %%%%
+%                                                                              %
+%  Copyright (c) 2012 - Michiel Helvensteijn   (www.mhelvens.net)              %
+%                                                                              %
+%  http://latex-with.googlecode.com                                            %
+%                                                                              %
+%  This work may be distributed and/or modified under the conditions           %
+%  of the LaTeX Project Public License, either version 1.3 of this             %
+%  license or (at your option) any later version. The latest version           %
+%  of this license is in       http://www.latex-project.org/lppl.txt           %
+%  and version 1.3 or later is part of all distributions of LaTeX              %
+%  version 2005/12/01 or later.                                                %
+%                                                                              %
+%  This work has the LPPL maintenance status `author-maintained'.              %
+%                                                                              %
+%  The Current Maintainer of this work is Michiel Helvensteijn.                %
+%                                                                              %
+%  This work consists of the file with.sty and with.tex.                       %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \fi %%%%
+
+% \CheckSum{0}
+%
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Package Info}                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%    \begin{macrocode}
+\NeedsTeXFormat{LaTeX2e}
+\RequirePackage{expl3}
+\ProvidesExplPackage{with}{2012/12/23}{0.0.1}
+  {an inline construct for passing token lists as parameters}
+%    \end{macrocode}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Required Packages}                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%    \begin{macrocode}
+\RequirePackage{xparse}
+\RequirePackage{l3regex}
+%    \end{macrocode}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsection{Package Code}                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%    \begin{macrocode}
+\cs_generate_variant:Nn \cs_generate_variant:Nn {cn}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\cs_new:Nn \gen_use:nn {
+  \cs_generate_variant:cn
+    { #1 : \prg_replicate:nn{\tl_count:n{#2}}{n} }
+    { #2 }
+  \use:c{ #1 : #2 }
+}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\cs_new_protected:Nn \with:n {#1}
+\cs_new_protected:Nn \with:nn {
+  \cs_set:Npn \__with:n ##1 {#2}
+              \__with:n     {#1} }
+\cs_new_protected:Nn \with:nnn {
+  \cs_set:Npn \__with:nn ##1##2 {#3}
+              \__with:nn    {#1}{#2} }
+\cs_new_protected:Nn \with:nnnn {
+  \cs_set:Npn \__with:nnn ##1##2##3 {#4}
+              \__with:nnn   {#1}{#2}{#3} }
+\cs_new_protected:Nn \with:nnnnn {
+  \cs_set:Npn \__with:nnnn ##1##2##3##4 {#5}
+              \__with:nnnn  {#1}{#2}{#3}{#4} }
+\cs_new_protected:Nn \with:nnnnnn {
+  \cs_set:Npn \__with:nnnnn ##1##2##3##4##5 {#6}
+              \__with:nnnnn {#1}{#2}{#3}{#4}{#5} }
+\cs_new_protected:Nn \with:nnnnnnn {
+  \cs_set:Npn \__with:nnnnnn ##1##2##3##4##5##6  {#7}
+              \__with:nnnnnn {#1}{#2}{#3}{#4}{#5}{#6} }
+\cs_new_protected:Nn \with:nnnnnnnn {
+  \cs_set:Npn \__with:nnnnnnn ##1##2##3##4##5##6##7   {#8}
+              \__with:nnnnnnn {#1}{#2}{#3}{#4}{#5}{#6}{#7} }
+\cs_new_protected:Nn \with:nnnnnnnnn {
+  \cs_set:Npn \__with:nnnnnnnn ##1##2##3##4##5##6##7##8    {#9}
+              \__with:nnnnnnnn {#1}{#2}{#3}{#4}{#5}{#6}{#7}{#8} }
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\msg_new:nnnn{with}{invalid-parameter-specs}{
+  The~argument~specification~'#1'~is~not~valid.
+}{
+  The~argument~specification~should~consist~of~between~
+  one~and~seven~of~the~letters~'n',~'o',~'f',~'x',~'u'~or~'U'.
+}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\msg_new:nnnn{with}{invalid-parameter-number}{
+  You~specified~#1~arguments~but~provided~#2.
+}{
+  Your~argument~specification~is~'#3',~which~means~you~should~
+  provide~#1~optional~arguments.~However,~you~provided~only~#2.
+}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\tl_new:N \l__with_argspec_tl
+\tl_new:c {l__with_p_1_tl} \tl_new:c {l__with_p_2_tl}
+\tl_new:c {l__with_p_3_tl} \tl_new:c {l__with_p_4_tl}
+\tl_new:c {l__with_p_5_tl} \tl_new:c {l__with_p_6_tl}
+\tl_new:c {l__with_p_7_tl}
+\tl_new:N \l__with_code_tl
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\int_new:N \l__with_arg_int
+\cs_new:Nn \__with_param_name: {
+  l__with_p_
+  \int_use:N\l__with_arg_int
+  _tl
+}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\tl_new:N \l__with_unique_counter_tl
+\tl_new:N \l__with_param_tl
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\cs_generate_variant:Nn \with:nn        {xn}
+\cs_generate_variant:Nn \with:nnnnnnnnn {oooooooon}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+\NewDocumentCommand \with {m +o +o +o +o +o +o +o +m} {
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \regex_match:nnF {^[noxfuU]{1,7}$} {#1}
+    { \msg_critical:nnn{with}{invalid-parameter-specs}{#1} }
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \tl_set:Nn \l__with_argspec_tl {#1}
+  \int_zero:N \l__with_arg_int
+  \IfValueT{#2} {
+    \tl_set:cn {l__with_p_1_tl} {#2} \int_incr:N \l__with_arg_int
+  \IfValueT{#3} {
+    \tl_set:cn {l__with_p_2_tl} {#3} \int_incr:N \l__with_arg_int
+  \IfValueT{#4} {
+    \tl_set:cn {l__with_p_3_tl} {#4} \int_incr:N \l__with_arg_int
+  \IfValueT{#5} {
+    \tl_set:cn {l__with_p_4_tl} {#5} \int_incr:N \l__with_arg_int
+  \IfValueT{#6} {
+    \tl_set:cn {l__with_p_5_tl} {#6} \int_incr:N \l__with_arg_int
+  \IfValueT{#7} {
+    \tl_set:cn {l__with_p_6_tl} {#7} \int_incr:N \l__with_arg_int
+  \IfValueT{#8} {
+    \tl_set:cn {l__with_p_7_tl} {#8} \int_incr:N \l__with_arg_int
+  }}}}}}}
+  \tl_set:Nn \l__with_code_tl {#9}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \int_compare:nNnF {\tl_count:n{#1}} = {\l__with_arg_int} {
+    \msg_error:nnxxx{with}{invalid-parameter-number}
+      { \tl_count:n{#1} }
+      { \int_use:N \l__with_arg_int }
+      { #1 }
+  }
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \tl_replace_all:Nnn \l__with_argspec_tl {u} {x}
+  \tl_replace_all:Nnn \l__with_argspec_tl {U} {c}
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \int_zero:N \l__with_arg_int
+  \tl_map_inline:nn {#1} {
+    \int_incr:N \l__with_arg_int
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+    \tl_if_in:nnT {uU} {##1} {
+      \tl_set:Nx \l__with_unique_counter_tl
+        { g__with_unique_  \use:c{\__with_param_name:}  _count_int }
+      
+      \int_if_exist:cF {\l__with_unique_counter_tl}
+        { \int_new:c {\l__with_unique_counter_tl} }
+      
+      \int_incr:c {\l__with_unique_counter_tl}
+      
+      \tl_put_left:cx {\__with_param_name:}
+        { g_with_unique_ }
+      
+      \tl_put_right:cx {\__with_param_name:}
+        { _  \int_use:c{\l__with_unique_counter_tl} }
+    }
+%    \end{macrocode}
+
+
+
+%    \uninteresting\begin{macrocode}
+  }
+%    \end{macrocode}
+
+
+
+%    \begin{macrocode}
+  \with:oooooooon {\l__with_argspec_tl}
+                  {\cs:w l__with_p_1_tl \cs_end:}
+                  {\cs:w l__with_p_2_tl \cs_end:}
+                  {\cs:w l__with_p_3_tl \cs_end:}
+                  {\cs:w l__with_p_4_tl \cs_end:}
+                  {\cs:w l__with_p_5_tl \cs_end:}
+                  {\cs:w l__with_p_6_tl \cs_end:}
+                  {\cs:w l__with_p_7_tl \cs_end:} {
+    \with:oooooooon {##1o}{##2}{##3}{##4}
+                     {##5}{##6}{##7}{##8} {
+      \int_case:nnn {\l__with_arg_int} {
+        {1} { \gen_use:nn{with}{####1}
+                {####2}               {\l__with_code_tl} }
+        {2} { \gen_use:nn{with}{####1}
+                {####2}{####3}        {\l__with_code_tl} }
+        {3} { \gen_use:nn{with}{####1}
+                {####2}{####3}{####4} {\l__with_code_tl} }
+        {4} { \gen_use:nn{with}{####1}
+                {####2}{####3}{####4}
+                {####5}               {\l__with_code_tl} }
+        {5} { \gen_use:nn{with}{####1}
+                {####2}{####3}{####4}
+                {####5}{####6}        {\l__with_code_tl} }
+        {6} { \gen_use:nn{with}{####1}
+                {####2}{####3}{####4}
+                {####5}{####6}{####7} {\l__with_code_tl} }
+        {7} { \gen_use:nn{with}{####1}
+                {####2}{####3}{####4}
+                {####5}{####6}{####7}
+                {####8}               {\l__with_code_tl} }
+      }{}
+    }
+  }
+%    \end{macrocode}
+
+
+
+%    \uninteresting\begin{macrocode}
+}
+%    \end{macrocode}
+
+

@@ -1,0 +1,913 @@
+\documentclass[a4paper]{nlctdoc}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{color}
+\usepackage{creatdtx}
+\usepackage{probsoln}
+
+\usepackage[colorlinks,
+            bookmarks,
+            hyperindex=false,
+            pdfauthor={Nicola L.C. Talbot},
+            pdftitle={probsoln: creating problem sheets optionally with solutions}]{hyperref}
+\doxitem{Option}{option}{package options}
+
+\RecordChanges
+\PageIndex
+\CheckSum{1822}
+
+\newcommand*{\dq}[1]{``#1''}
+
+\begin{document}
+\MakeShortVerb{"}
+\DeleteShortVerb{\|}
+
+ \title{probsoln v3.04: 
+creating problem sheets optionally with solutions}
+ \author{Nicola L.C. Talbot\\[10pt]
+School of Computing Sciences\\
+University of East Anglia\\
+Norwich. Norfolk\\
+NR4 7TJ. United Kingdom.\\
+\url{http://theoval.cmp.uea.ac.uk/~nlct/}}
+
+ \date{2012-08-23}
+ \maketitle
+\tableofcontents
+
+ \section{Introduction}
+The \styfmt{probsoln} package is designed for teachers or lecturers
+who want to create problem sheets for their students. This package
+was designed with mathematics problems in mind, but can be used for
+other subjects as well. The idea is to create a file containing a
+large number of problems with their solutions which can be read in
+by \LaTeX, and then select a number of problems to typeset. This
+means that once the database has been set up, each year you can
+easily create a new problem sheet that is sufficiently different
+from the previous year, thus preventing the temptation of current
+students seeking out the previous year's students, and checking out
+their answers. There is also an option that can be passed to the
+package to determine whether or not the solutions should be printed.
+In this way, one file can either produce the student's version or
+the teacher's version.
+
+\section{Package Options}\label{sec:pkgopt}
+The following options may be passed to this package:
+\begin{description}
+\item[\pkgopt{answers}]  Show the answers
+\item[\pkgopt{noanswers}] Don't show the answers (default)
+\item[\pkgopt{draft}] Display the label and dataset name when a problem is used
+\item[\pkgopt{final}] Don't display label and dataset name when a problem is used
+\item[\pkgopt{usedefaultargs}] Make \ics{thisproblem} use the
+default arguments supplied in the problem definition.
+\item[\pkgopt{nousedefaultargs}] Make \ics{thisproblem} prompt for
+problem arguments (default).
+\end{description}
+
+\section{Verbatim}\label{sec:verbatim}
+
+As from version 3.02, problems and solutions may contain verbatim
+text, but you must use the \iterm{fragile}\texttt{fragile} (or
+\texttt{fragile=true}) option for the associated environments.
+
+Alternatively, if most of your problems contain verbatim, you can
+globally set this option using:
+\begin{verbatim}
+\setkeys{probsoln}{fragile}
+\end{verbatim}
+You can switch off this option using \texttt{fragile=false}.
+
+The \texttt{fragile} option writes information to a temporary file.
+This defaults to "\jobname.vrb" but the name may be changed. The
+extension (".vrb") is given by:
+\begin{definition}[\DescribeMacro{\ProbSolnFragileExt}]
+\cs{ProbSolnFragileExt}
+\end{definition}
+The base name (\cs{jobname}) is given by:
+\begin{definition}[\DescribeMacro{\ProbSolnFragileFile}]
+\cs{ProbSolnFragileFile}
+\end{definition}
+
+\section{Showing and Hiding Solutions}\label{sec:showanswers}
+
+In addition to the \pkgopt{answers} and \pkgopt{noanswers} package
+options, it is also possible to show or suppress the solutions
+using
+\begin{definition}[\DescribeMacro{\showanswers}]
+\cs{showanswers}
+\end{definition}
+and
+\begin{definition}[\DescribeMacro{\hideanswers}]
+\cs{hideanswers}
+\end{definition}
+respectively.
+
+The boolean variable \bool{showanswers} determines whether the
+answers should be displayed. You can use this value with the
+\sty{ifthen} package to specify different text depending on 
+whether the solutions should be displayed. For example:
+\begin{verbatim}
+Assignment 1\ifthenelse{\boolean{showanswers}}{ (Solution Sheet)}{}
+\end{verbatim}
+Alternatively you can use \ics{ifshowanswers}\ldots\cs{else}\ldots
+\cs{fi}:
+\begin{verbatim}
+Assignment 1\ifshowanswers\space (Solution Sheet)\fi
+\end{verbatim}
+
+For longer passages, you can use the environments
+\begin{definition}[\DescribeEnv{onlyproblem}]
+\cs{begin}\marg{onlyproblem}\oarg{option}
+\end{definition}
+and 
+\begin{definition}[\DescribeEnv{onlysolution}]
+\cs{begin}\marg{onlysolution}\oarg{option}
+\end{definition}
+For example:
+\begin{verbatim}
+\begin{onlyproblem}%
+What is the derivative of $f(x) = x^2$?
+\end{onlyproblem}%
+\begin{onlysolution}%
+$f'(x) = 2x$
+\end{onlysolution}
+\end{verbatim}
+The above will only display the question if \bool{showanswers}
+is false and will only display the solution if \bool{showanswers}
+is true. If you want the question to appear in the answer
+sheet as well as the solution, then don't put the question in
+the \env{onlyproblem} environment:
+\begin{verbatim}
+What is the derivative of $f(x) = x^2$?
+\begin{onlysolution}%
+Solution: $f'(x) = 2x$
+\end{onlysolution}
+\end{verbatim}
+
+\begin{important}
+If you want to include verbatim text in the body of
+\env{onlyproblem} or \env{onlysolution}, you need to specify
+\texttt{fragile} in the optional argument of the environment.
+(See \sectionref{sec:verbatim} for further details.)
+\end{important}
+
+If you use \envfmt{onlysolution} within the \env{defproblem}
+environment, the problem will be tagged as having a solution
+and will be added to the list used by \ics{foreachsolution}.
+The optional argument of \envfmt{onlysolution} (and \env{onlyproblem})
+is inherited from the parent \env{defproblem} setting.
+
+\section{General Formatting Commands}\label{sec:formatting}
+
+The commands and environments described in this section are
+provided to assist formatting problems and their solutions.
+\begin{definition}[\DescribeEnv{solution}]
+\verb|\begin{solution}|\meta{text}\verb|\end{solution}|
+\end{definition}
+By default, this is equivalent to 
+\begin{display}
+\verb|\par\noindent\textbf{\solutionname}: |\meta{text}
+\end{display}
+where \DescribeMacro{\solutionname}\cs{solutionname} defaults
+to \dq{\solutionname}. Note that you must place the \env{solution}
+environment inside the \envfmt{onlysolution} environment or
+between \ics{ifshowanswers}\ldots\cs{fi} to ensure that it
+is suppressed when the solutions are not wanted. (See
+\sectionref{sec:showanswers}.) 
+
+
+Note that the \styfmt{probsoln} package will only define the 
+\env{solution} environment if it is not already defined.
+
+\begin{definition}[\DescribeEnv{textenum}]
+\verb|\begin{textenum}|\ldots\verb|\end{textenum}|
+\end{definition}
+The \envfmt{textenum} environment is like the \env{enumerate}
+environment but is in-line. It uses the same counter that the
+\envfmt{enumerate} environment would use at that level so the
+question can be compact but the answer can use \envfmt{enumerate}
+instead. For example:
+\begin{verbatim}
+\begin{onlyproblem}%
+  Differentiate the following:
+  \begin{textenum}
+    \item $f(x)=2^x$; \item $f(x)=\cot(x)$
+  \end{textenum}
+\end{onlyproblem}
+\begin{onlysolution}
+  \begin{enumerate}
+  \item
+    \begin{align*}
+    f(x) &= 2^x = \exp(\ln(x^2)) =\exp(2\ln(x))\\
+    f'(x) &= \exp(2\ln(x))\times \frac{2}{x}\\
+      &= f(x)\frac{2}{x}
+    \end{align*}
+  \item
+    \begin{align*}
+    f(x) &= \cot(x) = (\tan(x))^{-2}\\
+    f'(x) &= -(\tan(x))^{-2}\times\sec^2(x)\\
+    &=-\csc^2x
+    \end{align*}
+  \end{enumerate}
+\end{onlysolution}
+\end{verbatim}
+In this example, the items in the question are brief, so an
+\env{enumerate} environment would result in a lot of unnecessary
+white space, but the answers require more space, so an
+\envfmt{enumerate} environment is more appropriate. Since the
+\envfmt{textenum} environment uses the same counters as the
+\envfmt{enumerate} environment, the question and answer sheets use
+consistent labelling. Note that there are other packages available
+on CTAN that you can use to create in-line lists. Check the
+\urlfootref{http://www.tex.ac.uk/tex-archive/help/Catalogue/bytopic.html\#enumeration}{TeX
+Catalogue} for further details.
+
+\DescribeMacro{\correctitem}\DescribeMacro{\incorrectitem}
+\begin{definition}
+\cs{correctitem}\\
+\cs{incorrectitem}
+\end{definition}
+You can use the commands \cs{correctitem} and \cs{incorrectitem} 
+in place of \ics{item}. If the solutions are suppressed, these
+commands behave in the same way as \cs{item}, otherwise they
+format the item label using one of the commands:
+\DescribeMacro{\correctitemformat}\DescribeMacro{\incorrectitemformat}
+\begin{definition}
+\cs{correctitemformat}\marg{label}\\
+\cs{incorrectitemformat}\marg{label}
+\end{definition}
+For example:
+\begin{verbatim}
+Under which of the following functions does $S=\{a_1,a_2\}$
+become a probability space?
+\begin{enumerate}
+\incorrectitem $P(a_1)=\frac{1}{3}$, $P(a_2)=\frac{1}{2}$
+\correctitem $P(a_1)=\frac{3}{4}$, $P(a_2)=\frac{1}{4}$
+\correctitem $P(a_1)=1$, $P(a_2)=0$
+\incorrectitem $P(a_1)=\frac{5}{4}$, $P(a_2)=-\frac{1}{4}$
+\end{enumerate}
+\end{verbatim}
+The default definition of \cs{correctitemformat} puts a frame around
+the label.
+
+\section{Defining a Problem}\label{sec:defproblem}
+
+It is possible to construct a problem sheet with solutions using the
+commands described in the previous sections, however it is also
+possible to define a set of problems for later use. In this way you
+can create an external file containing many problems some or all of
+which can be loaded and used in a document. The \styfmt{probsoln}
+package has a default data set labelled \dq{default} in which you
+can store problems. Alternatively, you can create multiple data
+sets. You can then iterate through each problem in a problem set.
+You can use a previously defined problem more than once, which means
+that by judicious use of \env{onlyproblem}, \env{onlysolution} or
+the \bool{showanswers} boolean variable in conjunction with
+\ics{showanswers} and \ics{hideanswers}, you can print the solutions
+in a different location to the questions (for example in an
+appendix).
+
+\begin{definition}[\DescribeEnv{defproblem}]
+\verb|\begin{defproblem}|\oarg{n}\oarg{default args}\marg{label}\oarg{option}\newline
+\meta{definition}\newline
+\verb|\end{defproblem}|
+\end{definition}
+This defines the problem whose label is given by \meta{label}. The
+label must be unique for a given data set and should not contain
+active characters or a comma. (Active characters include the special characters
+such as \$ and \&, but some packages may make other symbols active,
+such as the colon (:) character. For example, the \sty{ngerman} and
+\sty{babel} packages make certain punctuation active. Check the
+relevant package documentation for details.)
+
+\begin{important}
+The final optional argument \meta{option} may be \texttt{fragile} to
+indicate that the problem contains verbatim text. Any occurrences of
+\env{onlyproblem} or \env{onlysolution} contained within
+\envfmt{defproblem} are inherited from \envfmt{defproblem}. (See
+\sectionref{sec:verbatim} for further details.)
+\end{important}
+
+If \env{defproblem} occurs in the document or is included via
+\ics{input} or \ics{include}, then the problem will be added to
+the default data set. If \envfmt{defproblem} occurs in an external
+file that is loaded using one of the commands defined in
+\sectionref{sec:load} then the problem will be added to
+the specified data set.
+
+The contents of the \env{defproblem} environment should be the text
+that defines the problem. This may include any of the commands
+defined in \sectionref{sec:showanswers} and
+\sectionref{sec:formatting}.
+
+The problem may optionally take \meta{n} arguments (where 
+\meta{n} is from 0 to 9). The arguments can be referenced
+in the definition via \texttt{\#1},\ldots,\texttt{\#9}.
+If \meta{n} is omitted then the problem doesn't take any
+arguments.
+The following example defines a problem with one argument:
+\begin{verbatim}
+\begin{defproblem}[1]{diffsin}
+Differentiate $f(x)=\sin(#1x)$.
+\begin{onlysolution}%
+  \begin{solution}
+    $f'(x) = #1\cos(#1x)$
+  \end{solution}
+\end{onlysolution}
+\end{defproblem}
+\end{verbatim}
+
+The second optional argument \meta{default args} supplies 
+default problem arguments that will automatically be used within
+\ics{thisproblem} when used in \ics{foreachproblem} in conjunction
+with the package option \pkgopt{usedefaultargs}. (See \sectionref{sec:foreach}.)
+For example:
+\begin{verbatim}
+\begin{defproblem}[1][{2}]{diffsin}
+Differentiate $f(x)=\sin(#1x)$.
+\begin{onlysolution}%
+  \begin{solution}
+    $f'(x) = #1\cos(#1x)$
+  \end{solution}
+\end{onlysolution}
+\end{defproblem}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\newproblem}]
+\cs{newproblem}\oarg{n}\oarg{default args}\marg{label}\marg{problem}\marg{solution}
+\end{definition}
+This is a shortcut command for:
+\begin{ttfamily}\obeylines
+\cs{begin}\{defproblem\}\oarg{n}\oarg{default args}\marg{label}\%
+\meta{problem}\%
+\cs{begin}\{onlysolution\}\%
+\cs{begin}\{solution\}\%
+\meta{solution}\%
+\cs{end}\{solution\}\%
+\cs{end}\{onlysolution\}\%
+\cs{end}\{defproblem\}
+\end{ttfamily}
+For example:
+\begin{verbatim}
+\newproblem[1]{diffsin}{%
+  \(f(x) = \sin(#1x)\)
+}%
+{%
+  \(f'(x) = #1\cos(#1x)\)
+}
+\end{verbatim}
+is equivalent to
+\begin{verbatim}
+\begin{defproblem}[1]{diffcos}%
+  \(f(x) = \cos(#1x)\)
+\begin{onlysolution}%
+  \begin{solution}%
+    \(f'(x) = -#1\sin(#1x)\)
+  \end{solution}%
+\end{onlysolution}%
+\end{defproblem}
+\end{verbatim}
+(In this example, the argument will need to be a positive number
+to avoid a double minus in the answer. If you want to perform
+floating point arithmetic on the arguments, then try the
+\sty{fp} or \sty{pgfmath} packages.)
+
+Alternatively, if you want to supply default arguments to use when
+iterating through problems with \ics{foreachproblem}:
+\begin{verbatim}
+\newproblem[1][{3}]{diffsin}{%
+  \(f(x) = \sin(#1x)\)
+}%
+{%
+  \(f'(x) = #1\cos(#1x)\)
+}
+\end{verbatim}
+
+
+\begin{definition}[\DescribeMacro{\newproblem*}]
+\cs{newproblem*}\oarg{n}\oarg{default args}\marg{label}\marg{definition}
+\end{definition}
+This is a shortcut for:
+\begin{ttfamily}\obeylines
+\cs{begin}\{defproblem\}\oarg{n}\oarg{default args}\marg{label}\%
+\meta{definition}\%
+\cs{end}\{defproblem\}
+\end{ttfamily}
+
+\begin{important}
+Note that you can't use verbatim text with \cs{newproblem} or
+\cs{newproblem*}. Use the \env{defproblem} environment instead with
+the \texttt{fragile option}.
+\end{important}
+
+\section{Using a Problem}\label{sec:useproblem}
+
+Once you have defined a problem using \env{defproblem} or
+\ics{newproblem} (see \sectionref{sec:defproblem}), you can 
+later display the problem using:
+\begin{definition}[\DescribeMacro{\useproblem}]
+\cs{useproblem}\oarg{data set}\marg{label}\marg{arg$_1$}\ldots
+\marg{arg$_N$}
+\end{definition}
+where \meta{data set} is the name of the data set that contains
+the problem (the default data set is used if omitted), 
+\meta{label} is the label identifying the required problem and
+\meta{arg$_1$}, \ldots, \meta{arg$_N$} 
+are the arguments to pass to the problem, if the problem was 
+defined to have arguments (where $N$ is the number 
+of arguments specified when the problem was defined).
+
+For example, in the previous section the problem \texttt{diffcos} 
+was defined to have one argument, so it can be used as follows:
+\begin{verbatim}
+\useproblem{diffcos}{3}
+\end{verbatim}
+This will be equivalent to:
+\begin{verbatim}
+\(f(x) = \cos(3x)\)
+\begin{onlysolution}%
+\begin{solution}%
+\(f'(x) = -3\sin(3x)\)
+\end{solution}%
+\end{onlysolution}%
+\end{verbatim}
+
+\section{Loading Problems From External Files}\label{sec:load}
+
+You can store all your problem definitions (see
+\sectionref{sec:defproblem}) in an external file. 
+These problems can all be appended to the default data set by
+including the file via \ics{input} or they can be appended
+to other data sets using one of the commands described below.
+Once you have loaded all the required problems, you can
+iterate through the data sets using the commands described
+in \sectionref{sec:foreach}. Note that the commands below
+will create a new data set, if the named data set doesn't
+exist.
+
+\begin{definition}[\DescribeMacro{\loadallproblems}]
+\cs{loadallproblems}\oarg{data set}\marg{filename}
+\end{definition}
+This will load all problems defined in \meta{filename} and
+append them to the specified data set, in the order in which
+they are defined in the file. If \meta{data set} is
+omitted, the default data set will be used. If \meta{data set}
+doesn't exist, it will be created.
+
+\begin{definition}[\DescribeMacro{\loadselectedproblems}]
+\cs{loadselectedproblems}\oarg{data set}\marg{labels}\marg{filename}
+\end{definition}
+This is like \cs{loadallproblems}, but only those problems whose
+label is listed in the comma-separated list \meta{labels} are
+loaded. For example, if I have some problems defined in the
+file \texttt{derivatives.tex}, then
+\begin{verbatim}
+\loadselectedproblems{diffsin,diffcos}{derivatives}
+\end{verbatim}
+will only load the problems whose labels are \texttt{diffsin}
+and \texttt{diffcos}, respectively. All the other problems in 
+the file will remain undefined.
+
+\begin{definition}[\DescribeMacro{\loadexceptproblems}]
+\cs{loadexceptproblems}\oarg{data set}\marg{exception list}\marg{filename}
+\end{definition}
+This is the reverse of \cs{loadselectedproblems}. This loads all
+problems except those whose labels are listed in \meta{exception
+list}.
+
+\begin{definition}[\DescribeMacro{\loadrandomproblems}]
+\cs{loadrandomproblems}\oarg{data set}\marg{n}\marg{filename}
+\end{definition}
+This randomly loads \meta{n} problems from \meta{filename} and
+adds them to the given data set. If \meta{data set} is omitted,
+the default data set is assumed. Note that the problems will be
+added to the data set in a random order, not in the order in
+which they were defined. There must be at least \meta{n} problems
+defined in \meta{filename}.
+
+\begin{definition}[\DescribeMacro{\loadrandomexcept}]
+\cs{loadrandomexcept}\oarg{data
+set}\marg{n}\marg{filename}\marg{exception list}
+\end{definition}
+This is similar to \cs{loadrandomproblems} except that it won't load
+those problems whose labels are listed in \meta{exception list}.
+\textbf{If you want to automatically exclude problems included in
+previous documents, see \sectionref{sec:exprev}.}
+
+Note that the random number generator has been modified in version
+3.01 in order to fix a bug. If you want to ensure that your random
+numbers are compatible with earlier versions, you can switch to the
+old generator using
+\begin{definition}[\DescribeMacro{\PSNuseoldrandom}]
+\cs{PSNuseoldrandom}
+\end{definition}
+
+\begin{important}
+It is generally not a good idea to place anything in 
+\meta{filename} that is not inside the body of \env{defproblem} 
+or in the arguments to \ics{newproblem} or \ics{newproblem*}.
+All the commands in this section input the external file within
+a local scope, so command definitions would need to be made
+global to have any effect. In addition, \cs{loadrandomproblems}
+has to load each file twice, which means that anything outside
+a problem definition will be parsed twice.
+\end{important}
+
+\subsection{Randomly Selecting Problems Not Selected in Previous
+Documents}
+\label{sec:exprev}
+
+Suppose you have a large set of questions that you want to randomly
+select for assignments and exams. The chances are, you don't want to
+include questions that have been previously set for, say, the last
+three years. That is, you don't want to select questions the
+students may already have seen. As from version 3.03, you can now do
+this.
+
+The \sty{probsoln} package defaults to the UK academic year, which
+starts in September. If this isn't appropriate, you can change it
+using:
+\begin{definition}[\DescribeMacro{\SetStartMonth}]
+\cs{SetStartMonth}\marg{n}
+\end{definition}
+where \meta{n} is the number of the month. (1 = January, 2 =
+February, etc.)
+
+The \emph{start year} is the calender year in effect when the
+academic year started. For example, if this is the academic year
+2011/12, then the start year is 2011. This is automatically set to
+the start of the current academic year. It is also updated when
+\cs{SetStartMonth} is used.\footnote{So don't use \cs{SetStartMonth}
+after \cs{SetStartYear}.} If you want to set it to a specific year,
+you can use:
+\begin{definition}[\DescribeMacro{\SetStartYear}]
+\cs{SetStartYear}\marg{year}
+\end{definition}
+For example: \verb|\SetStartYear{2008}| indicates the academic year
+2008/9.
+
+There are two files concerned with previously used labels. They are:
+\begin{description}
+
+  \item[The previously used labels file] This keeps track of all
+    problems used in previous years, as well as problems used by
+    other documents that have this as their previously used labels
+    file, and it contains the problem labels from the last run of
+    the current document.
+
+  \item[The current used labels file] This defaults to
+\cs{jobname}\texttt{.prb}, but the name can be changed using:
+  \begin{definition}[\DescribeMacro{\SetUsedFileName}]
+  \cs{SetUsedFileName}\marg{name}
+  \end{definition}
+  This file keeps track of all the labels used in the current
+  document from the previous \LaTeX\ run. Note that if you want to
+  delete this file, first clear it using
+  \begin{definition}[\DescribeMacro{\ClearUsedFile}]
+  \cs{ClearUsedFile}\marg{file}
+  \end{definition}
+  in place of \cs{ExcludePreviousFile}\marg{file}, described below.
+  The argument \meta{file} is the previously used labels file
+  described above. \cs{ClearUsedFile} will remove all labels in
+  the current used labels file from the previously used labels file
+  and clear the current used labels file. Once this file is empty,
+  it may then be deleted.
+
+\end{description}
+
+Before loading randomly selected problems, first specify the
+previously used labels file with the command:
+\begin{definition}[\DescribeMacro{\ExcludePreviousFile}]
+\cs{ExcludePreviousFile}\oarg{number of years}\marg{file name}
+\end{definition}
+where \meta{file name} is the name of the previously used file. The
+optional argument \meta{number of years} specifies the year cut-off.
+This defaults to 3, which means that only those labels used this
+year or the previous 2 years will be kept. Any problems used before
+then may be reused.
+
+Suppose I'm lecturing a first year undergraduate mathematics course
+(designated, say, mth101). I want to set assignments on each topic
+and an exam at the end of the year (as well as a resit or second
+sitting paper). I've got databases with problems for each topic, but
+the first and second sitting exams mustn't include any of the
+problems used in the assignments or any problems used in assignments
+or exams for the previous two academic years. I'm going to arrange
+my directory structure as follows:
+\begin{itemize}
+\item \texttt{mth101/}
+  \begin{itemize}
+   \item \texttt{assignment1/} (differentiation)
+     \begin{itemize}
+       \item \texttt{assignment1.tex}
+     \end{itemize}
+   \item \texttt{assignment2/} (probability spaces)
+     \begin{itemize}
+       \item \texttt{assignment2.tex}
+     \end{itemize}
+   \item \texttt{assignment3/} (linear algebra)
+     \begin{itemize}
+       \item \texttt{assignment3.tex}
+     \end{itemize}
+   \item \texttt{exams/}
+     \begin{itemize}
+       \item \texttt{exam.tex} (first sitting)
+       \item \texttt{resit.tex} (second sitting)
+     \end{itemize}
+   \item \texttt{databases/}
+     \begin{itemize}
+       \item \texttt{differentiation.tex}
+       \item \texttt{probabilityspaces.tex}
+       \item \texttt{linearalgebra.tex}
+     \end{itemize}
+   \item \texttt{previouslabels.tex} (created by \sty{probsoln})
+  \end{itemize}
+\end{itemize}
+
+\section{Iterating Through Datasets}\label{sec:foreach}
+
+Once you have defined all your problems for a given data set, you
+can use an individual problem with \ics{useproblem} (see
+\sectionref{sec:useproblem}) but it is more likely that you will
+want to iterate through all the problems so that you don't need to
+remember the labels of all the problems you have defined.
+
+\begin{definition}[\DescribeMacro{\foreachproblem}]
+\cs{foreachproblem}\oarg{data set}\marg{body}
+\end{definition}
+This does \meta{body} for each problem in the given data set.
+If \meta{data set} is omitted, the default data set is used.
+Within \meta{body} you can use 
+\begin{definition}[\DescribeMacro{\thisproblem}]
+\cs{thisproblem}
+\end{definition}
+to use the current problem and
+\begin{definition}[\DescribeMacro{\thisproblemlabel}]
+\cs{thisproblemlabel} 
+\end{definition}
+to access the current label. If the problem requires arguments,
+and no default arguments were supplied in the problem definition or
+the package option \pkgopt{usedefaultargs} was not used, then
+you will be prompted for arguments, so if you want to use this
+approach you will need to use \LaTeX\ in interactive mode. If
+you do provide arguments, they will be stored in the event that
+you need to iterate through the data set again. The
+arguments will be included in \cs{thisproblem}, so you only
+need to use \cs{thisproblem} without having to specify
+\ics{useproblem}.
+
+For example, to iterate through all problems
+in the default data set:
+\begin{verbatim}
+\begin{enumerate}
+\foreachproblem{\item\thisproblem}
+\end{enumerate}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\foreachsolution}]
+\cs{foreachsolution}\oarg{data set}\marg{body}
+\end{definition}
+This is equivalent to \cs{foreachsolution}, but only iterates
+through problems that contain the \env{onlysolution} environment.
+Note that you still need to use \ics{showanswers} or the
+\pkgopt{answers} package option for the contents of the
+\env{onlysolution} environment to appear.
+
+\begin{definition}[\DescribeMacro{\foreachdataset}]
+\cs{foreachdataset}\marg{cmd}\marg{body}
+\end{definition}
+This does \meta{body} for each of the defined data sets. Within
+\meta{body}, \meta{cmd} will be set to the name of the current
+data set. For example, to display all problems in all data sets:
+\begin{verbatim}
+\begin{enumerate}
+\foreachdataset{\thisdataset}{%
+\foreachproblem[\thisdataset]{\item\thisproblem}}
+\end{enumerate}
+\end{verbatim}
+
+Suppose I have two external files called
+\texttt{derivatives.tex} and \texttt{probspaces.tex} which
+define problems using both \env{onlyproblem} and 
+\env{onlysolution} for example:
+\begin{verbatim}
+\begin{defproblem}{cosxsqsinx}%
+\begin{onlyproblem}%
+$y = \cos(x^2)\sin x$.%
+\end{onlyproblem}%
+\begin{onlysolution}%
+\[\frac{dy}{dx} = -\sin(x^2)2x\sin x + \cos(x^2)\cos x\]
+\end{onlysolution}%
+\end{defproblem}
+\end{verbatim}
+I can write a document that creates two data sets, one for
+the derivative problems and one for the problems about
+probability spaces. I can then use \ics{hideanswers} and
+iterate through the require data set to produce the problems.
+Later, I can use \ics{showanswers} and iterate over all problems defined in both data
+sets to produce the chapter containing all the answers. When
+displaying the questions, I have taken advantage of the fact that
+I can cross-reference items within an \env{enumerate} environment,
+and redefined \ics{theenumi} to label the questions according to
+the chapter. The cross-reference label is constructed from
+the problem label and is referenced in the answer section to
+ensure that the answers have the same label as the questions.
+\begin{verbatim}
+\documentclass{report}
+\usepackage{probsoln}
+\begin{document}
+\hideanswers
+\chapter{Differentiation}
+% randomly select 25 problems from derivatives.tex and add to
+% the data set called 'deriv'
+\loadrandomproblems[deriv]{25}{derivatives}
+
+% Display the problems
+\renewcommand{\theenumi}{\thechapter.\arabic{enumi}}
+\begin{enumerate}
+\foreachproblem[deriv]{\item\label{prob:\thisproblemlabel}\thisproblem}
+\end{enumerate}
+% You may need to change \theenumi back here
+
+\chapter{Probability Spaces}
+% randomly select 25 problems from probspaces.tex and add to
+% the data set called 'spaces'
+\loadrandomproblems[spaces]{25}{probspaces}
+
+% Display the problems
+\renewcommand{\theenumi}{\thechapter.\arabic{enumi}}
+\begin{enumerate}
+\foreachproblem[spaces]{\item\label{prob:\thisproblemlabel}\thisproblem}
+\end{enumerate}
+% You may need to change \theenumi back here
+
+\appendix
+
+\chapter{Solutions}
+\showanswers
+\begin{itemize}
+\foreachdataset{\thisdataset}{%
+\foreachproblem[\thisdataset]{\item[\ref{prob:\thisproblemlabel}]\thisproblem}
+}
+\end{itemize}
+
+\end{document}
+\end{verbatim}
+
+\section{Random Number Generator}\label{sec:random}
+
+This package provides a pseudo-random number generator that is used
+by \ics{loadrandomproblems}. As noted earlier the random number
+generator has been modified in version 3.01 in order to fix a bug.
+If you want to ensure that your random numbers are compatible with
+earlier versions, you can switch to the old generator using
+\begin{definition}[\DescribeMacro{\PSNuseoldrandom}]
+\cs{PSNuseoldrandom}
+\end{definition}
+
+\begin{definition}[\DescribeMacro{\PSNrandseed}]
+\cs{PSNrandseed}\marg{n}
+\end{definition}
+This sets the seed to \meta{n} which must be a non-zero integer.
+For example, to generate a different set of random numbers
+every time you \LaTeX\ your document,\footnote{assuming you
+leave at least a minute between runs.} put the following in your
+preamble:
+\begin{verbatim}
+\PSNrandseed{\time}
+\end{verbatim}
+or to generate a different set of random numbers every year you
+\LaTeX\ your document:
+\begin{verbatim}
+\PSNrandseed{\year}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\PSNgetrandseed}]
+\cs{PSNgetrandseed}\marg{register}
+\end{definition}
+This stores the current seed in the count register specified by 
+\meta{register}.
+For example:
+\begin{verbatim}
+\newcount\myseed
+\PSNgetrandseed{\myseed}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\PSNrandom}]
+\cs{PSNrandom}\marg{register}\marg{n}
+\end{definition}
+Generates a random integer from 1 to \meta{n} and stores in 
+the count register specified by \meta{register}. For example,
+the following generates an integer from 1 to 10 and stores it
+in the register \cs{myreg}:
+\begin{verbatim}
+\newcount\myreg
+\PSNrandom{\myreg}{10}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\random}]
+\cs{random}\marg{counter}\marg{min}\marg{max}
+\end{definition}
+Generates a random integer from \meta{min} to \meta{max} and
+stores in the given counter. For example, the following generates
+a random number between 3 and 8 (inclusive) and stores it in
+the counter \texttt{myrand}.
+\begin{verbatim}
+\newcounter{myrand}
+\random{myrand}{3}{8}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\doforrandN}]
+\cs{doforrandN}\marg{n}\marg{cmd}\marg{list}\marg{text}
+\end{definition}
+Randomly selects \meta{n} values from the comma-separated list
+given by \meta{list} and iterates through this subset. On
+each iteration it sets \meta{cmd} to the current value and
+does \meta{text}. For example, the following will load a
+randomly selected problem from two of the listed files (where
+\texttt{file1.tex}, \texttt{file2.tex} and \texttt{file3.tex}
+are files containing at least one problem):
+\begin{verbatim}
+\doforrandN{2}{\thisfile}{file1,file2,file3}{%
+\loadrandomproblems{1}{\thisfile}}
+\end{verbatim}
+
+\section{Compatibility With Versions Prior to 3.0}
+
+Version 3.0 of the \sty{probsoln} package completely changed the
+structure of the package, but the commands described in this
+section have been provided to maintain compatibility with 
+earlier versions. The only problems that are likely to occur are
+those where commands are contained within groups. This will 
+effect any commands that are contained in external files that are
+outside of the arguments to \ics{newproblem} and \ics{newproblem*}.
+However, since the external files had to be parsed twice in
+order to load the problems, this shouldn't be an issue as adding
+anything other than problem definitions in those files would
+be problematic anyway.
+
+The other likely difference is where the random generator is
+used in a group. This includes commands such as 
+\ics{selectrandomly}. For example, if your document contained
+something like:
+\begin{verbatim}
+\begin{enumerate}
+\selectrandomly{file1}{8}
+
+\item Solve the following:
+\begin{enumerate}
+\selectrandomly{file2}{4}
+\end{enumerate}
+
+\selectrandomly{file3}{2}
+\end{enumerate}
+\end{verbatim}
+Then using versions prior to v3.0 will produce a different
+set of random numbers since the second \cs{selectrandomly}
+is in a different level of grouping. If you want to ensure
+that the document produces exactly the same random set with
+the new version as with the old version, you will need to
+get and set the random number seed. For example, the above
+would need to be modified so that it becomes:
+\begin{verbatim}
+\begin{enumerate}
+\selectrandomly{file1}{8}
+
+\item Solve the following:
+\newcount\oldseed
+\PSNgetrandseed{\oldseed}
+\begin{enumerate}
+\selectrandomly{file2}{4}
+\end{enumerate}
+\PSNrandseed{\oldseed}
+
+\selectrandomly{file3}{2}
+\end{enumerate}
+\end{verbatim}
+
+\begin{definition}[\DescribeMacro{\selectrandomly}]
+\cs{selectrandomly}\marg{filename}\marg{n}
+\end{definition}
+This is now equivalent to:
+\begin{ttfamily}\obeylines
+\{\cs{loadrandomproblems}\oarg{filename}\marg{n}\marg{filename}\}\%
+\cs{foreachproblem}\oarg{filename}\{\cs{PSNitem}\cs{thisproblem}\cs{endPSNitem}\}
+\end{ttfamily}
+
+\begin{definition}[\DescribeMacro{\selectallproblems}]
+\cs{selectallproblems}\marg{filename}
+\end{definition}
+This is now equivalent to:
+\begin{ttfamily}\obeylines
+\{\cs{loadallproblems}\oarg{filename}\marg{filename}\}\%
+\cs{foreachproblem}\oarg{filename}\{\cs{PSNitem}\cs{thisproblem}\cs{endPSNitem}\}
+\end{ttfamily}
+
+Note that in both the above cases, a new data set is created
+with the same name as the file name.
+
+ \StopEventually{\clearpage\phantomsection\addcontentsline{toc}{section}{Index}\PrintIndex}
+
+\end{document}

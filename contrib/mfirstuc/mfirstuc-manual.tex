@@ -1,0 +1,878 @@
+\documentclass[report]{nlctdoc}
+
+\usepackage[a4paper,left=1.75in]{geometry}
+\usepackage{alltt}
+\usepackage{mfirstuc}
+\usepackage{pifont}
+\usepackage[utf8]{inputenc}
+\ifpdf
+ \usepackage[T1]{fontenc}
+ \usepackage{metalogo}
+\else
+ \providecommand{\XeLaTeX}{XeLaTeX}
+ \providecommand{\XeTeX}{XeTeX}
+\fi
+\usepackage{cmap}
+\usepackage[colorlinks,
+            bookmarks,
+            hyperindex=false,
+            pdfauthor={Nicola L.C. Talbot},
+            pdftitle={mfirstuc.sty: uppercasing first letter},
+            pdfkeywords={LaTeX,package,uppercase}]{hyperref}
+
+\IndexPrologue{%
+\chapter*{\indexname}\markright{\indexname}
+\addcontentsline{toc}{chapter}{\indexname}}
+
+\begin{document}
+\MakeShortVerb{|}
+ \title{mfirstuc.sty v2.04: 
+uppercasing first letter}
+ \author{Nicola L.C. Talbot\\[10pt]
+Dickimaw Books\\
+\url{http://www.dickimaw-books.com/}}
+
+ \date{2016-07-31}
+ \maketitle
+ \tableofcontents
+
+ \chapter{Introduction}
+ \label{sec:intro}
+
+The \styfmt{mfirstuc} package was originally part of the
+\styfmt{glossaries} bundle for use with commands like \cs{Gls}, but
+as the commands provided by \styfmt{mfirstuc} may be used without
+\styfmt{glossaries}, the two have been split into separately
+maintained packages.
+
+\begin{important}
+The commands described here all have limitations. To minimise
+problems, use text-block style semantic commands with one argument
+(the text that requires case-changing), and avoid scoped 
+declarations.
+\end{important}
+
+Here are some examples of semantic commands:
+\begin{enumerate}
+\item Quoted material:
+\begin{verbatim}
+\newcommand{\qt}[1]{``#1''}
+\end{verbatim}
+(or use the \styfmt{csquotes} package). With this, the following
+works:
+\begin{verbatim}
+\makefirstuc{\qt{word}}
+\end{verbatim}
+This produces:
+\begin{display}
+\makefirstuc{\qt{word}}
+\end{display}
+Whereas 
+\begin{verbatim}
+\makefirstuc{``word''}
+\end{verbatim}
+fails (no case-change and double open quote becomes two single open
+quotes):
+\begin{display}
+\makefirstuc{``word''}
+\end{display}
+
+\item Font styles or colours:
+\begin{verbatim}
+\newcommand*{\alert}[1]{\textcolor{red}{#1}}
+\end{verbatim}
+Now the following is possible:
+\begin{verbatim}
+\makefirstuc{\alert{word}}
+\end{verbatim}
+This produces
+\begin{display}
+\newcommand*{\alert}[1]{\textcolor{red}{#1}}%
+\makefirstuc{\alert{word}}
+\end{display}
+Note that \verb|\makefirstuc{\textcolor{red}{word}}| fails
+(with an error) because the case-changing interferes with the label.
+\end{enumerate}
+
+Define these semantic commands robustly if you intend using
+any of the commands that fully expand their argument
+(\cs{emakefirstuc}, \cs{ecapitalisewords} and
+\cs{ecapitalisefmtwords}).
+
+\chapter{Capitalising the First Letter of a Word}
+\label{sec:makefirstuc}
+
+A simple word can be capitalised just using the standard \LaTeX\
+upper casing command. For example,
+\begin{verbatim}
+\MakeUppercase word
+\end{verbatim}
+but for commands like \cs{Gls} the word may be embedded within the
+argument of another command, such as a~font changing command. This
+makes things more complicated for a~general purpose solution, so
+the \styfmt{mfirstuc} package provides:
+\begin{definition}[\DescribeMacro{\makefirstuc}]
+\cs{makefirstuc}\marg{stuff}
+\end{definition}
+This makes the first object of
+\meta{stuff} upper case unless \meta{stuff} starts with a control
+sequence followed by a non-empty group, in which case the first
+object in the group is converted to upper case.
+\textbf{No expansion is performed on the argument.}
+
+\begin{important}
+If \meta{stuff} starts with a control sequence that takes more than
+one argument, the case-changing will always be applied to the
+\emph{first} argument. If the text that requires the case change is
+in one of the other arguments, you must hide the earlier arguments
+in a wrapper command. For example, instead of \verb|\textcolor{red}{text}|
+you need to define, say, \verb|\red| as \verb|\color{red}| and use
+\verb|\red{text}|.
+\end{important}
+
+Examples:
+\begin{itemize}
+\item |\makefirstuc{abc}| produces \makefirstuc{abc}.
+
+\item |\makefirstuc{\emph{abc}}| produces \makefirstuc{\emph{abc}}
+(\ics{MakeUppercase} has been applied to the letter \qt{a} rather
+than \cs{emph}). Note however that
+\begin{verbatim}
+\makefirstuc{{\em abc}}
+\end{verbatim}
+produces \makefirstuc{{\em abc}} (first object is |{\em abc}| so
+this is equivalent to |\MakeUppercase{\em abc}|), and
+\begin{verbatim}
+{\makefirstuc{\em abc}}
+\end{verbatim}
+produces {\makefirstuc{\em abc}} (|\em| doesn't have an argument
+therefore first object is |\em| and so is equivalent to
+|{\MakeUppercase{\em}abc}|).
+
+\item |\makefirstuc{{\'a}bc}| produces \makefirstuc{{\'a}bc}.
+
+\item |\makefirstuc{\ae bc}| produces \makefirstuc{\ae bc}.
+
+\item |\makefirstuc{{\ae}bc}| produces \makefirstuc{{\ae}bc}.
+
+\item |\makefirstuc{{ä}bc}| produces \makefirstuc{{ä}bc}.
+
+\end{itemize}
+
+Note that non-Latin or accented characters appearing at the
+start of the text should be placed in a group (even if you are
+using the \sty{inputenc} package). The reason for this restriction
+is detailed in \sectionref{sec:utf8}.
+
+\textbf{New to version 2.04:} There is now limited support for
+UTF-8 characters with the \sty{inputenc} package, provided that
+you load \sty{datatool-base} (at least v2.24) before
+\styfmt{mfirstuc} (\sty{datatool-base} is loaded automatically with newer versions
+of \sty{glossaries}). If available
+\sty{mfirstuc} will now use \sty{datatool-base}'s
+\ics{dtl@getfirst@UTFviii} command which is still experimental.
+See the \styfmt{datatool} manual for further details.
+
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\usepackage{datatool-base}[2016/01/12]% v2.24+
+\usepackage{mfirstuc}
+
+\begin{document}
+\makefirstuc{élite}
+\end{document}
+\end{verbatim}
+(Package ordering is important.)
+
+\begin{important}
+In version 1.02 of \styfmt{mfirstuc}, a bug fix resulted in a change
+in output if the first object is a control sequence followed by
+an empty group. Prior to version 1.02, |\makefirstuc{\ae{}bc}|
+produced \ae Bc. However as from version 1.02, it now produces
+\AE bc.
+\end{important}
+
+Note also that
+\begin{verbatim}
+\newcommand{\abc}{abc}
+\makefirstuc{\abc}
+\end{verbatim}
+produces: ABC. This is because the first object in the argument of
+\cs{makefirstuc} is \cs{abc}, so it does |\MakeUppercase{\abc}|.
+Whereas:
+\begin{verbatim}
+\newcommand{\abc}{abc}
+\expandafter\makefirstuc\expandafter{\abc}
+\end{verbatim}
+produces: Abc. There is a short cut command which will do this:
+\begin{definition}[\DescribeMacro{\xmakefirstuc}]
+\cs{xmakefirstuc}\marg{stuff}
+\end{definition}
+This is equivalent to \cs{expandafter}\cs{makefirstuc}\cs{expandafter}\marg{stuff}. So
+\begin{verbatim}
+\newcommand{\abc}{abc}
+\xmakefirstuc{\abc}
+\end{verbatim}
+produces: 
+\newcommand{\abc}{abc}%
+\xmakefirstuc{\abc}.
+
+\begin{important}
+\cs{xmakefirstuc} only performs one level expansion on the
+\emph{first} object in its argument. It does not fully expand the entire
+argument.
+\end{important}
+
+As from version 1.10, there is now a command that fully expands the
+entire argument before applying \cs{makefirstuc}:
+\begin{definition}[\DescribeMacro\emakefirstuc]
+\cs{emakefirstuc}\marg{text}
+\end{definition}
+
+Examples:
+\begin{verbatim}
+\newcommand{\abc}{\xyz a}
+\newcommand{\xyz}{xyz}
+No expansion: \makefirstuc{\abc}.
+First object one-level expansion: \xmakefirstuc{\abc}.
+Fully expanded: \emakefirstuc{\abc}.
+\end{verbatim}
+produces: 
+\renewcommand{\abc}{\xyz a}%
+\newcommand{\xyz}{xyz}
+No expansion: \makefirstuc{\abc}.
+First object one-level expansion: \xmakefirstuc{\abc}.
+Fully expanded: \emakefirstuc{\abc}.
+
+If you use \styfmt{mfirstuc} without the \sty{glossaries} package, 
+the standard \cs{MakeUppercase} command is used. If used with
+\sty{glossaries}, \ics{MakeTextUppercase} (defined by the \sty{textcase}
+package) is used instead. If you are using \styfmt{mfirstuc}
+without the \styfmt{glossaries} package and want to use
+\ics{MakeTextUppercase} instead, you can redefine
+\begin{definition}[\DescribeMacro\glsmakefirstuc]
+\cs{glsmakefirstuc}\marg{text}
+\end{definition}
+For example:
+\begin{verbatim}
+\renewcommand{\glsmakefirstuc}[1]{\MakeTextUppercase #1}
+\end{verbatim}
+Remember to also load \sty{textcase} (\styfmt{glossaries} loads this
+automatically).
+
+\chapter{Capitalise the First Letter of Each Word in a Phrase or Sentence (Title Case)}
+\label{sec:capitalisewords}
+
+New to mfirstuc v1.06:
+\begin{definition}[\DescribeMacro{\capitalisewords}]
+\cs{capitalisewords}\marg{text}
+\end{definition}
+This command applies \ics{makefirstuc} to each word in \meta{text}
+where the space character is used as the word separator. Note that
+it has to be a plain space character, not another form of space,
+such as \verb|~| or \cs{space}. Note that no expansion is performed
+on \meta{text}. See \sectionref{sec:nocap} for excluding
+words (such as \qt{of}) from the case-changing.
+
+The actual capitalisation of each word is done using
+(new to version 2.03): 
+\begin{definition}[\DescribeMacro\MFUcapword]
+\cs{MFUcapword}\marg{word}
+\end{definition}
+This just does \cs{makefirstuc}\marg{word} by default, but
+its behaviour is determined by the conditional:
+\begin{definition}[\DescribeMacro\ifMFUhyphen]
+\cs{ifMFUhyphen}
+\end{definition}
+
+If you want to title case each part of
+a compound word containing hyphens, you can enable this using
+\begin{definition}[\DescribeMacro\MFUhyphentrue]
+\cs{MFUhyphentrue}
+\end{definition}
+or switch it back off again using:
+\begin{definition}[\DescribeMacro\MFUhyphenfalse]
+\cs{MFUhyphenfalse}
+\end{definition}
+Compare
+\begin{verbatim}
+\capitalisewords{server-side includes}
+\end{verbatim}
+which produces: 
+\begin{display}
+\capitalisewords{server-side includes}
+\end{display}
+with
+\begin{verbatim}
+\MFUhyphentrue
+\capitalisewords{server-side includes}
+\end{verbatim}
+which produces: 
+\begin{display}
+\MFUhyphentrue
+\capitalisewords{server-side includes}
+\end{display}
+
+Formatting for the entire phrase must go outside
+\cs{capitalisewords} (unlike \cs{makefirstuc}). Compare:
+\begin{verbatim}
+\capitalisewords{\textbf{a sample phrase}}
+\end{verbatim}
+which produces:
+\begin{display}
+\capitalisewords{\textbf{a sample phrase}}
+\end{display}
+with:
+\begin{verbatim}
+\textbf{\capitalisewords{a sample phrase}}
+\end{verbatim}
+which produces:
+\begin{display}
+\textbf{\capitalisewords{a sample phrase}}
+\end{display}
+
+As from version 2.03, there is now a command for phrases that may
+include a formatting command:
+\begin{definition}
+\cs{capitalisefmtwords}\marg{phrase}
+\end{definition}
+where \meta{phrase} may be just words (as with \cs{capitalisewords})
+or may be entirely enclosed in a formatting command in the form
+\begin{alltt}
+\cs{capitalisefmtwords}\{\meta{cs}\marg{phrase}\}
+\end{alltt}
+or contain formatted sub-phrases 
+\begin{alltt}
+\cs{capitalisefmtwords}\{\meta{words} \meta{cs}\marg{sub-phrase} \meta{words}\}
+\end{alltt}
+Avoid scoped declarations.
+
+\begin{important}
+\cs{capitalisefmtwords} is only designed for phrases that contain
+text-block commands with a single 
+argument, which should be a word or sub-phrase. Anything
+more complicated is likely to break. Instead, use the
+starred form or \cs{capitalisewords}.
+\end{important}
+
+The starred form only permits a text-block command at the
+start of the phrase.
+
+Examples:
+\begin{enumerate}
+\item Phrase entirely enclosed in a formatting command:
+\begin{verbatim}
+\capitalisefmtwords{\textbf{a small book of rhyme}}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisefmtwords{\textbf{a small book of rhyme}}
+\end{display}
+
+\item Sub-phrase enclosed in a formatting command:
+\begin{verbatim}
+\capitalisefmtwords{a \textbf{small book} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisefmtwords{a \textbf{small book} of rhyme}
+\end{display}
+
+\item Nested text-block commands:
+\begin{verbatim}
+\capitalisefmtwords{\textbf{a \emph{small book}} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisefmtwords{\textbf{a \emph{small book}} of rhyme}
+\end{display}
+
+\item Indicating words that shouldn't have the case changed
+(see \sectionref{sec:nocap}):
+\begin{verbatim}
+\MFUnocap{of}
+\capitalisefmtwords{\textbf{a \emph{small book}} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUnocap{of}
+\capitalisefmtwords{\textbf{a \emph{small book}} of rhyme}
+\end{display}
+
+\item Starred form:
+\begin{verbatim}
+\MFUnocap{of}
+\capitalisefmtwords*{\emph{a small book of rhyme}}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUnocap{of}
+\capitalisefmtwords*{\emph{a small book of rhyme}}
+\end{display}
+
+\item The starred form also works with just text (no text-block
+command):
+\begin{verbatim}
+\MFUnocap{of}
+\capitalisefmtwords*{a small book of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUnocap{of}
+\capitalisefmtwords*{a small book of rhyme}
+\end{display}
+
+\end{enumerate}
+
+If there is a text-block command within the argument of the
+starred form, it's assumed to be at the start of the argument.
+Unexpected results can occur if there are other commands.
+For example
+\begin{verbatim}
+\MFUnocap{of}
+\capitalisefmtwords*{\emph{a small} book \textbf{of rhyme}}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUnocap{of}
+\capitalisefmtwords*{\emph{a small} book \textbf{of rhyme}}
+\end{display}
+(In this case \verb|\textbf{of rhyme}| is considered a
+single word.) Similarly if the text-block command occurs
+in the middle of the argument:
+\begin{verbatim}
+\MFUnocap{of}
+\capitalisefmtwords*{a \emph{very small} book of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUnocap{of}
+\capitalisefmtwords*{a \emph{very small} book of rhyme}
+\end{display}
+(In this case \verb|\emph{very small}| is considered a
+single word.)
+
+Grouping causes interference:
+\begin{verbatim}
+\capitalisefmtwords{{a \emph{small book}} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisefmtwords{{a \emph{small book}} of rhyme}
+\end{display}
+As with all the commands described here, avoid declarations.
+For example, the following fails:
+\begin{verbatim}
+\capitalisefmtwords{{\bfseries a \emph{small book}} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisefmtwords{{\bfseries a \emph{small book}} of rhyme}
+\end{display}
+
+Avoid complicated commands in the unstarred version. For example,
+the following breaks:
+\begin{verbatim}
+\newcommand*{\swap}[2]{{#2}{#1}}
+\capitalisefmtwords{a \swap{bo}{ok} of rhyme}
+\end{verbatim}
+However it works okay with the starred form and the simpler
+\cs{capitalisewords}:
+\begin{verbatim}
+\newcommand*{\swap}[2]{{#2}{#1}}
+\capitalisefmtwords*{a \swap{bo}{ok} of rhyme}
+
+\capitalisewords{a \swap{bo}{ok} of rhyme}
+\end{verbatim}
+Produces:
+\begin{display}
+\newcommand*{\swap}[2]{{#2}{#1}}
+\capitalisefmtwords*{a \swap{bo}{ok} of rhyme}
+
+\capitalisewords{a \swap{bo}{ok} of rhyme}
+\end{display}
+Note that the case change is applied to the first argument.
+
+\begin{definition}[\DescribeMacro{\xcapitalisewords}]
+\cs{xcapitalisewords}\marg{text}
+\end{definition}
+This is a short cut for
+\cs{expandafter}\cs{capitalisewords}\cs{expandafter}\marg{text}.
+
+As from version 1.10, there is now a command that fully expands the
+entire argument before applying \cs{capitalisewords}:
+\begin{definition}[\DescribeMacro\ecapitalisewords]
+\cs{ecapitalisewords}\marg{text}
+\end{definition}
+
+There are also similar shortcut commands for the version that allows
+text-block commands:
+\begin{definition}[\DescribeMacro{\xcapitalisefmtwords}]
+\cs{xcapitalisefmtwords}\marg{text}
+\end{definition}
+The unstarred version is a short cut for
+\cs{expandafter}\cs{capitalisefmtwords}\cs{expandafter}\marg{text}.
+Similarly the starred version of \cs{xcapitalisefmtwords}
+uses the starred version of \cs{capitalisefmtwords}.
+
+For full expansion:
+\begin{definition}[\DescribeMacro\ecapitalisefmtwords]
+\cs{ecapitalisefmtwords}\marg{text}
+\end{definition}
+Take care with this as it may expand non-robust semantic commands
+to replacement text that breaks the functioning of
+\cs{capitalisefmtwords}. Use robust semantic commands
+where possible. Again this has a starred version that uses
+the starred form of \cs{capitalisefmtwords}.
+
+Examples:
+\begin{verbatim}
+\newcommand{\abc}{\xyz\space four five}
+\newcommand{\xyz}{one two three}
+No expansion: \capitalisewords{\abc}.
+First object one-level expansion: \xcapitalisewords{\abc}.
+Fully expanded: \ecapitalisewords{\abc}.
+\end{verbatim}
+produces: 
+\begin{display}
+\renewcommand{\abc}{\xyz\space four five}%
+\renewcommand{\xyz}{one two three}
+No expansion: \capitalisewords{\abc}.
+First object one-level expansion: \xcapitalisewords{\abc}.
+Fully expanded: \ecapitalisewords{\abc}.
+\end{display}
+
+(Remember that the spaces need to be explicit. In the second case
+above, using \cs{xcapitalisewords}, the space before \qt{four} has
+been hidden within \cs{space} so it's not recognised as a word
+boundary, but in the third case, \cs{space} has been expanded to an
+actual space character.)
+
+Examples:
+\begin{enumerate}
+\item 
+\begin{verbatim}
+\capitalisewords{a book of rhyme.}
+\end{verbatim}
+produces:
+\capitalisewords{a book of rhyme.}
+
+\item
+\begin{verbatim}
+\capitalisewords{a book\space of rhyme.}
+\end{verbatim}
+produces:
+\capitalisewords{a book\space of rhyme.}
+
+\item
+\begin{verbatim}
+\newcommand{\mytitle}{a book\space of rhyme.}
+\capitalisewords{\mytitle}
+\end{verbatim}
+produces:
+\newcommand{\mytitle}{a book\space of rhyme.}
+\capitalisewords{\mytitle}
+(No expansion is performed on \cs{mytitle}.) Compare with next example:
+
+\item
+\begin{verbatim}
+\newcommand{\mytitle}{a book\space of rhyme.}
+\xcapitalisewords{\mytitle}
+\end{verbatim}
+produces:
+\xcapitalisewords{\mytitle}
+
+However
+\begin{verbatim}
+\ecapitalisewords{\mytitle}
+\end{verbatim}
+produces: 
+\ecapitalisewords{\mytitle}
+(\cs{space} has been expanded to an actual space character.)
+
+\item 
+\begin{verbatim}
+\newcommand*{\swap}[2]{{#2}{#1}}
+\capitalisewords{a \swap{bo}{ok} of rhyme}
+
+\ecapitalisewords{a \swap{bo}{ok} of rhyme}
+\end{verbatim}
+produces:
+\begin{display}
+\newcommand*{\swap}[2]{{#2}{#1}}
+\capitalisewords{a \swap{bo}{ok} of rhyme}
+
+\ecapitalisewords{a \swap{bo}{ok} of rhyme}
+\end{display}
+This is because the argument of \cs{ecapitalisewords} is
+fully expanded before being passed to \cs{capitalisewords} so
+that last example is equivalent to:
+\begin{verbatim}
+\capitalisewords{a {ok}{bo} of rhyme}
+\end{verbatim}
+\end{enumerate}
+
+\section{PDF Bookmarks}
+\label{sec:pdfbookmarks}
+
+\begin{important}
+If you are using \sty{hyperref} and want to use
+\cs{capitalisewords}, \cs{capitalisefmtwords}
+or \ics{makefirstuc} (or the expanded variants) 
+in a section heading, the PDF bookmarks won't be able to use the command 
+as it's not expandable, so you will get a warning that looks like:
+\begin{verbatim}
+Package hyperref Warning: Token not allowed in a PDF string 
+(PDFDocEncoding):
+(hyperref)                removing `\capitalisewords'
+\end{verbatim}
+\end{important}
+
+If you want to provide an alternative for the PDF bookmark, you can
+use \sty{hyperref}'s \ics{texorpdfstring} command. For example:
+\begin{verbatim}
+\chapter{\texorpdfstring
+  {\capitalisewords{a book of rhyme}}% TeX
+  {A Book of Rhyme}% PDF
+}
+\end{verbatim}
+Alternatively, you can use \sty{hyperref}'s mechanism for
+disabling commands within the bookmarks. For example:
+\begin{verbatim}
+\pdfstringdefDisableCommands{%
+ \let\capitalisewords\@firstofone
+}
+\end{verbatim}
+
+See the \sty{hyperref} manual for further details.
+
+\section{Excluding Words From Case-Changing}
+\label{sec:nocap}
+
+As from v1.09, you can specify words which shouldn't be capitalised unless they
+occur at the start of \meta{text} using:
+\begin{definition}[\DescribeMacro\MFUnocap]
+\cs{MFUnocap}\marg{word}
+\end{definition}
+This only has a local effect. The global version is:
+\begin{definition}[\DescribeMacro\gMFUnocap]
+\cs{gMFUnocap}\marg{word}
+\end{definition}
+
+For example:
+\begin{verbatim}
+\capitalisewords{the wind in the willows}
+
+\MFUnocap{in}%
+\MFUnocap{the}%
+
+\capitalisewords{the wind in the willows}
+\end{verbatim}
+produces:
+\begin{display}
+\capitalisewords{the wind in the willows}
+
+\MFUnocap{in}%
+\MFUnocap{the}%
+
+\capitalisewords{the wind in the willows}
+\end{display}
+The list of words that shouldn't be capitalised can be cleared using
+\begin{definition}[\DescribeMacro\MFUclear]
+\cs{MFUclear}
+\end{definition}
+
+You can also simply place an empty group in front of a word
+if you don't want that specific instance to be capitalised.
+For example:
+\begin{verbatim}
+\MFUclear
+\capitalisewords{the {}wind in the willows}
+\end{verbatim}
+produces:
+\begin{display}
+\MFUclear
+\capitalisewords{the {}wind in the willows}
+\end{display}
+This is also a useful way of protecting commands that
+shouldn't be parsed. For example:
+\begin{verbatim}
+\capitalisewords{this is section {}\nameref{sec:nocap}.}
+\end{verbatim}
+produces
+\begin{display}
+\capitalisewords{this is section {}\nameref{sec:nocap}.}
+\end{display}
+(No case-changing is applied to \verb|\nameref{sec:nocap}|.
+It just happens to already be in title case.)
+
+The package \sty{mfirstuc-english} loads \styfmt{mfirstuc} and uses
+\cs{MFUnocap} to add common English articles and conjunctions, such
+as ``a'', ``an'', ``and'', ``but''. You may want to add other
+words to this list, such as prepositions but, as there's some
+dispute over whether prepositions should be capitalised, I~don't
+intend to add them to this package.
+
+If you want to write a similar package for another language, all you
+need to do is create a file with the extension \texttt{.sty}
+that starts with
+\begin{verbatim}
+\NeedsTeXFormat{LaTeX2e}
+\end{verbatim}
+The next line should identify the package. For example, if you have
+called the file \texttt{mfirstuc-french.sty} then you need:
+\begin{verbatim}
+\ProvidesPackage{mfirstuc-french}
+\end{verbatim}
+It's a good idea to also add a version in the final optional
+argument, for example:
+\begin{verbatim}
+\ProvidesPackage{mfirstuc-french}[2014/07/30 v1.0]
+\end{verbatim}
+Next load \styfmt{mfirstuc}:
+\begin{verbatim}
+\RequirePackage{mfirstuc}
+\end{verbatim}
+Now add all your \cs{MFUnocap} commands. For example:
+\begin{verbatim}
+\MFUnocap{de}
+\end{verbatim}
+At the end of the file add:
+\begin{verbatim}
+\endinput
+\end{verbatim}
+
+Put the file somewhere on \TeX's path, and now you can use this
+package in your document. You might also consider 
+\href{http://ctan.org/upload}{uploading it to CTAN} in case 
+other users find it useful.
+
+\chapter{UTF-8}
+\label{sec:utf8}
+
+The \cs{makefirstuc} command works by utilizing the fact that, in
+most cases, \TeX\ doesn't require a regular argument to be enclosed
+in braces if it only consists of a single token. (This is why you
+can do, say, \verb|\frac12| instead of \verb|\frac{1}{2}| or
+\verb|x^2| instead of \verb|x^{2}|, although some users
+frown on this practice.)
+
+A~simplistic version of the \cs{makefirstuc} command is:
+\begin{verbatim}
+\newcommand*{\FirstUC}[1]{\MakeUppercase #1}
+\end{verbatim}
+Here
+\begin{verbatim}
+\FirstUC{abc}
+\end{verbatim}
+is equivalent to
+\begin{verbatim}
+\MakeUppercase abc
+\end{verbatim}
+and since \cs{MakeUppercase} requires an argument, it grabs the
+first token (the character ``a'' in this case) and uses that as the
+argument so that the result is: Abc.
+
+The \sty{glossaries} package needs to take into account the fact
+that the text may be contained in the argument of a formatting
+command, such as \cs{acronymfont}, so \cs{makefirstuc} has to be
+more complicated than the trivial \cs{FirstUC} shown above, but at
+its basic level, \cs{makefirstuc} uses this same method and is the
+reason why, in most cases, you don't need to enclose the first
+character in braces. So if 
+\begin{alltt}
+\cs{MakeUppercase} \meta{stuff}
+\end{alltt}
+works,
+then
+\begin{alltt}
+\cs{makefirstuc}\marg{stuff} 
+\end{alltt}
+should also work and so should
+\begin{alltt}
+\cs{makefirstuc}\{\cs{foo}\marg{stuff}\}
+\end{alltt}
+but if 
+\begin{alltt}
+\cs{MakeUppercase} \meta{stuff}
+\end{alltt}
+doesn't work, then neither will
+\begin{alltt}
+\cs{makefirstuc}\marg{stuff} 
+\end{alltt}
+nor
+\begin{alltt}
+\cs{makefirstuc}\{\cs{foo}\marg{stuff}\}
+\end{alltt}
+
+Try the following document:
+\begin{alltt}
+\cs{documentclass}\{article\}
+
+\cs{usepackage}[utf8]\{inputenc\}
+\cs{usepackage}[T1]\{fontenc\}
+
+\cs{begin}\{document\}
+
+\cs{MakeUppercase} \~abc
+
+\cs{end}\{document\}
+\end{alltt}
+
+This will result in the error:
+\begin{verbatim}
+! Argument of \UTFviii@two@octets has an extra }.
+\end{verbatim}
+This is why \verb|\makefirstuc{|\texttt{\~abc}\verb|}| won't work.
+It will only work if the character \texttt{\~a} is placed inside a
+group.
+
+The reason for this error message is due to \TeX\ having been written before
+Unicode was invented. Although \texttt{\~a} may look like a single
+character in your text editor, from \TeX's point of view it's \emph{two} 
+tokens. So
+\begin{alltt}
+\cs{MakeUppercase} \~abc
+\end{alltt}
+tries to apply \cs{MakeUppercase} to just the first octet of \~a.
+This means that the second octet has been separated from the first octet,
+which is the cause of the error. In this case the argument isn't a
+single token, so the two tokens (the first and second octet of \~a)
+must be grouped:
+\begin{alltt}
+\cs{MakeUppercase}\{\~a\}bc
+\end{alltt}
+
+Note that \XeTeX\ (and therefore \XeLaTeX) is a modern
+implementation of \TeX\ designed to work with Unicode and therefore
+doesn't suffer from this drawback. Now let's look at the \XeLaTeX\
+equivalent of the above example:
+\begin{alltt}
+\cs{documentclass}\{article\}
+
+\cs{usepackage}\{fontspec\}
+
+\cs{begin}\{document\}
+
+\cs{MakeUppercase} \~abc
+
+\cs{end}\{document\}
+\end{alltt}
+
+This works correctly when compiled with \XeLaTeX. This means
+that \cs{makefirstuc}\verb|{|\texttt{\~abc}\verb|}| will work
+\emph{provided you use \XeLaTeX\ and the \sty{fontspec} package}.
+
+Version 2.24 of \sty{datatool-base} added the
+command \cs{dtl@getfirst@UTFviii} which attempts to grab both octets.  If this command
+has been defined, \sty{mfirstuc} will use it when it tries to split
+the first character from the rest of the word. See the
+\href{http://mirrors.ctan.org/macros/latex/contrib/datatool/datatool-code.pdf}{\styfmt{datatool}
+documented code} for further details.
+
+\PrintIndex
+\end{document}

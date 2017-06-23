@@ -1,0 +1,2239 @@
+\documentclass{article}
+\usepackage[fleqn]{amsmath}
+\usepackage[
+    web={centertitlepage,designv,forcolorpaper,tight*,latextoc,pro},
+    eforms,aebxmp
+]{aeb_pro}
+\usepackage{graphicx,array,fancyvrb}
+\usepackage{aeb_mlink}
+%\usepackage{myriadpro}
+%\usepackage{calibri}
+\usepackage[altbullet]{lucidbry}
+
+\usepackage[ignorecfg,
+    useselverses,useverses=docverses,fetchsubtr]{fetchbibpes}
+
+\addtoBibles{YLT,ESV,NKJV}
+\selectedVersesFrom
+{
+    {from=YILT,onlyverses={Gen 1:1-2}}
+}
+
+\begin{declareBVs}
+\BV(Gal 1:15 NKJV) But when it pleased God, who separated me from my mother's womb and called me through His grace,\null
+\BV(Gal 1:16 NKJV) to reveal His Son in me, that I might preach Him among the Gentiles, I did not immediately confer with flesh and blood,\null
+\end{declareBVs}
+
+
+\makeatletter
+\renewenvironment{quote}[1][]
+   {\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\rghtm\@empty\else\def\rghtm{\rightmargin\leftmargin}\fi
+    \list{}{\rghtm} %{\rightmargin\leftmargin}%
+    \item\relax}
+   {\endlist}
+\@ifundefined{l@tex@@@@driver}{\let\yyPC\relax}
+    {\def\yyPC{\special{color: pop}}}
+\makeatother
+\renewcommand{\hproportionwebtitle}{.8}
+
+
+
+\def\hardspace{{\fontfamily{cmtt}\selectfont\symbol{32}}}
+
+
+%\usepackage{makeidx}
+%\makeindex
+\usepackage{acroman}
+\usepackage[active]{srcltx}
+
+\urlstyle{tt}
+
+%\def\tutpath{doc/tutorial}
+%\def\tutpathi{tutorial}
+%\def\expath{../examples}
+
+\def\STRUT{\rule{0pt}{14pt}}
+
+
+\DeclareDocInfo
+{
+    university={\AcroTeX.Net},
+    title={The \textsf{bibpes} and \textsf{fetchbibpes} Packages
+    \texorpdfstring{\\[1ex]\Large}{: }Inserting Bible Passages from \textsf{e-Sword}},
+    author={D. P. Story},
+    email={dpstory@acrotex.net},
+    subject=Documentation for the fetchbibpes and bibpes packages,
+    talksite={\url{www.acrotex.net}},
+    version={2.3a, 2016/12/20},
+    Keywords={LaTeX, e-sword, Bible passages, AcroTeX},
+    copyrightStatus=True,
+    copyrightNotice={Copyright (C) \the\year, D. P. Story},
+    copyrightInfoURL={http://www.acrotex.net}
+}
+
+\universityLayout{fontsize=Large}
+\titleLayout{fontsize=LARGE}
+\authorLayout{fontsize=Large}
+\tocLayout{fontsize=Large,color=aeb}
+\sectionLayout{indent=-62.5pt,fontsize=large,color=aeb}
+\subsectionLayout{indent=-31.25pt,color=aeb}
+\subsubsectionLayout{indent=0pt,color=aeb}
+\subsubDefaultDing{\texorpdfstring{$\bullet$}{\textrm\textbullet}}
+
+\chngDocObjectTo{\newDO}{doc}
+\begin{docassembly}
+var titleOfManual="The fetchbib Bundle";
+var manualfilename="Manual_BG_Print_fetchbib.pdf";
+var manualtemplate="Manual_BG_Brown.pdf"; // Blue, Green, Brown
+var _pathToBlank="C:/Users/Public/Documents/ManualBGs/"+manualtemplate;
+var doc;
+var buildIt=false;
+if ( buildIt ) {
+    console.println("Creating new " + manualfilename + " file.");
+    doc = \appopenDoc({cPath: _pathToBlank, bHidden: true});
+    var _path=this.path;
+    var pos=_path.lastIndexOf("/");
+    _path=_path.substring(0,pos)+"/"+manualfilename;
+    \docSaveAs\newDO ({ cPath: _path });
+    doc.closeDoc();
+    doc = \appopenDoc({cPath: manualfilename, oDoc:this, bHidden: true});
+    f=doc.getField("ManualTitle");
+    f.value=titleOfManual;
+    doc.flattenPages();
+    \docSaveAs\newDO({ cPath: manualfilename });
+    doc.closeDoc();
+} else {
+    console.println("Using the current "+manualfilename+" file.");
+}
+var _path=this.path;
+var pos=_path.lastIndexOf("/");
+_path=_path.substring(0,pos)+"/"+manualfilename;
+\addWatermarkFromFile({
+    bOnTop:false,
+    bOnPrint:false,
+    cDIPath:_path
+});
+\executeSave();
+\end{docassembly}
+
+
+\begin{document}
+
+\maketitle
+
+\selectColors{linkColor=black}
+\tableofcontents
+\selectColors{linkColor=webgreen}
+
+
+\section{Introduction}
+
+The motivation for this pair of packages (\pkg{bibpes} and \pkg{fetchbibpes})
+came from my friend Thomas Price, who was preparing Bible studies using a
+combination of the application \app{e-Sword}
+(\mlurl{http://www.e-sword.net/}) and \LaTeX. He wanted a `database' of Bible
+passages from which he could simply `fetch' passages into the {\LaTeX} source
+file. To that end, the pair of packages \pkg{bibpes} and \pkg{fetchbibpes}
+were written.
+\begin{itemize}
+    \item \pkg{bibpes} is the `database' part of the problem. Use the
+        \app{e-Sword} application to copy and paste desired passages into
+        an (empty) \EXT{TXT} file. Use \texttt{makebibpes.tex} to convert the
+        \EXT{TXT} file to a \EXT{DEF} file formatted in a way that
+        is usable by \pkg{fetchbibpes}.
+
+    \item \pkg{fetchbibpes} is the `fetch' portion. Using the fetch
+        commands of \pkg{fetchbibpes} to reference the passages to be
+        typeset into the {\LaTeX} source.
+\end{itemize}
+
+\section{The \texorpdfstring{\protect\pkg{bibpes}}{bibpes} Package}
+
+    The \textsf{bibpes} package (\underbar{bib}le
+    \underbar passages from \underbar e-\underbar sword) takes a \EXT{TXT} file,
+    and writes a \EXT{DEF} file suitable for use by the \pkg{fetchbibpes}
+    package. The contents of the \EXT{TXT} file consists of Bible passages that
+    have been pasted in from the \textsf{e-Sword} desktop application or the
+    \textsf{e-sword} macro add-in to \textsf{Microsoft Word}. This package reads in
+    that \EXT{TXT} file and writes a \EXT{DEF} file where each passage referenced
+    is made into a text macro that expands to the passage.
+
+    This package correctly processes Bible verses in the \emph{English language}. With the exception
+    of German (using the German Elberfelder Bible (\texttt{GEB}), no other language has been tested.
+
+    \paragraph*{Package options} The package has several options, listed in display that follows.
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=*()]
+\usepackage[%
+    infolder=*ameta(infolder),
+    outfolder=*ameta(outfolder),
+    txtfilein=*ameta(base_name_txt),
+    deffileout=*ameta(base_name_def),
+    build|!build
+]{bibpes}
+\end{Verbatim}
+\paragraph*{Description of options}
+\begin{description}
+
+    \item[\texttt{infolder=\ameta{infolder}}] The value \ameta{infolder} is
+        the path to the folder location of the \EXT{TXT} file to be
+        processed. If \texttt{infolder} is not specified, the \EXT{TXT} file is
+        assumed to be in the source folder of the \texttt{makebibpes.tex}
+        file (more on this file later); otherwise, the \EXT{TXT} file should be
+        found in \ameta{infolder}.
+
+    \item[\texttt{outfolder=\ameta{outfolder}}] The value of
+        \ameta{outfolder} is the path to the folder location where the \EXT{DEF}
+        file is to be placed. If \texttt{outfolder} is not specified, the
+        \EXT{DEF} file is placed in the source folder of the
+        \texttt{makebibpes.tex} file (more on this file later); otherwise,
+        the \EXT{DEF} file is placed in \ameta{outfolder}.
+
+    \item[\texttt{txtfilein=\ameta{base\_name\_txt}}] is the base name of
+        the input \texttt{TXT} file, do not add the extension. For example,
+        \texttt{txtfilein=myverses}; the file \texttt{myverses.txt} must be
+        located in the folder specified by \texttt{infolder} or in the current folder
+        if \texttt{infolder} is not specified.
+
+        A value for \texttt{txtfilein} is required for this package to do its
+        thing; otherwise, this package does nothing.
+
+    \item[\texttt{deffileout=\ameta{base\_name\_def}}] is the base name of
+        the output \texttt{DEF} file, no not add the extension. If
+        \texttt{deffileout} is not specified, then the base name of the
+        output file is the same as the base name of the input file. The new
+        \EXT{DEF} file is saved in the folder specified by the
+        \texttt{deffileout} option, or if that option is not specified, it
+        is saved in the current folder.
+
+    \item[\texttt{build|!build}] Two esoteric options that determine
+        whether the \EXT{DEF} file is created (\texttt{build}) or not
+        (\texttt{!build}). The default is \texttt{build} and need not
+        appear in the option list, except in contrast to \texttt{!build}.
+        By default (\texttt{build}), \pkg{bibpes} takes \texttt{txtfilein}
+        and produces \texttt{deffileout} file; when \texttt{!build} is
+        specified, the \texttt{deffileout} file is not produced. See
+        \hyperref[para:crtDEF]{Section~\ref*{para:crtDEF}} for additional remarks on \texttt{build}
+        verses \texttt{!build}.
+
+
+\end{description}
+
+
+    \paragraph*{Steps to create a \EXT{DEF} file from a \EXT{TXT} file.}
+    There are two steps (1) create a \EXT{TXT} file containing the Bible
+    passages to be referenced; (2) run the \texttt{makebibpes.tex} file with
+    \texttt{txtfilein} and \texttt{deffileout} set as desired. For step~(1)
+    read \hyperref[s:Methods]{Section~\ref*{s:Methods}} on
+    `\mlnameref[\linktxtcolor{webgreen}]{s:Methods}'; for step~(2), read the
+    paragraph \Nameref{para:crtDEF}.
+
+     \subsection{Methodologies}\label{s:Methods}
+
+    To create a \EXT{TXT} file consisting of Biblical verses obtained from the \textsf{e-Sword}
+    application, there are two methodologies to consider.
+
+    \paragraph*{Methodology 1.} Work directly with the \textsf{e-Sword} desktop
+    application, located at URL \url{http://www.e-sword.net/}. In this workflow, we copy and
+    paste the verses directly into a \EXT{TXT} file.
+    \begin{enumerate}
+        \item Open your favorite {\TeX} editor, create a new document or
+            open an existing \EXT{TXT} file. If your {\TeX} editor can
+            automatically wrap long lines, \emph{turn this feature off}
+            before you paste any verses into the document.
+        \item Open the \textsf{e-Sword} desktop application. Select \textsf{Bible
+            > Copy Verses\ldots}
+        \item From the \textsf{Copy Verses} dialog box, refer to
+            \hyperref[fig:cpyVrs]{Figure~\ref*{fig:cpyVrs}}, choose the
+            verses required. Select the following options from the dialog:
+            \begin{itemize}
+               \item \textsf{Abbreviated book names} option: check this option
+               \item \textsf{Include translation name} option: this box \emph{must be checked}.
+               \item \textsf{Include text formatting} option: clear this checkbox
+               \item \textsf{Format} option: Be sure to use the \textsf{Format} labeled as~1.
+               \item \textsf{Reference delimiter}: Keep the reference delimiters of
+                   parentheses `\texttt{(}' and `\texttt{)}'. The delimiters are required to
+                   be parentheses as they are used in the definition of the Bible
+                   verses and use in the \pkg{fetchbibpes} package.
+            \end{itemize}
+        \item Press the \textsf{Copy} button.
+        \item Paste the copied verses into your \EXT{TXT} file. \textbf{\textcolor{red}{Important!}}
+            Verify that each verse is on a single line, do not allow your editor to wrap any line around.
+            You should have \emph{one verse per line}.
+        \item When you are finished pasting verses, save the \EXT{TXT} file
+            using some appropriate base name, say
+            \texttt{{\slshape{myverses}}.txt}.
+    \end{enumerate}
+
+    \paragraph*{Methodology 2.} Work within \textsf{Microsoft Word} and use the
+    \textsf{e-Sword} ADD-IN (\mlurl{http://www.e-sword.net/extras.html}). The
+    assumptions are that you have the \textsf{e-Sword} application and have installed
+    the \textsf{Word} add-in.
+    \begin{enumerate}
+    \item Open an empty Word document
+    \item Select ADD-INS
+    \item Tap the icon e-Sword Macros: Paste Verses from e-Sword.
+    \item See the description of step 3, in \textbf{Methodology 1} above.
+    \item When satisfied, save the file as a \EXT{TXT} file (Plain text), choose a
+        base name that is meaningful, say \texttt{{\slshape{myverses}}.txt}
+    \item Place \texttt{{\slshape{myverses}}.txt} in the source folder.
+    \end{enumerate}
+
+\begin{figure}[htb]\centering
+  \includegraphics[width=.67\linewidth]{copyVerses}
+  \caption{\textsf{Copy Verses} dialog box}\label{fig:cpyVrs}
+\end{figure}
+
+    \paragraph*{Other comments.} Quotations (sometimes) appear as double quotes
+    (\texttt{"}), the companion package \pkg{fetchbibpes} attempts to convert
+    double quotes to the {\TeX} notion of quotes; therefore, it is important
+    to copy verses that have matched double quotes.
+
+    In some translations, Jesus' words are quoted in red and are not set off
+    by quotation marks. You'll have to hand edit the \EXT{TXT} file.
+\begin{Verbatim}
+    (Mat 11:4) Jesus answered and said unto them, Go and shew John
+    again those things which ye do hear and see:
+\end{Verbatim}
+    can be changed to,
+\begin{Verbatim}
+    (Mat 11:4) Jesus answered and said unto them,
+    \textcolor{red}{Go and shew John again those things which ye do
+    hear and see:}
+\end{Verbatim}
+to be typeset as
+    \begin{quote}
+    (Mat 11:4) Jesus answered and said unto them, \textcolor{red}{Go and shew John
+    again those things which ye do hear and see:}
+    \end{quote}
+    That is, should such emphasis of Jesus' words be desired.\footnote{Here,
+    and throughout this manual, verses taken from the \EXT{TXT} or \EXT{DEF}
+    files are wrapped to the next line, this is done for \emph{display
+    purposes only}. In both the \EXT{TXT} and \EXT{DEF} files, the rule is
+    \emph{one verse per line}.}
+
+\subsection{Create the \EXT{DEF} file}\label{para:crtDEF}
+
+After you have created your \EXT{TXT} file, open the file
+ \texttt{makebibpes.tex}, which is found in the \texttt{examples} folder.
+ This is a short file, it reads:
+\begin{equation}
+\begin{minipage}{100pt}
+\begin{Verbatim}[numbers=left,commandchars=!()]
+\documentclass{article}
+\usepackage[!ameta(options)]{bibpes}
+\begin{document}
+\reportOnBibPes
+\readbackDefFile
+\end{document}
+\end{Verbatim}
+\end{minipage}\label{display:bibpes1}
+\end{equation}
+ The \texttt{makebibpes.tex} file, found in the root folder of this
+ distribution, is used to convert a \texttt{TXT} file of Bible verses to a
+ \EXT{DEF} file of Bible verses. The action of this package is to take
+ each line of Bible verse in the \EXT{TXT} file, for example, the verse
+ in the \EXT{TXT} file,
+\begin{Verbatim}[xleftmargin=0pt,fontsize=\small]
+(Gen 1:1 KJV) In the beginning God created the heaven and the earth.
+\end{Verbatim}
+is transformed the following verse in the \EXT{DEF} file,
+\begin{Verbatim}[xleftmargin=0pt,fontsize=\small]
+\BV(Gen 1:1 KJV) In the beginning God created the heaven and the earth.\null
+\end{Verbatim}
+ The command \cs{BV} (\underbar{B}ible \underbar{V}erse) is defined in the \pkg{fetchbibpes} package.
+ The end of the line is delimited by the \cs{null} command. \hyperref[s:declareBVs]{Section~\ref*{s:declareBVs}}
+ discusses the general format of the argument \ameta{verse-ref} of \cs{BV}.
+
+It is the \pkg{fetchbibpes} package that uses this special \EXT{DEF} file to fetch
+a verse from the file and typesets it into the document. See the documentation of \pkg{fetchbibpes}
+in \hyperref[fetch]{Section~\ref*{fetch}} below.
+
+The two commands \cs{reportOnBibPes} and \cs{readbackDefFile} expand to useful information
+when you compile the \pkg{bibpes} document, as seen in display~\eqref{display:bibpes1}.
+The first command expands to the input and output information given by the options
+\texttt{infolder}, \texttt{txtfilein}, \texttt{outfolder}, and \texttt{deffileout}; while
+\cs{readbackDefFile} reads back a listing of all passage just created. As a simple example,
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!()]
+\documentclass{article}
+\usepackage[!textbf(build),
+    infolder=mytxts,
+    outfolder=mydefs,
+    txtfilein=Gen1-KJV
+]{bibpes}
+\begin{document}
+\reportOnBibPes
+\readbackDefFile
+\end{document}
+\end{Verbatim}
+When compiled, the \pkg{bibpes} document might typeset as,
+\begin{flushleft}\parskip3pt
+Input file: \texttt{mytxts/Gen1-KJV.txt}\\
+Output file: \texttt{mydefs/Gen1-KJV.def}
+\end{flushleft}
+\begingroup
+\parindent0pt\parskip3pt
+    \def\BV(#1){\makebox[0pt][r]{#1\quad}\ignorespaces}%
+    \def\null{\par}%
+\BV(Gen 1:1 KJV) In the beginning God created the heaven and the earth.\null
+\BV(Gen 1:2 KJV) And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.\null
+\BV(Gen 1:3 KJV) And God said, Let there be light: and there was light.\null
+\BV(Gen 1:4 KJV) And God saw the light, that it was good: and God divided the light from the darkness.\null
+\BV(Gen 1:5 KJV) And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.\null
+\makebox[0pt][r]{\dots\dots\dots\dots\dots\dots\quad}\dots\dots\dots\dots\dots\dots
+\endgroup\par\medskip\noindent
+Passage references appear in the margins, while the passages themselves are
+in the body of the document. When\marginpar{\raggedright\opt{build} verses
+\opt{!build}} the \texttt{build} option, shown in bold font above, is
+specified, \pkg{bibpes} is fully functional in the sense that the \EXT{TXT}
+file is read and the \EXT{DEF} file is created and saved. When \texttt{build}
+is changed to \texttt{!build}, the typeset document displayed above appears,
+but the \EXT{TXT} file is \emph{not read} and the \EXT{DEF} is \emph{not
+created}. Using \opt{!build} is useful to get a typeset listing of the
+passages in the \EXT{DEF} file, which, it is assumed, has \emph{already been built}.
+
+\newtopic
+As an application seen later, a special command \cs{bibpesBody} is also defined, basically
+consisting of lines~(3)--(6), which include the beginning and ending of the document.
+A revised \texttt{makebibpes.tex} document can, consequently, read as follows:
+\begin{equation}
+\begin{minipage}{200pt}
+\begin{Verbatim}[numbers=left,commandchars=!()]
+\documentclass{article}
+\usepackage[!ameta(options)]{bibpes}
+\bibpesBody\relax
+\end{Verbatim}
+\end{minipage}\label{display:bibpes2}
+\end{equation}
+It is important to have the \cs{relax} command following \cs{bibpesBody}.
+This document should behave the same way as the other, more verbose one
+given previously.
+
+\newtopic\noindent
+\hyperref[s:combpkg]{Section~\ref*{s:combpkg}} contains another application to \cs{bibpesBody}.
+
+
+\subsection{Production and organization of your \texorpdfstring{\protect\EXT{TXT} and \protect\EXT{DEF}}
+{TXT and DEF} files}
+
+The file \texttt{makebibpes.tex} is found in the root folder of the
+\pkg{fetchbibpes} distribution. Modern {\LaTeX} systems, {MiK\TeX} comes do
+mind, do not allow you to compile a source file from their application
+folder, and the folder itself is readonly. Therefore, you must move
+\texttt{makebibpes.tex} to another folder.
+
+\paragraph*{Production and organization.}
+There are two thoughts that come to mind for producing \texttt{DEF} files.
+\begin{enumerate}
+\item Move \texttt{makebibpes.tex} into the working folder of your
+    project. Within the working folder, you can create your \EXT{TXT}
+    and \EXT{DEF} files as described in the \hyperref[s:Methods]{Sections~\ref*{s:Methods}}
+    and~\ref{para:crtDEF}, respectively.
+
+    Or, for a tidier setup, you can save your \EXT{TXT} and \EXT{DEF}
+    file in subfolders of the working folder. Create two subfolders
+    \texttt{mytxtfiles} and \texttt{mydeffiles}. When you convert your
+    \EXT{TXT} files into \EXT{DEF} files, specify the options
+    \texttt{infolder=mytxtfiles} and \texttt{outfolder=mydeffiles}.
+    For example,
+\begin{equation}
+\begin{minipage}{100pt}
+\begin{Verbatim}
+\usepackage[%
+    infolder=mytxtfiles,
+    outfolder=mydeffiles,
+    txtfilein=1Cor1
+]{bibpes}
+\end{Verbatim}
+\end{minipage}\label{display:bibpes}
+\end{equation}
+\pkg{bibpes} looks for \texttt{1Cor1.txt} in the \texttt{mytxtfiles} folder
+and saves the newly created \texttt{1Cor1.def} file in the
+\texttt{mydeffiles} folder. Later, when you use the \pkg{fetchbibpes}
+package, specify \texttt{deffolder=mydeffiles} on the option list of
+\pkg{fetchbibpes}, see
+\hyperref[s:PkgOptsfetchbibpes]{Section~\ref*{s:PkgOptsfetchbibpes}} for a
+description of the \opt{deffolder} option.
+
+\item Create a folder named \texttt{mybibleverses}, or any such name, and
+    move the conversion file \texttt{makebibpes.tex} to this folder. This
+    folder acts as a `database' of Bible verses. As described above, create
+    subfolders, one for \EXT{TXT} files and the other for \EXT{DEF} files
+    (perhaps named \texttt{mytxtfiles} and \texttt{mydeffiles}).
+
+    Over time, you save your \EXT{TXT} files from \app{e-Sword} into the
+    \texttt{mytxtfiles}. Convert the \EXT{TXT} files into \EXT{DEF}
+    by compiling \texttt{makebibpes.tex} with the options in
+    equation~\eqref{display:bibpes} above.
+
+    For any given project, move selected \EXT{DEF} files, as needed,
+    into your the root of your working folder, or place them in a
+    subfolder, \texttt{mydeffiles}. In the latter case, specify
+    \texttt{deffolder=mydeffiles} on the open list of \pkg{fetchbibpes}, see
+    \hyperref[s:PkgOptsfetchbibpes]{Section~\ref*{s:PkgOptsfetchbibpes}} for
+    a description of the \opt{deffolder} option.
+
+\end{enumerate}
+
+\paragraph*{Just a few \EXT{DEF}s, many, or none?} The question addressed here is
+whether, for a given project, develop many or a just a few \EXT{DEF} files
+for use in the project.
+
+\subparagraph*{Just a few \EXT{DEF}s.} From the \app{e-Sword} application,
+you can save \emph{all the verses} you need for a given project into a
+\emph{single} \EXT{TXT} file, then create a single \EXT{DEF} file. If you
+have a `database' of \EXT{DEF} files already, you can copy and paste the
+required verses into a single \EXT{DEF} file.
+
+We preview the \pkg{fetchbibpes}, in the case of a single \EXT{DEF} file, you
+can specify your only file (\texttt{lession1}) in the option list of
+\pkg{fetchbibpes}:
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\usepackage[%
+    useverses=lesson1,
+    deffolder=mydeffiles
+]{fetchbibpes}
+\end{Verbatim}
+Here, \pkg{fetchbibpes} looks for \texttt{lession1.def} in the subfolder
+\texttt{mydeffiles}.
+
+This approach is useful for a small project (lesson) requiring verses of a limited scope.
+As you need more verses, just add them into your \EXT{DEF} file.
+
+\subparagraph*{Many \EXT{DEF} files.}
+Another choice is to use several \EXT{DEF} files, perhaps from your
+`data\-base' collection.
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\usepackage[%
+    useverses={Gen1,Mat2,Rom1,1Cor1},
+    deffolder=mydeffiles
+]{fetchbibpes}
+\end{Verbatim}
+Here, you plan to reference verses in the \texttt{Gen1.def} file (containing
+Genesis, chapter~1), \texttt{Mat2.def}, \texttt{Rom1.def}, and
+\texttt{1Cor1.def}. With this database approach, authoring Bible lessons is
+more modular; just drop in the \texttt{DEF} files you need into the
+appropriate folder.
+
+The `database' approach is useful for large projects. It is critical to name
+your \EXT{DEF} files to make it easy to determine which files to include
+in your document. In the development of this package and \pkg{fetchbibpes}, I
+started a naming convention: \texttt{Gen1.def} (Chapter~1, or a subset of
+chapter~1, of Genesis of KJV)\footnote{KJV is the King James Version},
+\texttt{Gen1-ISV.def} (Chapter~1, or a subset of chapter~1, of Genesis of
+ISV)\footnote{ISV is the International Standard Version}, and so on.
+
+\subparagraph*{No \EXT{DEF} files.} When the \opt{useverses} option does not
+appear, or has no value, a warning is generated and written to the log to remind you to
+specify a value of the \opt{useverses} option. You can suppress this warning by specifying
+\texttt{useverses=none}. This declares that no \EXT{DEF} files are to be input. Instead, you
+can manage the verses by hand through the use of the \env{declareBVs} environment, refer to
+\hyperref[s:declareBVs]{Section~\ref*{s:declareBVs}} on page~\pageref*{s:declareBVs}.
+
+
+\subsection{\textsf{e-Sword} Book abbreviations}
+
+The \textsf{e-Sword} desktop application uses 3-letter abbreviations for the
+books of the Bible, see the \textbf{\app{e-Sword} Abbr} column of
+\hyperref[table:esabbr]{Table~\ref*{table:esabbr}}. (39 in Old Testament and
+27 in the New Testament).
+
+\begin{table}[htb]
+\centering\footnotesize
+$$\begin{tabular}{lll|lll}\\
+ \textbf{Book} & \multicolumn{1}{l}{\shortstack[c]{\bfseries\hbox to0pt{\hss\app{e-Sword}\hss}\\\bfseries Abbr}}& \textbf{Alt\_Abbr} &
+ \textbf{Book} & \multicolumn{1}{l}{\shortstack[c]{\bfseries\hbox to0pt{\hss\app{e-Sword}\hss}\\\bfseries Abbr}}& \textbf{Alt\_Abbr}\\\hline
+ Genesis         & Gen & Genesis      & Nahum          &  Nah & Nahum           \\
+ Exodus          & Exo & Exodus       & Habakkuk       &  Hab & Habakkuk        \\
+ Leviticus       & Lev & Leviticus    & Zephaniah      &  Zep & Zephaniah       \\
+ Numbers         & Num & Numbers      & Haggai         &  Hag & Haggai          \\
+ Deuteronomy     & Deu & Deuteronomy  & Zechariah      &  Zec & Zechariah       \\
+ Joshua          & Jos & Joshua       & Malachi        &  Mal & Malachi         \\
+ Judges          & Jdg & Judges       & Matthew        &  Mat & Matthew         \\
+ Ruth            & Rth & Ruth         & Mark           &  Mar & Mark            \\
+ 1 Samuel        & 1Sa & ISamuel      & Luke           &  Luk & Luke            \\
+ 2 Samuel        & 2Sa & IISamuel     & John           &  Joh & John            \\
+ 1 Kings         & 1Ki & IKings       & Acts           &  Act & Acts            \\
+ 2 Kings         & 2Ki & IIKings      & Romans         &  Rom & Romans          \\
+ 1 Chronicles    & 1Ch & IChronicles  & 1 Corinthians  &  1Co & ICorinthians    \\
+ 2 Chronicles    & 2Ch & IIChronicles & 2 Corinthians  &  2Co & IICorinthians   \\
+ Ezra            & Ezr & Ezra         & Galatians      &  Gal & Galatians       \\
+ Nehemiah        & Neh & Nehemiah     & Ephesians      &  Eph & Ephesians       \\
+ Esther          & Est & Esther       & Philippians    &  Php & Philippians     \\
+ Job             & Job & Job          & Colossians     &  Col & Colossians      \\
+ Psalms          & Psa & Psalms       & 1 Thessalonians&  1Th & IThessalonians  \\
+ Proverbs        & Pro & Proverbs     & 2 Thessalonians&  2Th & IIThessalonians \\
+ Ecclesiastes    & Ecc & Ecclesiastes & 1 Timothy      &  1Ti & ITimothy        \\
+ Song of Solomon & Son & SongofSolomon& 2 Timothy      &  2Ti & IITimothy       \\
+ Isaiah          & Isa & Isaiah       & Titus          &  Tit & Titus           \\
+ Jeremiah        & Jer & Jeremiah     & Philemon       &  Phm & Philemon        \\
+ Lamentations    & Lam & Lamentations & Hebrews        &  Heb & Hebrews         \\
+ Ezekiel         & Eze & Ezekiel      & James          &  Jas & James           \\
+ Daniel          & Dan & Daniel       & 1 Peter        &  1Pe & IPeter          \\
+ Hosea           & Hos & Hosea        & 2 Peter        &  2Pe & IIPeter         \\
+ Joel            & Joe & Joel         & 1 John         &  1Jn & IJohn           \\
+ Amos            & Amo & Amos         & 2 John         &  2Jn & IIJohn          \\
+ Obadiah         & Oba & Obadiah      & 3 John         &  3Jn & IIIJohn         \\
+ Jonah           & Jon & Jonah        & Jude           &  Jud & Jude            \\
+ Micha           & Mic & Micha        & Revelation     &  Rev & Revelation
+\end{tabular}$$
+\caption{\textsf{e-Sword} abbreviations}\label{table:esabbr}
+\end{table}
+
+\section{The \texorpdfstring{\protect\pkg{fetchbibpes}}{fetchbibpes} Package}\label{fetch}
+
+    The problem of fetching Bible verses was suggested to me by my friend Tom Price. He plans
+    to write Bible lessons, notes and handouts will be prepared using
+    {\LaTeX} and these packages (\textsf{bibpes} and \textsf{fetchbibpes}).
+
+    This is a companion package to \textsf{bibpes}. Use the
+    commands of this package to fetch the Bible passages that the \textsf{bibpes} package has
+    defined.
+
+\subsection{The fetch verse commands}
+    The major commands of this package are \cs{fetchverse} and \cs{fetchverses}, latter one being more
+    powerful than the former. The syntax for these two are,
+\bVerb\takeMeasure{\cs{fetchverses*}[\ameta{opts}]\darg{\ameta{book}{\vissp}\ameta{ch}:\ameta{vrs\SUB{1}}-\ameta{vrs\SUB{2}}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\fetchverse[!ameta(opts)]{!ameta(book)(!vissp)!ameta(ch):!ameta(vrs)}
+\fetchverses*[!ameta(opts)]{!ameta(book)(!vissp)!ameta(ch):!ameta(vrs)}
+\fetchverses*[!ameta(opts)]{!ameta(book)(!vissp)!ameta(ch):!ameta(vrs!SUB(1))-!ameta(vrs!SUB(2))}
+\end{dCmd}
+\endgroup\noindent
+    where \ameta{opts}, discussed in \Nameref{s:optsfetch}, are any of the
+    supported options; \ameta{book} is either the three letter book
+    abbreviation that \textsf{e-Sword} uses (refer to the
+    \textbf{\app{e-Sword} Abbr} column of
+    \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}) or one of the
+    alternate abbreviations, seen in the \textbf{Alt\_Abbr} column of
+    \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}; \meta{ch:vrs} is a
+    chapter-verse reference. The \cs{fetchverse} command only fetches a
+    \emph{single verse}, while the \cs{fetchverses} (plural) command can
+    fetch a single verse (\ameta{ch}:\ameta{vrs}) or can fetch \emph{multiple
+    verses} (\ameta{ch}:\ameta{vrs\SUB1}-\ameta{vrs\SUB2}). The run of verses
+    must all be from the same chapter. The `\texttt{*}' parameter is
+    optional, when present, the book and verse references are shown,
+    otherwise they are not. We illustrate with \texttt{Gen\;1:1} and
+    \texttt{Gen\;1:1-2}.
+ \begin{itemize}
+    \item \cs{fetchverse\darg{Gen\;1:1}}: \fetchverse{Gen 1:1}
+    \item \cs{fetchverses\darg{Gen\;1:1}}: \fetchverses{Gen 1:1}
+    \item \cs{fetchverses*\darg{Gen\;1:1-2}}:\ \fetchverses*{Gen 1:1-2}
+    \item \cs{fetchverses\darg{Gen\;1:1-2}}: \fetchverses{Gen 1:1-2}
+ \end{itemize}
+ Though the thee-letter abbreviations are preferred for the book names, \pkg{fetchbibpes} does
+ support an alternate set of names as seen in the \textbf{Alt\_Abbr} column of
+    \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}.
+ \begin{itemize}
+    \item \cs{fetchverse\darg{Genesis\;1:1}}: \fetchverse{Genesis 1:1}
+    \item \cs{fetchverse\darg{IKings\;1:1}}: \fetchverse{IKings 1:1}
+    \item \cs{fetchverses*\darg{ICorinthians\;1:1-2}}: \fetchverses*{ICorinthians 1:1-2}
+ \end{itemize}
+
+\subsubsection{Fetching a verse that is not available.}
+An error that can occur surely.
+For example,
+\begin{quote}
+\verb|\fetchverse{Gen 1:11}|\\[3pt]
+\fetchverse{Gen 1:11}
+\end{quote}
+In this case, there is no Gen 1:11, the first chapter only has 10 verses. Instead of the passage,
+the marker \fetchverses{Gen 1:11} appears. This signals that the passage is undefined.
+
+Another possibility is that the passages are not in any of the \EXT{DEF}
+files you've input into the current document.
+\begin{quote}
+\verb|\fetchverses{Gen 2:1-3}|\\[3pt]
+\fetchverses{Gen 2:1-3}
+\end{quote}
+In this case, chapter 2 of the book of Genesis was not input into the current
+document, so \pkg{fetchbibpes} cannot find them, and marks which of the
+verses were not found.
+
+Another error is simply mistyping the passage reference, for example, the
+declaration,
+\begin{quote}
+\verb|\fetchverse{gen 1:1}| yields\\[3pt]\fetchverse{gen 1:1}
+\end{quote}
+Notice that the reference label (\textbf{??}gen\textbf{??} 1:1) has
+`\textbf{??}' around the \emph{book name}, this means that the book name is
+not recognized, possibly a misspelling. In this case, `gen' should be `Gen'.
+A warning message appears in the log.
+
+One last common mistake is to use \cs{fetchverse} (singular) when
+\cs{fetchverses} (plural) is needed; for example,
+\begin{quote}
+\cs{fetchverse\darg{ICorinthians\;1:1-2}} yields\\[3pt]
+\fetchverse{ICorinthians 1:1-2}
+\end{quote}
+In this case, we referenced a range of verses, but used \cs{fetchverse} to fetch.
+It is perhaps always better to use \cs{fetchverses} for single and multiple verses.
+
+
+
+\subsubsection{The options of the fetch verse commands}\label{s:optsfetch}
+
+    In this section, we describe the \ameta{opts} argument of the fetch verse commands.
+    These options control how the book names are displayed.
+
+\begin{description}
+     \item [\texttt{abbr=\ameta{\upshape{esword|none|long|short}}}] The
+         \texttt{abbr} key designates how the book reference is displayed,
+         possible values are \texttt{esword}, \texttt{none}, \texttt{long},
+         and \texttt{short}. Specifying \texttt{abbr} is equivalent to
+         \texttt{abbr=esword}. Initially, we set \texttt{abbr=esword}.
+
+\textbf{Examples}
+ \begin{itemize}
+       \item \cs{fetchverse[abbr=esword]\brpr{Gen 1:1}}: \fetchverse[abbr=esword]{Gen 1:1}
+       \item \cs{fetchverse[abbr=none]\brpr{Gen 1:1}}: \fetchverse[abbr=none]{Gen 1:1}
+       \item \cs{fetchverse[abbr=long]\brpr{Gen 1:1}}: \fetchverse[abbr=long]{Gen 1:1}
+       \item \cs{fetchverse[abbr=short]\brpr{Gen 1:1}}: \fetchverse[abbr=short]{Gen 1:1}
+ \end{itemize}
+
+% \useBookStyle{abbr,roman=false,from,transl}
+
+
+ \item[\texttt{roman=\ameta{\upshape{true|false}}}] The \texttt{roman} key
+     determines how book numbers are displayed, `1~Corinthians' versus `I
+     Corinthians', for example. Possible values are \texttt{true} (use
+     roman letters) of \texttt{false} (use arabic numbers). Specifying
+     \texttt{roman} without a value is equivalent to \texttt{roman=true}.
+     Initially, we set \texttt{roman=false}.
+
+ This key has no effect when \texttt{abbr=esword}.
+
+ \textbf{Examples}
+ \begin{itemize}
+       \item \fetchverse[abbr=long,roman=false]{1Co 1:1}
+       \item \fetchverse[abbr=long,roman]{1Co 1:1}
+ \end{itemize}
+
+ \item[\texttt{from=\ameta{\upshape{KVJ|KVJ+|ISV}}}] The value of the
+     \texttt{from} key is the Bible translation to be used. For example,
+     \texttt{from=ISV}.
+
+    \textbf{Example} \verb|\fetchverse[abbr=none,from=ISV]{Gen 1:1}| yields,
+    \begin{quote}
+        \fetchverse[abbr=none,from=ISV]{Gen 1:1}
+    \end{quote}
+
+    The \texttt{from} key, only supports values \texttt{KJV},
+    \texttt{KJV+}, \texttt{ISV}, these are the versions of the Bible are
+    free versions available from \app{e-Sword} commonly used. When the
+    \texttt{from} key is not specified, the default Bible is usef, see
+    \hyperref[s:suppfetch]{Section~\ref*{s:suppfetch}} for more information on setting the default
+    Bible. Initially, the default Bible is set to \texttt{KJV}; thus,
+    \verb|\fetchverse{Gen 1:1}| fetches Genesis 1:1 from the \texttt{KJV},
+    if defined.
+
+    If you want to add other Bibles use the \cs{addtoBibles} to declare
+    them. See \mlhyperref[\linktxtcolor{webgreen}]{s:suppfetch}{Section~\protect\ref*{s:suppfetch}}
+    for more information on this
+    command.
+
+    \item[\texttt{alt=\ameta{word}}]\label{key:alt} The value \ameta{word}
+        is a single word (containing no spaces). The \pkg{fetchbibpes}
+        fetches the verses in the \EXT{DEF} files, as originally obtained
+        from the \app{e-Sword} application. These verses are without
+        formatting or emphasis or color. By hand-editing selected \EXT{DEF}
+        files, you can create rich text Bible passages and retrieve them through the
+        \texttt{alt} key. For example, we edit the file containing
+        \texttt{Gen 1:1 KJV} and add a line:
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\BV(Gen 1:1 KJV) In the beginning
+    God created the heaven and the earth.\null
+\BV(Gen 1:1 KJV Alt) \dots
+    \emph{God created the heaven and the earth}.\null
+\end{Verbatim}
+(Lines are wrapped around above to fit within the margins, this \emph{should not
+be done} in the \EXT{DEF} file itself.) To access this alternate version
+of \texttt{Gen 1:1}, we use the \texttt{alt} key.
+\begin{quote}
+\verb|\fetchverse{Gen 1:1}|\\[3pt]\fetchverse{Gen 1:1}\\[6pt]
+\verb|\fetchverse[alt=Alt]{Gen 1:1}|\\[3pt]\fetchverse[alt=Alt]{Gen 1:1}
+\end{quote}
+There can be many variations on verses, \texttt{alt=Alt},
+\texttt{alt=Alt1}, \texttt{alt=Color}, and so on.
+
+When you edit a \texttt{DEF} file to add an alternate version, there must
+be a space between the Book (\texttt{KJV}), for example) and the
+\ameta{word} (\texttt{\string\BV(Gen 1:1 KJV Alt)}).
+
+Beginning at date 2016/11/07, the behavior of the \texttt{alt} key is
+modified. If you specify an alternate version, say \texttt{alt=Alt}
+(\cs{fetchverse[alt=Alt]\darg{Gen\,1:1}}) and that alternate version is
+\emph{not available} (undefined), \pkg{fetchbibpes} attempts to typeset the
+the same verse with no \texttt{alt} key, and writes an informative message
+to the log. The previous behavior is to mark that passage with
+`\texttt{??}', which indicates the passage is undefined. This new behavior
+also manifests itself with the \texttt{alt*} key. The demo file
+\texttt{bibpes\_alt-star.tex} tests this new behavior.
+
+The command \cs{useOldAlt} reverts to the old behavior of \texttt{alt}
+and \cs{useNewAlt} to returns to the new behavior. The default is
+\cs{useNewAlt}.
+
+    \item[\texttt{alt*=\ameta{list-of-words}}] The parameter
+        \ameta{list-of-words} is a comma-delimited list of \texttt{alt}
+        keywords. Empty entries are supported. Perhaps an example before
+        further explanation.
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\fetchverses[alt*={Alt1,,,Alt2,,Alt1}]{Gen 1:1-10}
+\end{Verbatim}
+The \pkg{fetchbibpes} package typesets the following verses: Gen 1:1 Alt1,
+Gen 1:2, Gen~1:3, Gen 1:4 Alt2, Gen 1:5, Gen 1:6 Alt1, Gen 1:7, Gen 1:8,
+Gen 1:9, Gen 1:10. If any of the \texttt{alt} versions are undefined,
+\pkg{fetchbibpes} typesets the passage with no \texttt{alt} key specified
+and an informative message is written to the log.
+
+The demo file \texttt{bibpes\_alt-star.tex} tests this feature.
+
+    \item[\texttt{transl=\ameta{text}}] The \texttt{transl} key is an
+        annotation key that appends text (\ameta{text}) on the end of the
+        Bible reference, such as a translation abbreviation,
+        \texttt{transl=KJV}.
+
+\textbf{Examples} We annotate the translation version using `King James Version'.
+\begin{quote}\small
+\verb|\fetchverse[abbr=none,transl=King James Version]{Gen 1:1}|\\[3pt]\normalsize
+\fetchverse[abbr=none,transl=King James Version]{Gen 1:1}
+\end{quote}
+Normally, the version abbreviation is used as the \ameta{text}:
+\begin{quote}\small
+\verb|\fetchverse[abbr=none,transl=KJV]{Gen 1:1}|\\[3pt]\normalsize
+\fetchverse[abbr=none,transl=KJV]{Gen 1:1}
+\end{quote}
+
+\item[\texttt{from*=\ameta{version}}] The \texttt{from*} combines the
+    actions of the options \texttt{from} and \texttt{transl} and is
+    equivalent to \texttt{from=\ameta{version},transl=\ameta{version}}. Here
+    \ameta{version} must be a recognized version of the Bible available on
+    your computer.
+
+\textbf{Example} \verb|\fetchverse[abbr=none,from*=ISV]{Gen 1:1}| yields,
+\begin{quote}\fetchverse[abbr=none,from*=ISV]{Gen 1:1}\end{quote}
+The value of the \texttt{from*} key must be a valid value of the \texttt{from} key.
+
+\item[\texttt{pcolor=\ameta{color}}]\label{item:pcolor} Use the \opt{pcolor} key to color the passage text.
+    The value \ameta{color} is any color specification accepted by the \cs{color} macro
+    of the \pkg{color} or \pkg{xcolor} package.
+
+\textbf{Example} \verb|\fetchverses*[pcolor=blue]{Gen 1:1-2}|
+\begin{quote}
+\fetchverses*[pcolor=blue]{Gen 1:1-2}
+\end{quote}
+The coloring includes the two tokens placed by the \opt{enclosewith} key.
+
+Note that the verse numbers are also colored; to typeset the verse number in black, say,
+redefine \cs{verseFmt}. For example
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\small]
+\renewcommand\verseFmt[1]{{\normalcolor\verseFmtDef{#1}}}
+\end{Verbatim}
+the above passage becomes,
+\begin{quote}
+\renewcommand\verseFmt[1]{{\normalcolor\verseFmtDef{#1}}}
+\fetchverses*[pcolor=blue]{Gen 1:1-2}
+\end{quote}
+The general treatment of \cs{verseFmt} is taken up in \hyperref[s:VerseNumbers]{Section~\ref*{s:VerseNumbers}}
+on \autopageref*{s:VerseNumbers}.
+
+In the option list of a fetch command, declaring \opt{pcolor} (without a
+value) causes the passage text to be colored the default color (usually
+black). All changes in the option list are local to the passage, but you can
+use \cs{useBookStyle} to set `global' options. Continue reading on this
+subject, beginning with the named paragraph \textbf{\nameref{para:useBookStyle}} on
+\autopageref*{para:useBookStyle}.
+
+\item[\texttt{pformat=\ameta{various}}] Use the \opt{pformat} key to change
+    the formatting (or style) of the passage text. The \ameta{various}
+    argument should be style declarations, such as \cs{bfseries},
+    \cs{itshape}, \cs{slshape}, \cs{sffamily}, and so on, but can be anything that does not
+    take an argument.
+
+\textbf{Example} \verb|\fetchverses*[pformat=\slshape]{Gen 1:1-2}|
+\begin{quote}
+\fetchverses*[pformat=\slshape]{Gen 1:1-2}
+\end{quote}
+More than one formatting command may be used; for example, to obtain bold slant passage text,
+we declare \opt{pformat=\string\bfseries\string\slshape}.
+
+See the \opt{format} key for formatting the passage reference.
+
+\item[\texttt{delims=\ameta{tok\SUB{1}tok\SUB{2}}}] The \texttt{delims} key
+    takes a value of two characters (or tokens or groups enclosed in braces
+    (\verb|{}|)) used to set off the Bible reference. The default is
+    \texttt{delimin=()}.
+
+If \texttt{delims} appears in the option list without a value, then there are
+no characters delimiting the Bible passage.
+\goodbreak
+\textbf{Examples}
+\begin{enumerate}
+   \item \verb|\fetchverse[abbr=none,delims]{Gen 1:1}|
+   \begin{quote}
+   \fetchverse[abbr=none,delims]{Gen 1:1}
+   \end{quote}
+   \item \verb|\fetchverse[abbr=none,delims={[]}]{Gen 1:1}|
+   \begin{quote}
+   \fetchverse[abbr=none,delims={[]}]{Gen 1:1}
+   \end{quote}
+   \item \verb|\fetchverse[abbr=none,delims={According to }{,}]{Gen 1:1}|:
+   \begin{quote}
+   \fetchverse[abbr=none,delims={According to }{,}]{Gen 1:1}
+   \end{quote}
+ \end{enumerate}
+ As seen in item~2, delimiters of `\texttt{[]}' must be enclosed in braces
+ because this all takes place within an optional argument, without the
+ braces, the parsing of the optional argument fails. The \texttt{delims}
+ expects two tokens, they need not be characters, they can be anything, as
+ long as they are enclosed in matching braces. In item~3, we set
+ \verb|delims={According to }{,}|, the first token is placed before the
+ passage reference, the second after; this results in a phrase that leads
+ up to the passage itself.
+
+\item[\texttt{enclosewith=\ameta{tok\SUB{1}tok\SUB{2}\upshape|\cs{quote}}}] The
+    \texttt{enclosewith} key takes either a two-token argument or the command
+    \cs{quote}. The latter is used to enclose the passage in quotation
+    marks. The tokens are placed as follows:
+    \ameta{tok\SUB1}\meta{passage}\ameta{tok\SUB2}. When \cs{quote} is specified
+    \texttt{\ameta{tok\SUB1}=\darg{``}} (left quote) and
+    \texttt{\ameta{tok\SUB2}=\darg{''}} (right quote).
+
+   \textbf{Example} Enclose the passage in quotation marks:
+   \begin{quote}
+   {\small\verb|\fetchverse[delims={According to }{,},enclosewith=\quote]{Gen 1:1}|}\\[3pt]
+   \fetchverse[abbr=none,delims={According to }{,},enclosewith=\quote]{Gen 1:1}\\[6pt]
+   {\small\verb|\fetchverses[delims={According to }{,},|\\
+   \hspace*{16pt}\verb|enclosewith={\guillemotleft\space}{ \guillemotright}]{Gen 1:1-2}|}\\[3pt]
+   \fetchverses[abbr=none,delims={According to }{,},enclosewith={\guillemotleft\space}{ \guillemotright}]{Gen 1:1-2}
+   \end{quote}
+
+   The \texttt{enclosewith} key must be used wisely as some passages, depending on the translation,
+   already contain single and/or double quotation marks.
+
+ \item[\texttt{format=\ameta{value}}] The \texttt{format} key is a general key for making formatting declarations,
+ for example, we format the reference using \texttt{format=\string\bfseries\string\sffamily}.
+
+\textbf{Example} \verb|\fetchverse[format=\bfseries\sffamily]{Gen 1:1}| produces
+the passage:
+ \fetchverse[format=\bfseries\sffamily]{Gen 1:1}
+
+ The formatting only effects the passage label (reference) \textbf{Gen 1:1} and its surrounding
+ delimiters.
+
+
+\item[\texttt{caps=\ameta{\upshape{true|false}}}] Specifying the
+    \texttt{caps} key displays the chapter name (the passage reference or
+    label) in capital letters `GENESIS' versus `Genesis'. Specifying
+    \texttt{caps} without a value is equivalent to
+    \texttt{caps=true}.
+
+\textbf{Example} Capitalize the full book name and while we're at it we format the passage
+reference as well.
+\begin{quote}\small
+ \verb|\fetchverse[format=\bfseries\sffamily,abbr=none,caps]{Gen 1:1}|\\[3pt]\normalsize
+ \fetchverse[format=\bfseries\sffamily,abbr=none,caps]{Gen 1:1}
+ \end{quote}
+
+ \item[\texttt{showfirst=\ameta{\upshape{true|false}}}] The
+     \texttt{showfirst} key is a Boolean, which if \texttt{true}, the first verse
+     number is typeset. The default is \texttt{false}, the first verse number is not
+     typeset. Specifying \texttt{showfirst} without a value is equivalent to
+    \texttt{showfirst=true}.
+
+    \textbf{Examples} We compare the passages \texttt{Gen 1:1-2} with and
+    without first verse number:
+\begin{itemize}
+   \item \verb|\fetchverses[showfirst]{Gen 1:1-2}|\\[3pt]
+   \fetchverses[showfirst]{Gen 1:1-2}
+   \item \verb|\fetchverses{Gen 1:1-2}|\\[3pt]
+   \fetchverses{Gen 1:1-2}
+ \end{itemize}
+
+\item[\texttt{shownone}] When this valueless key is specified, no verse
+    numbers are shown for the passage. In this case, the \texttt{showfirst}
+    key has no effect.
+
+\textbf{Example} \verb|\fetchverses[shownone]{Gen 1:1-3}| fetches the
+passage, no verse numbers are shown.
+\begin{quote}
+\fetchverses[shownone]{Gen 1:1-3}
+\end{quote}
+
+ \item [\texttt{useperiod=\ameta{\upshape{true|false}}}] The
+     \texttt{useperiod} key is a Boolean, which if \texttt{true} a period follows
+     any abbreviation of a book name. If \texttt{useperiod=false} no period
+     is affixed. The default is \texttt{true}. (`Matt.' versus `Matt', for example.)
+
+\textbf{Examples}
+\begin{itemize}
+   \item \verb|\fetchverse[abbr=long]{Mat 2:1}|\\[3pt]
+         \fetchverse[abbr=long]{Mat 2:1}
+   \item \verb|\fetchverse[abbr=long,useperiod=false]{Mat 2:1}|\\[3pt]
+         \fetchverse[abbr=long,useperiod=false]{Mat 2:1}
+ \end{itemize}
+ The period is used by default, you must say \texttt{useperiod=false} to
+ remove it. This option is not obeyed when \texttt{abbr=esword} (or just
+ \texttt{abbr}, the default).
+
+ \item[\texttt{citeatend=\ameta{\upshape{true|false}}}] The
+     \texttt{citeatend} key is a Boolean, which if \texttt{true}, places the
+     citation reference at the end of the passage. Specifying
+    \texttt{citeatend} without a value is equivalent to
+    \texttt{citeatend=true}.
+
+\textbf{Example} \verb|\fetchverses*[citeatend,showfirst]{Gen 1:1-2}|
+\begin{quote} %\priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }
+\fetchverses*[citeatend,showfirst]{Gen 1:1-2}
+ \end{quote}
+It is possible to control the positioning of the citation using additional features,
+yet to appear in the record, refer to \hyperref[s:suppfetch]{Section~\ref*{s:suppfetch}}.
+
+\item[\texttt{nocite}] The \opt{nocite} key is only obeyed with the
+\cs{fetchverse} command. If present, the citation for the passage does not appear.
+
+\textbf{Example} \verb|\fetchverse[nocite]{Gen 1:1}| displays as:
+\begin{quote}
+\fetchverse[nocite]{Gen 1:1}
+\end{quote}
+Of course, the citation would normally appear prior to the appearance of the passage.
+The above passage is equivalent to \verb~\fetchverses{Gen 1:1}~.
+
+For \cs{fetchverse}, the citation \texttt{appears by default}, you must force it
+away with \opt{nocite}; for \cs{fetchverses}, the citation \emph{does not
+appear by default}, to make it appear, use \cs{fetchverses*}.
+
+\item[\texttt{priorref=\ameta{value}}] The value of \texttt{priorref} is
+    placed just before the book reference (\ameta{value}\darg{\cs{book@passage}}).
+    The book reference itself (\cs{book@passage}) is enclosed in braces so
+    \ameta{value} can be a macro with one argument.
+
+    \textbf{Example} Place the passage reference in the margin. The command
+    \cs{mpfmt} is defined locally, within the \texttt{quote} environment.
+\begin{quote}
+\def\mpfmt#1{\afterRef{{}}\marginpar{\small\raggedleft#1}}
+\verb|\fetchverses*[priorref=\mpfmt,delims]{Gen 1:1-2}|\\[3pt]
+\fetchverses*[priorref=\mpfmt,delims]{Gen 1:1-2}
+ \end{quote}
+ The definition of \cs{mpfmt} within the quote environment is
+\begin{verbatim}
+   \def\mpfmt#1{\afterRef{{}}\marginpar{\small\raggedleft#1}}
+\end{verbatim}
+The \cs{afterRef} command is described later in this documentation.
+
+\item[\texttt{ltxquotes}] If this key is present (it has no value), it is assumed that
+the corresponding passage or passages uses {\LaTeX} style quotes, as in
+\texttt{\char018\char018God\char129s grace\char129\char129} or \texttt{\char018God\char129s grace\char129}.
+Such a situation can occur if you've hand-edited the \EXT{DEF} file that contains the passages of interest.
+In this case you want to use the \texttt{ltxquotes} open key with the \cs{fetchverses} command; for example,
+\begin{quote}
+\verb|\fetchverses*[ltxquotes,from*=NKJV]{Mat 8:5-13}|\\[3pt]
+\fetchverses*[ltxquotes,from*=NKJV]{Mat 8:5-13}
+\end{quote}
+This particular passage has been hand-edited, and uses {\LaTeX} quotation marks.
+
+There are two commands related to \texttt{ltxquotes}, these are \cs{LaTeXQuotesOn} and \cs{LaTeXQuotesOff}, the default is \cs{LaTeXQuotesOff}. The option \texttt{ltxquotes} executes \cs{LaTeXQuotesOn} within a group. In extraordinary
+situations, these commands my be explicitly expanded by the document author.
+
+Refer to Section~\ref{ProbsQuotes} for a discussion of quotation marks and apostrophes.
+
+\item[\texttt{replace=\darg{\ameta{find\SUB1}}\darg{\ameta{replc\SUB1}}%
+      \darg{\ameta{find\SUB2}}\darg{\ameta{replc\SUB2}}...%
+      \darg{\ameta{find\SUB{k}}}\darg{\ameta{replc\SUB{k}}}}]\label{item:replace}\leavevmode\\[3pt]The
+      key performs (multiple) find and replace operations. There must be
+      an even number of arguments. For each pair, \ameta{find\SUB{i}} is
+      searched for and replaced by \ameta{replc\SUB{i}}. This is an exact
+      match search. A command in the \ameta{replc\SUB{i}}
+      argument might need to be protected using \cs{protect}.
+
+      For example,
+\begin{quote}
+\verb|\fetchverse{Mat 2:1}|\\[3pt]
+\fetchverse{Mat 2:1}
+\end{quote}
+As a stand alone quote, you'll note that the passage ends with a comma; we
+want to change this to a period. Also, just to demonstrate multiple find
+and replace, we'll also replace every instance of `Jesus' with
+`\textcolor{red}{Jesus}'.
+\begin{quote}
+\verb|\fetchverse[replace={Jerusalem,}{Jerusalem.}|\\
+\null\hskip20pt\verb|{Jesus}{\textcolor{red}{Jesus}}]{Mat 2:1}|\\[3pt]
+\fetchverse[replace={Jerusalem,}{Jerusalem.}%{Jerusalem}{\textbf{Jerusalem}}
+{Jesus}{\textcolor{red}{Jesus}}]{Mat 2:1}
+\end{quote}
+There are two commas in the sentence, so we must characterize the comma
+we want to replace, the one that follows `Jerusalem'.
+
+\textbf{Rule:} Do \emph{plain text replacements first} followed by any formatted text replacements last.
+\begin{quote}
+\verb|\fetchverse[replace={Jerusalem,}{Jerusalem.}|\\
+\null\hskip20pt\verb|{Jerusalem}{\textbf{Jerusalem}}]{Mat 2:1}|\\[3pt]
+\fetchverse[replace={Jerusalem,}{Jerusalem.}{Jerusalem}{\textbf{Jerusalem}}]{Mat 2:1}
+\end{quote}
+succeeds whereas,
+\begin{quote}
+\verb|\fetchverse[replace={Jerusalem}{\textbf{Jerusalem}}|\\
+\null\hskip20pt\verb|{Jerusalem,}{Jerusalem.}]{Mat 2:1}|\\[3pt]
+\fetchverse[replace={Jerusalem}{\textbf{Jerusalem}}{Jerusalem,}{Jerusalem.}]{Mat 2:1}
+\end{quote}
+fails. Notice the comma (\texttt{,}) was not replaced by a period (\texttt{.}). After the first
+replacement, where is no string `\texttt{Jerusalem,}', there is `\verb|\textbf{Jerusalem},|'.
+
+Additional examples are found in the sample files
+\texttt{bibpes\_replace.tex} and in \texttt{bibpes\_replaces.tex} that
+accompany this distribution. Examples include some `creative' use of
+\opt{replace}.
+
+\paragraph*{The \opt{replace} key and \cs{fetchverses}.}\label{para:replace}
+A more detailed understanding of how \opt{replace} works when retrieving
+multiple verses with \cs{fetchverses} is needed. The \opt{replace}
+algorithm is run on \emph{each verse} individually -- not on the combined
+verses -- as it is retrieved. This fact leads us to another rule.
+
+\textbf{Rule:} The \ameta{find} text should only match text within a
+single verse, not across several verses, for such a match will never be
+successful. Restrict your searches to match fragments within a single
+verse.
+
+
+There is a command that may be useful with the \opt{replace} key.
+\bVerb\takeMeasure{\string\gobbleto\darg{\ameta{word}}\darg{\ameta{\cs{cmd}}} }%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\gobbleto{!ameta(word)}{!ameta(\cmd)}}
+\end{dCmd}
+\eVerb The command defines another command \ameta{\cs{cmd}}, the action
+of this command is to gobble up all token between it and the
+\ameta{word}. The need for such a command arose when \ameta{find} text
+contains one or more of the active characters. (The active characters are
+the single left quote (\texttt{\char018}), the single right quote or
+apostrophe (\texttt{'}), and the double quote (\texttt{"}).) It is
+difficult to make things work (find/replace) when there is one of these
+active characters in the \ameta{find} text. Below is an example from
+\texttt{bibpes\_replaces.tex}. We quote a passage from Gal 1:15-16:
+\begin{quote}\relax
+\verb|\fetchverses*[from*=NKJV]{Gal 1:15-16}|\\[3pt]
+\eSQ\fetchverses*[from*=NKJV]{Gal 1:15-16}
+\end{quote}
+We want to annotate this passage by removing unwanted sentence fragments,
+so we can concentrate on the teaching of the passage. Note that \texttt{mother's womb}
+is part of verse~15, the problem is to deal with the apostrophe.
+\begin{Verbatim}[xleftmargin=\leftmargini,numbers=left]
+\gobbleto{and}{\gobbletoand}\gobbleto{blood,}{\gobbletoblood}
+\fetchverses*[from=NKJV,replace=
+    {But when}{\leavevmode\ldots when}
+    {who separated me from my}{who\gobbletoand}
+    {, that I might preach Him}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+\end{Verbatim}
+Prior to the passage, we make two declarations
+\verb|\gobbleto{and}{\gobbletoand}| and
+\verb|\gobbleto{blood,}{\gobbletoblood}|, and insert them into our
+\ameta{replace} text, as seen above.
+\begin{quote}
+\gobbleto{and}{\gobbletoand}\gobbleto{blood,}{\gobbletoblood}
+\fetchverses*[from=NKJV,replace=
+    {But when}{\leavevmode\ldots when}
+    {who separated me from my}{who\gobbletoand}
+    {, that I might preach Him}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+\end{quote}
+In line~(4) of the verbatim listing above, we fine the text \texttt{who
+separated me from my} (could have been shorter) and replace it by
+\texttt{who\cs{gobbletoand}}. The \cs{gobbletoand} command is inserted
+just after `\texttt{who}', and will gobble everything that follows it up
+to and including the word `\texttt{and}. Included in the gobbled text is
+the active character \texttt{'}, which now causes no grief. In line~(5),
+another `gobble-replacement' is performed for a very long passage
+(containing no active characters). In this way, Biblical fragments may be
+displayed.
+
+Obviously, great care must be taken to prevent unwanted replacements. The
+\ameta{find} text must characterize what is to be found. Always check
+your work to make sure you are getting the targeted replacement and not
+spurious replacement.
+
+The \opt{replace} option is a quick and easy way of making minor
+editorial adjustments to the passage. Major revisions, such putting the
+Jesus' words in red as some translations do, require editing the
+\EXT{DEF} file and creating alternate passages; for more information on
+how to create alternate passages, refer to the \opt{alt} key on
+\autopageref{key:alt}.
+
+\item[\texttt{localdefs=\ameta{localdefs}}] Use the \opt{localdefs} key
+    to pass macro definitions into the group in which \cs{fetchverse} and
+    \cs{fetchverses} operate. Any definitions, or other {\LaTeX} constructs, should
+    not take up any space, nor should they disturb the {\LaTeX} code of \cs{fetchverse}
+    and \cs{fetchverses}. The application of this key is to the \cs{gobbleto} command.
+    Pass any \cs{gobbleto} declarations through the \opt{localdefs} key to make them
+    local to the group.
+
+    The `Gal 1:15-16' passages above were made within a \env{quote}
+    environment, which made the \cs{gobbleto} declarations local; to
+    quote the same passage outside of an enclosing group, yet avoiding a
+    global declaration, use the \opt{localdefs} key.
+\begin{Verbatim}[xleftmargin=\leftmargini]
+\fetchverses*[from=NKJV,
+    localdefs={\gobbleto{and}{\gobbletoand}%
+        \gobbleto{blood,}{\gobbletoblood}},
+    replace=
+        {But when}{\leavevmode\ldots when}
+        {who separated me from my}{who\gobbletoand}
+        {, that I might preach Him}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+\end{Verbatim}
+This code expands to:
+\fetchverses*[from=NKJV,
+    localdefs={\gobbleto{and}{\gobbletoand}%
+        \gobbleto{blood,}{\gobbletoblood}},
+    replace=
+        {But when}{\leavevmode\ldots when}
+        {who separated me from my}{who\gobbletoand}
+        {, that I might preach Him}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+
+Note that because \cs{gobbleto\darg{blood,}} contains a comma, we must
+enclose the value of \opt{localdefs} in braces so \pkg{xkeyval} will
+parse it correctly.
+
+The above example appears in \texttt{bibpes\_replaces.tex}.
+
+\end{description}
+
+\paragraph*{Predefined options using a `helper' command.}\label{para:PredefHelper} It can become
+tedious to type the various options, nothing can be done about that, but if
+you use the same collection of options consistently, you can package them in
+a `helper' command:
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\newcommand{\Optsi}{pcolor=blue,format=\bfseries,abbr=none}
+\end{Verbatim}
+Then you can say,
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!()]
+\fetchverses*[!textbf(\Optsi),!ameta(more_options)]{Gen 1:1-2}
+\end{Verbatim}
+\textbf{\textcolor{red}{Important.}} The placement of the `helper' command is
+important, it should placed just to the right of the left bracket (\texttt[),
+as shown above. The first token (\cs{Optsi}) is expanded using the {\TeX}
+primitive \cs{expandafter}, which is a limited kind of expansion.
+\begin{quote}\newcommand{\Optsi}{pcolor=blue,format=\bfseries,abbr=none}%
+\verb|\fetchverses*[\Optsi,caps]{Gen 1:1-2}|\\[3pt]
+\fetchverses*[\Optsi,caps]{Gen 1:1-2}
+\end{quote}
+
+\subsection{Package options}\label{s:PkgOptsfetchbibpes}
+The basic syntax for \pkg{fetchbibpes} is as follows:
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!()]
+\usepackage[%
+    useverses={!ameta(list)},
+    deffolder=!ameta(path),
+    useselverses,
+    usesr,ignorecfg
+]{fetchbibpes}
+\end{Verbatim}
+
+\paragraph*{Description of options}
+\begin{description}\def\HR{\hspace{-\labelsep}}
+\item[\texttt{useverses=\darg{\ameta{list}}}] The  \opt{useverses} option
+     is the way the \EXT{DEF} files are input into the document. The
+     value of \opt{useverses} is \texttt{\darg{\ameta{list}}}, a
+     comma-delimited base names for \EXT{DEF} file created by
+     \textsf{bibpes}. The listed base name \EXT{DEF} files contain
+     verses that are to be referenced and fetched from the files. These
+     files should be located in the folder containing the source file of
+     the document or in the search path of your {\LaTeX} distribution. For
+     example,
+\begin{Verbatim}
+\usepackage[useverses={Gen1,Mat2,Rom1,1Cor1}]{fetchbibpes}
+\end{Verbatim}
+The items listed in the \emph{comma-delimited} list are the base names of the
+\texttt{DEF} files to be input. The above assumes the listed files
+(\texttt{Gen1.def}, \texttt{Mat2.def}, \texttt{Rom1.def}, \texttt{1Cor1.def}) are
+in the folder of the source file, or in the search path of your {\LaTeX} system.
+
+\item[\texttt{useverses=none}] There is a second form for the
+    \texttt{useverses} option where the value is not a \ameta{list},
+    but the word `\texttt{none}'. When \opt{useverses} does not appear
+    in the option list, or has no value, a {\LaTeX} warning is generate
+    to remind you to specify one or more \EXT{DEF} files. To suppress
+    this warning, use the special of `\texttt{none}', in which case no
+    \EXT{DEF} files are expected to be input into the document. When
+    using this option, you normally manually manage the Biblical
+    passages by using the \env{declareBVs} environment, which is covered in
+    \hyperref[s:declareBVs]{Section~\ref*{s:declareBVs}} on page~\pageref*{s:declareBVs}.
+
+\item [\texttt{deffolder=\ameta{path}}] Through \texttt{deffolder} key you
+    can specify the \ameta{path} to the \EXT{DEF} files. Ideally,
+    \ameta{path} is a subfolder of your source file. Do not place a forward
+    slash (`\texttt{/}') at the end of the path, this is done internally
+    only if \ameta{path} is nonempty.
+\begin{Verbatim}
+\usepackage[%
+    useverses={Gen1,Mat2,Rom1,1Cor1},
+    deffolder=mydeffiles
+]{fetchbibpes}
+\end{Verbatim}
+Here, {\LaTeX} looks for the listed files (\texttt{Gen1.def},
+\texttt{Mat2.def}, \texttt{Rom1.def}, \texttt{1Cor1.def}) in the folder
+\texttt{mydeffiles}, which is a subfolder of the source file.
+
+This key is useful if you want to remove the clutter of numerous
+\EXT{DEF} files from the root folder of your source file.
+
+\item\HR\opt{useselverses} is an option that tries to economize memory
+    usage, refer to Section~\ref{s:sf} for details.
+
+\item\HR\opt{fetchsubtr} is an option that includes code to extract substrings
+from a verse. See \hyperref[s:substr]{Section~\ref*{s:substr}} for details.
+
+\item\HR\opt{usesr} is a specialize option that brings in the definition of
+    the \cs{sr} command, see \hyperref[s:sr]{Section~\ref*{s:sr}} for more information.
+
+\item[\opt{ignorecfg}] When this key is present (no value is required), the \EXT{CFG}
+file for this package (\texttt{fbpes.cfg}) is \emph{not loaded}. Refer to \hyperref[s:cfg]{Section~\ref*{s:cfg}}
+for more information on the \EXT{CFG} file.
+\end{description}
+
+\paragraph*{Demo file:} \texttt{bibpes\_tst.tex}.
+
+\subsection{Supporting commands for fetching verses}\label{s:suppfetch}
+
+\subsubsection{Adding Bibles}
+Suppose you want to fetch verses from the American Standard Version (ASV) and
+Young's Literal Translation (YLT), first download them (if not already on
+your system) using the \app{e-Sword} desktop application; second, use the
+\cmd{\addtoBibles} command to add them to the list of supported Bible
+versions.
+\bVerb\takeMeasure{\string\addtoBibles\darg{\ameta{list}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\addtoBibles{!ameta(list)}
+\end{dCmd}
+\endgroup\noindent
+    This command is placed in the preamble, \ameta{list} is a comma
+    delimited list of \app{e-Sword} Bible translation abbreviations.
+    (These are apparent when you make your choice of Bible version to
+    download.) For example, place
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\addtoBibles{ASV,YLT}
+\end{Verbatim}
+    in the preamble to specify the American Standard Version (\texttt{ASV}) and Young's
+    Literal Translation (\texttt{YLT}), assuming these versions are available
+    on your system.
+
+    \paragraph*{Example} \verb|\fetchverses[from=YLT]{Gen 1:1-2}| yields,
+    \begin{quote}
+        \fetchverses[from=YLT]{Gen 1:1-2}
+    \end{quote}
+
+\subsubsection{Setting the default Bible}
+You can set your own default Bible using the \cs{defaultBible} command.
+\bVerb\takeMeasure{\string\defaultBible\darg{\ameta{transl}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\defaultBible{!ameta(transl)}
+\end{dCmd}
+\eVerb where \ameta{transl} is the name of a Bible translation assigned
+by the \app{e-Sword} application. The name \ameta{transl} must be a
+recognized Bible translation: KJV, KJV+, ISV, or any Bible translation registered
+by the \cs{addtoBibles} command.
+
+ of the \texttt{from}
+key of the fetch commands. Other than the ones initially defined
+(\texttt{KJV}, \texttt{KJV+}, and \texttt{ISV}), Bible can be added on
+with the \cs{addtoBibles} command, or by redefining the \texttt{from}
+key, perhaps in the \EXT{CFG}; see \hyperref[s:cfg]{Section~\ref*{s:cfg}}
+for more information on how to do this.
+
+\paragraph*{Example} Purchase, download and install \texttt{NKJV} (a premium Bible)
+and declare in a document:
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\addtoBibles{NKJV}
+\defaultBible{NKJV}
+\end{Verbatim}
+With these declarations, the command \cs{fetchverse\darg{Gen 1:1}} fetch \texttt{Gen 1:1}
+from \texttt{NKJV}, assuming such verses exist in any of the \texttt{DEF} files that are
+specified by the \opt{useverses} option.
+
+\subsubsection{The \texorpdfstring{\protect\cs{useBookStyle}}{\textbackslash{useBookStyle}} command}\label{para:useBookStyle}
+You can design your own default key-values using the \cs{useBookStyle} command.
+\bVerb\takeMeasure{\string\useBookStyle\darg{\ameta{opts}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\useBookStyle{!ameta(opts)}
+\end{dCmd}
+\endgroup\noindent where \ameta{opts} is a comma-delimited list of key-values for
+the fetch verses commands. This command may be used in the body of the
+document to change the style.
+
+\paragraph*{Example}
+Declaring \cs{useBookStyle\darg{abbr=none,roman}}\cs{fetchverse\darg{1Co 1:1}}
+produces the following passage:
+\begin{quote}
+\useBookStyle{abbr=long,roman=true}\fetchverse{1Co 1:1}
+\end{quote}
+The \pkg{fetchbibpes} package uses \cs{useBookStyle} to initially declare,
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\useBookStyle{abbr,roman=false,from,transl}
+\end{Verbatim}
+The changes are local to any group in which they are made.
+
+As with the fetch command options, see \textbf{\mlnameref[\linktxtcolor{webgreen}]{para:PredefHelper}}
+on page~\pageref*{para:PredefHelper}, the first token in the argument of
+\cs{useBookStyle} is expanded using \cs{expandafter}, this means that the
+first token can be a macro command of key-values; for example,
+\cs{useBookStyle\darg{\cs{Optsi,caps}}} sets the book style to your favorite
+options (\cs{Optsi}), plus the \opt{caps} option.
+
+When declared outside a group, the changes are considered global, which may
+not always be what is wanted. For example, if we declare \cs{useBookStyle\darg{pcolor=blue}}, then all passages
+are colored blue by default.
+\begin{quote}\useBookStyle{pcolor=blue}%
+\verb|\useBookStyle{pcolor=blue}|\\[3pt]
+\verb|\fetchverse{Gen 1:1}|
+results in \fetchverse{Gen 1:1} This may
+not be what is wanted within a paragraph presentation. To revert to
+default black passage text, use \opt{pcolor} with no
+value. Thus, \verb|\fetchverse[pcolor]{Gen 1:1}|, yields
+\fetchverse[pcolor]{Gen 1:1}
+\end{quote}
+
+\subsubsection{\texorpdfstring{\protect\cs{usePassage}}{\textbackslash{usePassage}}:
+    The raw retrieval of a passage}
+
+The \cs{fetchverse} and \cs{fetchverses} command are rather complex in
+that they must process any of the many options before it produces the
+passage. There may be an application to simply retrieving the passage
+without any frills; in this case use \cs{usePassage}:
+\bVerb\takeMeasure{\string\usePassage\darg{\ameta{verse-ref}}}%
+\begin{dCmd}[commandchars=!~@]{\bxSize}
+\usePassage{!ameta~verse-ref@}
+\end{dCmd}
+\eVerb where \ameta{verse-ref} is the argument of the \cs{BV} command as it is specified in one of
+the \EXT{DEF} files. Thus, if we type \verb|\usePassage{Gen 1:1 KJV}|, we get,
+\begin{quote}
+\usePassage{Gen 1:1 KJV}
+\end{quote}
+That is, you get the `raw' passage without any annotations (translation, book, chapter, verse, and so on).
+Only one passage (verse) may be retrieved this way.
+
+\subsection{Setting various spaces}
+
+\paragraph*{The space prior to the reference for
+\texorpdfstring{\protect\opt{citeatend}}{citeatend}.}
+
+When the option \texttt{citeatend=true}, the \cs{priorRefSpc} command sets the
+spacing between the passage and the reference.
+\bVerb\takeMeasure{\normalfont{Other choices for \ameta{arg} are \cs{fbFitItIn} and \cs{fbFillRght}}}%
+\begin{dCmd}[commandchars=!~@]{\bxSize}
+\priorRefSpc{!ameta~arg@}!quad!normalfont(!ttfamily\space!normalfont)
+!normalfont~Other choices for !ameta~arg@ are !cs~fbFitItIn@ and !cs~fbFillRght@@
+\end{dCmd}
+\endgroup\noindent
+Without any declaration, the default argument is \cs{space} (shown in parentheses); other
+choices are also listed above for the \ameta{arg}. The \ameta{arg} can be some other custom
+declaration.
+
+\paragraph*{Examples} We illustrate the effects of \cs{priorRefSpc}.
+\begin{quote}\useBookStyle{showfirst,citeatend}
+\verb|\fetchverses*{Gen 1:1-2}| (the default)\\[3pt]
+\fetchverses*{Gen 1:1-2}
+
+\verb|\priorRefSpc{\fbFillRght}\fetchverses*{Gen 1:1-2}|\\[3pt]
+\priorRefSpc{\fbFillRght}\fetchverses*{Gen 1:1-2}
+
+\verb|\priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }%|\\
+\verb|\fetchverses*{Gen 1:1-2}|\\[3pt]
+\priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }\fetchverses*{Gen 1:1-2}
+ \end{quote}
+
+
+\paragraph*{Setting the space after the book name}\leavevmode
+\bVerb\takeMeasure{\string\afterBookSpc\darg{\ameta{value}}\quad\normalfont(\texttt{\string\ })}%
+\begin{dCmd}[commandchars=~!@]{\bxSize}
+\afterBookSpc{~ameta!value@}~quad~normalfont(~ttfamily\~vissp~normalfont)
+\resetAfterBookSpc
+\end{dCmd}
+\endgroup\noindent The \meta{value} of the \cs{afterBookSpc} determines the
+spacing just after the book name and before the chapter and verse, it is
+normally a hard space (\cs{\vissp}). However, you can pass a different value.
+
+\paragraph*{Example} Illustrate the placement of the \meta{value} of
+\cs{afterBookSpc}:
+\begin{quote}
+\verb|\afterBookSpc{\textbf{!!}}\fetchverse{Mat 2:1}\resetAfterBookSpc|\\[3pt]
+\afterBookSpc{\textbf{!!}}\fetchverse{Mat 2:1}\resetAfterBookSpc
+\end{quote}
+The command \cmd{\resetAfterBookSpc} resets the change by to its default. In
+the example, the use of \cmd{\resetAfterBookSpc} was not needed since the
+change occurred within a \texttt{quote} environment. A declaration of
+\cmd{\afterBookSpc\darg{}} removes the space completely. There may be some
+application to this command.
+
+\paragraph*{The space following the passage reference}\leavevmode
+\bVerb\takeMeasure{\string\afterRef\darg{\ameta{value}}\quad\normalfont(\texttt{\string\@empty})}%
+\begin{dCmd}[commandchars=~!^]{\bxSize}
+\afterRef{~ameta!value^}~quad~normalfont(~ttfamily\@empty~normalfont)
+\end{dCmd}
+\endgroup\noindent The \cmd{\afterRef} command places its \ameta{value} immediately following
+the passage \emph{reference} when the option \opt{citeatend} is \emph{not in effect}:
+\begin{quote}
+\verb|\afterRef{\textbf{!!}}\fetchverses*{1Jn 1:1}|\\[3pt]
+\afterRef{\textbf{!!}}\fetchverses*{1Jn 1:1}
+\end{quote}
+The default value is \cs{space} obtained by declaring \cmd{\afterRef\darg{}}
+with the empty argument. To get no space after the passage reference and the
+beginning of the passage use \cmd{\afterRef\darg{\darg{}}}; this latter
+declaration was used in the example of the \opt{priorref} key of the fetch
+commands.
+
+\paragraph*{The space between the book and book number}\leavevmode
+\bVerb\takeMeasure{\string\afterBookSpc\darg{\ameta{value}}\quad\normalfont(\texttt{\string\space})}%
+\begin{dCmd}[commandchars=~!@]{\bxSize}
+\afterBookSpc{~ameta!value@}~quad~normalfont(~ttfamily\space~normalfont)
+\resetAfterBookSpc
+\end{dCmd}
+\endgroup\noindent
+The \cs{afterBookSpc} places \ameta{value} between the book number and the book,
+if there is a book number. (E.g., 1 Corinthians).
+
+\paragraph*{Example} Remove the space and use roman numbers:
+\begin{quote}
+\verb|\afterNumSpc{}\fetchverse[abbr=none]{1Co 1:1}|\\[3pt]
+\afterNumSpc{}\fetchverse[abbr=none]{1Co 1:1}\\[6pt]
+\verb|\afterNumSpc{}\fetchverse[abbr=none,roman]{1Co 1:1}|\\[3pt]
+\afterNumSpc{}\fetchverse[abbr=none,roman]{1Co 1:1}
+\end{quote}
+Of course, the default is to leave a space between the number and the book.
+\begin{quote}
+\verb|\fetchverse[abbr=none,roman]{1Co 1:1}|\\[3pt]
+\fetchverse[abbr=none,roman]{1Co 1:1}
+\end{quote}
+
+
+    \subsection{Formatting the verse numbers}\label{s:VerseNumbers}
+
+    We define three commands to support the formatting of the verse numbers.
+\bVerb\takeMeasure{\string\renewcommand\string\verseFmt{\ameta\darg{tex\_code\_for\_\#1}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\renewcommand\verseFmt{!ameta(tex_code_for_#1)}
+\verseFmtReset
+\end{dCmd}
+\endgroup\noindent
+The definition of \cs{verseFmt} determines the formatting of the verse number
+in the passage; the argument of \cs{verseFmt} (\texttt{\#1}) is the verse
+number. There is a default definition is
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\newcommand{\verseFmt}[1]{\verseFmtDef{#1}}
+\end{Verbatim}
+where \cs{verseFmtDef} is the default command to typeset the verse numbers as
+a superscript. (We don't present its definition in this documentation.)
+
+After redefinition, to return to the default definition, just expand
+\cmd{\verseFmtReset}. Of course, \cmd{\verseFmtDef} may be redefined to have
+a different default definition. (Refer to \texttt{fetchbibpes.dtx} for its definition.)
+
+ Below are verses showing the default representation of the verse numbers.
+\begin{quote}
+ \fetchverses*[showfirst,abbr=none]{Gen 1:1-5}
+ \end{quote}
+ The verse numbers appear as superscripts prior to the passages.
+
+ However, this formatting can be redefined to obtain the style of numbers you want.
+ In the passage that follows, I've changed the formatting style seen in some
+ Bibles of the multiple passages.
+\begin{quote}[1]
+\newlength\verseBoxLength
+\settowidth{\verseBoxLength}{\normalsize\normalfont000}
+\renewcommand{\verseFmt}[1]{\par\noindent\makebox[\verseBoxLength][c]{#1}}
+\afterRef{\par\kern3pt}
+\fetchverses*[showfirst,delims,caps,format={\bfseries\sffamily},abbr=none]{Gen 1:1-5}
+\end{quote}
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\small]
+\begin{quote}
+\newlength\verseBoxLength
+\settowidth{\verseBoxLength}{\normalsize\normalfont000}
+\renewcommand{\verseFmt}[1]{\par\noindent
+    \makebox[\verseBoxLength][c]{#1}}
+\afterRef{\par\kern3pt}
+\fetchverses*[showfirst,delims,caps,
+    format={\bfseries\sffamily},abbr=none]{Gen 1:1-5}
+\end{quote}
+\end{Verbatim}
+It is not necessary in this example for the changes occurred within a group,
+but to switch back to the default verse number style, we
+declare \cs{afterRef\darg{}}\cs{verseFmtReset}.
+
+\newtopic
+The description of \opt{pcolor=\ameta{color}} on \autopageref{item:pcolor} has another example of
+redefining \cs{verseFmt}.
+
+\paragraph*{See demo file:} See the demo file \texttt{bibpes\_tst.tex} for a
+working version of this example.
+
+\newtopic\noindent
+Immediately following the verse number is an opportunity to insert an
+additional command (as a function of the verse number).
+\bVerb\takeMeasure{\string\afterVerseFmt\darg{\meta{\string\cmd}}%
+\quad\normalfont(\ttfamily{\string\afterVerseFmt\darg{}}\normalfont)}%
+\begin{dCmd}[commandchars=!~@]{\bxSize}
+\afterVerseFmt{!meta~\cmd@}!quad!normalfont(!ttfamily~\afterVerseFmt{}@!normalfont)
+\end{dCmd}
+\endgroup\noindent where \meta{\cs{cmd}} is a command taking one argument, the verse number.
+ Consider the following quotation:
+\begin{quote}\def\mrk#1{\textbf{!!Verse~#1!!}}\afterVerseFmt{\mrk}
+\fetchverses[showfirst]{Gen 1:1-2}
+\end{quote}
+The verbatim listing of the above is
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\small]
+\begin{quote}\def\mrk#1{\textbf{!!Verse~#1!!}}\afterVerseFmt{\mrk}
+\fetchverses[showfirst]{Gen 1:1-2}
+\end{quote}
+\end{Verbatim}
+This is not a very interesting application, but a more interesting use of
+this command lies ahead. To revert to the default definition execute
+\cs{afterVerseFmt\darg{}} with the empty argument.
+
+\subsection{Dealing with \textsl{Strong's Concordance} numbers}
+
+When the \texttt{KJV+} is used, for example, the text is annotated with
+cross-references to \textsl{Strong's Concordance}. In the text file, the
+references are of the form `\texttt{G\string|H\string\d+}', where
+\texttt{\string\d+} means one or more natural numbers, `\texttt{G}' and
+`\texttt{H}' refer to the Greek and Hebrew scriptural texts. The references
+come through in the \EXT{TXT} files as `\texttt{G3739}' or `\texttt{H7225}'. When
+using the \app{WinEdt} editor, you can use a regular expression find and
+replace these references with command versions (e.g., \verb|\G{3739}| or
+\verb|\H{7225}|):
+\begin{quote}
+\begin{tabular}{ll}
+\textbf{Greek Strongs} & \textbf{Hebrew Strongs}\\
+find: \verb|G\(+$Numeric$\)| & find: \verb|H\(+$Numeric$\)|\\
+replace: \verb|\\G\{\0\}| & replace: \verb|\\H\{\0\}|
+\end{tabular}
+\end{quote}
+
+\paragraph*{Macro File.} This can be done in either the \EXT{TXT} or \EXT{DEF} file. If you are using \textsf{WinEdt}, you can use the specially
+written Macro File \texttt{bibpes\_strongs.edt}, which is found in the
+\texttt{extras} folder. Open the \EXT{TXT} or \EXT{DEF} file (\EXT{DEF}
+preferred) in \app{WinEdt}.
+
+\subparagraph*{Procedure.} The procedure for using this Macro File is a follows:
+(1) Use the menu \texttt{Macro\thinspace>\thinspace Execute Macro Script},
+browse for \texttt{bibpes\_strongs.edt} and select it; (2) the Find and
+Replace dialog box opens with various fields pre-filled; (3) Press `Replace
+All', and the regular expression find and replace looks for expressions of
+the form \texttt{Gnnnn} or \texttt{Hnnnn}, and replaces them with \verb|\G{nnnn}|
+and \verb|\H{nnnn}|. The definitions of \cs{G} and \cs{H} follow; they may be
+redefined.
+
+\paragraph*{Example} Below is an example from \texttt{KJV+}, with annotations
+to \textsl{Strong's Concordance}.
+
+\begin{quote}
+\verb|\fetchverses*[useperiod=false,abbr=short,from*=KJV+]{Rom 1:1}|\\[3pt]
+\fetchverses*[useperiod=false,abbr=short,from*=KJV+]{Rom 1:1}
+
+\end{quote}
+
+\subsection{The \EXT{CFG} file of the package}\label{s:cfg}
+
+Unless the option \marginpar{\small\raggedleft\opt{ignorecfg} option}\opt{ignorecfg} option
+appears in the option list of \pkg{fectchbibpes}, the configuration file
+\texttt{fbpes.cfg} is input at the end of the package.
+
+There is not much to `configure' in this package, however. The application
+that was in mind when this feature was created is the redefinition of the
+\opt{from} key of the fetch command options.
+
+For example, you might have many more books than the minimal ones set up by this package, so
+in your own \EXT{CFG} file you might define,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\small]
+\defaultBible{NKJV}
+\define@choicekey+{fbpes}{from}[\val\nr]%
+    {NKJV,KJV,KJV+,ISV,RV,YLT}[NKJV]{%
+    \ifcase\nr\relax
+        \def\fbpes@from{ NKJV}\or
+        \def\fbpes@from{ KJV}\or
+        \def\fbpes@from{ KJV+}\or
+        \def\fbpes@from{ ISV}\or
+        \def\fbpes@from{ RV}\or
+        \def\fbpes@from{ YLT}\fi
+}{%
+    \if@ddtoBiblesUsed
+        \def\fbpes@from{ #1}\setkeys{bibadd}{addfrom=#1}\else
+        \PackageWarning{fetchbibpes}{Bad Choice of \val\MessageBreak
+        will use \fb@defaultBible\space instead}\def\fbpes@from{}\fi
+}
+\end{Verbatim}
+The above code is a modification of \cs{define@choicekey} for the
+\texttt{from} key (the key family is named \texttt{fbpes}) found in
+\texttt{fetchbibpes.sty} (or \texttt{fetchbibpes.dtx}).
+
+A less complicated method that does not modify the definition of the
+\opt{from} key of the \texttt{fbpes} family is to simply use the
+\cs{addtoBibles} command in the \EXT{CFG} file. For example, in the \EXT{CFG}
+you can have,
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\defaultBible{NKJV}
+\addtoBibles{NKJV,RV,YLT}
+\end{Verbatim}
+The \pkg{fetchbibpes} package already recognizes \texttt{KJV}, \texttt{KJV+}, and \texttt{ISV},
+the above declarations adds to this list and makes \texttt{NKJV} the default Bible.
+
+\subsection{Marginal notes}
+We introduce a scheme for placing notes in the margins. The \cs{verseCmts}
+command is used to define the notes (comments), each note corresponds to
+a verse.
+\bVerb\def\lp{(}\def\rp{)}\takeMeasure{\qquad\darg{\ameta{comment\SUB{n}}}\qquad
+{\% \normalfont(second comment of passage)}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\verseCmts{
+!qquad{!ameta(comment!SUB1)}!qquad(% !normalfont!lp(first comment of passage)!rp)
+!qquad{!ameta(comment!SUB2)}!qquad(% !normalfont!lp(second comment of passage)!rp)
+!qquad...
+!qquad{!ameta(comment!SUB(n))}!qquad(% !normalfont!lp(last comment of passage)!rp)
+}
+\end{dCmd}
+\endgroup\medskip\noindent
+For example, the following declaration is used in the example below.
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\verseCmts{%
+    {In the beginning God creates\dots}    % v1
+    {Earth void}                           % v2
+    {Light!}                               % v3
+    {}                                     % v4
+    {First day}                            % v5
+}
+\end{Verbatim}
+Its argument is a series of token (comments enclosed in braces), the first token is the comment
+for verse 1, then verse 2, and so on. All verses must have a comment, even an empty comment.
+
+The marginal notes are placed in the margin using \cs{marginpar}. The formatting for the marginal
+notes is set by \cmd{\fbMarParFmt}:
+\bVerb\takeMeasure{\qquad\string\marginpar\darg{\string\footnotesize%
+\string\raggedright\string\verseFmt\darg{\string\vrseNum}\#1}\}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\newcommand{\fbMarParFmt}[1]{%
+!qquad\marginpar{\footnotesize\raggedright\verseFmt{\vrseNum}#1}}
+!STRUT\fbResetMarParFmt
+\end{dCmd}
+\endgroup\noindent The default definition of \cs{fbMarParFmt} is seen above.
+The command may be redefined as needed. (This is done in the demo file
+\texttt{bibpes\_tst.tex}.) If \cs{fbMarParFmt} is redefined, then expanding
+\cs{fbResetMarParFmt} returns it to its original definition.
+
+Now to make this all work -- that is, to make marginal comments appear -- you
+need two more commands, these are \cmd{\fbMarNotesOn} and
+\cmd{\fbMarNotesOff}. The former to turn on marginal notes, the latter to
+turn switch off again.
+\bVerb\takeMeasure{\string\fbMarNotesOn\quad\string\fbMarNotesOff}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\fbMarNotesOn!quad\fbMarNotesOff
+\end{dCmd}
+\endgroup\noindent Both make a \cmd{\afterVerseFmt} declaration to insert the marginal
+the marginal notes (\cmd\fbMarNotesOn) or to turn off the insertion
+(\cmd\fbMarNotesOff).
+
+\paragraph*{Example} Begin by expanding \cs{fbMarNotesOn}, then using the \cs{verseCmts}
+declared above, we fetch some verses.
+\fbMarNotesOn
+\verseCmts{%
+    {In the beginning God creates\dots}
+    {Earth void}
+    {Light!}
+    {}
+    {First day}
+}
+%\bgroup
+%\normalmarginpar
+%\oddsidemargin=80pt
+%\marginparpush0pt
+\begin{fpquote}[leftmargin=0pt,rightmargin=\marginparsep+80pt]
+\normalmarginpar\oddsidemargin=80pt\marginparpush0pt
+\renewcommand{\fbMarParFmt}[1]{\marginpar{\footnotesize
+    \makebox[0pt][r]{\verseFmt{\vrseNum}\parbox[t]{\oddsidemargin}{\raggedright\strut#1\strut}%
+    \hspace{\marginparsep}}\hfill}}\afterRef{\par\kern3pt}%
+%
+\fetchverses*[showfirst,delims,caps,format={\bfseries\sffamily},abbr=none]{Gen 1:1-5}
+\end{fpquote}\verseCmts{}\fbMarNotesOff
+After this passage, we turn everything off with \verb|\fbMarNotesOff\verseCmts{}|, not required
+if the passage is within a group.
+
+Actually, for this example there is extensive background redefinitions to fit the marginal
+notes to appear within the margins, as seen above.
+
+\paragraph*{Demo file:} The verbatim listings for this example, as well as for
+a basic example, are found in the demo file \texttt{bibpes\_tst.tex}.
+
+\subsection{Retrieving only the verses needed}\label{s:sf}
+    One user wants to have \emph{an entire book} (\texttt{1Jn}, for example) and to retrieve only the
+    verses needed. Thus, if
+\begin{quote}\ttfamily
+\cs{BV}(\ameta{book}\vissp\ameta{chapter}:\ameta{verse}\vissp
+    \ameta{transl})\vissp\ameta{passage}\cs{null}
+\end{quote}
+    is one of the required verses, it would be input as usual, otherwise the line
+    is ignored.
+
+To obtain selected verses, first specify the \marginpar{\small\raggedleft\opt{useselverses} option}\opt{useselverses}
+option in the option list of \pkg{fetchbibpes}. (This option inputs this code
+segment.) Now the document author needs to specify which of the verses
+he or she is to use. For that purpose the \cs{selectedVersesFrom} is defined.
+The syntax is presented next.
+\bVerb\takeMeasure{\qquad\darg{from=\ameta{version},onlyverses=\darg{\ameta{verses}}}}%
+\setlength{\dimen0}{\bxSize}\edef\temp{\the\dimen0}\setlength{\dimen0}{\linewidth-\temp}%
+\def\1{\makebox[0pt][l]{\hspace{\temp}\smash{\parbox[t]{\dimen0}
+{\normalfont\raggedright Recognized keys: \texttt{from}, \texttt{onlyverses}, \texttt{alt}}}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\selectedVersesFrom{
+!1!qquad{from=!ameta(version),onlyverses={!ameta(verses)}}
+   ...
+}
+\end{dCmd}
+\endgroup\noindent The argument for \cs{selectedVersesFrom} is a series of key-values
+enclosed in braces. Within the argument, three keys are recognized, \texttt{from},
+\texttt{onlyversion}, and \texttt{alt}\marginpar{\small\raggedleft\texttt{from}, \texttt{alt}, \texttt{onlyversion}}. For example,
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\selectedVersesFrom
+{
+   {onlyverses={1Jn 1:1-5,3:3-8}}
+   {from=ISV,onlyverses={Gen 1:1-5}}
+   {from=ISV,alt=Alt,onlyverses={Gen 1:1}}
+   {onlyverses=Mat}
+}
+\end{Verbatim}
+    It is assumed the required \EXT{DEF} files are listed in the value of
+    the \texttt{useverses} option of \textsf{fetchbibpes}. Note that the
+    syntax for the value of \texttt{onlyverses} is more general; in the
+    \texttt{1Jn} book, the author intends to use verses \texttt{1:1-5} and
+    \texttt{3:3-8}. Multiple references to the same book are separated by a
+    comma. If the desired book is an alternate translation than the default
+    one, use the \texttt{from} key, as above. In the case of \darg{onlyverses=Mat},
+    all verses from the book of Matthew are excluded for no verses are specified.
+
+    The book reference can be either the three-letter abbreviation of \app{e-Sword}
+    of the acceptable alternate abbreviation, refer to the \textbf{\app{e-Sword} Abbr}
+    and \textbf{Alt\_Abbr} columns of \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}.
+
+\paragraph*{Demo file:} See the test file \texttt{bibpes\_sf.tex}. Within this demo file,
+many finer details are explained and illustrated.
+
+\subsection{The \texorpdfstring{\protect\cs{sr}}{\CMD{sr}} command}\label{s:sr}
+
+The \cs{sr} command is designed to be used with the \pkg{bibleref-parse}
+package.
+\bVerb\takeMeasure{\string\sr\darg{\ameta{text}}\darg{\ameta{passages}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\sr{!ameta(text)}{!ameta(passages)}
+\end{dCmd}
+\endgroup\noindent
+    For \cs{sr} to be defined, the option \marginpar{\small\raggedleft
+    \opt{usesr} option}\opt{usesr} must be specified in the options list of
+    \pkg{fetchbibpes}.
+
+    \cs{sr} is a command that takes two arguments, if the first one is non-empty,
+    the \ameta{text} argument appears in \emph{italics}. The second
+    argument, \ameta{passages}, are references to one or more books of the
+    Bible and passages within the books. The syntax for the second argument
+    is illustrated by an example:
+\begin{quote}\ttfamily
+Psa 91:3,14-16;1Co 11; Galatians 5:6
+\end{quote}
+    The first two books referenced uses the three-letter abbreviation of
+    \textsf{e-Sword}, the last one (Galatians) uses a full book name. (Refer
+    to \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}) Multiple passages
+    within the same book are separated by commas, while references of
+    different books are separated by semicolons. There can be a space
+    following a semicolon. This second argument is passed to the
+    \cs{pibibleverse} command of the \textsf{bibleref-parse} package.
+
+\paragraph*{Demo file:} The simple demo file is \texttt{bibps\_sr.tex}.
+
+\subsection{The \texorpdfstring{\protect\env{declareBVs}}{declareBVs}
+and \texorpdfstring{\protect\env{declareBVs*}}{declareBVs*} environment}\label{s:declareBVs}
+
+The \env{declareBVs} and \env{declareBVs*} environments may be used
+anywhere in the document -- preamble or body -- to declare Biblical
+verses. Normally, it is used to declare verses not already included by
+the \opt{useverses=\ameta{list}} option, or when there are no
+\texttt{useverses} includes. The option \texttt{useverses=none} is
+appropriate in this last case. The syntax for the content of the
+\env{declareBVs} environment is,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\small]
+\begin{declareBVs}
+\BV(Gal 1:15 NKJV) But when it pleased God, who separated me from
+    my mother's womb and called me through His grace,\null
+\BV(Gal 1:16 NKJV) to reveal His Son in me, that I might preach Him
+    among the Gentiles, I did not immediately confer with
+    flesh and blood,\null
+\end{declareBVs}
+\end{Verbatim}
+where \cs{BV} is the low-level command first discussed in
+\hyperref[para:crtDEF]{Section~\ref*{para:crtDEF}} on
+page~\pageref*{para:crtDEF}. The general syntax for \cs{BV} is,
+\begin{quote}\ttfamily
+\cs{BV}(\ameta{verse-ref})\vissp\ameta{passage}\cs{null}
+\end{quote}
+where \ameta{verse-ref} is the specification of the verse referenced. Note that
+it is enclosed in parentheses, not braces. The general
+form of \ameta{verse-ref} is given in the expanded display below.
+\begin{quote}\ttfamily
+\cs{BV}(\ameta{book}\vissp\ameta{chapter}:\ameta{verse}\vissp
+    \ameta{transl}[\vissp\ameta{word}])\vissp\ameta{passage}\cs{null}
+\end{quote}
+The symbol `\texttt{\vissp}' here is a space-character (\emph{not} a
+hard space). The \ameta{passage} ends with \cs{null}, which
+acts as a delimiter for the \cs{BV} macro. Following \ameta{transl}
+(which corresponds to the value of the \opt{from} key) is an optional
+\opt{alt} \ameta{word} modification, refer to the discussion of the
+\opt{alt} key on \autopageref{key:alt}.
+
+Within the \env{declareBVs} environment, the passages can be allowed to wraparound, unlike
+when they appear in a \EXT{DEF} file.
+
+Once the passages are declared, they can be retrieved at any point thereafter:
+\begin{quote}
+\verb|\fetchverses*[from=NKJV]{Gal 1:15-16}|\\[3pt]
+\fetchverses*[from=NKJV]{Gal 1:15-16}
+\end{quote}
+
+The \env{declareBVs} environment is used in the sample files \texttt{bibpes\_replace.tex},
+\texttt{bibpes\_replaces.tex}, and \texttt{bibpes\_red.tex}.
+
+The \env{declareBVs*} environment is the same as \env{declareBVs*} but does not
+define single and double quote as active characters. Refer to
+\hyperref[ProbsQuotes]{Section~\ref*{ProbsQuotes}} for more information on quotation marks.
+
+\subsection{Fetching a substring of a verse}\label{s:substr}
+
+Why can't copy and paste just be used? A user wants it, I hear and obey.
+The new code for extracting a substring of a (single) verse is loaded in
+using the package option \opt{fetchsubtr}. The command tool for identifying the substring or substrings
+of a verse to be extracted is \cs{makeverse}. The demonstration file for this feature is
+\texttt{bibpes\_substr.tex}.
+\bVerb\takeMeasure{\qquad\quad\darg{\ameta{bfind\SUB2}}%
+\darg{\ameta{efind\SUB2}}...\darg{\ameta{bfind\SUB{k}}}\darg{\ameta{efind\SUB{k}}}}%
+\setlength{\dimen0}{\bxSize}\edef\temp{\the\dimen0}\setlength{\dimen0}{\linewidth-\temp}%
+\def\1{\makebox[0pt][l]{\hspace{\temp}\smash{\parbox[t]{\dimen0}
+{\normalfont\raggedright Recognized keys: \texttt{from}, \texttt{onlyverses}, \texttt{alt}}}}}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\markverse[name=!ameta(name),from=!ameta(transl),
+!qquad(marks={!ameta(bfind!SUB1)}{!ameta(efind!SUB1)})
+!qquad!quad{!ameta(bfind!SUB2)}{!ameta(efind!SUB2)}...{!ameta(bfind!SUB(k))}{!ameta(efind!SUB(k))}
+]{!ameta(book)(!vissp)!ameta(ch):!ameta(vrs)}
+\end{dCmd}
+\eVerb Only \emph{one verse may be marked off} at a time (of course
+multiple uses of \cs{markverse} are permitted), but several substrings
+within that verse may be marked off. There must be an even number of
+\texttt{marks}. The substrings must be non-overlapping and the order the
+markers appear in the list of \texttt{marks} is the order they appear in
+the passage. The command \cs{markverse} uses the replace feature
+developed earlier. The value of the \texttt{name} key must be unique
+throughout all names declared by the \cs{markverse} command.
+
+The marks (\ameta{bfind} and \ameta{efind}) are text (words or
+phrases) found in the verse. Ideally, the marks \emph{should not contain any
+quotes} (single or double) unless the verse is defined within the \env{declareBVs*}
+environment, where quotes are not active.
+
+Before illustrating, let's have a conceptual example. We begin with
+\begin{quote}
+\fetchverse{Gen 1:1}
+\end{quote}
+Suppose we wanted extract `In the beginning' and
+`the heaven and earth' from this short verse. We use \cs{markverse} in this way:
+\begin{quote}\ttfamily
+\string\markverse[name=Gen1:1-,marks=\darg{In the}\darg{God}\\
+\null\qquad\darg{the heaven}\darg{earth.}]\darg{Gen 1:1}
+\end{quote}
+When this command line is expanded, the supporting commands of the
+\texttt{replace} key
+(pages~\pageref*{item:replace}--\pageref*{para:replace}) are used to mark
+up this passage, like so:
+\begin{quote}\ttfamily\raggedright
+\string\bMrkFP\space In the beginning God\string\eMrkFP\space created
+\string\bMrkFP\space the heaven and the earth.\string\eMrkFP
+\end{quote}
+Each pair of marks is then used to scoop up the text string between them. Cool.
+
+\markverse[name=Gen1:1-,marks={In the}{God}
+{the heaven}{earth.}]{Gen 1:1}
+
+Let's try now: The first substring is \fetchverses[alt=Gen1:1-1,enclosewith=\quote]{Gen 1:1};
+the second substring is \fetchverses[alt=Gen1:1-2,enclosewith=\quote]{Gen 1:1}
+
+The verbatim listing of the previous paragraph is,
+\begin{Verbatim}[xleftmargin=\amtIndent]
+Let's try now: The first substring is
+\fetchverses[alt=Gen1:1-1,enclosewith=\quote]{Gen 1:1};
+the second substring is
+\fetchverses[alt=Gen1:1-2,enclosewith=\quote]{Gen 1:1}
+\end{Verbatim}
+The substrings are accessed through the fetch commands by concatenating
+the value of the \ameta{name} key with the index of the substring (first
+substring=1, second substring=2, and so on) and assigning it as the value
+of the \texttt{alt} key.
+
+The \cs{markverse} command saves the substrings to the file
+\cs{jobname-bv.cut} and inputs them at the top of the file, as a result
+it may take two compiles to see the changes. From the above
+\cs{markverse} declaration, the file \texttt{\jobname-bv.cut} reads,
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\begin{declareBVs*}
+\BV(Gen 1:1 KJV Gen1:1-1) In the beginning God\null
+\BV(Gen 1:1 KJV Gen1:1-2) the heaven and the earth.\null
+\end{declareBVs*}
+\end{Verbatim}
+The substrings are accessed through the \texttt{alt} key of the fetch
+commands. The declaration
+\verb~\fetchverses[alt=Gen1:1-1,enclosewith=\quote]{Gen 1:1}~ retrieves
+the \texttt{Gen 1:1 KJV Gen1:1-1} substring verse. Because the substrings are so
+defined, the power of the fetch verse commands can be brought to bare.
+
+\markverse[name=errorExmpl,marks={In the}{God}
+{the Heaven}{earth.}]{Gen 1:1}
+
+If a substring is not found (that is, for various reasons the
+\ameta{bfind} and/or \ameta{efind} marks are not found), the an index
+string is still defined and expands to an alert message. For example, we declare
+\begin{quote}\ttfamily\raggedright
+\string\markverse[name=errorExmpl,marks=\darg{In the}\darg{God}\linebreak
+\null\qquad\darg{the Heaven}\darg{earth.}]\darg{Gen 1:1}
+\end{quote}
+You'll note the fourth mark is `the Heaven' not `the heaven' (the search
+is case sensitive). What are the results:
+\begin{itemize}
+    \item \verb~\fetchverse[alt=errorExmpl1]{Gen 1:1}~:\\[3pt]\fetchverse[alt=errorExmpl1]{Gen 1:1}
+    \item \verb~\fetchverse[alt=errorExmpl2]{Gen 1:1}~:\\[3pt]\fetchverse[alt=errorExmpl2]{Gen 1:1}
+\end{itemize}
+As predicted, search for the second substring failed, and we are so informed.
+
+\paragraph*{Contiguous substrings.} One useful feature of the \texttt{marks}
+key of \cs{markverse} is the odd numbered markers may be the empty
+string. If one is empty, the search continues from where the previous
+search stopped. The first example could have been posed as follows:
+\begin{quote}\ttfamily
+\string\markverse[name=Gen1:1-,marks=\darg{}\darg{God}\\
+\null\qquad\darg{the heaven}\darg{earth.}]\darg{Gen 1:1}
+\end{quote}
+The first marker is empty (\darg{}) so the search begins where the
+previous one left off, but this is the first search so the search begins
+at the beginning of the verse. A more informative example would be the following.
+Declare,
+
+\begin{declareBVs*}
+\BV(Mat 6:31 NKJV) ``Therefore do not worry, saying,
+    `What shall we eat?' or `What shall we drink?' or
+    `What shall we wear?'\null
+\end{declareBVs*}
+
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\begin{declareBVs*}
+\BV(Mat 6:31 NKJV) ``Therefore do not worry, saying,
+    `What shall we eat?' or `What shall we drink?' or
+    `What shall we wear?'\null
+\end{declareBVs*}
+\end{Verbatim}
+Note the presence of quote marks, hence, we declare this verse using \env{declareBVs*}.
+We emit our \cs{markverse} command:
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!()]
+\markverse[name=Mat6:31-,from=NKJV,
+!qquad(marks={}{eat?'}{}{drink?'}{}{wear?'}]{Mat 6:31})
+\end{Verbatim}
+\markverse[name=Mat6:31-,marks={}{eat?'}{}{drink?'}{}{wear?'},from=NKJV]{Mat 6:31}
+Now, let's read out the substrings:
+\begin{itemize}
+    \item \verb~\fetchverse[alt=Mat6:31-1,from=NKJV]{Mat 6:31}~:\\[3pt]\fetchverse[alt=Mat6:31-1,from=NKJV]{Mat 6:31}
+    \item \verb~\fetchverse[alt=Mat6:31-2,from=NKJV]{Mat 6:31}~:\\[3pt]\fetchverse[alt=Mat6:31-2,from=NKJV]{Mat 6:31}
+    \item \verb~\fetchverse[alt=Mat6:31-3,from=NKJV]{Mat 6:31}~:\\[3pt]\fetchverse[alt=Mat6:31-3,from=NKJV]{Mat 6:31}
+\end{itemize}
+Contiguous substrings as promised!
+
+In this example, \texttt{from=NKJV} was used in both the \cs{markverse}
+and \cs{fetchverse} commands to identify the translation, this is
+required if the passage from from a translation other than the default
+translation (KJV in this document).
+
+\markverse[name=multihits,marks={`What}{wear?'},from=NKJV]{Mat 6:31}
+
+\paragraph*{Warning!} Because the code for the \texttt{replace} feature is used, the entire verse is searched
+for the  find text and replaced, possibly multiple times! Multiple
+replacements in this context is never wanted, I would think. Therefore,
+the markers \ameta{bfind} and \ameta{efind} should \emph{occur once and
+only once} in the verse. For example the line
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!()]
+\markverse[name=multihits,from=NKJV,
+!qquad(marks={`What}{wear?'}]{Mat 6:31})
+\end{Verbatim}
+produces the following \cs{BV} definition in the \texttt{\jobname-bv.cut} file:
+\begin{quote}\ttfamily\raggedright
+\string\BV(Mat 6:31 NKJV multihits1) `What shall we eat?' or
+\string\bMrkFP\space`What shall we drink?' or \string\bMrkFP\space`What shall we
+wear?'\null
+\end{quote}
+Oops, multiple \cs{bMrkFP} markers linger where they shouldn't.
+
+\subsection{Some extended quote environment}
+
+At the mild prompting of one of the (only two known) users, three environments are
+also defined for quoting long passages. These are minor modifications of
+the {\LaTeX} environments \env{quote}, \env{verse}, and \env{quotation}.
+\bVerb\takeMeasure{\string\begin\darg{fpquotation}[\ameta{options}]}%
+\begin{dCmd}[commandchars=!()]{\bxSize}
+\begin{fpquote}[!ameta(options)]
+!qquad!ameta(content)
+\end{fpquote}
+!STRUT\begin{fpverse}[!ameta(options)]
+!qquad!ameta(content)
+\end{fpverse}
+!STRUT\begin{fpquotation}[!ameta(options)]
+!qquad!ameta(content)
+\end{fpquotation}
+\end{dCmd}
+\endgroup\noindent When any of the three environments \env{fpquote},
+\env{fpverse}, and \env{fpquotation} are used without the optional argument,
+they behave exactly as the {\LaTeX} core counterparts do. The optional
+argument recognizes three keys \opt{leftmargin}, \opt{rightmargin}, and
+\opt{itemindent}; these \cs{leftmargin},
+\cs{rightmargin}, and \cs{itemindent}, respectively.
+A few examples suffice.
+\begin{itemize}
+    \item \env{fpquote} only obeys \opt{leftmargin}, \opt{rightmargin}.
+    \begin{fpquote}[rightmargin=0pt]
+    \verb|\begin{fpquote}[rightmargin=0pt]|\\[3pt]
+    \fetchverses*{Gen 1:1-2}\par
+    \fetchverses*{Gen 1:3-4}
+    \end{fpquote}
+    This is perhaps the most common use for this environment, to indent on
+    the left, but not on the right. The key \opt{itemindent} is not obeyed
+    for the \env{fpquote} environment.
+
+    \item The \env{verse} gives an outdent effect.
+    \begin{fpverse}[rightmargin=0pt]
+    \verb|\begin{fpverse}[rightmargin=0pt]|\\[3pt]
+    \fetchverses*{Gen 1:1-2}
+    \end{fpverse}
+    We can adjust the amount of outdent with \opt{itemindent}.
+    \begin{fpverse}[itemindent=3em,rightmargin=0pt]
+    \verb|\begin{fpverse}[itemindent=3em,rightmargin=0pt]|\\[3pt]
+    \fetchverses*{Gen 1:1-2}\par
+    \fetchverses*{Gen 1:3-4}
+    \end{fpverse}
+    The default for \opt{itemindent} is \texttt{1.5em}.
+    \item The \env{fpquotation} environment is like the \env{fpverse} but each paragraph
+    is indented by an amount of \cs{itemindent} (set by \opt{itemindent}).
+    \begin{fpquotation}[rightmargin=0pt]
+    \hspace*{-\leftmargin}\hspace{-\labelsep}\verb|\begin{fpquotation}[rightmargin=0pt]|\par\kern3pt
+    \fetchverses*{Gen 1:1-2}\par
+    \fetchverses*{Gen 1:3-4}
+    \end{fpquotation}
+    The default value for \opt{itemindent} is \texttt{1.5em}.
+\end{itemize}
+
+\subsection{Troubles with quotation marks and apostrophes}\label{ProbsQuotes}
+
+Some Bible translations use more quotes (both single and double) than others.
+The English Standard Version (ESV) uses an overabundance of such. Quotation
+marks are not only used to quote the speaker, but the single quote
+(\texttt{\char129}) is often used as an apostrophe to indicate possession, as in
+``God's grace.'' (\texttt{\char018\char018God\char129s grace.\char129\char129}). `Most' Bible translations, as
+copied from \textsf{e-Sword}, use double quotes (\texttt{"}) and single quotes
+(\texttt{\char129}) for quoting passages. At least one translation, Young's Literal
+Translation (YLT), uses single quotes in the same way as does {\LaTeX}; for
+example, \eSQ\fetchverse[from=YLT,format=\itshape,delims={according to }{,},
+pformat=\bfseries]{Gen 1:3} If you look in the DEF file you'll see that this
+passage reads, in part, \texttt{\char018Let light be;\char129}, which is good for user's of
+{\LaTeX}. But there are problems.
+
+\texttt{fectchbibpes} tries to match pairs of double quotation
+marks (\texttt{"}\ameta{text}\texttt{"}) and single quotes
+(\texttt{\char129}\ameta{text}\texttt{\char129}). It maintains two count registers \cs{fp@dqcnt}
+and \cs{fp@sqcnt}. When a double quote is encountered and \cs{fp@dqcnt} is
+even, `\texttt{"}' is replaced by `\texttt{\char018\char018}'; similarly, when \cs{fp@dqcnt} is
+odd, `\texttt{"}' is replaced by `\texttt{\char129\char129}'. For the single quote it's the same
+thing. If a given passage has balanced quotes we don't have a problem, for
+single quote used as an apostrophe, usually, we have to make adjustment so
+the typesetting is correct. For this purpose, the commands \cs{bDQ}\marginpar{\small\raggedleft\cs{bDQ}, \cs{eDQ}},
+\cs{eDQ}, \cs{bSQ}\marginpar{\small\raggedleft\cs{bSQ}, \cs{eSQ}}, and \cs{eSQ} are defined. \cs{bDQ} and \cs{bSQ} set their
+respective counters to zero (0), which is an even number, while \cs{eDQ} and
+\cs{eSQ} set their respective counter to one (1), which is odd.
+
+\paragraph*{Example} Verses 3 and 5 use an apostrophe, we use the following commands to get the
+single quite (apostrophe) correct. This passage comes from Matthew 7:1-7 \emph{(ESV):}
+\begin{fpquote}[rightmargin=0pt]
+\eSQ\fetchverses[showfirst,from=ESV]{Mat 7:1-4} \eSQ\fetchverses[showfirst,from=ESV]{Mat 7:5-7}\bDQ
+\end{fpquote}
+The verbatim listing is
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\eSQ\fetchverses[showfirst,from=ESV]{Mat 7:1-4}
+\eSQ\fetchverses[showfirst,from=ESV]{Mat 7:5-7}
+\end{Verbatim}
+It was necessary to break the passage up so the two apostrophe were included
+in separate fetches; prior to each fetch we declared \cs{eSQ}, which makes
+\cs{fp@sqcnt} odd, and so the next single quote (\texttt{\char129}) is typeset as
+\texttt{'} rather than \texttt{`}. Notice that in verse~4 there are matching
+single quotes, following the apostrophe of verse~3, \cs{fp@sqcnt} should be
+even, so the matched single quotes are handled correctly. Again, in verse~5
+there is an apostrophe, we use \cs{eSQ} to make the counter odd so the
+apostrophe is typeset correctly.
+
+\paragraph*{Example} In the next passage (Mat 7:13-20 \textit{(ESV)}) there are several troubling
+quotation marks. In verse 13 a left double quote opens a quotation, but it is never closed; verse~15 starts
+another left double quote. Also, there is an apostrophe in verse~15 that needs to be displayed correctly.
+\begin{fpquote}[rightmargin=0pt]
+\fetchverses[showfirst,from=ESV]{Mat 7:13-14} \eSQ\bDQ\fetchverses[showfirst,from=ESV]{Mat 7:15-20}
+\end{fpquote}
+The verbatim listing is
+\begin{Verbatim}[xleftmargin=\amtIndent]
+\fetchverses[showfirst,from=ESV]{Mat 7:13-14}
+\eSQ\bDQ\fetchverses[showfirst,from=ESV]{Mat 7:15-20}
+\end{Verbatim}
+The double quote of verse~13 opens correctly. Beginning with verse~15, we make the adjustments
+\cs{eSQ}\cs{bDQ}.
+
+\newtopic\indent
+The King James Version does not have many quote marks, if any, but does have
+apostrophes; one runs into challenges with other translations. The rule here
+is, when quoting from a translation that uses quotes and apostrophes, keep an
+eagle eye out for them.
+
+\section{Combining \texorpdfstring{\protect\pkg{bibpes}}{bibpes}
+and \texorpdfstring{\protect\pkg{fetchbibpes}}{fetchbibpes}}\label{s:combpkg}
+
+Though the two packages were originally designed to work separately, but in
+concert with each other, it is possible to combine the two packages in one
+source file, yet keep the functionalities of the two separated.
+
+To do this, use the \pkg{spdef} package, which comes bundled with
+the \pkg{aeb\_mobile} package (\url{http://ctan.org/pkg/aeb-mobile}). The technique
+is roughly outlined below.
+
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!(),numbers=left]
+\RequirePackage[use=builddefs]{spdef}
+!textbf(\ifbuilddefs)
+\documentclass{article}
+\usepackage[!ameta(opts)]{bibpes}
+\bibpesBody!textbf(\fi)
+%
+% Begin the fetchbibpes portion of the document
+%
+\documentclass{article}
+\usepackage[!ameta(opts)]{fetchbibpes}
+\begin{document}
+!qquad!ameta(document content, containing fetch verse commands)
+\end{document}
+\end{Verbatim}
+Line~(1) introduces \pkg{spdef} using \cs{RequirePackage}. The option
+\opt{use=builddefs} defines a Boolean switch \cs{ifbuilddefs} and sets it to
+\texttt{true}. When the source document is \texttt{latexed} in this state,
+only the lines~(2)--(5) (the \pkg{bibpes} portion of the document) are
+compiled. When the source document is \texttt{latexed} with option
+\opt{!use=builddefs} (note the exclamation mark), the Boolean switch
+\cs{ifbuilddefs} is once again created but this time it is set to
+\texttt{false}; consequently, lines~(2)--(5) are scanned over (ignored) and
+lines~(9)--(13) (the \pkg{fetchbibpes} portion of the document) are compiled.
+
+\paragraph*{Demo file:} \texttt{combpkgs.tex}
+
+\section{My retirement}
+
+Now, I simply must get back to it. \dps
+
+\end{document}

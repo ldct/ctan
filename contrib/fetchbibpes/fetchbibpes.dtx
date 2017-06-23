@@ -1,0 +1,2380 @@
+%\iffalse
+% makeindex -s gglo.ist -o fetchbibpes.gls fetchbibpes.glo
+% makeindex -s gind.ist -o fetchbibpes.ind fetchbibpes.idx
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% fetchbibpes.sty package,                              %%
+%% Copyright (C) 2016        D. P. Story                 %%
+%%   dpstory@uakron.edu                                  %%
+%%                                                       %%
+%% This program can redistributed and/or modified under  %%
+%% the terms of the LaTeX Project Public License         %%
+%% Distributed from CTAN archives in directory           %%
+%% macros/latex/base/lppl.txt; either version 1.2 of the %%
+%% License, or (at your option) any later version.       %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+%<package>\ProvidesPackage{fetchbibpes}
+%<package> [2016/12/20 v2.3a fetchbibpes: Fetch Bible passages from DEF files (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex=false]{hyperref}
+\usepackage{fancyvrb,array,calc}
+\begin{filecontents}{usedverses.def}
+\BV(Gen 1:1 KJV) In the beginning God created the heaven and the earth.\null
+\BV(Gen 1:1 KJV Alt) \dots \emph{God created the heaven and the earth}.\null
+\BV(Gen 1:2 KJV) And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.\null
+\BV(Gen 1:3 KJV) And God said, Let there be light: and there was light.\null
+\BV(Gen 1:4 KJV) And God saw the light, that it was good: and God divided the light from the darkness.\null
+\BV(Gen 1:5 KJV) And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day.\null
+\BV(Gen 1:1 ISV) In the beginning, God created the universe.\null
+\BV(Gen 1:1 YLT) In the beginning of God's preparing the heavens and the earth--\null
+\BV(Gen 1:2 YLT) the earth hath existed waste and void, and darkness is on the face of the deep, and the Spirit of God fluttering on the face of the waters,\null
+\BV(1Ki 1:1 KJV) Now king David was old and stricken in years; and they covered him with clothes, but he gat no heat.\null
+\BV(1Ki 1:1 ISV) When David had grown very old, they covered him with blankets, but he could not keep warm,\null
+\BV(1Ki 1:1 ISV Alt) When David had grown \emph{very old}, they covered him with blankets, but he could not keep warm,\null
+\BV(1Jn 1:1 KJV) That which was from the beginning, which we have heard, which we have seen with our eyes, which we have looked upon, and our hands have handled, of the Word of life;\null
+\BV(Mat 2:1 KJV) Now when Jesus was born in Bethlehem of Judaea in the days of Herod the king, behold, there came wise men from the east to Jerusalem,\null
+\BV(Rom 1:1 KJV+) Paul,\G{3972} a servant\G{1401} of Jesus\G{2424} Christ,\G{5547} called\G{2822} to be an apostle,\G{652} separated\G{873} unto\G{1519} the gospel\G{2098} of God,\G{2316}\null
+\BV(1Co 1:1 KJV) Paul, called to be an apostle of Jesus Christ through the will of God, and Sosthenes our brother,\null
+\BV(1Co 1:2 KJV) Unto the church of God which is at Corinth, to them that are sanctified in Christ Jesus, called to be saints, with all that in every place call upon the name of Jesus Christ our Lord, both theirs and ours:\null
+\end{filecontents}
+\usepackage[ignorecfg,
+    useverses={usedverses}]{fetchbibpes}
+%\pdfstringdefDisableCommands{\let\\\textbackslash}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\bgroup\ttfamily
+\gdef\brpr#1{\char123\relax#1\char125\relax}\egroup
+\let\darg\brpr
+\let\env\texttt
+\let\opt\texttt
+\let\app\textsf
+\def\visispace{\symbol{32}}
+\def\ameta#1{\ensuremath{\langle\textit{\texttt{#1}}\rangle}}
+\def\meta#1{\textsl{\texttt{#1}}}
+\def\SUB#1{\ensuremath{{}_{\mbox{\scriptsize\ttfamily#1}}}}
+\def\cs#1{\texttt{\bslash#1}}
+\DeclareRobustCommand{\tmspace}[3]{%
+  \ifmmode\mskip#1#2\else\kern#1#3\fi\relax}
+\renewcommand{\,}{\tmspace+\thinmuskip{.1667em}}
+\let\thinspace\,
+\renewcommand{\!}{\tmspace-\thinmuskip{.1667em}}
+\let\negthinspace\!
+\renewcommand{\:}{\tmspace+\medmuskip{.2222em}}
+\let\medspace\:
+\newcommand{\negmedspace}{\tmspace-\medmuskip{.2222em}}
+\renewcommand{\;}{\tmspace+\thickmuskip{.2777em}}
+\let\thickspace\;
+\newcommand{\negthickspace}{\tmspace-\thickmuskip{.2777em}}
+\makeatletter
+\renewcommand{\paragraph}
+    {\@startsection{paragraph}{4}{0pt}{6pt}{-3pt}
+    {\normalfont\normalsize\bfseries}}
+\renewenvironment{quote}[1][]
+   {\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\rghtm\@empty\else\def\rghtm{\rightmargin\leftmargin}\fi
+    \list{}{\rghtm} %{\rightmargin\leftmargin}%
+    \item\relax}
+   {\endlist}
+\makeatother
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{fetchbibpes}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{fetchbibpes}{aebdocfmt.def cannot be found}}
+\begin{document}
+\def\CMD#1{\textbackslash#1}
+  \GetFileInfo{fetchbibpes.sty}
+  \title{\textsf{fetchbibpes}: Fetch Bible passages from DEF files}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@acrotex.net}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{fetchbibpes.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o fetchbibpes.ind fetchbibpes.idx}\\on the command line and recompile
+    \texttt{fetchbibpes.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o fetchbibpes.gls fetchbibpes.glo}\\on the command line and recompile
+    \texttt{fetchbibpes.dtx}.}
+\end{document}
+%</driver>
+% \fi
+% \MakeShortVerb{|}
+%
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{web}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{web}{cannot find aebdonotindex.def}}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%
+%\section{Description}
+%    The problem of fetching Bible verses was suggested to me by my friend Tom Price. He plans
+%    to write Bible lessons, notes and handouts will be prepared using
+%    {\LaTeX} and these packages (\textsf{bibpes} and \textsf{fetchbibpes}).
+%
+%    This is a companion package to \textsf{bibpes}. Use the
+%    commands of this package to fetch the Bible passages that the \textsf{bibpes} package has
+%    defined.
+%
+%    The major commands of this package are \cs{fetchverse} and \cs{fetchverses}, latter one being more
+%    powerful than the former. The syntax for these two are, ^^A 3ltrbk
+%\begin{quote}\ttfamily
+%\cs{fetchverse}[\ameta{opts}]\darg{\ameta{book}{\visispace}\ameta{ch}:\ameta{vrs}}\\[3pt]
+%\cs{fetchverses*}[\ameta{opts}]\darg{\ameta{book}{\visispace}\ameta{ch}:\ameta{vrs}} or\\[3pt]
+%\cs{fetchverses*}[\ameta{opts}]\darg{\ameta{book}{\visispace}\ameta{ch}:\ameta{vrs\SUB{1}}-\ameta{vrs\SUB{2}}}
+%\end{quote}
+%    where \ameta{opts} are defined options of the \texttt{fbpes} family;
+%    \ameta{book} is either the three letter book abbreviation that
+%    \textsf{e-Sword} uses (as given in the \textbf{e-Sword Abbr} column of \hyperref[table:esabbr]{Table~\ref*{table:esabbr}}) or is an alternate abbreviation
+%    (as given in the \textbf{Alt\_Abbr} column of \hyperref[table:esabbr]{Table~\ref*{table:esabbr}});
+%    \ameta{ch}:\ameta{vrs} is a chapter-verse reference.
+%    The \cs{fetchverse} command only fetches a single verse, while \cs{fetchverses}
+%    can fetch multiple verses (by the syntax \ameta{ch}:\ameta{vrs\SUB1}-\ameta{vrs\SUB2}). The run of verses
+%    must all be from the same chapter. The `\texttt{*}' parameter is optional, when
+%    present the book and verse references are shown, otherwise they are not. We
+%    illustrate with \texttt{Gen\;1:1} and \texttt{Gen\;1:1-2}.
+% \begin{itemize}
+%    \item \cs{fetchverse\darg{Gen\;1:1}}: \fetchverse{Gen 1:1}
+%    \item \cs{fetchverses\darg{Gen\;1:1}}: \fetchverses{Gen 1:1}
+%    \item \cs{fetchverses*\darg{Gen;1:1}}:\ \fetchverses*{Gen 1:1}
+%    \item \cs{fetchverses\darg{Gen\;1:1-2}}: \fetchverses{Gen 1:1-2}
+% \end{itemize}
+%
+%\begin{table}[htb]
+%\centering\footnotesize
+%$$\begin{tabular}{lll|lll}\\
+% \textbf{Book} & \multicolumn{1}{l}{\shortstack[c]{\bfseries\hbox to0pt{\hss\app{e-Sword}\hss}\\\bfseries Abbr}}& \textbf{Alt\_Abbr} &
+% \textbf{Book} & \multicolumn{1}{l}{\shortstack[c]{\bfseries\hbox to0pt{\hss\app{e-Sword}\hss}\\\bfseries Abbr}}& \textbf{Alt\_Abbr}\\\hline
+% Genesis         & Gen & Genesis      & Nahum          &  Nah & Nahum           \\
+% Exodus          & Exo & Exodus       & Habakkuk       &  Hab & Habakkuk        \\
+% Leviticus       & Lev & Leviticus    & Zephaniah      &  Zep & Zephaniah       \\
+% Numbers         & Num & Numbers      & Haggai         &  Hag & Haggai          \\
+% Deuteronomy     & Deu & Deuteronomy  & Zechariah      &  Zec & Zechariah       \\
+% Joshua          & Jos & Joshua       & Malachi        &  Mal & Malachi         \\
+% Judges          & Jdg & Judges       & Matthew        &  Mat & Matthew         \\
+% Ruth            & Rth & Ruth         & Mark           &  Mar & Mark            \\
+% 1 Samuel        & 1Sa & ISamuel      & Luke           &  Luk & Luke            \\
+% 2 Samuel        & 2Sa & IISamuel     & John           &  Joh & John            \\
+% 1 Kings         & 1Ki & IKings       & Acts           &  Act & Acts            \\
+% 2 Kings         & 2Ki & IIKings      & Romans         &  Rom & Romans          \\
+% 1 Chronicles    & 1Ch & IChronicles  & 1 Corinthians  &  1Co & ICorinthians    \\
+% 2 Chronicles    & 2Ch & IIChronicles & 2 Corinthians  &  2Co & IICorinthians   \\
+% Ezra            & Ezr & Ezra         & Galatians      &  Gal & Galatians       \\
+% Nehemiah        & Neh & Nehemiah     & Ephesians      &  Eph & Ephesians       \\
+% Esther          & Est & Esther       & Philippians    &  Php & Philippians     \\
+% Job             & Job & Job          & Colossians     &  Col & Colossians      \\
+% Psalms          & Psa & Psalms       & 1 Thessalonians&  1Th & IThessalonians  \\
+% Proverbs        & Pro & Proverbs     & 2 Thessalonians&  2Th & IIThessalonians \\
+% Ecclesiastes    & Ecc & Ecclesiastes & 1 Timothy      &  1Ti & ITimothy        \\
+% Song of Solomon & Son & SongofSolomon& 2 Timothy      &  2Ti & IITimothy       \\
+% Isaiah          & Isa & Isaiah       & Titus          &  Tit & Titus           \\
+% Jeremiah        & Jer & Jeremiah     & Philemon       &  Phm & Philemon        \\
+% Lamentations    & Lam & Lamentations & Hebrews        &  Heb & Hebrews         \\
+% Ezekiel         & Eze & Ezekiel      & James          &  Jas & James           \\
+% Daniel          & Dan & Daniel       & 1 Peter        &  1Pe & IPeter          \\
+% Hosea           & Hos & Hosea        & 2 Peter        &  2Pe & IIPeter         \\
+% Joel            & Joe & Joel         & 1 John         &  1Jn & IJohn           \\
+% Amos            & Amo & Amos         & 2 John         &  2Jn & IIJohn          \\
+% Obadiah         & Oba & Obadiah      & 3 John         &  3Jn & IIIJohn         \\
+% Jonah           & Jon & Jonah        & Jude           &  Jud & Jude            \\
+% Micha           & Mic & Micha        & Revelation     &  Rev & Revelation
+%\end{tabular}$$
+%\caption{\textsf{e-Sword} abbreviations}\label{table:esabbr}
+%\end{table}
+% \paragraph*{Package syntax.}
+% Basic syntax is as follows:
+%\begin{verbatim}
+%   \usepackage[useverses={Gen1,Mat2,Rom1,1Cor1,1Ki1}]{fetchbibpes}
+%\end{verbatim}
+% The package option, \texttt{useverses}, a comma-delimited base names for \textsf{DEF} file
+% created by \textsf{bibpes}. The listed base name \textsf{DEF} files contain verses that are to be
+% referenced and fetched from the files. These files should be located in the folder containing the
+% source file of the document.
+%
+% In addition to the \texttt{useverses}, \texttt{useselverses} is an option that tries to economize memory usage,
+% refer to \hyperref[s:sf]{Section~\ref*{s:sf}} for details; the \texttt{usesr} option is a specialize option that brings in the
+% definition of the \cs{sr} command, see \hyperref[s:sr]{Section~\ref*{s:sr}} for more information.
+%
+% \paragraph*{Demo file:} \texttt{bibpes\_tst.tex}.
+%
+% \section{Documentation and Code}
+% We begin by requiring \texttt{xkeyval}.
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+%    \end{macrocode}
+% We borrow a convenient utility command from the \textsf{comment} package.
+%    \begin{macrocode}
+\def\csarg#1#2{\expandafter#1\csname#2\endcsname}
+\let\fb@Zero=0 \let\fb@One=1 \let\fb@Two=2
+%    \end{macrocode}
+%
+% \subsection{Package options}
+%
+% The \IndexOpt{deffolder}\texttt{deffolder} option allows the author to specify
+% a folder wherein the DEF files are found, usually, a relative path.
+%    \begin{macrocode}
+\define@key{fetchbibpes.sty}{deffolder}{\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\fb@deffolder\@empty\else\def\fb@deffolder{#1/}\fi}
+\let\fb@deffolder\@empty
+%    \end{macrocode}
+% The \IndexOpt{useverses}\texttt{useverses} option key is required. It takes as its value a comma-delimited
+% list of basenames that have DEF extensions.
+%\begin{verbatim}
+%   useverses={Gen1,Mat1,Rom1}
+%\end{verbatim}
+% where, \texttt{Gen1.def}, \texttt{Mat1.def}, \texttt{Rom1.def} are expected to be found on the user's hard drive.
+%    \begin{macrocode}
+\define@key{fetchbibpes.sty}{useverses}[]{\def\fbpes@useverses{#1}}
+\let\fbpes@useverses\@empty
+%    \end{macrocode}
+% The \IndexOpt{useselverses}\texttt{useselverses} brings in
+% \texttt{selfetch.def}, which enables selected retrieval (selected fetching)
+% of verses. See Section~\ref{s:sf} for the definitions.
+%    \begin{macrocode}
+\define@key{fetchbibpes.sty}{useselverses}[]{%
+    \AtEndOfPackage{\InputIfFileExists{selfetch.def}
+    {\fetchInputMsg}{\fetchWarningMsg}}%
+}
+\def\fetchInputMsg{\PackageInfo{fetchbibpes}
+    {useselverses option,\MessageBreak
+        inputting file selfetch.def}}
+\def\fetchWarningMsg{\PackageWarning{fetchbibpes}
+    {useselverses option,\MessageBreak
+        cannot find file selfetch.def}}
+%    \end{macrocode}
+% The \IndexOpt{usesr}\texttt{usesr} brings in
+% \texttt{sr.def}, which defines the \cs{sr} command.
+% See \hyperref[s:sr]{Section~\ref*{s:sr}} for the definition.
+%    \begin{macrocode}
+\define@key{fetchbibpes.sty}{usesr}[]{%
+    \AtEndOfPackage{\InputIfFileExists{sr.def}
+    {\srInputMsg}{\srWarningMsg}}%
+}
+\def\srInputMsg{\PackageInfo{fetchbibpes}
+    {usesr option detected, inputting file sr.def}}
+\def\srWarningMsg{\PackageWarning{fetchbibpes}
+    {usesr option detected, cannot find file sr.def}}
+%    \end{macrocode}
+%    \begin{macrocode}
+\newif\iffetchsubstr \fetchsubstrfalse
+\define@key{fetchbibpes.sty}{fetchsubstr}[]{\fetchsubstrtrue
+    \AtEndOfPackage{\InputIfFileExists{fsubstr.def}
+    {\fsbstrInputMsg}{\fsbstrWarningMsg}}%
+}
+\define@key{fetchbibpes.sty}{fetchsubtr}[]{\ExecuteOptionsX{fetchsubstr}}
+\def\fsbstrInputMsg{\PackageInfo{fetchbibpes}
+    {fetchsubtr option detected, inputting file fsubstr.def}}
+\def\fsbstrWarningMsg{\PackageWarning{fetchbibpes}
+    {fetchsubtr option detected, cannot find file fsubstr.def}}
+%    \end{macrocode}
+% The \IndexOpt{ignorecfg}\texttt{ignorecfg} causes this package
+% not to input the \textsf{CFG} file \texttt{fbpes.cfg}.
+%    \begin{macrocode}
+\newif\iffb@ignorecfg \fb@ignorecfgfalse
+\define@key{fetchbibpes.sty}{ignorecfg}[true]{\fb@ignorecfgtrue}
+%    \end{macrocode}
+% We process the options for this package.
+%    \begin{macrocode}
+\ProcessOptionsX
+%    \end{macrocode}
+% If the user has not passed a value for the \texttt{userverses}, we send a warning
+% to the user.
+% \changes{v2.3a}{2016/12/20}{Revised manual to include \string\cs{markverse}}
+% \changes{v2.3}{2016/12/17}{Added the ability to extract segments of a verse}
+% \changes{v2.1a}{2016/09/24}{Added demo file \string\texttt{bibpes\_red.tex}}
+% \changes{v2.1a}{2016/09/24}{Revised documentation}
+% \changes{v2.0a}{2016/09/19}{Added special value `none' for \string\texttt{useverses}}
+%    \begin{macrocode}
+\def\fbp@none{none}
+\ifx\fbpes@useverses\@empty
+    \PackageWarning{fetchbibpes}
+    {The useverses option is not present.\MessageBreak
+    At lease one DEF file is advised}
+\else
+    \ifx\fbpes@useverses\fbp@none\let\fbpes@useverses\@empty\fi
+\fi
+%    \end{macrocode}
+%
+% \subsection{The \texorpdfstring{\protect\cs{BV}}{\textbackslash{BV}} command \textsl{et al.}}
+%
+%    \begin{macro}{\BV}\texttt{(\ameta{verse-ref})}
+%   The Bible verses are stored in a separate file (DEF) or declared within the \env{declareBVs} environment.
+%   (The companion package, \textsf{bibpes}, writes a DEF file.) In either case, a Bible verse is one of the
+%   arguments of the \cs{BV} command, the syntax of which is given below.
+%\begin{quote}\ttfamily
+%\cs{BV}(\ameta{book}{\visispace}\ameta{chapter}:\ameta{verse}{\visispace}\ameta{transl}[{\visispace}\ameta{word}]){\visispace}\ameta{passage}\cs{null}
+%\end{quote}
+%    Note that the \ameta{verse-ref} is enclosed in parentheses, not braces.
+%    The symbol \texttt{{\visispace}} is a space-character (not a hard space). The \ameta{passage} ends
+%    with a \cmd{\null}, which acts as a delimiter for the \cs{BV} macro. For example,
+%\begin{quote}\ttfamily
+%   \cs{BV}(Mat 2:1 KJV) Now when Jesus was born...to Jerusalem,\cs{null}\\[3pt]
+%   \cs{BV}(Mat 2:1 ISV) ...\cs{null}
+%\end{quote}
+%   Generally, the abbreviated names (\textsf{e-Sword abbreviations}) of the books are used.
+%   Only one verse per chapter is written to the DEF file. The definition for \cs{BV} is given
+%   next, though \cs{BV} is redefined when the \opt{usesr} option is specified.
+%    \begin{macrocode}
+\def\BV(#1) #2\null{\csarg\gdef{#1}{#2}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{environment}{declareBVs}
+%    is a convenience environment used to make \cs{BV} declarations.
+%\begin{verbatim}
+%\begin{declareBVs}
+%\BV(Gen 1:1 KJV Mrk) \textit{In the beginning} God created the heaven
+%   and the earth.\null
+%\end{declareBVs}
+%\end{verbatim}
+%where we have wrapped the line to display it within the margins. The environment should
+%appear in vertical mode.
+%    \begin{macrocode}
+\newenvironment{declareBVs}{\cvrtdqs}{}
+\newenvironment{declareBVs*}{}{}
+%    \end{macrocode}
+%    \end{environment}
+%    \begin{macro}{\usePassage} \texttt{\darg{\ameta{verse-ref}}}
+%    takes the raw \ameta{verse-ref} and expands to the associated passage:
+%    |\usePassage{Gen 1:1 KJV}| should produce the referenced passage, provided this reference has been
+%    defined.
+%    \changes{v1.9}{2016/09/15}{Added \string\cs{usePassage}}
+%    \begin{macrocode}
+\def\usePassage#1{\@nameuse{#1}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+\iffetchsubstr
+    \AtEndDocument{%
+        \immediate\write\bvout{\string\end{declareBVs*}}%
+        \immediate\closeout\bvout}
+    \AtBeginDocument{\InputIfFileExists{\jobname-bv.cut}
+        {\PackageInfo{fetchbibpes}{Inputting \jobname-bv.cut}}
+        {\PackageInfo{fetchbibpes}{Cannot find \jobname-bv.cut}}}
+\fi
+%    \end{macrocode}
+% \subsection{Formatting the names of the books}
+%    \begin{macrocode}
+\def\bookFmt#1#2#3#4{\csarg\def{bkfmt#1}{{#1}{#2}{#3}{#4}}}
+%    \end{macrocode}
+% The books and their visual representations. The first argument is
+% the \textsf{e-Sword} three-letter name, the second is the full name,
+% the third is a long abbreviation, and the fourth is a short abbreviation.
+% \paragraph*{Old Testament}
+%    \begin{macrocode}
+\bookFmt{Gen}{Genesis}{Gen\.}{Gn\.}
+\bookFmt{Exo}{Exodus}{Exod\.}{Ex\.}
+\bookFmt{Lev}{Leviticus}{Lev\.}{Lv}
+\bookFmt{Num}{Numbers}{Num\.}{Nb\.}
+\bookFmt{Deu}{Deuteronomy}{Deut\.}{Dt\.}
+\bookFmt{Jos}{Joshua}{Josh\.}{Jos\.}
+\bookFmt{Jdg}{Judges}{Judg\.}{Jg\.}
+\bookFmt{Rth}{Ruth}{Ruth}{Rt\.}
+\bookFmt{1Sa}{\1Samuel}{\1Sam\.}{\1S\.}
+\bookFmt{2Sa}{\2Samuel}{\2Sam\.}{\2S\.}
+\bookFmt{1Ki}{\1Kings}{\1Kgs\.}{\1K\.}
+\bookFmt{2Ki}{\2Kings}{\2Kgs\.}{\2K\.}
+\bookFmt{1Ch}{\1Chronicles}{\1Chr\.}{\1Ch\.}
+\bookFmt{2Ch}{\2Chronicles}{\2Chr\.}{\2Ch\.}
+\bookFmt{Ezr}{Ezra}{Ezra}{Ezr\.}
+\bookFmt{Neh}{Nehemiah}{Neh\.}{Ne\.}
+\bookFmt{Est}{Esther}{Esther}{Est\.}
+\bookFmt{Job}{Job}{Job}{Jb\.}
+\bookFmt{Psa}{Psalms}{Ps\.}{Ps\.}
+\bookFmt{Pro}{Proverbs}{Prov\.}{Pr\.}
+\bookFmt{Ecc}{Ecclesiastes}{Eccles\.}{Ecc\.}
+\bookFmt{Son}{Song of Solomon}{Song\.}{Sng\.}
+\bookFmt{Isa}{Isaiah}{Isa\.}{Is\.}
+\bookFmt{Jer}{Jeremiah}{Jer\.}{Jr\.}
+\bookFmt{Lam}{Lamentations}{Lam\.}{La\.}
+\bookFmt{Eze}{Ezekiel}{Ezek\.}{Ezk\.}
+\bookFmt{Dan}{Daniel}{Dan\.}{Dn}
+\bookFmt{Hos}{Hosea}{Hos\.}{Ho\.}
+\bookFmt{Joe}{Joel}{Joel}{Jl\.}
+\bookFmt{Amo}{Amos}{Amos}{Am\.}
+\bookFmt{Oba}{Obadiah}{Obad\.}{Ob\.}
+\bookFmt{Jon}{Jonah}{Jonah}{Jon\.}
+\bookFmt{Mic}{Micha}{Mic\.}{Mi\.}
+\bookFmt{Nah}{Nahum}{Nah\.}{Na\.}
+\bookFmt{Hab}{Habakkuk}{Hab\.}{Hab,}
+\bookFmt{Zep}{Zephaniah}{Zeph\.}{Zp\.}
+\bookFmt{Hag}{Haggai}{Hag\.}{Hg\.}
+\bookFmt{Zec}{Zechariah}{Zech\.}{Zc\.}
+\bookFmt{Mal}{Malachi}{Mal\.}{Ml\.}
+%    \end{macrocode}
+%\goodbreak
+% \paragraph*{New Testament}
+%    \begin{macrocode}
+\bookFmt{Mat}{Matthew}{Matt\.}{Mt\.}
+\bookFmt{Mar}{Mark}{Mark}{Mk\.}
+\bookFmt{Luk}{Luke}{Luke}{Lk\.}
+\bookFmt{Joh}{John}{John}{Jn\.}
+\bookFmt{Act}{Acts}{Acts}{Ac\.}
+\bookFmt{Rom}{Romans}{Rom\.}{Rm\.}
+\bookFmt{1Co}{\1Corinthians}{\1Cor\.}{\1Co\.}
+\bookFmt{2Co}{\2Corinthians}{\2Cor\.}{\2Co\.}
+\bookFmt{Gal}{Galatians}{Gal\.}{Ga\.}
+\bookFmt{Eph}{Ephesians}{Eph\.}{Ep\.}
+\bookFmt{Php}{Philippians}{Phil\.}{Ph\.}
+\bookFmt{Col}{Colossians}{Col\.}{Col\.}
+\bookFmt{1Th}{\1Thessalonians}{\1Thess\.}{\1Th\.}
+\bookFmt{2Th}{\2Thessalonians}{\2Thess\.}{\2Th\.}
+\bookFmt{1Ti}{\1Timothy}{\1Tim\.}{\1Tm\.}
+\bookFmt{2Ti}{\2Timothy}{\2Tim\.}{\2Tm\.}
+\bookFmt{Tit}{Titus}{Tit\.}{Tt\.}
+\bookFmt{Phm}{Philemon}{Philem\.}{Phm\.}
+\bookFmt{Heb}{Hebrews}{Heb\.}{Heb\.}
+\bookFmt{Jas}{James}{Jas\.}{Jm\.}
+\bookFmt{1Pe}{\1Peter}{\1Pet\.}{\1P\.}
+\bookFmt{2Pe}{\2Peter}{\2Pet\.}{\2P\.}
+\bookFmt{1Jn}{\1John}{\1John}{\1Jn\.}
+\bookFmt{2Jn}{\2John}{\2John}{\2Jn\.}
+\bookFmt{3Jn}{\3John}{\3John}{\3Jn\.}
+\bookFmt{Jud}{Jude}{Jude}{Jude}
+\bookFmt{Rev}{Revelation}{Rev\.}{Rv\.}
+%    \end{macrocode}
+% \subsection{Key-values for the fetch commands}
+% We now define a \textsf{xkeyval} family \texttt{fbpes} to control how the
+% book names are displayed. The \IndexKey{abbr}\texttt{abbr} key designates how the book is
+% displayed, possible values are \texttt{esword}, \texttt{none}, \texttt{long}, and \texttt{short};
+% these corresponding to the arguments 1--4 of \cs{bookFmt}.
+%    \begin{macrocode}
+\define@choicekey+{fbpes}{abbr}[\val\nr]%
+    {esword,none,long,short}[esword]{%
+    \ifcase\nr\relax
+        \def\fbpes@abbr{\ioiv}\or
+        \def\fbpes@abbr{\iioiv}\or
+        \def\fbpes@abbr{\iiioiv}\or
+        \def\fbpes@abbr{\ivoiv}\fi
+}{}
+%    \end{macrocode}
+%   The values of \texttt{abbr} use the arguments of \cs{bookFmt}
+%    (\texttt{esword} is argument \texttt{\#1}; \texttt{none} is argument
+%    \texttt{\#2}; \texttt{long} is argument \texttt{\#3}; \texttt{short} is
+%    argument \texttt{\#4}).
+%
+% \paragraph*{Examples}
+% \begin{itemize}
+%       \item \cs{fetchverse[abbr=esword]\darg{Gen 1:1}}: \fetchverse[abbr=esword]{Gen 1:1}
+%       \item \cs{fetchverse[abbr=none]\darg{Gen 1:1}}: \fetchverse[abbr=none]{Gen 1:1}
+%       \item \cs{fetchverse[abbr=long]\darg{Gen 1:1}}: \fetchverse[abbr=long]{Gen 1:1}
+%       \item \cs{fetchverse[abbr=short]\darg{Gen 1:1}}: \fetchverse[abbr=short]{Gen 1:1}
+% \end{itemize}
+% The \IndexKey{roman}\texttt{roman} key determines how book numbers are displayed,
+% `1 Corinthians' versus `I Corinthians', for example. Possible values are \texttt{true} (use roman letters)
+% of \texttt{false} (use arabic numbers).
+%\changes{v1.7}{2016/04/11}{Correct typos that prevented the roman key from working correctly (2-II and 3-III).}
+%    \begin{macrocode}
+\define@boolkey{fbpes}{roman}[true]{\ifKV@fbpes@roman
+    \def\fb@numi{I}\def\fb@numii{II}\def\fb@numiii{III}\else
+    \def\fb@numi{1}\def\fb@numii{2}\def\fb@numiii{3}\fi
+}
+%    \end{macrocode}
+% This key has no effect when \texttt{abbr=esword}.
+% \paragraph*{Examples}
+% \begin{itemize}
+%       \item \fetchverse[abbr=long,roman=false]{1Co 1:1}
+%       \item \fetchverse[abbr=long,roman]{1Co 1:1}
+% \end{itemize}
+% The value of the \IndexKey{from}\texttt{from} key is the Bible version to be used.
+% For example, \texttt{from=ISV}. When present, this is affixed to the passage reference.
+%\begin{quote}\ttfamily
+%\string\BV(\textsl{book}{\visispace}\textsl{chapter}:\textsl{verse}{\visispace}\textsl{bible}){\visispace}\textsl{passage}\string\null
+%\end{quote}
+% The \texttt{from} key, see below, only supports \texttt{KJV}, \texttt{KJV+}, \texttt{ISV}, these are the versions of the Bible
+% that I used for testing. If someone wants to use ASV (American Standard Version), he can either
+% make a personal copy of \texttt{fetchbibpes.sty} and add \texttt{ASV}, for example, onto the list in the
+% choice key definition for \texttt{from} below, or he can use \DescribeMacro\addtoBibles\cmd{\addtoBibles}.
+%    \begin{macrocode}
+\newif\if@ddtoBiblesUsed \@ddtoBiblesUsedfalse
+%    \end{macrocode}
+%    \begin{macro}{\defaultBible}
+% The \cmd{\defaultBible} sets the default Bible. Then if you say
+% |\defaultBible{NKJV}| then |fetchverse{Gen 1:1}| attempts to fetch the \texttt{NKJV} of
+% \texttt{Gen 1:1}. In this way, you don't have to use the \texttt{from} option for the version
+% of the Bible you are using the most.
+%    \begin{macrocode}
+\newcommand{\defaultBible}[1]{\def\@rg{#1}\ifx\@rg\@empty
+    \else\def\fb@defaultBible{#1}\def\fbpes@from{ #1}\fi}
+\defaultBible{KJV}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\addtoBibles}
+%    Use this command to add to the list of supported Bible versions. To add to the
+%    list of supported Bible versions, in the preamble expand |\addtoBibles{ASV}|,
+%    for example. The argument for \cs{addtoBibles} is a comma-delimited list of abbreviations
+%    uses by \textsf{e-Sword} to designate various Bible translations.
+%    \begin{macrocode}
+\newcommand\addtoBibles[1]{%
+%    \end{macrocode}
+% If the argument is empty, we ignore; otherwise, we set
+% \cs{@ddtoBiblesUsedtrue} and create a new choice key consisting of the
+% values passed to us by \texttt{\#1}.
+%    \begin{macrocode}
+    \def\@rgi{#1}\ifx\@rgi\@empty\else
+    \global\@ddtoBiblesUsedtrue\fi
+    \define@choicekey+{bibadd}{addfrom}[\val\nr]{#1}{}
+        {\PackageWarning{fetchbibpes}{Bad Choice of \val\MessageBreak
+        will use \fb@defaultBible\space instead}%
+        \edef\fbpes@from{ \fb@defaultBible}}%
+}
+\@onlypreamble\addtoBibles
+%    \end{macrocode}
+%    \end{macro}
+% Now we define the \IndexKey{from}\texttt{from} key, it has only three values,
+% \texttt{KJV}, \texttt{KJV+}, and \texttt{ISV}, but through \cs{addtoBibles},
+% it can be extended.
+%    \begin{macrocode}
+\define@choicekey+{fbpes}{from}[\val\nr]%
+    {KJV,KJV+,ISV}[KJV]{%
+    \ifcase\nr\relax
+        \def\fbpes@from{ KJV}\or
+        \def\fbpes@from{ KJV+}\or
+        \def\fbpes@from{ ISV}\fi
+}{%
+    \if@ddtoBiblesUsed
+%    \end{macrocode}
+% If \cs{addtoBibles} has been expanded in the preamble, we determine if the argument
+% \texttt{\#1} is in the new list of Bibles, if yes, OK; otherwise, we emit a warning
+% and default to KJV.
+%    \begin{macrocode}
+        \def\fbpes@from{ #1}\setkeys{bibadd}{addfrom=#1}\else
+        \PackageWarning{fetchbibpes}{Bad Choice of \val\MessageBreak
+        will use \fb@defaultBible\space instead}%
+        \edef\fbpes@from{ \fb@defaultBible}\fi
+}
+%    \end{macrocode}
+%\paragraph{Example} |\fetchverse[abbr=none,from=ISV]{Gen 1:1}| yields,
+%\begin{quote}\fetchverse[abbr=none,from=ISV]{Gen 1:1}\end{quote}
+% The \IndexKey{transl}\texttt{transl} key is an annotation key, that appends
+% text on the end of the Bible reference, such as a translation: \texttt{transl=KJV}.
+%    \begin{macrocode}
+\define@key{fbpes}{transl}[]{\def\fbpes@transl{#1}%
+    \ifx\fbpes@transl\@empty\else\edef\fbpes@transl{\space#1}\fi}
+\let\fbpes@transl\@empty
+%    \end{macrocode}
+% \paragraph*{Example} We annotate the translation version using `King James Version'.
+%\begin{quote}\small
+%|\fetchverse[abbr=none,transl=King James Version]{Gen 1:1}|\\[3pt]\normalsize
+%\fetchverse[abbr=none,transl=King James Version]{Gen 1:1}
+%\end{quote}
+% \IndexKey{from*}combines the actions of the options \texttt{from} and
+% \texttt{transl}.
+%    \begin{macrocode}
+\define@key{fbpes}{from*}[]{\setkeys{fbpes}{from=#1,transl=#1}}
+%    \end{macrocode}
+%\paragraph*{Example} |\fetchverse[abbr=none,from*=ISV]{Gen 1:1}| yields,
+%\begin{quote}\fetchverse[abbr=none,from*=ISV]{Gen 1:1}\end{quote}
+% The value of the \texttt{from*} key must be a valid value of the \texttt{from} key.
+%
+%\par\medskip\noindent
+% We provide a mechanism for \emph{alternate} phrasing of a passage
+% through the \IndexKey{alt}\texttt{alt=\ameta{word}} key, perhaps an alternate provides
+% of some formatting commands. If we say,
+%\begin{quote}
+%   |\fetchverse[from=ISV,alt=Alt]{1Ki 1:1}|\\[3pt]
+%   \fetchverse[from=ISV,alt=Alt]{1Ki 1:1}
+%\end{quote}
+%A line in one of the DEF file should have
+%\begin{verbatim}
+%   \BV(1Ki 1:1 ISV Alt) When David had grown \emph{very old}, \dots\null
+%\end{verbatim}
+%for example.
+%    \begin{macrocode}
+\newif\iffbpes@altstar\fbpes@altstarfalse
+%    \end{macrocode}
+%    Add a switch \cs{ifuseoldalt} to revert back to the old behavior of \texttt{alt}
+%    and supporting convenience commands \DescribeMacro{\useOldAlt}\cs{useOldAlt}
+%    and \DescribeMacro{useNewAlt}\cs{useNewAlt}.
+%    \changes{v2.2a}{2016/11/09}{Added the switch \string\cs{ifuseoldalt}}
+%    \begin{macrocode}
+\newif\ifuseoldalt \useoldaltfalse
+\def\useOldAlt{\useoldalttrue}
+\def\useNewAlt{\useoldaltfalse}
+\define@key{fbpes}{alt}[]{\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\fbpes@alt\@empty\else\def\fbpes@alt{ #1}\fi}
+\let\fbpes@alt\@empty
+%    \end{macrocode}
+%    We add a new key \IndexKey{alt*}\texttt{alt*} to process many alternate and normal
+%    Bible verses. The key is only obeyed for \cs{fetchverses}. Syntax is,
+%\begin{quote}
+%    \texttt{alt*=\darg{Alt,,Alt,Alt1,Paul,,,Special}}
+%\end{quote}
+%    The length of this comma delimited ist must be equal to or less than as the
+%    number of verses being processed by \cs{fetchverses}. The first verse passes \texttt{alt=Alt},
+%    the second has no \texttt{alt} key, the third passes \texttt{alt=Alt}, the fourth
+%    \texttt{alt=Alt1}, the fifth, \texttt{alt=Paul}, the sixth and seventh have no \texttt{alt} key
+%    specification, the last has \texttt{alt=Special}. Any further verses will have no \texttt{alt} key.
+%    \changes{v2.2}{2016/11/07}{Added the \string\texttt{alt*} key}
+%    \begin{macrocode}
+\define@key{fbpes}{alt*}[]{\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\fbpes@altstar\@empty\else\def\fbpes@altstar{#1}\fi}
+\let\fbpes@altstar\@empty
+%    \end{macrocode}
+%Only one of \texttt{alt} or \texttt{alt*} is allowed, this is enforced from within \cs{fetchverses}.
+%\par\medskip\noindent
+% The \IndexKey{delims}\texttt{delims} key takes a value of two characters used
+% to set off the Bible reference. The default is \texttt{delimin=()}. If \texttt{delims} appears
+% in the option list without a value, then there is no characters delimiting the Bible passage.
+%    \begin{macrocode}
+\define@key{fbpes}{delims}[]{\def\fbp@getDelims{#1}%
+    \ifx\fbp@getDelims\@empty\let\l@fbp@delim\@empty
+    \let\r@fbp@delim\@empty\else
+    \fbp@getDelimsi#1\@nil\fi}
+\def\fbp@getDelimsi#1#2#3\@nil{\def\@rgiii{#3}\ifx\@rgiii\@empty
+    \def\l@fbp@delim{#1}\def\r@fbp@delim{#2}\else
+    \PackageWarning{fetchbibpes}{Only two delimiters expected, using the
+    defaults of '()'}\def\l@fbp@delim{(}\def\r@fbp@delim{)}\fi}
+\def\l@fbp@delim{(}\def\r@fbp@delim{)}
+%    \end{macrocode}
+%\paragraph*{Examples}
+%\begin{enumerate}
+%   \item |\fetchverse[abbr=none,delims]{Gen 1:1}|: \fetchverse[abbr=none,delims]{Gen 1:1}
+%   \item |\fetchverse[abbr=none,delims={[]}]{Gen 1:1}|:
+%       \fetchverse[abbr=none,delims={[]}]{Gen 1:1}
+%   \item |\fetchverse[abbr=none,delims={According to }{,}]{Gen 1:1}|:
+%   \begin{quote}
+%   \fetchverse[abbr=none,delims={According to }{,}]{Gen 1:1}
+%   \end{quote}
+% \end{enumerate}
+% As seen item~2, with the delimiters as `\texttt{[]}', they must be enclosed in braces
+% because this all takes place within an optional argument, without the braces, the parsing
+% of the optional argument fails. The \texttt{delims} expects two tokens, they need not be
+% characters, they can be anything, as long as they are enclosed in matching braces. In item~3,
+% we set |delims={According to }{,}|, the first token is place before the passage reference,
+% the second after; this results in a phrase that leads up to the passage itself.
+%
+%\medskip\noindent
+% The value of \IndexKey{enclosewith}\cs{enclosewith} key is a set of two tokens.
+% The first token is placed at the beginning of the passage, and the second one at the
+% end of the passage. A special value of \cs{quote} is recognized, this places quotation
+% marks around the passage.
+%    \begin{macrocode}
+\define@key{fbpes}{enclosewith}[]{\def\fbp@getEnclose{#1}%
+    \def\quote{{``}{''}}%
+    \ifx\fbp@getEnclose\@empty\let\l@fbp@enclose\@empty
+    \let\r@fbp@enclose\@empty\else
+    \expandafter\fbp@getEnclosei#1\@nil\fi}
+\def\fbp@getEnclosei#1#2#3\@nil{\def\@rgiii{#3}\ifx\@rgiii\@empty
+    \def\l@fbp@enclose{#1}\def\r@fbp@enclose{#2}\else
+    \PackageWarning{fetchbibpes}{Only two tokens expected, using the
+    defaults of ''}\let\l@fbp@enclose\@empty
+    \let\r@fbp@enclose\@empty\fi}
+\let\l@fbp@enclose\@empty\let\r@fbp@enclose\@empty
+%    \end{macrocode}
+%
+% \medskip\noindent
+% \IndexKey{format}\texttt{format} is a general key for making formatting declarations,
+% for example, we format the reference using \texttt{format=\string\bfseries\string\sffamily}.
+%    \begin{macrocode}
+\define@key{fbpes}{format}{\def\fbp@format{#1}}
+\let\fbp@format\relax
+%    \end{macrocode}
+%    \changes{v1.8}{2016/09/14}{Added new key \string\texttt{ltxquotes}}
+%    New key of \texttt{ltxquotes}. When the author uses the \IndexKey{ltxquotes}\texttt{ltxquotes},
+%    it is expected that all passages referenced use {\LaTeX} style quotes, perhaps
+%    had edited. That is, |``In the beginning''| instead of |"In the beginning"| and for single quotes
+%    |`In the beginning'| instead of |'In the beginning'|. In extraordinary situations, the switch
+%    \cs{ifNotL@TeXQuotes} may be turned on or off with \DescribeMacro{\LaTeXQuotesOn}\cmd{\LaTeXQuotesOn} and
+%    \DescribeMacro{\LaTeXQuotesOff}\cmd{\LaTeXQuotesOff}. Assuming the normal case that Bible passages do not
+%    use {\LaTeX} style quoting, the default state is \cs{LaTeXQuotesOff}.
+%    \changes{v1.9}{2016/09/15}{Added \string\cs{LaTeXQuotesOff} and \string\cs{LaTeXQuotesOn}}
+%    \begin{macrocode}
+\newif\ifNotL@TeXQuotes \NotL@TeXQuotestrue
+\def\LaTeXQuotesOn{\NotL@TeXQuotesfalse}
+\def\LaTeXQuotesOff{\NotL@TeXQuotestrue}
+\define@key{fbpes}{ltxquotes}[]{\NotL@TeXQuotesfalse}
+%    \end{macrocode}
+%\paragraph*{Example} |\fetchverse[format=\bfseries\sffamily]{Gen 1:1}| produces
+%the passage:
+% \fetchverse[format=\bfseries\sffamily]{Gen 1:1}
+% \par\medskip\noindent The formatting only effects the passage label \textbf{Gen 1:1} and its surrounding
+% delimiters.
+% \par\medskip\noindent
+%\IndexKey{replace} This key replaces \ameta{find} with \ameta{repl}. The syntax is,
+%\begin{quote}\ttfamily
+%   replace=\darg{\ameta{find\SUB1}}\darg{\ameta{repl\SUB1}}^^A
+%       \darg{\ameta{find\SUB2}}\darg{\ameta{repl\SUB2}}...^^A
+%       \darg{\ameta{find\SUB{k}}}\darg{\ameta{repl\SUB{k}}}
+%\end{quote}
+%    where \ameta{find\SUB1} is replaced by \ameta{repl\SUB1}, and
+%    \ameta{find\SUB2} is replaced by \ameta{repl\SUB2}, and so on. Normally, \ameta{find}
+%    and \ameta{repl} are strings, but they can be commands as well, if done correctly.
+%    \changes{v2.0}{2016/09/17}{Introduced the \string\texttt{replace} option for \string\cs{fetchverse}}
+%    \begin{macrocode}
+\define@key{fbpes}{replace}[]{\fp@cntArgs#1\stop@rg
+    \def\fbpes@replace{#1}}
+\let\stop@rg\relax\def\st@p@arg{\stop@rg}%
+%    \end{macrocode}
+%    Count the number of arguments to see if there are an even number of them.
+%    \begin{macrocode}
+\def\fp@cntArgs#1\stop@rg{\bgroup\@tempcnta\z@
+    \fp@cntArgs@i#1\stop@rg}
+\def\fp@cntArgs@i#1{\def\arg@i{#1}%
+    \ifx\arg@i\st@p@arg
+        \ifodd\@tempcnta\PackageError{fetchbibpes}{You've supplied
+        an odd number of values for\MessageBreak
+        replace key. I was expecting an even number}{}\fi
+%    \end{macrocode}
+%    Yes, an even number, \cs{fp@nReplace} is the number of pairs of arguments.
+%    \begin{macrocode}
+        \divide\@tempcnta2\relax
+        \xdef\fp@nReplace{\the\@tempcnta}%
+        \let\fb@next\egroup
+    \else
+        \advance\@tempcnta\@ne
+        \def\fb@next{\fp@cntArgs@i}%
+    \fi\fb@next
+}
+\let\fbpes@replace\@empty
+\let\repl@cep@ssage\@empty
+\newif\iffb@silentreplace \fb@silentreplacefalse
+%    \end{macrocode}
+%    (2016/12/17) Added switch to detect when a find is successful.
+%    \changes{v2.3}{2016/12/17}{Added \string\cs{iffb@doreplace}}
+%    \begin{macrocode}
+\newif\iffb@doreplace \fb@doreplacefalse
+%    \end{macrocode}
+%    \cs{isstopreplace} determines whether \texttt{\#1} contains the stop marker
+%    \cs{stoprepl@ce}; it \cs{let}s \cs{stoprepl@cehere} to \texttt{1} and to \texttt{0} otherwise.
+%    \begin{macrocode}
+\def\isstopreplace#1{\istopreplacei#1\stoprepl@ce\@nil}
+\def\istopreplacei#1\stoprepl@ce#2\@nil{\def\fb@rgi{#1}\def\fb@rgii{#2}%
+    \ifx\fb@rgii\@empty\let\stoprepl@cehere\fb@Zero\else
+        \let\stoprepl@cehere\fb@One\fi}
+%    \end{macrocode}
+%    \begin{macro}{\gobbleto}
+%    defines a command (\texttt{\#2}) that gobbles all content from the beginning
+%    of \texttt{\#2} to \texttt{\#1}, inclusive. Used with \texttt{replace} when
+%    the find key has active characters, we'll just gobble past them.
+%    \changes{v2.1}{2016/09/21}{Added \string\cs{gobbleto}}
+%    \begin{macrocode}
+\def\gobbleto#1#2{\def#2##1#1{}}
+%    \end{macrocode}
+%    \end{macro}
+%    \paragraph*{Replace algorithm.} The following code is taken from another
+%    (unknown) source and modified considerably.
+%    \begin{macrocode}
+\def\fb@replace{\@ifstar{\fb@silentreplacetrue\fb@replace@i} %
+    {\fb@silentreplacefalse\fb@replace@i}}
+\def\fb@replace@i#1#2#3{\let\repl@cep@ssage\@empty
+    \global\fb@doreplacefalse
+    \iffb@silentreplace
+        \def\fb@gettoNext##1#2{\isstopreplace{##1}%
+            \ifx\stoprepl@cehere1\relax
+                \expandafter\g@addto@macro\expandafter
+                    \repl@cep@ssage\expandafter{\fb@rgi}%
+                \def\fb@next{\let\fb@passage\repl@cep@ssage}%
+            \else
+%    \end{macrocode}
+%    For silent mode, replacement occurs here, we mark it by setting \cs{iffb@doreplace} to true.
+%    \begin{macrocode}
+                \global\fb@doreplacetrue
+                \def\fb@next{\g@addto@macro\repl@cep@ssage{##1#3}%
+                    \fb@gettoNext}\fi
+            \fb@next}%
+    \else
+%    \end{macrocode}
+%    This is where replacement occurs, we mark it by setting \cs{iffb@doreplace} to true.
+%    \begin{macrocode}
+        \def\fb@gettoNext##1#2{##1#3\fb@gettoNext}%
+    \fi
+    \expandafter\fb@gettoNext#1\stoprepl@ce#2}
+\def\stoprepl@ce#1\fb@gettoNext{}
+%    \end{macrocode}
+%\paragraph*{Example} The passage Mat 2:1 ends with a comma, to change this to a period, we would
+%use \texttt{replace}. In the passage, there are several commas, we want to replace the one following
+%Jerusalem.
+%\begin{quote}
+%|\fetchverse[replace={Jerusalem,}{Jerusalem.}]{Mat 2:1}|\\[3pt]
+%\fetchverse[replace={Jerusalem,}{Jerusalem.}]{Mat 2:1}
+%\end{quote}
+%
+% \par\medskip\noindent
+%\IndexKey{pcolor}The value of \texttt{color} colors the text.
+%\changes{v1.7}{2016/04/11}{Added a color key, it colors the passage and the enclosing tokens.}
+%    \begin{macrocode}
+\define@key{fbpes}{pcolor}[]{\def\fbp@pcolor{#1}}
+\let\fbp@pcolor\@empty
+%    \end{macrocode}
+%The value of \IndexKey{pformat}\texttt{pformat} passes formatting declarations
+%to the text.
+%\changes{v1.7}{2016/04/11}{Added formatting for the passage text.}
+%    \begin{macrocode}
+\define@key{fbpes}{pformat}[]{\def\fbp@pformat{#1}}
+\let\fbp@pformat\@empty
+%    \end{macrocode}
+% \medskip\noindent
+% With the \IndexKey{caps}\texttt{caps}, you can make the display the chapter name in capital
+% letters `GENESIS' versus `Genesis'.
+%    \begin{macrocode}
+\define@boolkey{fbpes}{caps}[true]{\ifKV@fbpes@caps
+    \def\fbpes@case{\uppercase}\else
+    \let\fbpes@case\relax\fi
+}
+\let\fbpes@case\relax
+%    \end{macrocode}
+%\paragraph*{Example} We capitalize the full book name:
+%\begin{quote}\small
+% |\fetchverse[format=\bfseries\sffamily,abbr=none,caps]{Gen 1:1}|\\[6pt]\normalsize
+% \fetchverse[format=\bfseries\sffamily,abbr=none,caps]{Gen 1:1}
+% \end{quote}
+% The \IndexKey{showfirst}\texttt{showfirst} key is a Boolean, which if true, the first verse number
+% is typeset. The default is false, the first verse number is not typeset.
+%    \begin{macrocode}
+\define@boolkey{fbpes}{showfirst}[true]{}
+\KV@fbpes@showfirstfalse
+%    \end{macrocode}
+%    \paragraph*{Examples} We compare the passages \texttt{Gen 1:1-2} with and
+%    without first verse number: |\fetchverses[showfirst]{Gen 1:1-2}|
+%versus |\fetchverses{Gen 1:1-2}|.
+%\begin{itemize}
+%   \item \fetchverses[showfirst]{Gen 1:1-2}
+%   \item \fetchverses{Gen 1:1-2}
+% \end{itemize}
+% When \IndexKey{shownone}\texttt{shownone} is specified, no verses numbers are shown in the specified
+% passage. When \texttt{shownone} is specified, the related option \texttt{showfirst} has no effect.
+%    \begin{macrocode}
+\define@key{fbpes}{shownone}[]{\let\verseFmt\@gobble}
+%    \end{macrocode}
+%\paragraph*{Example}
+%\begin{quote}
+%|\fetchverses[shownone,enclosewith=\quote]{Gen 1:1-3}|\\[3pt]
+%\fetchverses[shownone,enclosewith=\quote]{Gen 1:1-3}
+%\end{quote}
+% The \IndexKey{useperiod}\texttt{useperiod} key is a Boolean, which if true a period follows any
+% abbreviation of a book name. If \texttt{useperiod=false} no period is affixed. The default is true.
+% (`Matt.' versus `Matt', for example.)
+%    \begin{macrocode}
+\define@boolkey{fbpes}{useperiod}[true]{%
+    \ifKV@fbpes@useperiod\def\fbp@period{.}\else\def\fbp@period{}\fi
+}
+\def\fbp@period{.}
+\KV@fbpes@useperiodtrue
+%    \end{macrocode}
+%\paragraph*{Examples}
+%\begin{itemize}
+%   \item |\fetchverse[abbr=long]{Mat 2:1}|: \fetchverse[abbr=long]{Mat 2:1}
+%   \item |\fetchverse[abbr=long,useperiod=false]{Mat 2:1}|: \fetchverse[abbr=long,useperiod=false]{Mat 2:1}
+% \end{itemize}
+% The period is used by default, you must say \texttt{useperiod=false} to remove it.
+%
+% \medskip\noindent The \IndexKey{citeatend}\texttt{citeatend} key is a Boolean, which if true, places
+% the citation reference at the end of the passage.
+%    \begin{macrocode}
+\define@boolkey{fbpes}{citeatend}[true]{}
+%    \end{macrocode}
+%\paragraph*{Example} |\fetchverses*[citeatend,showfirst]{Gen 1:1-2}| displays as:
+%\begin{quote}\priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }
+%\fetchverses*[citeatend,showfirst]{Gen 1:1-2}
+% \end{quote}
+%    For the \cs{fetchverse} command only, if \IndexKey{nocite}\texttt{nocite} is present, the citation
+%    not to appear.
+%    \changes{v2.0a}{2016/09/19}{Added \string\texttt{nocite} for \string\cs{fetchverse} only.}
+%    \begin{macrocode}
+\define@boolkey{fbpes}{nocite}[true]{}
+%    \end{macrocode}
+%\paragraph*{Example} |\fetchverse[nocite]{Gen 1:1}| displays as:
+%\begin{quote}
+%\fetchverse[nocite]{Gen 1:1}
+% \end{quote}
+% Of course, the default is to cite the reference.
+% \par\medskip\noindent
+% The value of \IndexKey{priorref}\texttt{priorref} is placed as the command \cs{fbpes@priorref} just before the book reference
+%(|\fbpes@priorref{\book@passage}|). The book reference itself (\cs{book@passage}) is enclosed
+%in braces so \cs{fbpes@priorref} can be a macro with one argument.
+%    \begin{macrocode}
+\define@key{fbpes}{priorref}{\long\def\fbpes@priorref{#1}}
+\let\fbpes@priorref\relax
+%    \end{macrocode}
+%\paragraph*{Example} Place the passage reference in the margin. The command \cs{mpfmt}
+%is defined locally, within the \texttt{quote} environment.
+%\begin{quote}
+%\def\mpfmt#1{\afterRef{{}}\marginpar{\small\raggedleft#1}}
+%|\fetchverses*[priorref=\mpfmt,delims]{Gen 1:1-2}|\\[3pt]
+%\fetchverses*[priorref=\mpfmt,delims]{Gen 1:1-2}
+% \end{quote}
+% The definition of \cs{mpfmt} within the quote environment is
+%\begin{verbatim}
+%   \def\mpfmt#1{\afterRef{{}}\marginpar{\small\raggedleft#1}}
+%\end{verbatim}
+%The \cs{afterRef} command is described later in this documentation.
+%\par\medskip\noindent
+%    To\IndexKey{localdefs} pass local commands that do not disturb the command expansions or take up space,
+%    use the \texttt{localdefs} key.
+%    \changes{v2.1}{2016/09/21}{Added \string\texttt{localdefs} key}
+%    \begin{macrocode}
+\define@key{fbpes}{localdefs}[]{\def\fbpes@localdefs{#1}}
+\let\fbpes@localdefs\@empty
+%    \end{macrocode}
+%See the demo file \texttt{bibpes\_replaces.tex} for an example.
+%\par\medskip\noindent
+%This ends the section on the key-values of the \cs{fetchverse} and \cs{fetchverses} commands.
+%
+%\subsection{Main command definitions}
+%
+%\subsubsection{Formatting commands for fetch commands}
+%
+% \DescribeMacro\priorRefSpc This command sets the spacing prior to the reference, only
+% applicable when \texttt{citeatend=true}.
+%    \begin{macrocode}
+\long\def\priorRefSpc#1{\def\fbp@priorRefSpc{#1}}
+\def\fbp@priorRefSpc{\space}
+%    \end{macrocode}
+%\DescribeMacro{\fbFitItIn} is designed to be used as the argument of \cs{priorRefSpc}.
+% Another suggest style is \DescribeMacro\fbFillRght\cmd\fbFillRght.
+%    \begin{macrocode}
+\def\fbFitItIn{\noindent\unskip\nobreak\hfill\penalty100
+    \hskip1em\hbox{}\nobreak\hfill}%
+\def\fbFillRght{\hfil\break\null\hfill}
+%    \end{macrocode}
+%\paragraph*{Examples}
+% \begin{quote}\useBookStyle{showfirst,citeatend}
+% |\fetchverses*{Gen 1:1-2}| (the default)\\[3pt]
+% \fetchverses*{Gen 1:1-2}
+%
+% |\priorRefSpc{\fbFillRght}\fetchverses*{Gen 1:1-3}|\\[3pt]
+% \priorRefSpc{\fbFillRght}\fetchverses*{Gen 1:1-3}
+%
+% |\priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }%|\\
+% |\fetchverses*{Gen 1:1-3}|\\[3pt]
+% \priorRefSpc{\fbFitItIn}\afterBookSpc{\nobreak\ }\fetchverses*{Gen 1:1-3}
+% \end{quote}
+%\DescribeMacro{\useBookStyle}\cmd{\useBookStyle} sets the option keys just defined above. This
+%command may be used in the body of the document to change the style.
+%\changes{v1.7}{2016/04/11}{Expand the first token of \string\texttt{\#1} before passing to
+%    \string\cs{setkeys}.}
+%    \begin{macrocode}
+\def\useBookStyle#1{%
+    \def\fp@SK{\setkeys{fbpes}}\expandafter\fp@SK\expandafter{#1}}
+\useBookStyle{abbr,roman=false,from,transl}
+\def\ioiv#1#2#3#4{#1}\def\iioiv#1#2#3#4{\fbpes@case{#2}}
+\def\iiioiv#1#2#3#4{\fbpes@case{#3}}\def\ivoiv#1#2#3#4{\fbpes@case{#4}}
+%    \end{macrocode}
+%\paragraph*{Example}
+%\begin{verbatim}
+%   \useBookStyle{abbr=none,roman}
+%   \fetchverse{1Co 1:1}
+%\end{verbatim}
+% \begin{quote}
+%\useBookStyle{abbr=long,roman=true}%
+%\fetchverse{1Co 1:1}
+% \end{quote}
+%\DescribeMacro\fb@bksp\cmd{\fb@bksp} is the space that occurs just after the
+%display of the book. The command declaration \DescribeMacro{\afterBookSpc}\cmd{\afterBookSpc}
+%is a convenience command for changing \cmd{\fb@bksp}. The
+%command \DescribeMacro{\resetAfterBookSpc}\cmd{\resetAfterBookSpc} resets \cs{fb@bksp} to its default.
+%    \begin{macrocode}
+\def\afterBookSpc#1{\def\fb@bksp{#1}}
+\def\resetAfterBookSpc{\afterBookSpc{\ }}
+\def\fb@bksp{\ }
+%    \end{macrocode}
+%\paragraph*{Example} We declare |\afterBookSpc{}|, which removes the space
+%between the book and passage reference:
+%\begin{quote}
+%\afterBookSpc{}\fetchverse{Gen 1:1}
+%\end{quote}
+%There may be some application to this.
+%
+%\medskip\noindent
+%\DescribeMacro\afterRef\cmd{\afterRef} is the space that follows the passage reference.
+%Declaring |\afterRef{}| is equivalent to setting the space after the reference to
+%\cs{space}.
+%    \begin{macrocode}
+\long\def\afterRef#1{\def\@rgi{#1}\ifx\@rgi\@empty
+    \def\@fterRef{\space}\else
+    \def\@fterRef{#1}\fi}
+\afterRef{}
+%    \end{macrocode}
+%\paragraph*{Example} We declare |\afterRef{\qquad}|, which sets the space after
+%the passage reference to \cs{qquad}:
+%\begin{quote}
+%\afterRef{\qquad}\fetchverse{Gen 1:1}
+%\end{quote}
+% \DescribeMacro{\@nmsspc}\cmd{\@nmsspc} is the space between the book number and the book,
+% if there is a book number. (E.g., \texttt{1 Corinthians}). We also supply a convenience
+% command of \DescribeMacro\afterNumSpc\cmd{\afterNumSpc}.
+%    \begin{macrocode}
+\def\afterNumSpc#1{\def\@nmsspc{#1}}
+\def\@nmsspc{\space}
+%    \end{macrocode}
+%\paragraph*{Example} Remove the space and use roman numbers:
+%\begin{quote}
+%   |\afterNumSpc{}\fetchverse[abbr=long,roman]{1Co 1:1}|\\[6pt]
+%   \afterNumSpc{}\fetchverse[abbr=long,roman]{1Co 1:1}
+% \end{quote}
+%\DescribeMacro\setNumStyle is an internal macro that uses the commands defined by
+%the \texttt{roman} key and the \cs{@nmsspc} command.
+%    \begin{macrocode}
+\def\setNumStyle{\def\1{\fb@numi\@nmsspc}\def\2{\fb@numii\@nmsspc}%
+    \def\3{\fb@numiii\@nmsspc}}
+%    \end{macrocode}
+%
+%\subsubsection{Parsing commands for fetch commands}
+%
+% The argument of \cs{fb@fmtBook} is \cs{bib@book}, the three-letter name of the book.
+% We expand |\@nameuse{bkfmt#1}|, which expands to `|{}{}{}{}|', the
+% four tokens that are the alternate representations of the book defined by
+% \cs{bookFmt} above.
+%    \begin{macrocode}
+\newif\ifbookexists \bookexiststrue
+\def\fb@fmtBook#1{\edef\fb@fmtBookExp{\noexpand
+    \fbpes@abbr\@nameuse{bkfmt#1}}\fb@fmtBookExp}
+%    \end{macrocode}
+% The \cs{fb@getBookAPassage} command parses the second argument of \cs{fetchverse} and
+% \cs{fetchverses} to break it down into book, chapter, and verses.
+%    \begin{macrocode}
+\def\fb@getBookAPassage#1 #2\@nil{\def\bib@book{#1}\def\bib@passage{#2}%
+%    \end{macrocode}
+% See if the book has more than three letters (\textsf{e-Sword} uses only three).
+%    \begin{macrocode}
+    \fb@doInvLUAsNeeded#1\@nil
+}
+%    \end{macrocode}
+% \cs{fb@doInvLUAsNeeded} takes the book name (normally three tokens), if more than
+% three, we assume it is the full name and convert it to the \textsf{e-Sword} abbreviation.
+%    \begin{macrocode}
+\def\fb@doInvLUAsNeeded#1#2#3#4\@nil{\def\@rg{#4}%
+    \ifx\@rg\@empty
+        \@ifundefined{bkfmt#1#2#3}\bookexistsfalse\bookexiststrue
+        \ifbookexists\else\def\bib@book{#1#2#3}%
+        \PackageWarning{fetchbibpes}{The book '\bib@book' is not
+            recognized,\MessageBreak possibly misspelled}\fi
+    \else
+        \@ifundefined{inv@#1#2#3#4}\bookexistsfalse\bookexiststrue
+        \ifbookexists
+            \edef\bib@book{\@nameuse{inv@#1#2#3#4}}\else
+            \def\bib@book{#1#2#3#4}\PackageWarning{fetchbibpes}
+                {The book '\bib@book' is not recognized,\MessageBreak
+                possibly misspelled}\fi
+    \fi}
+%    \end{macrocode}
+% Used by \cs{fetchverses}. Check whether \cmd{\bib@passages} contains a colon, which it should,
+% then parse the verse range, if there is one.
+%    \begin{macrocode}
+\def\fb@get@chptverse#1:#2\@nil{\def\bib@chpt{#1}\def\bib@verses{#2}%
+%    \end{macrocode}
+% Check if there is a range of versus, e.g., 1-10
+%    \begin{macrocode}
+    \fb@get@verses#2--\@nil}
+%    \end{macrocode}
+% Check if there is a range of versus
+%    \begin{macrocode}
+\def\fb@get@verses#1-#2-#3\@nil{\def\fb@verseStart{#1}%
+    \def\@rgii{#2}\ifx\@rgii\@empty\def\fb@verseEnd{#1}\else
+    \def\fb@verseEnd{#2}\fi
+}
+%    \end{macrocode}
+%
+% \subsubsection{The \protect\cs{fetchverse} command}
+%
+% The \DescribeMacro{\fetchverse}\cmd{\fetchverse} fetches a \emph{single} Bible verse referenced
+% by \texttt{\#1}. For example, if we type |\fetchverse{Mat 2:1}|, the result is shown below.
+% \begin{quote}
+%   (Mat 2:1) Now when Jesus was born in Bethlehem of Judaea in the days of
+%             Herod the king, behold, there came wise men from the east to Jerusalem,
+% \end{quote}
+% The result is the Bible reference followed by the corresponding Bible verse (or passage).
+% The format for the reference is determined by the \DescribeMacro{\fb@fetchverse}\cmd{\fb@fetchverse}
+% command. When the version is not defined, the expression
+% `\textbf{??}(\texttt{\#1})\textbf{??}' is typeset; for example,
+% `\textbf{??}(\texttt{Mat 2:11})\textbf{??}'. In this case, you must use \textsf{bibpes} to define
+% the needed passage. The syntax for \cs{fetchverse} is,
+%\begin{quote}\ttfamily
+%   \string\fetchverse[\textsl{opts}]\{\textsl{3ltrbk}{\visispace}\textsl{ch}:\textsl{vrs}\} or\\[3pt]
+%   \string\fetchverse[\textsl{opts}]\{\textsl{fullbk}{\visispace}\textsl{ch}:\textsl{vrs}\}
+% \end{quote}
+% In the second case, \texttt{\textsl{fullbk}} is the full book name, it must be one of the books listed
+% as the second argument of the \cs{fb@inv@name} commands. See Section~\ref{INL} for the listing.
+%    \begin{macrocode}
+\newcommand\fb@qq{\textbf{??}}
+\def\fp@getTwo#1#2#3\@nil{\def\fp@FT{{#1}{#2}}\def\fbpes@replace{#3}}%
+\def\fp@looptoreplace{%
+        \@tempcntb\fp@nReplace\relax
+        \let\repl@cep@ssage\@empty
+        \protected@edef\fb@passage{\@nameuse{\bib@ver}}%
+%    \end{macrocode}
+%    (2016/09/19) Simulate \cs{protected@edef} throughout this loop below.
+%    \changes{v2.0a}{2016/09/19}{Added protection to the \string\cs{@whilenum} loop.}
+%    \begin{macrocode}
+        \let\@@protect\protect
+        \let\protect\@unexpandable@protect
+        \let\fbpes@replace@save\fbpes@replace
+%    \end{macrocode}
+%    Loop through this passage to replace.
+%    \begin{macrocode}
+        \@whilenum\@tempcntb>\z@\do
+        {%
+            \expandafter\fp@getTwo\fbpes@replace\@nil
+            \protected@edef\fb@@tmp{\noexpand
+                \fb@replace*{\fb@passage}}%
+            \expandafter\fb@@tmp\fp@FT
+            \advance\@tempcntb\m@ne
+        }%
+        \let\fbpes@replace\fbpes@replace@save
+        \set@typeset@protect
+        \fb@passage
+}
+\newcommand\fetchverse[2][]{\bgroup\setNumStyle
+    \def\@rgi{#1}\ifx\@rgi\@empty\else\useBookStyle{#1}\fi
+    \let\.\fbp@period\fbpes@localdefs
+    \fb@getBookAPassage#2\@nil\fb@fetchverse
+    \edef\bib@ver{\bib@book\space\bib@passage\fbpes@from\fbpes@alt}%
+    \@ifundefined{\bib@ver}{%
+        \ifx\fbpes@alt\@empty\else
+            \ifuseoldalt\else
+                \edef\bib@ver{\bib@book\space
+                    \bib@passage\fbpes@from}\fi
+                \@ifundefined{\bib@ver}{%
+                    \edef\bib@ver{\bib@book\space
+                        \bib@passage\fbpes@from\fbpes@alt}%
+                }{%
+                    \PackageWarning{fetchbibpes}{An alt value
+                    of\fbpes@alt\space is specified.
+                    \MessageBreak The verse '\bib@ver\fbpes@alt'
+                    is undefined,\MessageBreak using
+                    '\bib@ver' instead}%
+                }%
+            \fi
+        }{%
+    }%
+    \@ifundefined{\bib@ver}{\fb@qq(\bib@ver)\fb@qq}
+    {\bgroup
+        \fbp@pformat
+        \ifx\fbp@pcolor\@empty\else\color{\fbp@pcolor}\fi
+        \l@fbp@enclose
+%    \end{macrocode}
+%    (2016/09/17) Introduce the \texttt{replace} option here. The option is only implemented
+%    for \cs{fetchverse}, not \cs{fetchverses}.
+%    \changes{v2.0}{2016/09/17}{Implement the replace option here}
+%    \begin{macrocode}
+        \ifx\fbpes@replace\@empty\@nameuse{\bib@ver}\else
+            \fp@looptoreplace\fi
+        \r@fbp@enclose
+    \egroup}%
+    \ifKV@fbpes@citeatend
+        \fbp@priorRefSpc{\ifKV@fbpes@nocite\else
+            \book@passage\fi}\fi\egroup
+}
+%    \end{macrocode}
+% \cs{fb@fetchverse} sets the form of the passage reference, the form includes many
+% variables whose vales are determined by the key-values and other formatting commands.
+%    \begin{macrocode}
+\def\fb@fetchverse{%
+    \ifbookexists
+        \def\book@passage{\fbp@format\l@fbp@delim\expandafter\fb@fmtBook
+        \expandafter{\bib@book}\fb@bksp\bib@passage
+        \fbpes@transl\r@fbp@delim}\else
+        \def\book@passage{\l@fbp@delim\fb@qq\bib@book\fb@qq
+        \fb@bksp\bib@passage\fbpes@transl\r@fbp@delim}\fi
+    \ifKV@fbpes@citeatend\else
+        \fbpes@priorref{\ifKV@fbpes@nocite\else
+            \book@passage\fi}\@fterRef\fi
+}
+%    \end{macrocode}
+% \subsubsection{The \protect\cs{fetchverses} command}
+% \begin{macro}{\fetchverses}
+% fetches the verse or verses only, it does not
+% typeset the reference (such as `(Mat 2:1)'). The syntax of the argument is as follows:
+% \begin{quote}
+%   |\fetchverses{Mat 2:1}| or |\fetchverses{Mat 2:1-10}|
+% \end{quote}
+% in the latter case, verses 1 through 10 are fetched. Note that you can specify a range of verses
+% within the same chapter, \emph{but not across chapters}. Though \cs{fetchverses} does not typeset
+% the reference, but the \DescribeMacro{\fetchverses*}\cs{fetchverses*} variation does. Thus
+% |\fetchverses*{Mat 2:1}| typesets the passage: \fetchverses*{Mat 2:1}
+% \changes{v2.1}{2016/09/21}{Extended \string\texttt{replace} to \string\cs{fetchverses}}
+%    \begin{macrocode}
+\newcommand\fetchverses{\bgroup\setNumStyle
+    \@ifstar{\let\isitstar\fb@One\fb@fetchversesi}
+        {\let\isitstar\fb@Zero\fb@fetchversesi}}
+%    \end{macrocode}
+% We continue. We get the arguments and parse them.
+%    \begin{macrocode}
+\newcommand\fb@fetchversesi[2][]{\def\@rgi{#1}\ifx\@rgi\@empty\else
+    \useBookStyle{#1}\ifx\fbpes@altstar\@empty\else
+    \ifx\fbpes@alt\@empty\else\PackageWarning{fetchbibpes}
+    {You have specified both alt* and alt,\MessageBreak
+     removing the alt key}\fi\fi\fi\let\.\fbp@period\fbpes@localdefs
+    \fb@getBookAPassage#2\@nil\fb@fetchversesii#2\@nil}
+%    \end{macrocode}
+% Continuing, we build \cs{book@passage} and cycle through all requested verses,
+% retrieving them as we go.
+%    \begin{macrocode}
+\def\fb@fetchversesii#1 #2\@nil{%
+    \ifbookexists
+        \def\book@passage{\fbp@format\l@fbp@delim\expandafter\fb@fmtBook
+            \expandafter{\bib@book}\fb@bksp\bib@passage
+            \fbpes@transl\r@fbp@delim}\else
+        \def\book@passage{\l@fbp@delim\fb@qq\bib@book\fb@qq
+            \fb@bksp\bib@passage\fbpes@transl\r@fbp@delim}\fi
+    \if\isitstar\fb@One\ifKV@fbpes@citeatend\else
+        \fbpes@priorref{\book@passage}\@fterRef\fi\fi
+    \fb@get@chptverse#2\@nil
+    \@tempcnta\fb@verseEnd\relax
+    \advance\@tempcnta\@ne
+    \edef\fb@verseEnd{\the\@tempcnta}%
+    \@tempcnta\fb@verseStart\relax
+    \bgroup\fbp@pformat\ifx\fbp@pcolor\@empty\else\color{\fbp@pcolor}\fi
+    \l@fbp@enclose
+%    \end{macrocode}
+%    Before entering the loop, we determine if \texttt{alt*} is used.
+%    \begin{macrocode}
+    \ifx\fbpes@altstar\@empty\fbpes@altstarfalse
+        \else\fbpes@altstartrue\fi
+%    \end{macrocode}
+%    Rework of \cs{fetchverses} to support the \texttt{replace} key.
+%    \begin{macrocode}
+    \@whilenum\@tempcnta<\fb@verseEnd\do{%
+        \ifnum\@tempcnta=\fb@verseStart\relax
+            \ifKV@fbpes@showfirst\verseFmt{\the\@tempcnta}\fi
+        \else\space\verseFmt{\the\@tempcnta}\fi
+%    \end{macrocode}
+%    If the user has specified \texttt{alt*}, then we retrieve the \texttt{alt} value
+%    from a list of values.
+%    \begin{macrocode}
+        \iffbpes@altstar\fb@getnextalt\fi
+        \@fterVerseFmt{\the\@tempcnta}\edef\bib@ver{\bib@book\space
+            \bib@chpt:\the\@tempcnta\fbpes@from\fbpes@alt}%
+%    \end{macrocode}
+%    Determine if the \cs{bib@ver} is defined.
+%    \begin{macrocode}
+        \@ifundefined{\bib@ver}{%
+%    \end{macrocode}
+%    The verse is undefined, try the passage without the \texttt{alt} specification,
+%    if there is one.
+%    \begin{macrocode}
+            \ifx\fbpes@alt\@empty
+%    \end{macrocode}
+%    If there is no \texttt{alt} key, this verse is tagged as undefined (??).
+%    Otherwise, we see if verse is defined without the \texttt{alt} key.
+%    \begin{macrocode}
+            \else
+                \ifuseoldalt\else
+                    \edef\bib@ver{\bib@book\space
+                        \bib@chpt:\the\@tempcnta\fbpes@from}\fi
+                \@ifundefined{\bib@ver}{%
+%    \end{macrocode}
+%    The verse is undefined without an \texttt{alt} key. No action taken, the verse
+%    will be marked with `??' to indicate undefined verse.
+%    \begin{macrocode}
+                    \edef\bib@ver{\bib@book\space
+                        \bib@chpt:\the\@tempcnta\fbpes@from\fbpes@alt}%
+                }{%
+%    \end{macrocode}
+%    The verse is defined without an \texttt{alt} key. Only informative action
+%    is taken, the current value of \cs{bib@ver} will be used (without \texttt{alt}).
+%    \begin{macrocode}
+                    \PackageWarning{fetchbibpes}{An alt value
+                    of\fbpes@alt\space is specified.
+                    \MessageBreak The verse '\bib@ver\fbpes@alt'
+                    is undefined,\MessageBreak using
+                    '\bib@ver' instead}%
+                }%
+            \fi
+        }{%
+%    \end{macrocode}
+%    The verse is defined as specified. No action, we use this verse reference.
+%    \begin{macrocode}
+        }%
+        \@ifundefined{\bib@ver}{\fb@qq(\bib@ver)\fb@qq}
+            {\bgroup
+                \ifx\fbpes@replace\@empty\@nameuse{\bib@ver}\else
+                    \fp@looptoreplace\fi
+            \egroup}\advance\@tempcnta\@ne
+%    \end{macrocode}
+%    This is the bottom of the \cs{@whilenum} do loop.
+%    When \texttt{alt*} is specified, and we've reached the end of the list, we need a way
+%    of gracefully exiting. \cs{fb@@getnextalt} sets \cs{iffound@ltstarstop} to \texttt{true},
+%    whereas the normal state is \texttt{false}.
+%    \begin{macrocode}
+        \iffound@ltstarstop\let\fbpes@alt\@empty\fi
+    }%
+    \r@fbp@enclose\egroup
+    \ifKV@fbpes@citeatend\fbp@priorRefSpc{\book@passage}\fi
+    \egroup
+}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macrocode}
+\newif\iffound@ltstarstop \found@ltstarstopfalse
+\def\removeAltSt@r#1,\stopAltSt@r\@nil{\def\fbpes@altstar{#1}}
+\def\removeTr@ilSpcs#1 #2;{\def\@rgi{#1}}
+\def\stopAltSt@r{stopAltSt@r}
+\def\fb@getnextalt{\expandafter
+    \fb@@getnextalt\fbpes@altstar,\stopAltSt@r\@nil}
+\def\fb@@getnextalt#1,#2\@nil{\def\@rgi{#1}\edef\@rgii{#2}%
+    \fb@rmvspcsp{\@rgi}%
+    \ifx\@rgii\stopAltSt@r
+        \let\fbpes@altstar\@empty
+        \fbpes@altstarfalse\found@ltstarstoptrue\else
+        \removeAltSt@r#2\@nil\fi
+%    \end{macrocode}
+%    Remove any trailing spaces from the value of the \texttt{alt*} key.
+%    \changes{v2.2b}{2016/11/10}{Remove trailing spaces from value of \string\texttt{alt*} key}
+%    \begin{macrocode}
+        \edef\@tmpexp{\noexpand\removeTr@ilSpcs\@rgi\space;}\@tmpexp
+        \ifx\@rgi\@empty\let\fbpes@alt\@empty\else
+        \edef\fbpes@alt{ \@rgi}\fi
+}
+%    \end{macrocode}
+%
+%    \subsubsection{Formatting the verse numbers} We define three commands to
+%    support the formatting of the verse numbers.
+%    \DescribeMacro\verseFmtDef\cmd{\verseFmtDef} is the default formatting (verse
+%    number as a superscript); while \DescribeMacro\verseFmt\cmd{\verseFmt} formats the
+%    verse number, it takes one argument, which turns out to be the verse number;
+%    the command may be redefined. After redefinition, if you want to return to the
+%    default definition, just \DescribeMacro\verseFmtReset\cmd{\verseFmtReset}. Of
+%    course, \cmd{\verseFmtDef} may be redefined to have a different default
+%    definition.
+%    \begin{macrocode}
+\newcommand{\verseFmtDef}[1]{\ensuremath{{}^{\fb@sc{#1}}}}
+\newcommand{\verseFmt}[1]{\verseFmtDef{#1}}
+\newcommand{\verseFmtReset}{\def\verseFmt##1{\verseFmtDef{##1}}}
+%    \end{macrocode}
+% Below are verses showing the default representation of the verse numbers.
+%\begin{quote}
+% \fetchverses*[showfirst,abbr=none]{Gen 1:1-5}
+% \end{quote}
+% However, this formatting can be redefined to obtain the style of numbers you want.
+% In the passage that follows, I've changed the formatting style seen in some
+% Bibles of the multiple passages.
+%
+%\newlength\verseBoxLength
+%\settowidth{\verseBoxLength}{\normalsize\normalfont0000}
+%\renewcommand{\verseFmt}[1]{\par\noindent\makebox[\verseBoxLength][c]{#1}}
+%\afterRef{\par\kern3pt}
+%
+%\medskip\noindent
+%\fetchverses*[showfirst,delims,caps,format={\bfseries\sffamily},abbr=none]{Gen 1:1-5}
+%
+%\medskip\noindent Now we switch back to the default presentation style, we
+% make command declarations |\afterRef{}|\cs{verseFmtReset}.
+%
+%\afterRef{}\verseFmtReset
+% See the demo file \texttt{bibpes\_tst.tex} to see the source for the above passages.
+%
+%\medskip\noindent
+% We also define \cs{@afterVerseFmt} that is initially set to \cs{@gobble}.
+% The command is placed immediately after \cs{verseFmt} and may conveniently
+% redefined using \cs{afterVerseFmt}. The command is used primarily to place notes
+% in the margin of a Bible passage. \DescribeMacro\afterVerseFmt\cmd{\afterVerseFmt} is
+% a convenience command for setting \cs{@fterVerseFmt}.
+%    \begin{macrocode}
+\let\@fterVerseFmt\@gobble
+\def\afterVerseFmt#1{\def\@rgi{#1}\ifx\@rgi\@empty
+    \let\@fterVerseFmt\@gobble\else\def\@fterVerseFmt{#1}\fi}
+%    \end{macrocode}
+% Some utility commands.
+%    \begin{macrocode}
+\@ifundefined{text}{\def\fb@sc#1{\mbox{\scriptsize #1}}}
+    {\def\fb@sc#1{\text{#1}}}
+%    \end{macrocode}
+%
+% \subsubsection{Dealing with \textsl{Strong's Concordance}}
+%
+% When the KJV+ is used, for example, the text is annotated with cross-references
+% to \textsl{Strong's Concordance}. In the text file, the references are of the
+% form `\texttt{G\string|H\string\d+}', where \texttt{\string\d+} means one or more natural
+% numbers, `\texttt{G}' and `\texttt{H}' refer to the Greek and Hebrew scriptural texts.
+% The references come through in the TXT files as `\texttt{G3739}' or `\texttt{H7225}'.
+% When using the \textsf{WinEdt} editor, you can use a regular expression find
+% and replace these references with command versions (e.g., |\G{3739}| or |\H{7225}|):
+% \begin{quote}
+%\begin{tabular}{ll}
+% \textbf{Greek Strongs} & \textbf{Hebrew Strongs}\\
+% find: |G\(+$Numeric$\)| & find: |H\(+$Numeric$\)|\\
+%replace: |\\G\{\0\}| & replace: |\\H\{\0\}|
+%\end{tabular}
+%\end{quote}
+%This can be done in either the TXT or DEF file. If you are using \textsf{WinEdt}, you can use the specially
+%written \marginpar{\raggedleft Macro File}Macro File \texttt{bibpes\_strongs.edt}. Open the TXT or DEF file (DEF preferred) in \textsf{WinEdt}.
+%\marginpar{\raggedleft Procedure} The procedure for using this Macro File is a follows: (1) Use the menu \texttt{Macro\thinspace>\thinspace Execute Macro Script}, browse for
+% \texttt{bibpes\_strongs.edt} and select it; (2) the Find and Replace dialog box opens with various fields
+% pre-filled; (3) Press `Replace All', and the regular expression find and replace looks for expressions of the
+% form \texttt{Gnnnn} or \texttt{Hnnnn}, and replaces them with |\G{nnnn}| and
+% |\H{nnnn}|. The definitions of \cs{G} and \cs{H} follow; they may be redefined.
+%
+%    \begin{macrocode}
+\def\G#1{${}^{\fb@sc{G#1}}$}
+\def\H#1{${}^{\fb@sc{H#1}}$}
+%    \end{macrocode}
+%\subsubsection{Miscellaneous Commands}
+%    \begin{macrocode}
+\def\fb@gobtonil#1\@nil{}
+\def\fb@gettonil#1\@nil{\def\to@nilarg{#1}}
+\def\fb@ifspc{\ifx\@let@token\@sptoken
+    \let\fb@next\fb@xifspc\else
+    \let\fb@next\fb@gettonil\fi\fb@next}
+\begingroup
+\def\:{\fb@xifspc}
+\expandafter\gdef\: {\futurelet\@let@token\fb@ifspc}
+\endgroup
+\def\fb@strpspcs{\futurelet\@let@token\fb@ifspc}
+\def\fb@rmvspcsp#1{\expandafter\fb@strpspcs#1\@nil\edef#1{\to@nilarg}}
+%    \end{macrocode}
+%    \DescribeMacro{\letEach...\string\to} is a convenience command to \cs{let} several commands
+%    to another command, usually \cs{relax}. For example,
+%    \changes{v2.0a}{2016/09/19}{Added \string\cs{letEach...\string\cs{to}}}
+%\begin{verbatim}
+%   \letEach\cmdi\cmdii\cmdiii\to\relax
+%\end{verbatim}
+%is equivalent to |\let\cmdi\relax\let\cmdii\relax\let\cmdiii\relax|. See the sample file
+%\texttt{bibples\_replaced.tex} for an example of application.
+%    \begin{macrocode}
+\def\letEach#1\to#2{\@tfor\@tmp:=#1\do{\expandafter\let\@tmp=#2}}
+%    \end{macrocode}
+% \subsection{Environment for longer quotes}
+% {\LaTeX} has three environments for quoting long passages, these are
+% \texttt{quote}, \texttt{verse}, and \texttt{quotation}. In this package, we
+% define three environments based on these {\LaTeX} three, these are
+% \DescribeEnv{fpquote}\texttt{fpquote}, \DescribeEnv{fpverse}\texttt{fpverse},
+% and \DescribeEnv{fpquotation}\texttt{fpquotation}. We include an optional argument
+% for each of the environments for setting the \cs{leftmargin}, \cs{rightmargin}, and
+% \cs{itemindent}. Use the keys \IndexKey{leftmargin}\texttt{leftmargin},
+% \IndexKey{rightmargin}\texttt{rightmargin}, and \IndexKey{itemindent}\texttt{itemindent} to do this.
+% \changes{v1.7}{2016/04/11}{Add three quote environments.}
+%    \begin{macrocode}
+\define@key{fp@qts}{leftmargin}[\leftmargin]{\def\fp@qts@leftmargin{#1}}
+\def\fp@qts@leftmargin{\leftmargin}
+\define@key{fp@qts}{rightmargin}[\leftmargin]{%
+    \def\fp@qts@rightmargin{#1}}
+\def\fp@qts@rightmargin{\leftmargin}
+\define@key{fp@qts}{itemindent}[1.5em]{\def\fp@qts@itemindent{#1}}
+\def\fp@qts@itemindent{1.5em}
+\newenvironment{fpquote}[1][]
+   {\setkeys{fp@qts}{#1}\list{}
+        {\setlength{\leftmargin}{\fp@qts@leftmargin}%
+        \setlength{\rightmargin}{\fp@qts@rightmargin}}
+    \item\relax}
+   {\endlist}
+\newenvironment{fpverse}[1][]
+   {\let\\\@centercr\setkeys{fp@qts}{#1}%
+    \list{}{\itemsep \z@
+        \itemindent -\fp@qts@itemindent\relax
+        \listparindent\itemindent
+        \setlength{\leftmargin}{\fp@qts@leftmargin}%
+        \setlength{\rightmargin}{\fp@qts@rightmargin}%
+        \advance\leftmargin \fp@qts@itemindent\relax}%
+    \item\relax}
+   {\endlist}
+\newenvironment{fpquotation}[1][]
+   {\setkeys{fp@qts}{#1}\list{}{\listparindent \fp@qts@itemindent\relax
+        \itemindent \listparindent
+        \setlength{\leftmargin}{\fp@qts@leftmargin}%
+        \setlength{\rightmargin}{\fp@qts@rightmargin}%
+        \parsep \z@ \@plus\p@}%
+    \item\relax}
+   {\endlist}
+%    \end{macrocode}
+%
+% \subsection{Marginal notes}
+% We devise a scheme for placing notes in the margin for individual notes on the margins.
+% \par\medskip\noindent
+% \cs{fb@bibnoteshold} holds the notes (comments) for the selected passage.
+%    \begin{macrocode}
+\let\fb@bibnoteshold\@empty
+%    \end{macrocode}
+% The \DescribeMacro\verseCmts\cs{verseCmts} command is used to define the notes (comments) as a
+% function of the verse number. For example, the following declaration is used in the example below.
+%\begin{verbatim}
+%    \verseCmts{%
+%        {In the beginning God creates\dots}    % v1
+%        {Earth void}                           % v2
+%        {Light!}                               % v3
+%        {}                                     % v4
+%        {First day}                            % v5
+%    }
+%\end{verbatim}
+% Its argument is a series of token (comments enclosed in braces), the first token is the comment
+% for verse 1, then verse 2, and so on. All verse must have a comment, even an empty comment.
+%    \begin{macrocode}
+\def\verseCmts#1{\def\@rg{#1}\ifx\@rg\@empty
+    \let\fb@bibnoteshold\@empty\let\fb@next\relax\else
+    \def\fb@next{\verseCmtsi{#1}}\fi\fb@next}
+\def\verseCmtsi#1{\@tfor\bib:=#1\do{%
+        \g@addto@macro\fb@bibnoteshold{\or}%
+        \expandafter\g@addto@macro\expandafter
+            \fb@bibnoteshold\expandafter
+            {\expandafter\fb@mpbib\expandafter{\bib}}%
+    }\g@addto@macro\fb@bibnoteshold{\fi}%
+}
+%    \end{macrocode}
+%\DescribeMacro\fbMarParFmt may be redefined by the document author. It determines how
+%the  Bible notes are to appear in the margin. The argument \texttt{\#1} is the note
+%to be displayed in the margin.
+%\changes{v1.7}{2016/04/11}{Added \string\cs{fbResetMarParFmt} to reset the definition of
+%   \string\cs{fbMarParFmt} to its default, given by \string\cs{fb@DefaultMarParFmt}.}
+%    \begin{macrocode}
+\newcommand\fb@DefaultMarParFmt[1]{\marginpar{\footnotesize\raggedright
+    \verseFmt{\vrseNum}#1}}
+\newcommand{\fbMarParFmt}[1]{\fb@DefaultMarParFmt{#1}}
+\newcommand{\fbResetMarParFmt}{%
+    \gdef\fbMarParFmt##1{\fb@DefaultMarParFmt{##1}}}
+%    \end{macrocode}
+% \cs{fb@mpbib} is inserted into \cs{fb@bibnoteshold} by \cs{verseCmtsi}.
+%    \begin{macrocode}
+\def\fb@mpbib#1{\def\@rg{#1}\ifx\@rg\@empty\else
+    \fbMarParFmt{#1}\fi}%
+%    \end{macrocode}
+% Now to make this all work, you need to expand |\afterVerseFmt{\fb@cmtV}|;
+% However, two helper commands may be used, these are \DescribeMacro\fbMarNotesOn\cmd{\fbMarNotesOn}
+% and \DescribeMacro\fbMarNotesOff\cmd{\fbMarNotesOff}. The former to turn on marginal notes,
+% the latter to turn them off again. \cs{fb@cmtV} is placed just after \cs{verseFmt}.
+%    \begin{macrocode}
+\newcommand\fbMarNotesOn{\afterVerseFmt{\fb@cmtV}}
+\newcommand\fbMarNotesOff{\afterVerseFmt{}}
+%    \end{macrocode}
+% It is \cs{fb@cmtV} that selects the correct note for the current verse. It uses
+% \cs{fb@bibnoteshold}. If \cs{fb@bibnoteshold} is empty, the command does nothing.
+%    \begin{macrocode}
+\def\fb@cmtV{\ifx\fb@bibnoteshold\@empty\expandafter\@gobble\else
+    \expandafter\fb@cmtVi\fi}
+\def\fb@cmtVi#1{\def\vrseNum{#1}%
+    \def\fb@bifcase{\ifcase#1}\expandafter\fb@bifcase\fb@bibnoteshold}
+%    \end{macrocode}
+%\paragraph*{Example}
+%\fbMarNotesOn
+%\verseCmts{^^A
+%    {In the beginning God creates\dots}
+%    {Earth void}
+%    {Light!}
+%    {}
+%    {First day}
+%}
+%\bgroup
+%\normalmarginpar\oddsidemargin=80pt\marginparpush0pt
+%\renewcommand{\fbMarParFmt}[1]{^^A
+%    \marginpar{\footnotesize^^A
+%    \makebox[0pt][r]{\verseFmt{\vrseNum}\parbox[t]{\oddsidemargin}{\raggedright\strut#1\strut}^^A
+%    \hspace{\marginparsep}}\hfill}}
+%\afterRef{\par\kern3pt}
+%\newenvironment{myquote}
+%   {\list{}{\setlength\rightmargin{\marginparsep+\oddsidemargin}^^A
+%       \leftmargin=0pt}^^A
+%    \item\relax}^^A
+%   {\endlist}
+%\begin{myquote}
+%\fetchverses*[showfirst,delims,caps,format={\bfseries\sffamily},abbr=none]{Gen 1:1-5}
+%\end{myquote}\egroup
+%\fbMarNotesOff\verseCmts{}\noindent
+%After this passage, we turn everything off with |\fbMarNotesOff\verseCmts{}|.
+%
+% \subsection{Fixing the double quote}
+% We have a problem with the double quote (\texttt{"}), used by e-Sword. We
+% develop a simple solution. We make `\texttt{"}' an active character, and have a running
+% count going (\cs{dqcnt}), if \cs{dqcnt} is odd we typeset |''|, else we typeset
+% |``|. This may work if the fetched verses always contain a complete matched pair of
+% double quotes, with no nested double quotes.
+%    \begin{macrocode}
+\newcount\fp@dqcnt \fp@dqcnt=0
+%    \end{macrocode}
+%    \changes{v1.7}{2016/04/11}{Added single quote counter}
+%    (2016/04/11) Added single quote counter
+%    \begin{macrocode}
+\newcount\fp@sqcnt \fp@sqcnt=0
+%    \end{macrocode}
+%    Define left and right, single and double quotes for later use.
+%    \begin{macrocode}
+\def\fp@lq{`}\def\fp@rq{'}\def\fp@lqq{``}\def\fp@rqq{''}
+%    \end{macrocode}
+%    \changes{v1.7}{2016/04/11}{Advance \string\cs{fp@dqcnt} and \string\cs{fp@sqcnt} globally}
+%    (2016/04/11) Advance \cs{fp@dqcnt} and \cs{fp@sqcnt} globally
+%    \begin{macrocode}
+\def\h@ndledq{\ifodd\fp@dqcnt\fp@rqq\else\fp@lqq\fi
+    \global\advance\fp@dqcnt\@ne}
+\def\h@ndlesq{\ifodd\fp@sqcnt\fp@rq\else\fp@lq\fi
+    \global\advance\fp@sqcnt\@ne}
+%    \end{macrocode}
+%    \changes{v1.8}{2016/09/14}{Changes in quote handling routines to allow for
+%    latex markup for quotes.}
+%    (2016/09/14) Changes in quote handling routines to allow for
+%    latex markup for quotes.\par
+%    The active left single quote comes here, we see what the next token is, and continue
+%    at \cs{bQsCont@fp}.
+%    \begin{macrocode}
+\def\bH@ndleltxQs{\futurelet\fp@next\bQsCont@fp}
+%    \end{macrocode}
+%    Single quote followed by another single quote, we \cs{@gobble} the next one up
+%    and replace them with \cs{fp@lqq}.
+%    \begin{macrocode}
+\def\bH@ndleltxDQ{\fp@lqq\@gobble}
+%    \end{macrocode}
+%    If its a latex single left quote, we replace it with \cs{fp@lq}.
+%    \begin{macrocode}
+\def\bH@ndleltxSQ{\fp@lq}
+%    \end{macrocode}
+%    If author is using {\LaTeX} quotes, the flow comes here, we test to see if
+%    this is a double left quote or not. Continue
+%    at \cs{eQsCont@fp}.
+%    \begin{macrocode}
+\def\eH@ndleltxQs{\futurelet\fp@next\eQsCont@fp}
+%    \end{macrocode}
+%    Yes, a double latex right quote.
+%    \begin{macrocode}
+\def\eH@ndleltxDQ{\fp@rqq\@gobble}
+\def\eH@ndleltxSQ{\fp@rq}
+\def\fp@rq@choice{\ifNotL@TeXQuotes
+    \def\fp@next{\h@ndlesq}\else
+    \def\fp@next{\eH@ndleltxQs}\fi\fp@next
+}
+\begingroup\catcode`\"=\active \catcode`\'=\active \catcode`\`=\active
+%    \end{macrocode}
+%    For {\LaTeX} quoting system, we have two `intelligent' commands.
+%    \cs{bQsCont@fp} tests whether the next token is a single left quote,
+%    if it is, flow goes to \cs{bH@ndleltxDQ}, otherwise, it goes to
+%    \cs{bH@ndleltxSQ}. Similarly for right quotes.
+%    \begin{macrocode}
+\gdef\bQsCont@fp{\ifx\fp@next`\let\fp@next\bH@ndleltxDQ\else
+    \let\fp@next\bH@ndleltxSQ\fi\fp@next}
+\gdef\eQsCont@fp{\ifx\fp@next'\let\fp@next\eH@ndleltxDQ\else
+    \let\fp@next\eH@ndleltxSQ\fi\fp@next}
+%    \end{macrocode}
+%    \cs{cvrtdqs} creates active characters and associates commands for handling
+%    them. It is introduced through the \cs{@AddToVersesList} command.
+%    \begin{macrocode}
+\gdef\cvrtdqs{%
+%    \end{macrocode}
+%    Replace \cs{let} by \cs{gdef}, and \cs{protect} each command.
+%    \changes{v2.1}{2016/09/21}{Replace \string\cs{let} with \string\cs{gdef},  and protect
+%    the command body.}
+%    \begin{macrocode}
+    \expandafter\catcode\fp@lq\"=\active\gdef"{\protect\h@ndledq}%
+    \expandafter\catcode\fp@lq\'=\active\gdef'{\protect\fp@rq@choice}%
+    \expandafter\catcode\fp@lq\`=\active\gdef`{\protect\bH@ndleltxQs}%
+}
+\endgroup
+%    \end{macrocode}
+% In the case of unbalanced double quotes, you can force the correct quite to appear
+% by specifying \DescribeMacro{\bDQ}\cs{bDQ} (left-quote) or \DescribeMacro{\eDQ}\cs{eDB} (right-quote).
+%\changes{v1.7}{2016/04/11}{Added \cs{bDQ}, \cs{bSQ}, \cs{eDQ}, and \cs{eSQ} to reset the counters
+%   when there are unbalanced quotes or apostrophes.}
+%    \begin{macrocode}
+\def\bDQ{\global\fp@dqcnt=0 }\def\bSQ{\global\fp@sqcnt=0 }
+\def\eDQ{\global\fp@dqcnt=1 }\def\eSQ{\global\fp@sqcnt=1 }
+\def\ckDQs@End{\ifodd\fp@dqcnt\PackageWarning{fetchbibpes}
+    {An odd number of double quotes detected,\MessageBreak
+     please correct}\fi}
+\AtEndDocument{\ckDQs@End}
+%    \end{macrocode}
+% \cmd{\inputVerseList} is a command that inputs the requested files.
+%    \begin{macrocode}
+\def\inputVerseList#1{\InputIfFileExists{#1.def}
+    {\PackageInfo{fetchbibpes}{Inputting #1.def}}
+    {\PackageInfo{fetchbibpes}{#1.def cannot be found}}%
+}
+%    \end{macrocode}
+%\subsection{Inverse name lookup}\label{INL}
+% Some people like to type the full name of the chapter, we'll try to detect this, and convert
+% to \textsf{e-Sword} abbreviations.
+% \changes{v1.3}{2016/03/07}{Changed from inverse lookup to inverse and reverse lookup.}
+%    \begin{macrocode}
+\def\fb@inv@name#1#2{\csarg\def{inv@#2}{#1}}
+\def\fb@rev@name#1#2{\csarg\def{rev@#1}{#2}}
+\def\fb@twoway#1#2{\fb@inv@name{#1}{#2}\fb@rev@name{#1}{#2}}
+\fb@twoway{Gen}{Genesis}
+\fb@twoway{Exo}{Exodus}
+\fb@twoway{Lev}{Leviticus}
+\fb@twoway{Num}{Numbers}
+\fb@twoway{Deu}{Deuteronomy}
+\fb@twoway{Jos}{Joshua}
+\fb@twoway{Jdg}{Judges}
+\fb@twoway{Rth}{Ruth}
+\fb@twoway{1Sa}{ISamuel}
+\fb@twoway{2Sa}{IISamuel}
+\fb@twoway{1Ki}{IKings}
+\fb@twoway{2Ki}{IIKings}
+\fb@twoway{1Ch}{IChronicles}
+\fb@twoway{2Ch}{IIChronicles}
+\fb@twoway{Ezr}{Ezra}
+\fb@twoway{Neh}{Nehemiah}
+\fb@twoway{Est}{Esther}
+\fb@twoway{Job}{Job}
+\fb@twoway{Psa}{Psalms}
+\fb@twoway{Pro}{Proverbs}
+\fb@twoway{Ecc}{Ecclesiastes}
+\fb@twoway{Son}{SongofSolomon}
+\fb@twoway{Isa}{Isaiah}
+\fb@twoway{Jer}{Jeremiah}
+\fb@twoway{Lam}{Lamentations}
+\fb@twoway{Eze}{Ezekiel}
+\fb@twoway{Dan}{Daniel}
+\fb@twoway{Hos}{Hosea}
+\fb@twoway{Joe}{Joel}
+\fb@twoway{Amo}{Amos}
+\fb@twoway{Oba}{Obadiah}
+\fb@twoway{Jon}{Jonah}
+\fb@twoway{Mic}{Micha}
+\fb@twoway{Nah}{Nahum}
+\fb@twoway{Hab}{Habakkuk}
+\fb@twoway{Zep}{Zephaniah}
+\fb@twoway{Hag}{Haggai}
+\fb@twoway{Zec}{Zechariah}
+\fb@twoway{Mal}{Malachi}
+\fb@twoway{Mat}{Matthew}
+\fb@twoway{Mar}{Mark}
+\fb@twoway{Luk}{Luke}
+\fb@twoway{Joh}{John}
+\fb@twoway{Act}{Acts}
+\fb@twoway{Rom}{Romans}
+\fb@twoway{1Co}{ICorinthians}
+\fb@twoway{2Co}{IICorinthians}
+\fb@twoway{Gal}{Galatians}
+\fb@twoway{Eph}{Ephesians}
+\fb@twoway{Php}{Philippians}
+\fb@twoway{Col}{Colossians}
+\fb@twoway{1Th}{IThessalonians}
+\fb@twoway{2Th}{IIThessalonians}
+\fb@twoway{1Ti}{ITimothy}
+\fb@twoway{2Ti}{IITimothy}
+\fb@twoway{Tit}{Titus}
+\fb@twoway{Phm}{Philemon}
+\fb@twoway{Heb}{Hebrews}
+\fb@twoway{Jas}{James}
+\fb@twoway{1Pe}{IPeter}
+\fb@twoway{2Pe}{IIPeter}
+\fb@twoway{1Jn}{IJohn}
+\fb@twoway{2Jn}{IIJohn}
+\fb@twoway{3Jn}{IIIJohn}
+\fb@twoway{Jud}{Jude}
+\fb@twoway{Rev}{Revelation}
+%    \end{macrocode}
+%
+% \section{List of DEF to input}
+% We develop a list of all requested DEF files, and input them at
+% the beginning of the document. \DescribeMacro{\useverseslist}\cmd{useverseslist}
+% is a text macro that holds the list of commands \cmd{\inputVerseList\{\#1\}}, there
+% \texttt{\#1} is the a DEF file that is added to the list. We define a convenience
+% command \DescribeMacro\@AddToVersesList\cmd{\@AddToVersesList} to aid the effort to
+% make a list.
+%    \begin{macrocode}
+\let\useverseslist\@empty
+\newcommand{\@AddToVersesList}{\g@addto@macro\useverseslist}
+%    \end{macrocode}
+% We initialize the list by putting all we do in a group, and insert the code,
+% \cmd\cvrtdqs, to make the corrections for the double quotes.
+%    \begin{macrocode}
+\@AddToVersesList{\begingroup\cvrtdqs}
+\ifx\fbpes@useverses\@empty\else
+    \edef\temp@expand{\noexpand\@for\noexpand\@@tmp:=\fbpes@useverses}
+    \temp@expand\do{%
+        \ifx\@@tmp\@empty\else
+%    \end{macrocode}
+% Strip off any specious spaces
+%    \begin{macrocode}
+            \fb@rmvspcsp{\@@tmp}%
+%    \end{macrocode}
+% Expand where needed and add to the list
+%    \begin{macrocode}
+            \edef\tmp@expandverse{\noexpand
+                \inputVerseList{\fb@deffolder\@@tmp}}%
+            \expandafter\@AddToVersesList\expandafter{\tmp@expandverse}%
+        \fi
+    }%
+\fi
+\@AddToVersesList{\endgroup}
+\def\selectedVersesFrom#1{\PackageWarning{fetchbibpes}
+    {\string\selectedVersesFrom\space requires the\MessageBreak
+     useselverses option. Gobbling up\MessageBreak your argument}}
+%    \end{macrocode}
+% \subsection{\texttt{fbpes.cfg}, the configuration file}
+%    \begin{macrocode}
+\def\fb@loadcfg{\InputIfFileExists{fbpes.cfg}
+    {\PackageInfo{fetchpesbib}{Inputting fbpes.cfg}}
+    {\PackageInfo{fetchpesbib}{fbpes.cfg not found}}}
+\iffb@ignorecfg
+    \PackageInfo{fetchbibpes}{Ignoring CFG file}
+\else
+    \AtEndOfPackage{\fb@loadcfg}
+\fi
+%    \end{macrocode}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+%
+% \section{Retrieving only the verses needed}\label{s:sf}
+%    \begin{macrocode}
+%<*sf>
+%    \end{macrocode}
+%    One user wants to have \emph{an entire book} (1Jn, for example) and to retrieve only the
+%    verses needed. Thus, if\medskip
+%\begin{quote}\ttfamily
+%\string\BV(\textsl{book}{\visispace}\textsl{chapter}:\textsl{verse}{\visispace}\textsl{bible}){\visispace}\textsl{passage}\string\null
+%\end{quote}
+%    is one of the required verses,  it would be input as usual, otherwise \cs{BV} is set to
+% \cs{fb@gobbletonull}.
+%    \begin{macrocode}
+\def\fb@gobbletonull#1\null{}
+%    \end{macrocode}
+%Proposed syntax to be developed and implemented.
+%\begin{verbatim}
+%   \selectedVersesFrom
+%   {
+%       {onlyverses={1Jn 1:1-5,3:3-8}}
+%       {from=ISV,onlyverses={Gen 1:1-5}}
+%       {onlyverses=Mat}
+%       ...
+%   }
+%\end{verbatim}
+%    It is assumed the required DEF files are listed in the value of the
+%    \texttt{useverses} option of \textsf{fetchbibpes}.
+%
+%    \medskip\noindent We begin with
+%    \DescribeMacro\selectedVersesFrom\cmd{\selectedVersesFrom}. It takes one
+%    argument, that argument consists of a series of tokens as indicated above. The
+%    tokens take key-values, these are \texttt{onlyverses} and \texttt{from}. The
+%    \IndexKey{onlyverses}\texttt{onlyverses} consists of an \texttt{e-Sword}
+%    abbreviation for a book (or the full name, which gets converted) followed by a
+%    space, followed by standard notation for chapter and verses, as in
+%    |onlyverses={1Jn 1:1-5,3:3-8}|. If things work, only the verses declared
+%    are available to the document, potentially saving {\TeX} memory. The key
+%    \IndexKey{from}\texttt{from} key is required if the passage does not come
+%    from \texttt{KJV}, any other version (\texttt{ISV},\texttt{KJV+}) needs to be specified.
+%    \begin{macrocode}
+\define@key{sel@verses}{onlyverses}{\def\sel@verses@onlyverses{#1}%
+    \fb@getBookAPassage#1 \@nil
+%    \end{macrocode}
+%    \cs{fb@getBookAPassage} gets \cs{bib@book} and \cs{bib@passage}
+%    \begin{macrocode}
+    \ifx\bib@passage\@empty
+%    \end{macrocode}
+%    In this case, the book only was supplied
+%    \begin{macrocode}
+    \else
+%    \end{macrocode}
+%    Book and verse, remove final space
+%    \begin{macrocode}
+    \expandafter\fb@StrpSpcAftrBk\bib@passage \@nil
+    \fi
+}
+\let\sel@verses@onlyverses\@empty
+\def\fb@StrpSpcAftrBk#1 \@nil{\edef\bib@passage{#1}}
+%    \end{macrocode}
+% \cs{iffb@fromused} acts as a flag, set to true if the \texttt{from} key is specified.
+%    \begin{macrocode}
+\newif\iffb@fromused \fb@fromusedfalse
+\define@key{sel@verses}{from}{\fb@fromusedtrue
+    \def\@argi{#1}\ifx\@argi\@empty
+    \edef\sel@verses@from{ \fb@defaultBible}\else
+    \def\sel@verses@from{ #1}\fi}
+\edef\sel@verses@from{ \fb@defaultBible}%
+%    \end{macrocode}
+% \IndexKey{alt} The \texttt{alt} allows you to specify an alternate translation
+% of the passage.
+%    \begin{macrocode}
+\define@key{sel@verses}{alt}{\def\sel@verses@alt{ #1}}
+\let\sel@verses@alt\@empty
+%    \end{macrocode}
+%    We now develop the \DescribeMacro\selectedVersesFrom\cs{selectedVersesFrom} command.
+%    \begin{macrocode}
+\def\selectedVersesFrom#1{\@tfor\@rg:=#1\do
+    {%
+        \let\sel@verses@alt\@empty
+        \edef\sel@verses@from{ \fb@defaultBible}%
+        \edef\setkeysExp{\noexpand\setkeys{sel@verses}{\@rg}}\setkeysExp
+%    \end{macrocode}
+%    In case the author uses the full names, we do an inverse lookup, as needed.
+%    \begin{macrocode}
+        \expandafter\fb@doInvLUAsNeeded\bib@book\@nil
+%    \end{macrocode}
+%    We get each of the referenced verses (\texttt{1:1-5,3:3-8}) and mark them as special.
+%    \begin{macrocode}
+        \ifx\bib@passage\@empty\else
+        \expandafter\fb@getverses\expandafter{\bib@passage}\fi
+%    \end{macrocode}
+%    We mark the book as special (selected retrieval), we append the \texttt{from}
+%    and the \texttt{alt} (normally \cs{@empty}). We `register' this Book as one
+%    from which to take selected passages by defining the command below.
+%    For example, if we declare the following \cs{selectedVersesFrom} in the preamble,
+%\begin{verbatim}
+%\selectedVersesFrom{
+%    {onlyverses={Col 1:6}}
+%    {alt=Alt,onlyverses={Col 1:6-8}}
+%    {from=YLT,alt=Alt,onlyverses={Gen 1:1}}
+%    {alt=Alt1,onlyverses={Col 1:6}}
+%    {onlyverses=Mat}
+%}
+%\end{verbatim}
+%then commands with the following names are defined: \texttt{selb@Col KJV},
+%\texttt{selb@Col KJV Alt},
+%\texttt{selb@Gen YLT Alt}, \texttt{selb@Gen YLT},
+%\texttt{selb@Col KJV Alt1}, and \texttt{Mat KJV}, assuming \texttt{KJV} is the default Bible. If an author
+% tries to fetch a `\texttt{Col KJV}' passage, it may be undefined unless it is the particular
+%passage requested (\texttt{Col 1:6}). In the case of \texttt{Mat}, where no verses are specified,
+%the entire book of Matthew is excluded.
+%    \begin{macrocode}
+        \csarg\def{selb@\bib@book\sel@verses@from\sel@verses@alt}{}%
+        \ifx\sel@verses@alt\@empty\else
+%    \end{macrocode}
+%    If \texttt{alt} \emph{is specified}, we also select the same book,
+%    without the \texttt{alt} key.
+%    \begin{macrocode}
+        \csarg\def{selb@\bib@book\sel@verses@from}{}\fi
+    }%
+}
+%    \end{macrocode}
+%    The key to this feature is an intelligent \cs{BV} macro, here we
+%    redefined \DescribeMacro\BV\cmd\BV. The original definition is
+%    \begin{macrocode}
+\let\fb@BV\BV
+%    \end{macrocode}
+%    reproduced in \cs{fb@BV} we use it for ordinary passages and selected passages.
+%    Recall syntax for \cs{BV}, given through examples:
+%\begin{verbatim}
+%    \BV(Gen 1:1 KJV) In the beginning ... and the earth.\null
+%    \BV(Gen 1:1 ISV) In the beginning, ... the universe.\null
+%\end{verbatim}
+%    Some of the parsing below, grabs the book (\texttt{Gen}) and the translation
+%    (\texttt{KJV} in the first case and \texttt{ISV} in the second).
+%
+%    Now for the definition of the more discriminating version of \cs{BV}.
+%    \begin{macrocode}
+\def\BV(#1){\fb@getBookAPassage#1\@nil
+    \edef\bib@passage@exp{\bib@passage\space}%
+    \expandafter\fb@gettransl\bib@passage@exp\@nil
+    \@ifundefined{selb@\bib@book\bib@transl}
+%    \end{macrocode}
+%    If the book is \emph{not marked}, that is, if |selb@\bib@book\bib@transl| is undefined
+%    we treat this as an ordinary passage, and use \cs{fb@BV}.
+%    \begin{macrocode}
+    {\def\fb@next{\fb@BV(#1)}} % not a selected book
+%    \end{macrocode}
+%    The book \emph{is marked}, that is, the book is used for selected retrieval,
+%    we tread carefully with any of its passages.
+%    \begin{macrocode}
+    {%
+        \@ifundefined{sel@#1}
+%    \end{macrocode}
+%    The current passage reference (\texttt{\#1}) is \textit{not marked} for selected retrieval, so
+%    we gobble up everything to the termininating \cs{null}; this passage is not defined and is
+%    not available for fetching.
+%    \begin{macrocode}
+        {\let\fb@next\fb@gobbletonull}
+%    \end{macrocode}
+%    The current passage reference (\texttt{\#1}) \emph{is marked} for selected retrieval, so
+%    we treat it as an ordinary passage and use \cs{fb@BV}.
+%    \begin{macrocode}
+        {\def\fb@next{\fb@BV(#1)}}%
+    }\fb@next
+}
+%    \end{macrocode}
+%    What follows below are utility macros used above.
+%    \begin{macrocode}
+\def\fb@getPassageFrom#1 #2\@nil{\def\bib@passage{#1}\def\bib@from{#2}}
+\def\bib@transl@trimtrailspce#1 \@nil{\def\bib@transl{ #1}}
+\def\fb@gettransl#1 #2\@nil{% 1:1 ISV vs just 1:1
+    \def\bib@transl{#2}\ifx\bib@transl\@empty
+        \let\bib@transl\@empty\else
+        \bib@transl@trimtrailspce#2\@nil\fi}
+%    \end{macrocode}
+%    Get and mark the passages for selected retrieval.
+%    \begin{macrocode}
+\def\fb@getverses#1{% 1:1-5,3:3-8
+    \@for\fb@versesvar:=#1\do{\fb@rmvspcsp{\fb@versesvar}%
+        \expandafter\fb@markeach\expandafter{\fb@versesvar}}%
+}
+%    \end{macrocode}
+%    Mark the passage reference passed. We mark by creating a macro
+%    command names `|\@nameref{sel@1Jn 1:1}|' or `|\@namedef{sel@Gen 1:1 ISV}|', for example.
+%    \begin{macrocode}
+\def\fb@markeach#1{%
+%    \end{macrocode}
+%    \cs{fb@get@chptverse} takes its argument (\texttt{1:1-5}), sets
+%    the chapter (\cs{bib@chpt}) and calculates \cs{fb@verseEnd} and \cs{fb@verseStart}.
+%    \begin{macrocode}
+    \fb@get@chptverse#1\@nil
+%    \end{macrocode}
+%    Leading up to the \cs{@whilenum} look, we set the range, for something like \texttt{1:1-5}, we
+%    calculate \cs{fb@verseEndpi} to be \cs{fb@verseEndp + 1}.
+%    \begin{macrocode}
+    \@tempcnta\fb@verseEnd\relax
+    \advance\@tempcnta\@ne
+    \edef\fb@verseEndpi{\the\@tempcnta}%
+    \@tempcnta\fb@verseStart\relax
+    \@whilenum{\@tempcnta<\fb@verseEndpi\relax}\do
+        {\csarg\edef{sel@\bib@book\space
+            \bib@chpt:\the\@tempcnta\sel@verses@from\sel@verses@alt}{}
+         \advance\@tempcnta\@ne}%
+}
+%    \end{macrocode}
+% See the test file \texttt{bibpes\_sf.tex}.
+%    \begin{macrocode}
+%</sf>
+%<*sr>
+%    \end{macrocode}
+%    \section{The \protect\cs{sr} command}\label{s:sr}
+%    \DescribeMacro{\sr} is designed to be used with the \textsf{bibleref-parse}
+%    package. It is a command that takes two arguments, if the first one is
+%    non-empty, the text of the argument appears in \emph{italics}. The second
+%    argument are references to one or more books of the Bible and passages within the books.
+%    The syntax for the second argument is illustrated by an example:
+%\begin{quote}\ttfamily
+%Psa 91:3,14-16;1Co 11; Galatians 5:6
+%\end{quote}
+%    The first two books referenced uses the three-letter abbreviation of
+%    \textsf{e-Sword}, the last one (Galatians) uses a full book name. The
+%    recognized full book names are the second arguments of the \cs{fb@twoway}
+%    command. Multiple passages within the same book are separated by commas,
+%    while references of different books are separated by semicolons. There can
+%    be a space following a semicolon. This second argument is passed to the
+%    \cs{pibibleverse} command of the \textsf{bibleref-parse} package.
+%    \begin{macrocode}
+\newcommand{\sr}[2]{\def\@rgi{#1}\convBkN@mes{#2}%
+    \ifx\@rgi\@empty\else\textit{#1}\ \fi
+%    \end{macrocode}
+%   The converted version of \texttt{\#2} is in the \cs{convdBkN@mes} command, which we
+%   expand before \cs{pibibleverse} sees it.
+%    \begin{macrocode}
+    \textbf{(\expandafter\pibibleverse\expandafter{\convdBkN@mes})}}%
+%    \end{macrocode}
+%   \cs{convBkN@mes} converts the book names passed through the \texttt{\#1} argument to
+%   names recognized by the \textsf{bibleref-parse} package.
+%   As far as this package is concerned, we only are interested in the book names. The syntax
+%   of what we are parsing is as follows:
+%\begin{quote}\ttfamily
+%\meta{Book\SUB{1}}{\visispace}\ameta{stuff\SUB{1}};\meta{Book\SUB{2}}{\visispace}\ameta{stuff\SUB{2}};...
+%\end{quote}
+% \cs{convBkN@mes} searches through its argument, picking off the book and the stuff.
+% \cs{convdBkN@mes} will hold the converted argument of \texttt{\#1}.
+%    \begin{macrocode}
+\def\convBkN@mes#1{\let\convdBkN@mes\@empty
+    \convBkN@mesi#1;;\@nil}
+\def\convBkN@mesi#1 #2\@nil{%
+    \def\fb@thisbook{#1}\fb@rmvspcsp{\fb@thisbook}%
+%    \end{macrocode}
+%   determine whether the number of tokens is three or more than three
+%    \begin{macrocode}
+    \fb@ifItsiiiLttrs#1\@nil
+%    \end{macrocode}
+%   \cs{fb@ifItsiiilttrs} defines \cs{fb@itsiii} to be \texttt{iftrue} if there are
+%   only three letters, and to \texttt{iffalse} otherwise.
+%    \begin{macrocode}
+    \csname\fb@itsiii\endcsname
+%    \end{macrocode}
+%   Three tokens only, we use reverse lookup \texttt{Galatians --> Gal}, for example
+%    \begin{macrocode}
+        \edef\fb@expand@add{\noexpand\g@addto@macro
+            \noexpand\convdBkN@mes{\@nameuse{rev@\fb@thisbook}}}\else
+%    \end{macrocode}
+%   More than three letters, we assume author is passing a full book name
+%   (the second argument of one of the \cs{fb@twoway} commands).
+%    \begin{macrocode}
+        \edef\fb@expand@add{\noexpand\g@addto@macro
+%    \end{macrocode}
+%   add this name to \cs{convdBkN@mes}.
+%    \begin{macrocode}
+            \noexpand\convdBkN@mes{\fb@thisbook}}\fi
+%    \end{macrocode}
+%   Expand the above choice
+%    \begin{macrocode}
+    \fb@expand@add
+%    \end{macrocode}
+%   now get passages up to the first semicolon (;). We begin a look that flows from
+%   \cs{getp@assage} to \cs{convBkN@mesi} and back again until there are more semi-colon delimited
+%   arguments.
+%    \begin{macrocode}
+    \getp@ssage#2\@nil
+}
+%    \end{macrocode}
+%   All books are three or more letters; we determine if the name passed is three letters
+%   or more than three letters.
+%    \begin{macrocode}
+\def\fb@ifItsiiiLttrs#1#2#3#4\@nil{\def\@rgiv{#4}\ifx\@rgiv\@empty
+    \def\fb@itsiii{iftrue}\else\def\fb@itsiii{iffalse}\fi
+}
+%    \end{macrocode}
+% We get the first passage up to the first semi-colon, add it to the
+% \cs{convdBkN@mes}, the loop pack to \cs{convBkN@mesi} if \texttt{\#2} is not empty
+%   \begin{macrocode}
+\def\getp@ssage#1;#2;\@nil{\def\@rgii{#2}\fb@rmvspcsp{\@rgii}%
+    \edef\fb@expand@add{\noexpand\g@addto@macro
+%    \end{macrocode}
+%   Separate the book and the passage by a space
+%    \begin{macrocode}
+        \noexpand\convdBkN@mes{ #1;}}%
+    \fb@expand@add
+%    \end{macrocode}
+%   if \cs{@rgii} is empty we are done and we finish up; otherwise, we look back
+%   to \cs{convBkN@mesi}.
+%    \begin{macrocode}
+    \edef\@rgii{\@rgii}\ifx\@rgii\@empty
+        \def\fb@next{\fb@rmlstsemi}\else
+        \def\fb@next{\expandafter\convBkN@mesi\@rgii;\@nil}\fi
+    \fb@next
+}
+%    \end{macrocode}
+% We remove the final semicolon from the end of the final converted string
+% contained in \cs{convdBkN@mes}.
+%    \begin{macrocode}
+\def\fb@rmlstsemi{\expandafter\fb@rmlstsemii\convdBkN@mes\@nil}
+\def\fb@rmlstsemii#1;\@nil{\def\convdBkN@mes{#1}}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</sr>
+%    \end{macrocode}
+%    \begin{macrocode}
+%<*fsubstr>
+%    \end{macrocode}
+%
+%    \section{Fetching a substring of a verse}
+%
+%    One user wants the ability to fetch a \emph{substring of a verse}, go figure. Well, we'll try.
+%    We take the target verse and mark it off by inserting markers using basically the \texttt{replace} code.
+%    Using these markers, we extract the substrings.
+%
+%    We begin by defining new keys and supporting commands. We rely heavily on the earlier replace code.
+%    \changes{v2.3}{2016/12/17}{}
+%    \begin{macrocode}
+\define@key{fbpesvprts}{marks}[]{\fp@cntArgs#1\stop@rg
+    \xdef\nMarks{\fp@nReplace}\def\fbpesvprts@marks{#1}%
+    \def\fbpes@replace{#1{}}}
+\let\fbpesvprts@marks\@empty
+\define@key{fbpesvprts}{name}[]{\def\@rgi{#1}%
+    \ifx\@rgi\@empty\else
+        \@ifundefined{mvname#1}{\global\csarg\let{mvname#1}\null
+            \def\fbpesvprts@name{#1}}
+            {\PackageError{fetchbibpes}{%
+                The value assigned for the `name' key\MessageBreak
+                is already in use, choose another}
+                {Assign a value for `name' in \string\markverse}%
+            }%
+    \fi
+}
+%    \end{macrocode}
+%    The \texttt{fbpesfsubstr} is for \cs{fetchsubstrOf}.
+%    \begin{macrocode}
+\define@key{fbpesfsubstr}{name}[]{\def\@rgi{#1}%
+    \ifx\@rgi\@empty\else
+        \@ifundefined{mvname#1}{% Not declared earlier by \markverse
+            \PackageError{fetchbibpes}{%
+               The value `#1' has not been assigned earlier\MessageBreak
+               for the `name' key in \string\markverse}
+               {You've possibly mistyped the name,
+                or `name=#1'\MessageBreak was not declared earlier
+                in a \string\markverse\space command}%
+            }{\def\fbpesvprts@name{#1}}%
+    \fi
+}
+\define@key{fbpesfsubstr}{begin}[]{\def\fbpesvprts@begin{#1}}
+\let\fbpesvprts@begin\@empty
+\define@key{fbpesfsubstr}{end}[]{\def\fbpesvprts@end{#1}}
+\let\fbpesvprts@end\@empty
+\let\fbpesvprts@name\@empty
+\def\fb@removeBook#1 #2\@nil{%
+    \fb@get@chptverse#2\@nil
+}
+\def\fp@getOne#1#2\@nil{\def\fp@FT{#1}\def\fbpes@replace{#2}}%
+\let\bMrkFP\relax \let\eMrkFP\relax
+\newif\iffirstgr@b \firstgr@btrue
+\newwrite\bvout
+%    \end{macrocode}
+%    The \DescribeMacro{\gr@bSegment}\cs{gr@bSegment} extracts the substring set
+%    off by the two marks \cs{bMrkFP} and \cs{eMrkFP}. It also write to the hard
+%    disk a \cs{BV} definition.
+%    \begin{macrocode}
+\long\def\gr@bSegment#1\bMrkFP#2\eMrkFP#3\@nil{%
+    \csarg\gdef{\fbpesvprts@name\thisIndex}{#2}%
+%    \end{macrocode}
+%    Another choice for \cs{fb@passage} is to include \verb~#1~, which is the
+%    text prior to the setting of the first mark. For now, we use \verb~#3~
+%    \begin{macrocode}
+    \def\fb@passage{#3}% #1#3
+%    \end{macrocode}
+%    We write these verse substrings as \cs{BV} definitions to the hard disk.
+%    \begin{macrocode}
+    \writeToJobnameBV
+}
+\def\writeSubstrNotFound{%
+    \csarg\gdef{\fbpesvprts@name\thisIndex}{\expandafter
+        \string\fb@qq(alt=\fbpesvprts@name\thisIndex: substring not identified)\expandafter
+        \string\fb@qq}%
+    \writeToJobnameBV
+}
+\def\writeToJobnameBV{%
+    \iffirstgr@b
+        \immediate\openout\bvout \jobname-bv.cut
+        \immediate\write\bvout{\string\begin{declareBVs*}}\fi
+    \global\firstgr@bfalse
+    \immediate\write\bvout{\string\BV(\bib@ver\space\fbpesvprts@name\thisIndex)
+    \@nameuse{\fbpesvprts@name\thisIndex}\string\null}%
+}
+%    \end{macrocode}
+%    \begin{macro}{\markverse}
+%    Use this command to identify the verse you want to extract from, and supply the location
+%    of the various markers. The syntax is
+%\begin{quote}\ttfamily
+%\cs{markverse}[name=\ameta{name},\\
+%\null\quad\quad marks=\darg{\ameta{find\SUB1}}\darg{\ameta{find\SUB2}}...\darg{\ameta{find\SUB5}}\darg{\ameta{find\SUB6}}...]\darg{\ameta{verref}}
+%\end{quote}
+%Should we support \texttt{from} and \texttt{alt} keys? Currently, we only support one verse at a time.
+%That is, \texttt{\ameta{verref}} is of the form \texttt{\ameta{book}\visispace\ameta{chapter}:\ameta{verse}}
+%    \begin{macrocode}
+\newcommand\markverse[2][]{\bgroup
+%    \end{macrocode}
+%    The only key in the \texttt{fbpes} family we support is \texttt{from} (\cs{fbpes@from}).
+%    The keys in the \texttt{fbpesvprts} supported are \texttt{name} and \texttt{marks}.
+%    \begin{macrocode}
+    \setkeys{fbpesvprts,fbpes}{#1}%
+    \ifx\fbpesvprts@name\@empty
+        \PackageError{fetchbibpes}{%
+        You have not specified a value\MessageBreak
+        for the name key, please fix}{}\fi
+    \ifx\fbpesvprts@marks\@empty
+        \PackageWarning{fetchbibpes}{%
+        You have not specified any values\MessageBreak
+        for the marks key, please fix.\MessageBreak
+        Meanwhile, I'll set marks={}{}}%
+        \xdef\nMarks{2}\def\fbpesvprts@marks{{}{}}%
+        \def\fbpes@replace{{}{}{}}\fi
+    \fb@getBookAPassage#2\@nil
+    \fb@removeBook#2\@nil
+    \ifnum\fb@verseStart=\fb@verseEnd\relax\else
+        \PackageWarning{fetchbibpes}{You've specified multiple verses
+        (\fb@verseStart-\fb@verseEnd).\MessageBreak
+        The command \string\markverse\space
+        supports only a single verse.\MessageBreak
+        Will set the End verse equal to the Start verse\MessageBreak
+        and continue}\edef\fb@verseEnd{\fb@verseStart}%
+    \fi
+%    \end{macrocode}
+%    Now go through the referenced verse search for the marks
+%    \begin{macrocode}
+    \@tempcnta\fb@verseEnd\relax
+    \advance\@tempcnta\@ne
+    \edef\fb@verseEnd{\the\@tempcnta}%
+    \@tempcnta\fb@verseStart\relax
+    \let\fbpes@alt\@empty % the alt key is not supported
+    \@whilenum\@tempcnta<\fb@verseEnd\relax\do{%
+        \edef\bib@ver{\bib@book\space
+                \bib@chpt:\the\@tempcnta\fbpes@from\fbpes@alt}%
+        \@ifundefined{\bib@ver}{%
+            \ifx\fbpes@alt\@empty\else
+                \ifuseoldalt\else
+                    \edef\bib@ver{\bib@book\space
+                        \bib@chpt:\the\@tempcnta\fbpes@from}\fi
+                \@ifundefined{\bib@ver}{%
+                    \edef\bib@ver{\bib@book\space
+                        \bib@chpt:\the\@tempcnta\fbpes@from\fbpes@alt}%
+                }{%
+                    \PackageWarning{fetchbibpes}{An alt value
+                    of\fbpes@alt\space is specified.
+                    \MessageBreak The verse '\bib@ver\fbpes@alt'
+                    is undefined,\MessageBreak using
+                    '\bib@ver' instead}%
+                }%
+            \fi
+        }{}%
+        \@ifundefined{\bib@ver}{\fb@qq(\bib@ver)\fb@qq}
+            {%
+%    \end{macrocode}
+% OK, here is where we begin our loop to find and set the markers.
+%    \begin{macrocode}
+                \fp@loopformarks
+            }\advance\@tempcnta\@ne
+            \iffound@ltstarstop\let\fbpes@alt\@empty\fi
+    }%
+    \egroup
+}
+\let\markverseIn\markverse
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\fetchsubstrOf}
+%    Use this command to fetch the saved substrings.
+%\begin{quote}\ttfamily
+%\cs{fetchsubstrOf[name=\ameta{myname},begin=\ameta{bCode},end=\ameta{eCode}]\darg{1}}\\[3pt]
+%\cs{fetchsubstrOf[name=\ameta{myname},begin=\ameta{bCode},end=\ameta{eCode}]\darg{2}}
+%\end{quote}
+%    \begin{macrocode}
+\newcommand\fetchsubstrOf[2][]{%
+    \setkeys{fbpesfsubstr}{#1}%
+    \fbpesvprts@begin\@nameuse{\fbpesvprts@name#2}\fbpesvprts@end
+}
+%    \end{macrocode}
+%    \end{macro}
+%    More supporting commands, the most important of which is \cs{fp@loopformarks}. It is modeled after
+%    \cs{fp@looptoreplace}.
+%    \begin{macrocode}
+\def\fp@loopformarks{%
+    \@tempcntb\nMarks\relax
+    \multiply\@tempcntb\tw@\relax
+    \let\repl@cep@ssage\@empty
+    \protected@edef\fb@passage{\@nameuse{\bib@ver}}%
+    \let\@@protect\protect
+    \let\protect\@unexpandable@protect
+    \let\fbpes@replace@save\fbpes@replace
+    \advance\@tempcntb\@ne
+    \edef\fp@cnt{\the\@tempcntb}\@tempcntb1\relax
+    \let\fb@passage@SAVE\fb@passage
+    \@whilenum\@tempcntb<\fp@cnt\do
+    {%
+        \expandafter\fp@getOne\fbpes@replace\@nil
+        \protected@edef\fb@@tmp{\noexpand
+            \fb@replace*{\fb@passage}}%
+        \ifodd\@tempcntb\relax
+%    \end{macrocode}
+%    The case where the count is odd (the first of two find words).
+%    \begin{macrocode}
+            \edef\cntahold{\the\@tempcntb}%
+            \advance\@tempcntb\@ne
+            \divide\@tempcntb\tw@\relax
+            \xdef\thisIndex{\the\@tempcntb}%
+            \@tempcntb\cntahold\relax
+            \let\fb@foundNum\fb@Zero
+            \ifx\fp@FT\@empty
+%    \end{macrocode}
+%    if the mark is empty, insert \cs{bMrkFP} at the beginning of the passage
+%    \begin{macrocode}
+                \expandafter\def\expandafter\fb@passage\expandafter
+                    {\expandafter\bMrkFP\fb@passage}%
+                \let\fb@foundNum\fb@One
+            \else
+%    \end{macrocode}
+%    Otherwise, search for \cs{fp@FT} (the current mark (or find) word,
+%    and replace it with \verb~\bMrkFP\fp@FT~.
+%    \begin{macrocode}
+                \protected@edef\x{%
+                    \noexpand\fb@@tmp{\fp@FT}{\bMrkFP\fp@FT}}\x
+                \iffb@doreplace\let\fb@foundNum\fb@One\fi
+            \fi
+        \else
+%    \end{macrocode}
+%    The case where the count is even (the second of two find words). In this case,
+%    we search for \cs{fp@FT} and replace it with \verb~\fp@FT\eMrkFP~.
+%    \begin{macrocode}
+            \protected@edef\x{%
+            \noexpand\fb@@tmp{\fp@FT}{\fp@FT\eMrkFP}}\x
+            \iffb@doreplace\if\fb@foundNum\fb@One\let\fb@foundNum\fb@Two\fi\fi
+        \fi
+%    \end{macrocode}
+% Now remove the text just marked off, \cs{gr@bSegment} also write to an aux file.
+%    \begin{macrocode}
+        \ifodd\@tempcntb\else
+            \if\fb@foundNum\fb@Two\expandafter
+                \gr@bSegment\fb@passage\bMrkFP\eMrkFP\@nil
+            \else
+                \let\fb@passage\fb@passage@SAVE
+                \writeSubstrNotFound
+            \fi
+        \fi
+        \advance\@tempcntb\@ne
+    }%
+    \let\fbpes@replace\fbpes@replace@save
+    \set@typeset@protect
+}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</fsubstr>
+%    \end{macrocode}
+%
+% \section{Input the DEF files}
+%    \begin{macrocode}
+%<*package>
+\AtBeginDocument{\useverseslist}
+%</package>
+%    \end{macrocode}
+\endinput

@@ -1,0 +1,264 @@
+% General example LaTeX file for including Sage calculations and plots
+% Build with:
+%
+%   (pdf)latex example.tex; sage example.sage; pdflatex example.tex
+%
+% Please read README and the documentation of the SageTeX package for
+% more information!
+
+\documentclass{article}
+\title{Examples of embedding Sage in \LaTeX{} with \textsf{Sage\TeX}}
+\author{Dan Drake and others}
+\usepackage{amsmath}
+\usepackage{sagetex}
+%
+% If you want SageTeX to use Imagemagick's `convert' utility to make eps
+% files from png files when generating a dvi file, add the "imagemagick"
+% option above:
+%
+%    \usepackage[imagemagick]{sagetex}
+
+\setlength{\sagetexindent}{10ex}
+
+\begin{document}
+\maketitle
+
+\section{Inline Sage, code blocks}
+
+This is an example $2+2=\sage{2+2}$. If you raise the current year mod
+$100$ (which equals $\sage{mod(\the\year, 100)}$) to the power of the
+current day ($\the\day$), you get $\sage{Integer(mod(\the\year,
+100))^\the\day}$. Also, $\the\year$ modulo $42$ is $\sage{\the\year
+\percent 42}$.
+
+Code block which uses a variable \texttt{s} to store the solutions:
+\begin{sageblock}
+ 1+1
+ var('a,b,c')
+ eqn = [a+b*c==1, b-a*c==0, a+b==5]
+ s = solve(eqn, a,b,c)
+\end{sageblock}
+
+Solutions of $\mbox{eqn}=\sage{eqn}$:
+\[
+\sage{s[0]}
+\]
+\[
+\sage{s[1]}
+\]
+
+Now we evaluate the following block:
+\begin{sageblock}
+E = EllipticCurve("37a")
+\end{sageblock}
+You can't do assignment inside \verb|\sage| macros, since Sage doesn't
+know how to typeset the output of such a thing. So you have to use a
+code block. The elliptic curve $E$ given by $\sage{E}$ has discriminant
+$\sage{E.discriminant()}$.
+
+You can do anything in a code block that you can do in Sage and/or
+Python. Here we save an elliptic curve into a file.
+\begin{sageblock}
+try:
+    E = load('E2')
+except IOError:
+    E = EllipticCurve([1,2,3,4,5])
+    E.anlist(100000)
+    E.save('E2')
+\end{sageblock}
+
+The 9999th Fourier coefficient of $\sage{E}$ is
+$\sage{E.anlist(100000)[9999]}$.
+
+The following code block doesn't appear in the typeset file\dots
+\begin{sagesilent}
+  e = 2
+  e = 3*e + 1
+\end{sagesilent}
+but we can refer to whatever we did in that code block: $e=\sage{e}$.
+
+\begin{sageblock}
+  var('x')
+  f(x) = log(sin(x)/x)
+\end{sageblock}
+The Taylor Series of $f$ begins: $\sage{ f.taylor(x, 0, 10) }$.
+
+\section{Plotting}
+
+Here's a plot of the elliptic curve $E$.
+
+\sageplot{E.plot(-3,3)}
+
+\begin{sagesilent}
+  # the var line is unecessary unless you've defined x to be something
+  # other than a symbolic variable
+  var('x')
+  f(x) = -x^3+3*x^2+7*x-4
+\end{sagesilent}
+
+You can use variables to hold plot objects and do stuff with them.
+\begin{sageblock}
+  p = plot(f, x, -5, 5)
+\end{sageblock}
+
+Here's a small plot of $f$ from $-5$ to $5$, which I've centered:
+
+\begin{center} \sageplot[scale=.2]{p} \end{center}
+
+On second thought, use the default size of $3/4$ the \verb|\textwidth|
+and don't use axes:
+
+\sageplot{p, axes=False}
+
+Remember, you're using Sage, and can therefore call upon any of the
+software packages Sage is built out of.
+\begin{sageblock}
+f = maxima('sin(x)^2*exp(x)')
+g = f.integrate('x')
+\end{sageblock}
+Plot $g(x)$, but don't typeset it.
+\begin{sagesilent}
+  # g is a Maxima thingy, it needs to get converted into a Sage object
+  plot1 = plot(g.sage(),x,-1,2*pi)
+\end{sagesilent}
+
+You can specify a file format and options for \verb|includegraphics|.
+The default is for EPS and PDF files, which are the best choice in
+almost all situations. (Although see the section on 3D plotting.)
+
+\sageplot[angle=45, width=.5\textwidth][png]{plot1}
+
+If you use regular \verb|latex| to make a DVI file, you'll see a box,
+because DVI files can't include PNG files. If you use \verb|pdflatex|
+that will work. See the documentation for details.
+
+When using \verb|\sageplot|, you can pass in just about anything that
+Sage can call \verb|.save()| on to produce a graphics file:
+
+\begin{center}
+\sageplot{plot1 + plot(f.sage(),x,-1,2*pi,rgbcolor=hue(0.4)), figsize=[1,2]}
+\end{center}
+
+\sageplot{graphs.FlowerSnark().plot()}
+
+\begin{sageblock}
+G4 = DiGraph({1:[2,2,3,5], 2:[3,4], 3:[4], 4:[5,7], 5:[6]},\
+             multiedges=True)
+G4plot = G4.plot(layout='circular')
+\end{sageblock}
+
+\sageplot{G4plot, axes=False}
+
+Indentation and so on works fine.
+\begin{sageblock}
+ s     = 7
+ s2    = 2^s
+ P.<x> = GF(2)[]
+ M     = matrix(parent(x),s2)
+ for i in range(s2):
+    p  = (1+x)^i
+    pc = p.coeffs()
+    a  = pc.count(1)
+    for j in range(a):
+        idx        = pc.index(1)
+        M[i,idx+j] = pc.pop(idx)
+
+ matrixprogram = matrix_plot(M,cmap='Greys')
+\end{sageblock}
+And here's the picture:
+
+\sageplot{matrixprogram}
+
+Reset \texttt{x} in Sage so that it's not a generator for the polynomial
+ring: \sage{var('x')}
+
+\subsection{3D plotting}
+
+3D plotting right now is problematic because there's no convenient way
+to produce vector graphics. We can make PNGs, though, and since the
+\verb|sageplot| command defaults to EPS and PDF, \emph{you must specify
+a valid format for 3D plotting}. Sage right now (version 3.4.2) can't
+produce EPS or PDF files from plot3d objects, so if you don't specify a
+valid format, things will go badly. You can specify the
+``\texttt{imagemagick}'' option, which will use the Imagemagick
+\texttt{convert} utility to make EPS files. See the documentation for
+details.
+
+Here's the famous Sage cube graph:
+
+\begin{sageblock}
+  G = graphs.CubeGraph(5)
+\end{sageblock}
+
+% need empty [] so sageplot knows you want png format, and aren't
+% passing an option to includegraphics
+\sageplot[][png]{G.plot3d(engine='tachyon')}
+
+\section{Pausing Sage\TeX}
+\label{sec:pausing-sagetex}
+
+Sometimes you want to ``pause'' for a bit while writing your document if
+you have embedded a long calculation or just want to concentrate on the
+\LaTeX{} and ignore any Sage stuff. You can use the \verb|\sagetexpause|
+and \verb|\sagetexunpause| macros to do that.
+
+\sagetexpause
+
+A calculation: $\sage{factor(2^325 + 1)}$ and a code environment that
+simulates a time-consuming calculation. While paused, this will get
+skipped over.
+\begin{sageblock}
+  import time
+  time.sleep(15)
+\end{sageblock}
+
+Graphics are also skipped: \sageplot{plot(2*sin(x^2) + x^2, (x, 0, 5))}
+
+\sagetexunpause
+
+\section{Make Sage write your \LaTeX{} for you}
+
+With \textsf{Sage\TeX}, you can not only have Sage do your math for you,
+it can write parts of your \LaTeX{} document for you! For example, I
+hate writing \texttt{tabular} environments; there's too many fiddly
+little bits of punctuation and whatnot\ldots and what if you want to add
+a column? It's a pain---or rather, it \emph{was} a pain. Here's how to
+make Pascal's triangle. It requires the \texttt{amsmath} package because
+of what Sage does when producing a \LaTeX{} representation of a string.
+(It puts it inside a \verb|\text| macro.)
+
+\begin{sageblock}
+def pascals_triangle(n):
+  # start of the table
+  s  = r"\begin{tabular}{cc|" + "r" * (n+1) + "}"
+  s += r"  & & $k$: & \\"
+  # second row, with k values:
+  s += r"  & "
+  for k in [0..n]:
+    s += "& %d " % k
+  s += r"\\"
+  # the n = 0 row:
+  s += r"\hline" + "\n" + r"$n$: & 0 & 1 & \\"
+  # now the rest of the rows
+  for r in [1..n]:
+    s += " & %d " % r
+    for k in [0..r]:
+      s += "& %d " % binomial(r, k)
+    s += r"\\"
+  # add the last line and return
+  s += r"\end{tabular}"
+  return s
+
+# how big should the table be?
+n = 8
+\end{sageblock}
+
+Okay, now here's the table. To change the size, edit \texttt{n} above.
+If you have several tables, you can use this to get them all the same
+size, while changing only one thing.
+
+\begin{center}
+  \sage{pascals_triangle(n)}
+\end{center}
+
+\end{document}

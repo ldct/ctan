@@ -1,0 +1,226 @@
+\documentclass[a4paper,11pt,article]{memoir}
+\setlrmarginsandblock{3cm}{*}{1}
+\setulmarginsandblock{3cm}{4cm}{*}
+\checkandfixthelayout
+\usepackage[latin1]{inputenc}
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{fourier}
+\usepackage{digiconfigs}
+\usepackage{url}
+\makeatletter
+\newcommand*\Arg@s[1]{\textnormal{\texttt{#1}}}%
+\newcommand*\Arg@n[1]{\textnormal{$\langle$\textit{#1}$\rangle$}}%
+\newcommand*\Arg{\@ifstar{\Arg@s}{\Arg@n}}%
+\newcommand*\marg@s[1]{\textnormal{\texttt{\{#1\}}}}
+\newcommand*\marg@n[1]{%
+  \textnormal{\texttt{\{}$\langle$\textit{#1}$\rangle$\texttt{\}}}%
+}
+\newcommand*\marg{\@ifstar{\marg@s}{\marg@n}}
+
+\newcommand*\oarg@s[1]{\textnormal{\texttt{[#1]}}}
+\newcommand*\oarg@n[1]{%
+  \textnormal{\texttt{[}$\langle$\textit{#1}$\rangle$\texttt{]}}%
+}
+\newcommand*\oarg{\@ifstar{\oarg@s}{\oarg@n}}
+\providecommand*\cs[1]{\textnormal{\texttt{\symbol{'134}#1}}}
+\newenvironment{syntax}{%
+  \vskip.5\onelineskip%
+  \begin{adjustwidth}{\parindent}{0pt}
+    \parindent=0pt%
+    \obeylines%
+    \let\\=\relax%
+  }{%
+  \end{adjustwidth}%
+  \vskip.5\onelineskip%
+}
+\newoutputstream{SCS}
+\newenvironment{SCSexample}{%
+  \openoutputfile{\jobname.ex}{SCS}%
+  \begingroup
+  \writeverbatim{SCS}%
+}{%
+  \endwriteverbatim\relax%
+  \endgroup
+  \closeoutputstream{SCS}%
+  \verbatiminput{\jobname.ex}%
+  {\begin{minipage}{0.97\linewidth}
+      \input{\jobname.ex}\end{minipage}}%
+  \par\bigskip\noindent
+}
+\makeatother
+
+\pagestyle{plain}
+
+
+\begin{document}
+
+\title{The \textsf{\jobname} package}
+\author{Lars Madsen\thanks{Email:
+    \protect\url{daleif@imf.au.dk}}\thanks{Version 0.5}}
+\maketitle
+
+\chapter{Introduction}
+\label{cha:introduction}
+
+In Stochastic Geometry and Digital Image Analysis (both fields in
+statistics) some problems can be solved in terms of so-called
+\emph{configurations}. Which is basically a square matrix with
+$\circ$ and $\bullet$ in them (and interpreted in a specific fashion,
+that I do not know about).
+\begin{quote}
+  \itshape The configurations are mainly used to estimate geometric
+  features, such as the mean normal measure, the area density, and the
+  length density, of digitized random sets in the plane. Other
+  applications include the restoration of noisy realisations of random
+  sets. \hfill --- pseudo-anonymous researcher
+\end{quote}
+Now, a certain type of problem might need more than 50 $5\times5$
+matrices of $\circ$'s and $\bullet$'s, which is not very handy to
+write in the traditional way.
+\begin{verbatim}
+\begin{bmatrix}
+\circ & \bullet & \circ & \circ & \bullet \\
+...
+\end{bmatrix}
+\end{verbatim}
+
+Of course one method of easing this (for $5\times5$ matrices) is to
+create a macro with five arguments, which would then create the
+matrix. (Something like \cs{macro}\marg*{o..oo}\marg*{ooo.o}%
+\marg*{....o}\allowbreak\marg*{.....}\marg*{o.o.o}.) But that does not
+scale very well, we need a macro that given a special string (and
+perhaps a matrix size configuration) can simply build a
+configuration matrix.
+
+The \jobname-package tries to solve this problem.
+
+
+\chapter{Usage}
+\label{cha:usage}
+
+Simply load the package in the traditional way:
+\begin{verbatim}
+\usepackage{digiconfigs}
+\end{verbatim}
+This will also load the \texttt{amsmath} package. Digiconfigs provides the
+\cs{dconfig} macro, which has the following syntax:
+\begin{syntax}
+  \cs{dconfig}\oarg{matrix-size}\marg{configuration string}
+\end{syntax}
+\newpage
+\noindent Explanation:
+\begin{description}\firmlist
+\item[\Arg{matrix-size}] This optional argument is used to specify the
+  expected size of the matrix, the syntax to be used is of course
+  \texttt{\Arg{rows}x\Arg{cols}}, where, if
+  \texttt{\Arg{rows}=\Arg{cols}} is equivalent to simply typing
+  \texttt{\Arg{rows}}. Default is \texttt{4} (i.e. a $4\times4$
+  matrix), which is configurable.
+\item[\Arg{configuration string}] This is suppose to be a string of
+  single characters each of which will represent an entry in the
+  matrix. The macro will react to four different characters, which by
+  default is
+  \begin{description}\tightlist
+  \item[o] represents a $\circ$,
+  \item[.] represents a $\bullet$,
+  \item[c] represents a $\cdot$ (sometimes used to indicate a blank), and
+  \item[b] which represents a \emph{blank} entry.
+  \end{description}
+  All four characters are configurable, as is the symbols used for
+  \emph{circle}, \emph{bullet}, and \emph{cdot}.
+
+  All other characters (except \texttt{\#}, \texttt{\%}  and
+  \texttt{X}) will be ignored. \texttt{X} is internally added to the
+  string, and is used to detect the end of the string if it falls
+  short. 
+\end{description}
+\cs{dconfig} will then calculate the number of entries it has to
+look for, and simply eat up character by character (using tail
+recursion) until it has found the number it needs. Any remaining
+characters will be ignored. If the string it too short for the
+expected number of entries, a warning will be issued, and the matrix
+will simply come short at this point.
+
+Here are a few examples
+\begin{SCSexample}
+  \def\mystring{..o.. bb.o.. dsfsf co..}
+  \[
+  \dconfig[2]{\mystring} \dconfig[1x5]{\mystring}
+  \dconfig{\mystring} \dconfig[3x4]{\mystring}
+  \]
+\end{SCSexample}
+Matrix three here falls short of entries.
+
+
+
+\chapter{Configuration}
+\label{cha:configuration}
+
+The package offers various configurations. All of these can be changed
+throughout the document.
+\begin{syntax}
+\cs{setCircleChar}\marg{char}\hfill (\texttt{o})
+\cs{setBulletChar}\marg{char}\hfill (\texttt{.})
+\cs{setCdotChar}\marg{char}\hfill (\texttt{c})
+\cs{setBlankChar}\marg{char}\hfill (\texttt{b})
+\end{syntax}
+Is used to alter the four main characters the macro is looking
+for. Argument should be a single char (to keep things simple).
+
+\begin{syntax}
+\cs{setCircleSymbol}\marg{symbol}\hfill (\verb+\circ+)
+\cs{setBulletSymbol}\marg{symbol}\hfill (\verb+\bullet+)
+\cs{setCdotSymbol}\marg{symbol}\hfill (\verb+\cdot+)
+\end{syntax}
+Is used to alter the output symbols used in the matrix. The
+\emph{blank} symbol cannot be changed.
+\begin{syntax}
+\cs{setMatrixStart}\marg{matrix start code}\hfill (\verb+\begin{bmatrix}+)
+\cs{setMatrixEnd}\marg{matrix end code}\hfill (\verb+\end{bmatrix}+)
+\end{syntax}
+Fairly obvious. So if you want to save some space use\nopagebreak
+\begin{verbatim}
+  \setMatrixStart{\left[\begin{smallmatrix}}
+  \setMatrixEnd{\end{smallmatrix}\right]}
+\end{verbatim}
+\begin{syntax}
+\cs{setDefaultMatrixSize}\marg{matrix size} \hfill (\texttt{4})
+\end{syntax}
+Alters the expected number of entries. Use a positive integer or the
+\texttt{\Arg{number}x\Arg{number}}-syntax.
+
+\chapter{Example}
+\label{cha:examples}
+
+\begin{SCSexample}
+\setMatrixStart{\left[\begin{smallmatrix}}
+\setMatrixEnd{\end{smallmatrix}\right]}
+\setCircleChar{+}
+\setBulletChar{-}
+\setCircleSymbol{1}
+\setBulletSymbol{-1}
+\[
+\dconfig{c-+c +-+- -+-- b-+b -+--}
+\]  
+\end{SCSexample}
+
+\chapter{A tip}
+\label{cha:tip}
+
+
+
+Here is a small tip. If you find \cs{dconfig} to be a bit long, then
+try something like
+\begin{verbatim}
+\newcommand\dc[2][]{\dconfig[#1]{#2}}
+\end{verbatim}
+
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

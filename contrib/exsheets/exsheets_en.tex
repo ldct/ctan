@@ -1,0 +1,2650 @@
+% !arara: pdflatex
+% !arara: biber
+% arara: pdflatex
+% arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the EXSHEETS package
+% 
+%   Yet another package for the creation of exercise sheets
+% 
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    http://www.mychemistry.eu/forums/forum/exsheets/
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% Copyright 2011-2017 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+\documentclass[load-preamble+]{cnltx-doc}
+
+\usepackage{exsheets}
+\usepackage{bookmark}
+
+\setcnltx{
+  package  = {exsheets} ,
+  authors  = Clemens Niederberger ,
+  email    = contact@mychemistry.eu ,
+  url      = {http://www.mychemistry.eu/forums/forum/exsheets/} ,
+  title    = the \ExSheets\ bundle ,
+  info     = {%
+    the packages \ExSheets{} and \ExSheetslistings \\
+    \emph{or}\\
+    Yet another package for the creation of exercise sheets and exams.%
+  } ,
+  module-sep = {\,>>\,} ,
+  index-setup = { othercode=\footnotesize,level=\section} ,
+  abstract = {%
+    \ExSheets\ provides means to create exercises or questions and their
+    corresponding solutions.  The questions can be divided into classes and
+    can be printed selectively.  Meta-data to questions can be added and
+    recovered.
+    \par
+    The solutions may be printed where they are, can be collected and printed
+    at a later point in the document alltogether or section-wise or
+    selectively by \acs{id}.\par
+    \ExSheets\ provides a comprehensive interface for styling the headings of
+    questions and solutions.%
+  } ,
+  add-cmds = {
+    % exsheets:
+    addpoints,
+    blank,
+    C,
+    checkedchoicebox,choice,choicebox,
+    correct,
+    CurrentQuestionID,
+    DebugExSheets,
+    DeclareExSheetsHeadingContainer,
+    DeclareQuestionClass,DeclareQuestionProperty,
+    examspace,
+    exlabel,
+    ForEachQuestion,
+    GetQuestionClass,
+    GetQuestionProperty,
+    grade,
+    includequestions,iflastquestion,
+    IfQuestionPropertyF,IfQuestionPropertyT,IfQuestionPropertyTF,
+    IfQuestionSubtitleF,IfQuestionSubtitleT,IfQuestionSubtitleTF,
+    lastvariant,
+    NewQuSolPair,NewLstQuSolPair,
+    numberofquestions,
+    points,pointssum,
+    PrintIfIncludeActiveF,PrintIfIncludeActiveT,PrintIfIncludeActiveTF,
+    PrintQuestionClassF,PrintQuestionClassT,PrintQuestionClassTF,
+    printsolutions,
+    PrintSolutionsF,PrintSolutionsTF,PrintSolutionsT,
+    questionsincludedlast,QuestionNumber,RenewQuSolPair,
+    S,
+    SetQuestionProperties,
+    SetupExSheets,
+    SetVariations,
+    startnewitemline,
+    sumpoints,
+    totalpoints,
+    variant,vary,
+    % cntformats:
+    @cntfmts@parsed@pattern,
+    AddCounterPattern,
+    eSaveCounterPattern,
+    NewCounterPattern,
+    ReadCounterFrom,
+    ReadCounterPattern,ReadCounterPatternFrom,
+    SaveCounterPattern,
+    % tasks:
+    NewTasks,
+    settasks,
+    task
+  } ,
+  add-envs = {
+    question,
+    solution,
+    tasks
+  } ,
+  add-silent-cmds = {
+    acs,
+    bigstar,bottomrule,
+    citetitle,cs,color,
+    DeclareInstance,DeclareTemplateInterface,
+    endmdframed,endspacing,
+    keyis,
+    leftthumbsup,
+    mdframed,midrule,
+    rightarrow,rlap,
+    s,sample,setlength,
+    spacing,square,
+    tabcolsep,
+    textcite,
+    textcolor,
+    tmpa,tmpb,
+    toprule
+  }
+}
+\usepackage{exsheets-listings}
+
+\microtypesetup{tracking=scshape}
+
+\defbibheading{bibliography}[\bibname]{\section{#1}}
+
+\usepackage[biblatex]{embrac}[2012/06/29]
+  \ChangeEmph{[}[,.02em]{]}[.055em,-.08em]
+  \ChangeEmph{(}[-.01em,.04em]{)}[.04em,-.05em]
+\usepackage{booktabs,array,ragged2e}
+
+\newpackagename\ExSheets{ExSheets}
+\newpackagename\ExSheetslistings{ExSheets-listings}
+\newpackagename\cntformats{cntformats}
+\newpackagename\Tasks{tasks}
+
+% ----------------------------------------------------------------------------
+% other packages, bibliography, index
+\usepackage{xcoffins,wasysym,enumitem,siunitx}
+
+\usepackage[accsupp]{acro}
+\DeclareAcronym{faq}{
+  short     = faq ,
+  long      = Frequently Asked Questions ,
+  format    = \scshape ,
+  pdfstring = FAQ ,
+  accsupp   = FAQ
+}
+\DeclareAcronym{id}{
+  short     = id ,
+  long      = Identifier ,
+  format    = \scshape ,
+  pdfstring = ID ,
+  accsupp   = ID
+}
+\DeclareAcronym{ctan}{
+  short     = ctan ,
+  long      = Comprehensive \TeX\ Archive Network ,
+  format    = \scshape ,
+  pdfstring = CTAN ,
+  accsupp   = CTAN
+}
+
+\usepackage{filecontents}
+
+\usepackage{csquotes}
+
+\addbibresource{biblatex-examples.bib}
+\addbibresource{\jobname.bib}
+
+\begin{filecontents*}{\jobname.bib}
+@online{tex.sx:131546,
+  title   = {Fixing lstlisting inside \ExSheets\ \code{question} and
+    \code{solution} environments} ,
+  author  = {Stefano Bragaglia} , 
+  url     = {http://tex.stackexchange.com/q/131546/5049} ,
+  date    = {2013-09-04} ,
+  urldate = {2013-09-22}
+}
+@online{tex.sx:133907,
+  title   = {How do I extract repeated functionality (\ExSheets\ workaround) to
+    make it reusable?} ,
+  author  = {Forkrul Assail} , 
+  url     = {http://tex.stackexchange.com/q/133907/5049} ,
+  date    = {2013-09-18} ,
+  urldate = {2013-09-22}
+}
+\end{filecontents*}
+
+% ----------------------------------------------------------------------------
+% example definitions that have to be done in the preamble:
+\DeclareQuestionClass{difficulty}{difficulties}
+\DeclareQuestionProperty{notes}
+\DeclareQuestionProperty{reference}
+\DeclareQuestionProperty{topic}
+
+\DeclareRelGrades{
+  1     = 1 ,
+  {1,5} = .9167 ,
+  2     = .8333 ,
+  {2,5} = .75 ,
+  3     = .6667 ,
+  {3,5} = .5833 ,
+  4     = .5
+}
+
+\usepackage{amssymb}
+\let\checkmark\relax
+\usepackage{dingbat}
+
+\DeclareRobustCommand*\questionstar{\texorpdfstring{\bonusquestionsign}{* }}
+\DeclareRobustCommand*\bonusquestionsign{\llap{$\bigstar$\space}}
+
+\NewQuSolPair
+  {question*}[name=\questionstar Bonus Question]
+  {solution*}[name=\questionstar Solution]
+
+\NewTasks[style=multiplechoice]{multiplechoice}[\choice](3)
+\newcommand*\correct{\PrintSolutionsTF{\checkedchoicebox}{\choicebox}}
+
+\usepackage{alphalph}
+\NewPatternFormat{aa}{\alphalph}
+\NewCounterPattern{testa}{ta}
+
+% \AfterPackage!{hyperref}{%
+%   \pdfstringdefDisableCommands{\def\questionstar{* }}%
+% }
+
+\begin{document}
+
+\part{Preliminaries}
+\section{Licence and Requirements}
+\license
+
+\ExSheets\ loads and needs the following packages:
+\needpackage{l3kernel}~\cite{bnd:l3kernel}, \pkg{xparse}, \pkg{xtemplate},
+\pkg{l3keys2e}\footnote{all three \CTANurl{l3packages}}~\cite{bnd:l3packages},
+\pkg{l3sort}\footnote{\CTANurl{l3experimental}}~\cite{bnd:l3experimental},
+\needpackage{xcolor}~\cite{pkg:xcolor}, \needpackage{ulem}~\cite{pkg:ulem},
+\needpackage{etoolbox}~\cite{pkg:etoolbox},
+\needpackage{environ}~\cite{pkg:environ}, and
+\pkg{pgfcore}\footnote{\CTANurl[graphics]{pgf}}~\cite{pkg:pgf}.  \ExSheets\
+calls \cs*{normalem} (from the \pkg{ulem} package).
+
+\section{Motivation}
+There are already quite a number of packages that allow the creation of
+exercise sheets or written exams.  Just to name the most common ones:
+\pkg{eqexam}~\cite{pkg:eqexam}, \pkg{exam}~\cite{cls:exam},
+\pkg{examdesign}~\cite{pkg:examdesign}, \pkg{exercise}~\cite{pkg:exercise},
+\pkg{probsoln}~\cite{pkg:probsoln}, \pkg{answers}~\cite{pkg:answers},
+\pkg{esami}~\cite{pkg:esami}, \pkg{exsol}~\cite{pkg:exsol} (and many
+more \ldots).
+
+One thing I missed in all packages that I've tried out\footnote{Well, probably
+  I didn't try hard enough\ldots} was a high flexibility in choosing which
+questions and solutions should be printed, where which solutions should be
+printed and so on, combined with the possibility to assign questions to
+different classes so one could for example create two versions of an exam out
+of the box.  And --~I can't get enough~-- I also want to be able to use/design
+different layouts for questions additional to a standard section-like format.
+All these points are realized in \ExSheets.
+
+Additionally one should be able to assign some sort of meta-data to questions
+that of course should be easily reusable.  How this can be done is explained
+in section~\ref{sec:additional_info}.
+
+Then there is --~at least in Germany~-- the habit of having lists of exercises
+aligned in columns but counting from the left to the right instead from up to
+down.  That's why the \pkg{tasks} package was developed as part of \ExSheets{}
+and was distributed as part of the bundle\changedversion{0.15}.  Now it is a
+package of its own but is loaded by \ExSheets{} automatically with the
+necessary setup to make them work together nicely.
+
+\ExSheets{} has no native support for multiple choice tests but that doesn't
+mean that you can't create them with \ExSheets.  It just means that they may
+be a bit more work with \ExSheets{} than with other packages.
+
+I had the idea for this package in 2008.  Back then my \TeX{} skills were by
+far not good enough to write it.  Actually, even today I wouldn't have been
+able to realize it without all the l3 packages like \pkg{l3kernel} and
+\pkg{l3packages}.  I actively began to develop \ExSheets\ in spring~2011 but
+it wasn't until now (September~2012) that I consider it stable enough for
+wider usage.  At the time of writing (\today) there still are probably lots of
+rough edges let alone bugs so I am very interested in all kinds of feedback.
+
+\section{Additional Packages}
+\ExSheets\ actually bundles two packages: \ExSheets, \ExSheetslistings.
+\ExSheetslistings\ is an add-on to \ExSheets\ that offers some functionality
+to use \pkg{listings} with \ExSheets.  It is presented in
+part~\ref{part:listings}.
+
+\ExSheets\ used to bundle the \pkg{translations} package,
+too\changedversion{0.9i}, but doesn't any more.  You can find the
+\pkg{translations} package as a package of it's own on the \ac{ctan}.  It also
+used to bundle the packages \pkg{tasks} and
+\pkg{cntformats}\changedversion{0.15}.  They're available now as packages of
+their own as well.
+
+% \section{Installation and Documentation}
+% If you install \ExSheets\ manually beware to put the files
+% \begin{itemize}
+%   \item[]\verb+exsheets_headings.def+
+%   \item[]\verb+exsheets_headings.cfg+
+% \end{itemize}
+% in the same directory as the \code{exsheets.sty} file\footnote{That is, a
+%   directory like \code{texmf-local/tex/latex/exsheets}, probably}.
+
+% As with every manual package installation you need to make sure to put the
+% files in a directory where \TeX\ can find them and afterwards update the
+% database.
+
+% \subsection{The \pkg*{tasks} Package}
+% The \pkg{tasks} package~\cite{pkg:tasks} used to be part of the \ExSheets\
+% bundle but is a package of its own now\changedversion{0.15} and released
+% independently.  You can find it as every other package on \ctan\ and in a full
+% \TeX~Live or \hologo{MiKTeX} installation.
+
+% \subsection{The \pkg*{cntformats} Package}
+% The \pkg{cntformats} package~\cite{pkg:cntformats} used to be part of the
+% \ExSheets\ bundle but is a package of its own now\changedversion{0.15} and
+% released independently.  You can find it as every other package on \ctan\ and
+% in a full \TeX~Live or \hologo{MiKTeX} installation.
+
+% \subsection{The \pkg*{translations} Package}
+% The \pkg{translations} package~\cite{pkg:translations} used to be part of the
+% \ExSheets\ bundle but is a package of its own now\changedversion{0.9i} and
+% released independently.  You can find it as every other package on \ctan\ and
+% in a full \TeX~Live or \hologo{MiKTeX} installation.
+
+% \section{News}
+% \begin{description}
+% \item[Version 0.7]
+%   With version~0.7 there has been a potentially breaking change: the
+%   \code{tasks} environment previously provided by \ExSheets\ has been
+%   extracted into a package of its own.  This does not change any syntax
+%   \emph{per se}. However, if you used custom settings then you'll probably run
+%   into some problems.  The options for the environment are no longer set with
+%   \cs{SetupExSheets} but with \cs{settasks}.  Also the object that is used for
+%   the list template and its instances has been renamed from
+%   \code{exsheets-tasks} into \code{tasks}.
+
+%   What's probably even more of a breaking change is a syntax difference of the
+%   \code{tasks} environment: the optional argument for the number of columns is
+%   \emph{no longer set in braces but parentheses}.  This is deliberate as it
+%   reflects the optional nature of the argument better and is consistent with
+%   the syntax of \cs{NewTasks}, too.
+
+%   Additionally the labels of the list got an additional offset of \code{1ex}
+%   from the items which will lead to slightly different output.  In some cases
+%   this might actually lead to the most annoying changes.  In this case say
+%   \cs{settasks}\Marg{label-offset=0pt} which should cure things again.
+
+%   I am very sorry for any inconvenience!  I am trying to keep such changes as
+%   minimal and rare as possibly.  However, it is not always avoidable when a
+%   package is new and still a child. It will grow up eventually.
+
+%   \ExSheets' other packages -- \href{tasks_en.pdf}{\Tasks} and
+%   \href{cntformats_en.pdf}{\cntformats} -- have gotten their own documentation
+%   which are essentially extracted from this very document you're reading now.
+%   This manual contains links to the respective manuals.
+
+% \item[Version v0.9i]
+%   The \pkg{translations} package~\cite{pkg:translations} is no longer part of
+%   the \ExSheets\ bundle.  From now on (July~17.\@ 2013) it is provided as a
+%   package of its own.
+
+% \item[Version 0.10]
+%   The \ExSheets\ family has got a new member: \ExSheetslistings.  This package
+%   proposes a solution for the problem of using verbatim material in \ExSheets'
+%   \env{question} and \env{solution} environments.  It is presented in
+%   part~\ref{part:listings}.
+
+%   Question now can get subtitles that are printed if the heading instance
+%   supports it, see section~\ref{sec:subtitles-questions}.
+
+% \item[Version 0.11]
+%   The commands \cs{GetQuestionClass} and \cs{PrintQuestionClassTF} have been
+%   added.  They're explained in section~\ref{sec:retr-class-value}.
+ 
+% \item[Version 0.12]
+%   The \option{auto-label} is now more flexible to allow the use together with
+%   packages \pkg{cleveref}.
+
+%   Question properties can now be retrieved before the question is printed (by
+%   writing the properties to the \code{aux} file).
+
+% \item[Version 0.13]
+%   New options:
+%   \begin{itemize}
+%     \item \option{chapter-hook} allows to add code to the list of solutions
+%       when the solutions of a new chapter are printed, see
+%       section~\ref{sec:solutions-print-all}.
+%     \item \option{section-hook} allows to add code to the list of solutions
+%       when the solutions of a new section are printed, see
+%       section~\ref{sec:solutions-print-all}.
+%   \end{itemize}
+
+% \item[Version 0.14]
+%   New options:
+%   \begin{itemize}
+%     \item New option \option{pre-hook} to the \env{question} environment that
+%       allows to add code directly before the question body, see
+%       section~\ref{sec:opti-ques-envir}. 
+%     \item New option \option{post-hook} to the \env{question} environment that
+%       allows to add code directly after the question body, see
+%       section~\ref{sec:opti-ques-envir}.
+%     \item New command \cs{ExSheetsHeading}, see
+%       section~\ref{sec:using-an-exsheets}.
+%     \item New pre-defined question properties \code{question-body},
+%       \code{bonus-points} and \code{counter}, see
+%       section~\ref{sec:additional_info}.
+%     \item New option \option{save-to-aux}, see
+%       section~\ref{sec:additional_info}.
+%   \end{itemize}
+
+% \item[Version 0.15]
+%   \begin{itemize}
+%     \item The packages \pkg{tasks} and \pkg{cntformats} have been removed from
+%       the bundle and are now distributed as packages of their own.
+%      \item The options \option*{load-headings} and \option*{load-tasks} have
+%        been dropped.  The optional functionality they provided is now provided
+%        all the time.
+%     \item New command \cs{IfQuestionPropertyTF}, see
+%       section~\ref{sec:additional_info}.
+%   \end{itemize}
+
+% \item[Version 0.16]
+%   New options/changes:
+%   \begin{itemize}
+%     \item The option \option{pre-hook} to the \env{question} environment now
+%       places its contents before the question heading, see
+%       section~\ref{sec:opti-ques-envir}.
+%     \item New option \option{pre-body-hook} to the \env{question} environment
+%       which adds its contents before the question body, see
+%       section~\ref{sec:opti-ques-envir}.
+%     \item New option \option{post-body-hook} to the \env{question} environment
+%       which adds its contents after the question body, see
+%       section~\ref{sec:opti-ques-envir}.
+%     \item New option \option{pre-hook} to the \env{solution} environment which
+%       adds code before a solution, see section~\ref{sec:opti-soli-envir}.
+%     \item New option \option{post-hook} to the \env{solution} environment which
+%       adds code after a solution, see section~\ref{sec:opti-soli-envir}.
+%     \item New option \option{pre-body-hook} to the \env{solution} environment
+%       which adds its contents before the solution body, see
+%       section~\ref{sec:opti-soli-envir}.
+%     \item New option \option{post-body-hook} to the \env{solution} environment
+%       which adds its contents after the solution body, see
+%       section~\ref{sec:opti-soli-envir}.
+%   \end{itemize}
+
+% \item[Version 0.17]
+%   New option:
+%   \begin{itemize}
+%     \item The option \option{use-saved-counter-format} has been introduced. It
+%       is described in section~\ref{sec:solutions} on
+%       page~\pageref{option:use-saved-counter-format}.
+%   \end{itemize}
+
+% \item[Version 0.18]
+%   The package now provides the correct Danish translations, thanks to Jonas
+%   Nyrup.
+
+%   The macro \cs{exsheetsprintsolution} is introduced, see
+%   page~\pageref{exsheetsprintsolution} for a little bit of an explanation.
+
+%   The option \option{no-skip-below} is introduced which disables the insertion
+%   of vertical space after the question and solution environments.
+
+% \item[Version 0.20]
+%   New command \cs{DeclareExSheetsHeadingContainer}.
+
+% \item[Version 0.21] Changes:
+%   \begin{itemize}
+%     \item \cs{includequestions} issues an error if it can't find the file to
+%       include.
+%     \item question properties are now also accessable when the corresponding
+%       question isn't printed.
+%     \item The variables \verbcode+\l_exsheets_counter_qu_int+ and \\
+%       \verbcode+\g_exsheets_question_identification_prop+ are now public.
+%   \end{itemize}
+% \end{description}
+
+\section{Thanks}
+I need to thank the many users who gave me feedback so far!  For one thing
+this shows me that \ExSheets\ is useful to people.  It also led to many
+improvements like new features and countless bug fixes.
+
+\part{The \ExSheets\ package}\label{part:exsheets}
+\section{Setup}
+The \ExSheets\ package has three different types of options, kind of.  The
+first type are the classic package options which are used when you load
+\ExSheets:
+\begin{sourcecode}
+  \usepackage[<options>]{exsheets}
+\end{sourcecode}
+All general options can be used this way and most of them are described in
+section~\ref{sec:options}.  All of those options also can be set via the setup
+command:
+\begin{commands}
+  \command{SetupExSheets}[\oarg{module}\marg{options}]
+\end{commands}
+
+The second type are options that belong to a specific environment or command.
+These options are either used directly with the environment/command
+\begin{sourcecode}
+  \begin{env}[<options>]
+   ...
+  \end{env}
+\end{sourcecode}
+or can also be set with the setup command.  In the first case they only act
+upon the environment or command where they're used.  In the second case they
+are set for all following uses of the corresponding environment or command.
+
+The options of the second type all belong to \module*{modules}.  Let's say you
+want to specify some options of the \env{question} environment.  You can then
+say the following:
+\begin{sourcecode}
+  \SetupExSheets[question]{option1,option2=value2}
+  % or:
+  \SetupExSheets{question/option1,question/option2=value2}
+\end{sourcecode}
+The \module*{module} an option belongs to is written in the left margin next
+to the when the option is described.
+
+The third type aren't options at all, actually.  However, thanks to the great
+\pkg{xtemplate} package you are able to define your own instances of some of
+the objects used by \ExSheets.  This is explained in a little more detail in
+part~\ref{part:style} on page~\pageref{part:style}\,ff.  This third type,
+however, brings in a possible instability: the \pkg{xtemplate} package is in
+an experimental and developing state.  This means that the sytax of the
+package may and possibly will change sometime in the future.  I cannot foresee
+what any consequences of that will be for \ExSheets.
+
+\section{General Options}\label{sec:options}
+The package \ExSheets\ has some options, namely the following ones:
+\begin{options}
+  %% counter-format
+  \keyval{counter-format}{counter-format}\Default{qu.}
+    Formatting of the counter of the questions.  This option takes a special
+    kind of string that is described in section~\ref{ssec:counter}.
+  \keyval{counter-within}{counter}\Default
+    Resets the \code{question} counter with every step of \meta{counter}.
+  %% auto-label
+  \keybool{auto-label}\Default{false}
+    If set to \code{true} \ExSheets\ will automatically place a
+    \cs*{label}\Marg{qu:\meta{id}} for each question.  See
+    section~\ref{sec:auto-label-opti} for ways to customize this.  It will
+    also create the question properties \code{ref} and \code{pageref}, see
+    section~\ref{sec:additional_info} for more on this.
+  %% headings
+  \keyval{headings}{instance}\Default{block}
+    Choose the style of the questions' and solutions' headings.  There are two
+    predefined styles: \code{block} and \code{runin}.
+  %% headings-format
+  \keyval{headings-format}{code}\Default{\cs*{normalsize}\cs*{bfseries}}
+    This code is placed immediately before the headings of the questions and
+    solutions.
+  \keyval{subtitle-format}{code}\Default{\cs*{normalsize}\cs*{itshape}}
+    This code is placed immediately before the subtitle of the questions and
+    solutions.  It only has an effect with a title instance that uses the
+    subtitle coffin, see section~\ref{sec:exsheets-headings}.
+  % skip-below
+  \keyval{skip-below}{dim}\Default{.5\cs*{baselineskip}}
+    \sinceversion{0.18}Sets the vertical space that is inserted after the
+    question and solution environments.
+  % no-skip-below
+  \keybool{no-skip-below}\Default{false}
+    \sinceversion{0.18}Disables the insertion of vertical space after the
+    question and solution environments.
+  %% totoc
+  \keybool{totoc}\Default{false}
+    This option adds the questions and solutions with their names and numbers
+    to the table of contents.
+  %% questions-totoc
+  \keybool{questions-totoc}\Default{false}
+    This option adds the questions with their names and numbers to the table
+    of contents.
+  %% solutions-totoc
+  \keybool{solutions-totoc}\Default{false}
+    This option adds the solutions with their names and numbers to the table
+    of contents.
+  %% toc-level
+  \keyval{toc-level}{toc level}\Default{subsection}
+    This option sets the level in which questions and solutions should appear
+    in the table of contents.
+  %% questions-toc-level
+  \keyval{questions-toc-level}{toc level}\Default{subsection}
+    This option sets the level in which questions should appear in the table
+    of contents.
+  %% solutions-toc-level
+  \keyval{solutions-toc-level}{toc level}\Default{subsection}
+    This option sets the level in which solutions should appear in the table
+    of contents.
+  %% use-ref
+  \keybool{use-ref}\Default{false}
+    enable referencing to sections and chapters in a way that the references
+    can be used with \cs{printsolutions}, see
+    section~\ref{sssec:print_specific_section} for details.
+\end{options}
+The \code{toc} options are demonstrated with section~\ref{sec:solutions:list}
+and the solutions printed there being listed in the table of contents.
+
+
+\section{Create Questions/Exercises and their Solutions}
+Now, let's start with the most important part: the questions and (possibly)
+their respective solutions.
+\subsection{The \env*{question} Environment}\label{ssec:questions}
+Questions are written inside the \env{question} environment:
+\begin{environments}
+  \environment{question}[\oarg{options}\marg{points}]
+    The main environment: creates a new exercise/question.  Both arguments are
+    optional!
+\end{environments}
+\begin{example}
+  \begin{question}
+    This is our very first very difficult to solve question!
+  \end{question}
+\end{example}
+As you can see a heading is automatically created and the question is
+numbered.  You can of course change both the numbering and the naming, but
+more on that later.
+
+The \env{question} environment takes an optional argument \marg{points} that
+can be used to assign points to the question (as is common in written exams):
+\begin{example}
+  \begin{question}{3}
+    This is our first difficult question that is worth 3 points!
+  \end{question}
+\end{example}
+These points are saved internally (see section~\ref{sec:points} for reasons
+why) and are written to the right margin next to the question heading in the
+default setting.
+
+You can also assign bonus points by inserting \code{\meta{point}+\meta{bonus
+    points}} as argument.
+\begin{example}
+  \begin{question}{1+1}
+    This question is worth 1 point and 1 bonus point.
+  \end{question}
+  \begin{question}{+3}
+    This question is a bonus question. It is worth 3 bonus points.
+  \end{question}
+\end{example}
+
+The points are counted and added to the total sum of points, see
+section~\ref{sec:points} for details on this.  \sinceversion{0.12}Should you
+want that the points of a specific question \emph{should not be added} to the
+total sum then precede it with a bang \code{!}:
+\begin{example}
+  \begin{question}{!3}
+    This question's points won't be added to the total sum.
+  \end{question}
+\end{example}
+Beware that this also prevents bonus points.  The points simply will be
+written where the heading instance puts them.
+
+\sinceversion{0.3}One additional thing: you might want to define custom
+commands that should behave differently if they're inside or outside of the
+\env{question} environment.  In this case you can use these commands:
+\begin{commands}
+  \expandable\command{IfInsideQuestionTF}[\marg{true code}\marg{false code}]
+    Check if inside of a question and either leave \meta{true code} or
+    \meta{false code} in the input stream.
+  \expandable\command{IfInsideQuestionT}[\marg{true code}]
+    Check if inside of a question and either leave \meta{true code} in the
+    input stream if true.
+  \expandable\command{IfInsideQuestionF}[\marg{false code}]
+    Check if inside of a question and either leave \meta{false code} in the
+    input stream if not.
+\end{commands}
+
+\subsection{Options to the \env*{question} Environment}\label{sec:opti-ques-envir}
+The \env{question} environment takes one or more of the following options:
+\begin{options}
+  \keychoice{type}{exam,exercise}\Module{question}\Default{exercise}
+    Determines the type of question and changes the default name of a question
+    from ``Exercise'' to ``Question''.  These default names are language
+    dependent.\par
+    If you use \cs*{usepackage}\oarg{ngerman}\marg{babel}, for example, then
+    the names are ``Übung'' and ``Aufgabe''.
+  \keyval{name}{name}\Module{question}\Default
+    Sets a custom name.  All predefined names are discarded.
+  \keyval{subtitle}{subtitle}\Module{question}\Default
+    Adds a subtitle \meta{subtitle} for the question that is used by headings
+    instances that make use of the subtitle coffin, see
+    section~\ref{sec:exsheets-headings}.
+  \keyval{skip-below}{dim}\Module{question}\Default{.5\cs*{baselineskip}}
+    \sinceversion{0.18}Sets the vertical space that is inserted after the
+    question environment.
+  \keybool{no-skip-below}\Module{question}\Default{false}
+    \sinceversion{0.18}Disables the insertion of vertical space after the
+    question environment.
+  \keybool{print}\Module{question}\Default{true}
+    Prints or hides the question.
+  \keyval{ID}{id}\Module{question}\Default
+    Assigns a custom \acs{id} to the question.  See section~\ref{ssec:ids} for
+    further information.
+  \keyval{label}{label}\Module{question}\Default
+    Places a \cs*{label}\marg{label} for the question.  This will overwrite
+    any label that is placed by the \option{auto-label} option.
+  \keyval{class}{class}\Module{question}\Default
+    Assigns a class \meta{class} to the question.  See
+    section~\ref{sec:classes} for further information.
+  \keyval{topic}{topic}\Module{question}\Default
+    Assigns a topic \meta{topic} to the question.  See
+    section~\ref{sec:topics} for further information.
+  \keybool{use}\Module{question}\Default{true}
+    Discards the question.  Or not.
+  \keyval{pre-hook}{code}\Module{question}\Default
+    \changedversion{0.16}Adds \meta{code} directly before the question title.
+  \keyval{post-hook}{code}\Module{question}\Default
+    \changedversion{0.16}Adds \meta{code} directly after the question.
+  \keyval{pre-body-hook}{code}\Module{question}\Default
+    \sinceversion{0.16}Adds \meta{code} directly before the question body.
+  \keyval{post-body-hook}{code}\Module{question}\Default
+    \sinceversion{0.16}Adds \meta{code} directly after the question body.
+\end{options}
+
+\begin{example}
+  \begin{question}[type=exam]
+    This question has the type \keyis{type}{exam}. The default name has changed
+    from ``Exercise'' to ``Question''.
+  \end{question}
+  \begin{question}[name=Fancy name]
+    This question has a custom name.
+  \end{question}
+  \begin{question}[print=false]
+    This question is not printed.
+  \end{question}
+\end{example}
+
+The difference between \option{print} and \option{use} lies behind the scenes:
+with \keyis{print}{false} the question is not printed, but it still gets an
+individual \ac{id}, is numbered, and a possible solution is saved.  This is
+for example useful when you want to print a sample solution for an exam.  With
+\keyis{use}{false} it is fully discarded which means it is not accessible
+through an \acs{id} and a possible solution will not be saved.
+
+\subsection{Subtitles to Questions}\label{sec:subtitles-questions}
+The \option{subtitle} option mentioned in section~\ref{sec:opti-ques-envir}
+can be used to add a subtitle to a question.  However, unless you choose a
+suitable heading (see section~\ref{sec:exsheets-headings}) it won't be
+printed.  Currently there is \emph{one} heading instance that uses the
+subtitles but it should be easy to create a custom heading using one of the
+existing ones as a starter example.  When creating such a heading you may want
+to distinguish between the cases when a subtitle has been given and when no
+subtitle is present.  This can be done with the following commands:
+\begin{commands}
+  \expandable\command{IfQuestionSubtitleTF}[\marg{true code}\marg{false code}]
+    Tests if the current question has a subtitle.  Leaves either \meta{true
+      code} or \meta{false code} in the input stream.
+  \expandable\command{IfQuestionSubtitleT}[\marg{true code}]
+    Tests if the current question has a subtitle.  Leaves \meta{true code} in
+    the input stream if it has.
+  \expandable\command{IfQuestionSubtitleF}[\marg{false code}]
+    Tests if the current question has a subtitle.  Leaves \meta{false code} in
+    the input stream if it hasn't.
+\end{commands}
+
+A subtitle is also a property of a question in the sense of
+section~\ref{sec:additional_info}.  That means if a subtitle is given it can
+be retrieved with \cs{GetQuestionProperty}.
+
+As an example you could define your own heading instance that prints the
+\acs{id} of a question and (if given) the subtitle:
+
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{QE}{default}{
+    join = {
+      title[r,B]number[l,B](.333em,0pt) ;
+      title[r,B]subtitle[l,B](1em,0pt)
+    } ,
+    attach = {
+      main[l,vc]title[l,vc](0pt,0pt) ;
+      main[r,vc]points[l,vc](\marginparsep,0pt)
+    } ,
+    subtitle-post-code = {ID: \CurrentQuestionID} ,
+    number-post-code   = {\IfQuestionSubtitleF{ID: \CurrentQuestionID}}
+  }
+\end{sourcecode}
+
+Please see section~\ref{sec:exsheets-headings} for more details on heading
+instances.
+
+\subsection{The \env*{solution} Environment}
+If you want to save/print (more on the exact usage in
+section~\ref{sec:solutions}) a solution you have to use the \env{solution}
+environment \emph{after} the question it belongs to and \emph{before} the next
+question.
+\begin{environments}
+  \environment{solution}[\oarg{options}]
+    The main environment for adding solutions to exercises/questions.
+\end{environments}
+\begin{example}
+  \begin{question}[ID=first]\label{qu:question_with_solution}
+    This is our first question that gets a solution!
+  \end{question}
+  \begin{solution}
+    This is the solution to exercise~\ref{qu:question_with_solution}!
+  \end{solution}
+\end{example}
+You can see that in the default settings the solution is \emph{not} written to
+the document.  It has been saved, though, for possible later usage.  We will
+see the solution later!
+
+\subsection{Options to the \env*{solution} Environment}\label{sec:opti-soli-envir}
+The \env{solutions} environment also has options, namely these:
+\begin{options}
+  \keyval{name}{name}\Module{solution}\Default
+    Sets a custom name.
+  \keybool{print}\Module{solution}\Default{false}
+    Prints or hides the solution.
+  \keyval{skip-below}{dim}\Module{solution}\Default{.5\cs*{baselineskip}}
+    \sinceversion{0.18}Sets the vertical space that is inserted after the
+    solution environment.
+  \keybool{no-skip-below}\Module{solution}\Default{false}
+    \sinceversion{0.18}Disables the insertion of vertical space after the
+    solution environment.
+  \keyval{pre-hook}{code}\Module{solution}\Default
+    \sinceversion{0.16}Adds \meta{code} directly before the solution title.
+  \keyval{post-hook}{code}\Module{solution}\Default
+    \sinceversion{0.16}Adds \meta{code} directly after the solution.
+  \keyval{pre-body-hook}{code}\Module{solution}\Default
+    \sinceversion{0.16}Adds \meta{code} directly before the solution body.
+  \keyval{post-body-hook}{code}\Module{solution}\Default
+    \sinceversion{0.16}Adds \meta{code} directly after the solution body.
+\end{options}
+Their meaning is the same as those for the \code{question} environment.
+\begin{example}
+  \begin{question}{5}
+    The solution to this questions gets printed where it is.
+  \end{question}
+  \begin{solution}[print]
+    See? This solution gets printed where you have put it in the code of
+    your document.
+  \end{solution}
+  \begin{question}{2.5}
+    The solution to this questions gets printed where it is \emph{and}
+    has a fancy name. Have you noticed that you can assign partial
+    points?
+  \end{question}
+  \begin{solution}[print,name=Fancy name]
+    See? This solution gets printed where you have put it and has a fancy
+    name!
+  \end{solution}
+\end{example}
+
+\subsection{Setting the Counter}\label{ssec:counter}
+The package option \option{counter-format} allows you to specify how the question
+counter (a counter unsurprisingly name \code{question}) is formatted.
+
+The input is an arbitrary string which means you can have anything as counter
+number.  However, the letter combinations \code{ch}, \code{se}, \code{qu} and
+\code{tsk} are replaced with the counters for the chapter, section, question
+or tasks (see the \Tasks\ package), respectively.  While the last one is not
+really useful in this case the others allow for a combined numbering.  Each of
+these letter combinations can have an optional argument that specifies the
+format of the respective counter. \code{1}: \cs*{arabic}, \code{a}:
+\cs*{alph}, \code{A}: \cs*{Alph}, \code{r}: \cs*{roman} and \code{R}:
+\cs*{Roman}.
+\begin{example}
+  \SetupExSheets{counter-format=Nr~se~(qu[a])}
+  \begin{question}
+    A question with a differently formatted number.
+  \end{question}
+\end{example}
+Since the strings associated with the counters are replaced one has to hide
+them if they are actually wanted in the counter format.  The easiest way would
+to hide them in braces.
+\begin{example}
+  \SetupExSheets{counter-format={section}\,se~{question}\,(qu[a])}
+  \begin{question}
+    A question with a yet differently formatted number.
+  \end{question}
+\end{example}
+
+\subsection{Language Settings}
+The names of the questions and solutions are language dependent.  If you use
+\pkg{babel} or \pkg{polyglossia} \ExSheets\ will adapt to the document language.
+\ExSheets\ has a number of translations but surely not all!  If you miss a
+language please drop me a line in an
+email\footnote{\href{mailto:contact@mychemistry.eu}{contact@mychemistry.eu}}
+containing the \pkg{babel} language name and the correct translations for
+questions (possibly distinguishing between exercises and exam questions) and
+solutions.
+
+Until I implement it you can add something like this to your preamble (example
+for Danish) and try if it works:
+\begin{sourcecode}
+  \DeclareTranslation{Danish}{exsheets-exercise-name}{\O{}velse}
+  \DeclareTranslation{Danish}{exsheets-question-name}{Opgave}
+  \DeclareTranslation{Danish}{exsheets-solution-name}{Opl\o{}sning}
+\end{sourcecode}
+If this isn't working it means that the language you're using is unknown to
+the \pkg{translations} package.  In this case please notify me, too.  You then
+can still use the \option{name} options.
+
+\section{Counting Points}\label{sec:points}
+\subsection{The Commands}
+You have seen in section~\ref{ssec:questions} that you can assign points to a
+question.  If you do so these points are printed into the
+margin\footnote{Well, not necessarily.  It depends on the heading style you
+  have chosen.} and are counted internally.  But there are additional commands
+to assign points or bonus points and a number of commands to retrieve the sum
+of points and/or bonus points.
+\begin{commands}
+  \command{addpoints}[\sarg\marg{num}]
+    This command can be used to add points assigned to subquestions.
+    \cs{addpoints} will print the points (with ``unit'') \emph{and} add them
+    to the sum of all points, \cs{addpoints}\sarg\ will only add them but print
+    nothing.
+  \command{points}[\sarg\marg{num}]
+    This command will only print the points (with ``unit'') but won't add them
+    to the sum of points.
+  \command{addbonus}[\sarg\marg{num}]
+    This command can be used to add bonus points assigned to subquestions.
+    \cs{addbonus} will print the points (with ``unit'') \emph{and} add them
+    to the sum of all bonus points, \cs{addbonus}\sarg\ will only add them but
+    print nothing.
+  \command{bonus}[\sarg\marg{num}]
+    This command will only print the bonus points (with ``unit'') but won't
+    add them to the sum of bonus points.
+  \command{pointssum}[\sarg]
+    Prints the sum of all points with or without (starred version) ``unit'':
+    \pointssum
+  \command{currentpointssum}[\sarg]
+    Prints the current sum of points with or without (starred version)
+    ``unit'': \currentpointssum
+  \command{bonussum}[\sarg]
+    Prints the sum of all bonus points with or without (starred version)
+    ``unit'': \bonussum
+  \command{currentbonussum}[\sarg]
+    Prints the current sum of bonus points with or without (starred version)
+    ``unit'': \currentbonussum
+  \command{totalpoints}[\sarg]
+    prints the sum of the points \emph{and} the sum of the bonus points with
+    ``unit'': \totalpoints\space The starred version prints the sum of the
+    points without ``unit'': \totalpoints*.
+\end{commands}
+The commands \cs{pointssum}, \cs{bonussum} and \cs{totalpoints} need at
+least \emph{two} \LaTeX\ runs to get the sum right.
+
+Suppose you have an exercise worth \points{4} which consists of four questions
+listed with an \env{enumerate} environment that are all worth \points{1}
+each.  You have two possibilities to display and count them:
+\begin{example}
+  % uses package `enumitem'
+  \begin{question}{4}
+    \begin{enumerate}[label=\alph*)]
+      \item blah (\points{1})
+      \item blah (\points{1})
+      \item blah (\points{1})
+      \item blah (\points{1})
+    \end{enumerate}
+  \end{question}
+  \begin{question}
+    \begin{enumerate}[label=\alph*)]
+      \item blah (\addpoints{1})
+      \item blah (\addpoints{1})
+      \item blah (\addpoints{1})
+      \item blah (\addpoints{1})
+    \end{enumerate}
+  \end{question}
+\end{example}
+
+\subsection{Options}
+\begin{options}
+  \keyval{name}{name}\Module{points}\Default{P.}
+    Choose the ``unit'' for the points.  If you like to differentiate between
+    a single point and more than one point you can give a plural ending
+    separated with a slash: \keyis{name}{point/s}.  This sets also the name of
+    the bonus points.
+  \keyval{name-plural}{plural form of name}\Module{points}\Default
+    Instead of forming the plural form with an ending to the singular form
+    this option allows to set an extra word for it.  This sets also the plural
+    form for the bonus points.
+  \keyval{bonus-name}{name}\Module{points}\Default{P.}
+    Choose the ``unit'' for the bonus points.  If you like to differentiate
+    between a single point and more than one point you can give a plural
+    ending separated with a slash: \key{bonus-name}{point/s}.
+  \keyval{bonus-plural}{plural form of name}\Module{points}\Default
+    Instead of forming the plural form with an ending to the singular form
+    this option allows to set an extra word for it.
+  \keybool{use-name}\Module{points}\Default{true}
+    Don't display the name at all.  Or do.
+  \keyval{format}{code}\Module{points}\Default{\cs*{@firtsofone}}
+    \sinceversion{0.9d}Format number plus name as a whole.  Ideally
+    \meta{code} would end with a command that takes an argument.  Else
+    number plus name will be braced.
+  \keyval{number-format}{any code}\Module{points}\Default
+    This option allows formatting of the number, \eg, italics:
+    \keyis{number-format}{\cs*{textit}}.
+  \keyval{bonus-format}{any code}\Module{points}\Default
+    This option allows formatting of the number of the bonus points, \eg,
+    italics: \keyis{bonus-format}{\cs*{textit}}.
+  \keybool{parse}\Module{points}\Default{true}
+    If set to \code{false} the points are not counted and the
+    \cs{totalpoints}, \cs{pointssum} and \cs{bonussum} commands won't know
+    their value.
+  \keybool{separate-bonus}\Module{points}\Default{false}
+    This option determines whether points and bonus points each get their own
+    unit when they appear together (in the margin or with \cs{totalpoints}).
+  \keyval{pre-bonus}{tokens}\Module{points}\Default{\cs*{space}(+}
+    Code to be inserted before the bonus points when they follow normal
+    points.
+  \keyval{post-bonus}{tokens}\Module{points}\Default{)}
+    Code to be inserted after the bonus points when they follow normal
+    points.
+\end{options}
+
+\begin{example}[add-sourcecode-options={literate=}]
+  \SetupExSheets[points]{name=point/s,number-format=\color{red}}
+  \begin{question}{1}
+    This one's easy so only 1 point can be earned.
+  \end{question}
+  \begin{question}{7.5}
+    But this one's hard! 7.5 points are in there for you!
+  \end{question}
+\end{example}
+
+\section{Printing Solutions}\label{sec:solutions}
+You have already seen that you can print solutions where they are using the
+\option{print} option.  But \ExSheets\ offers you quite more
+possibilities.
+
+In the next subsections the usage of the following command is discussed.
+\begin{commands}
+  \command{printsolutions}[\oarg{setting}]
+    Print solutions of questions/exercises.
+\end{commands}
+
+Before we do that a hint: remember that you can set the option \option{print}
+globally:
+\begin{sourcecode}
+  % in the preamble
+  \SetupExSheets{solution/print=true}
+\end{sourcecode}
+
+Now if you want to typeset some text depending on the option being true or not
+you can use the following commands:
+\begin{commands}
+  \expandable\command{PrintSolutionsTF}[\marg{true code}\marg{false code}]
+    Either leaves \meta{true code} or \meta{false code} in the input stream
+    depending on wether solutions are printed or not, \ie, on the value of the
+    solution's option \option{print}.  Inside a \env{solution} environment
+    this always prints \meta{true code}.
+  \expandable\command{PrintSolutionsT}[\marg{true code}]
+    Either leaves \meta{true code} or nothing in the input stream depending on
+    wether solutions are printed or not, \ie, on the value of the solution's
+    option \option{print}.  Inside a \env{solution} environment this always
+    prints \meta{true code}.
+  \expandable\command{PrintSolutionsF}[\marg{false code}]
+    Either leaves nothing or \meta{false code} in the input stream depending
+    on wether solutions are printed or not, \ie, on the value of the
+    solution's option \option{print}.  Inside a \env{solution}environment this
+    always prints nothing. 
+\end{commands}
+They might come in handy if you want two versions of an exercise sheet, one
+with the exercises and one with the solutions, and you want to add different
+titles to these versions, for instance.
+
+% When solutions are saved a lot of information is saved. One of them is the
+% current counter format. The following option determines wether the saved
+% counter format or the currently active one is used when \cs{printsolutions} is
+% called:
+% \begin{options}
+%   \keybool{use-saved-counter-format}\Default{true}
+%     \changedversion{0.21}When set to true the counter format of solutions
+%     printed by \cs{printsolutions}\label{option:use-saved-counter-format} are
+%     independent from the setting of \option{counter-format}. The saved format
+%     is used instead.
+% \end{options}
+
+\subsection{Print all}\label{sec:solutions-print-all}
+The first and easiest usage of \cs{printsolutions} is the following:
+\begin{sourcecode}
+  \printsolutions
+\end{sourcecode}
+There is nothing more to say, really. It prints all solutions you have
+specified except those belonging to a question with option \keyis{use}{false}.
+Yes, there's one more point: \cs{printsolutions} only knows the solutions
+that have been set \emph{before} its usage!  This is also true for every usage
+explained in the next sections.
+
+\begin{example}
+  \printsolutions
+\end{example}
+
+Two options allow to add code to the list of solutions when used with
+\cs{printsolutions}\Oarg{all} (which is the same as using it without option):
+
+\begin{options}
+  \keyval{chapter-hook}{code}
+    \sinceversion{0.13}Adds \meta{code} to the list of solutions every time
+    solutions from a new chapter are printed (before the solutions of the
+    corresponding chapter are printed).
+  \keyval{section-hook}{code}
+    \sinceversion{0.13}Adds \meta{code} to the list of solutions every time
+    solutions from a new section are printed (before the solutions of the
+    corresponding section are printed).
+\end{options}
+
+\subsection{Print per chapter/section}
+\minisec{Current chapter/section}
+If you are not creating an exercise sheet or an exam but are writing a
+textbook you maybe want a section at the end of each chapter showing the
+solution to the exercises presented in that chapter.  In this case use the
+command as follows:
+\begin{sourcecode}
+  \printsolutions[section]
+  % or
+  \printsolutions[chapter]
+\end{sourcecode}
+Again, this is pretty much self-explaining.  The solutions to the questions of
+the current chapter\footnote{Only if the document class you're using
+  \emph{has} chapters, of course!} or section are printed.
+\begin{example}
+  \begin{question}
+    This is the first and only question in this section.
+  \end{question}
+  \begin{solution}
+    This will be one of a few solutions printed by the following call of
+    \cs{printsolutions}.
+  \end{solution}
+  And now:
+  \printsolutions[section]
+\end{example}
+
+\minisec{Specific chapter/section}\label{sssec:print_specific_section}
+You can also print only the solutions from chapters or sections other than the
+current ones.  The syntax is fairly easy:
+\begin{example}
+  \printsolutions[section={1-7,10}]
+  % the same for chapters:
+  % \printsolutions[chapter={1-7,10}]
+\end{example}
+Don't forget that \cs{printsolutions} cannot know the solutions from
+section~10 yet.  It is just used to demonstrate the syntax. You can also use
+an open range, \eg, something like
+\begin{sourcecode}
+  \printsolutions[section={-4,10-}]
+\end{sourcecode}
+This would print the solutions from sections~1--4 and from all sections with
+number 10\footnote{Or rather where \cs*{value}\Marg{section} is 10 or greater --
+  the actual counter formatting is irrelevant.} and greater.
+
+There is an obvious disadvantage: you have to know the section numbers!  But
+there is a solution: use the package option \keyis{use-ref}{true}.  Then you
+can do something like
+\begin{sourcecode}
+  % in the preamble:
+  \usepackage[use-ref]{exsheets}
+  % somewhere in your code after \section{A really cool section title}:
+  \label{sec:ReallyCool}
+  % somewhere later in your code:
+  \printsolutions[section={-\S{sec:ReallyCool}}]
+  % which will print all solutions from questions up to and
+  % including the really cool section
+\end{sourcecode}
+With the package option \keyis{use-ref}{true} each usage of \cs*{label} will
+create additional labels (one preceded with \code{exse:} and another one with
+\code{exch:}) which store the section number and the chapter number,
+respectively.  These are used internally by two commands \cs{S} and \cs{C}
+which refer to the section number and the chapter number the label was created
+in.  \emph{These commands are only available as arguments of}
+\cs{printsolutions}.
+
+Since some packages like the well known \pkg{hyperref} for example redefine
+\cs*{label} \option{use-ref} won't work in together with it.  In this case
+don't use \option{use-ref} and set \cs{exlabel}\marg{label} instead to
+remember the section/the chapter number.  Its usage is just like \cs*{label}.
+So the safest way is as follows:
+\begin{sourcecode}
+  % in the preamble:
+  \usepackage{exsheets}
+  % somewhere in your code after \section{A really cool section title}:
+  \exlabel{sec:ReallyCool}
+  % somewhere later in your code:
+  \printsolutions[section={-\S{sec:ReallyCool}}]
+  % which will print all solutions from questions up to and
+  % including the really cool section
+\end{sourcecode}
+Please be aware that the labels must be processed in a previous \LaTeX\ run
+before \cs{S} and \cs{C} can pass them on to \cs{printsolutions}.
+
+\subsection{Print by \acs{id}}\label{ssec:ids}
+Now comes the best part: you can also print selected solutions!  Every
+question has an \acs{id}.  To see which \acs{id} a question has you can call
+the following command:
+\begin{commands}
+  % \command{DebugExSheets}[\Marg{\choices{true,false}}]
+  %   Enable or disable visual \ExSheets' debugging.
+  \expandable\command{CurrentQuestionID}
+    \sinceversion{0.4a}Expands to the current question \acs{id}.
+\end{commands}
+\begin{options}
+  \keybool{debug}
+    Enable or disable visual \ExSheets' debugging.
+\end{options}
+Let's create some more questions and take a look what this command does:
+\begin{example}
+  \SetupExSheets{debug=true}
+  \begin{question}[ID=nice!]
+    A question with a nice \acs{id}!
+  \end{question}
+  \begin{solution}
+    The solution to the question with the nice \acs{id}.
+  \end{solution}
+  \begin{question}{3.75}
+    Yet another question. But this time with quarter points!
+  \end{question}
+  \begin{solution}
+    Yet another solution.
+  \end{solution}
+\end{example}
+
+So now we can call some specific solutions:
+\begin{example}
+  \printsolutions[byID={first,nice!,10,14}]
+\end{example}
+This makes use of the \pkg{l3sort} package which at the time of writing is
+still considered experimental.  In case you wonder where solution~14 is:
+question~14 has no solution given.
+
+If you don't want that the solutions are sorted automatically but appear in
+the order given you can use the option
+\begin{options}
+  \keybool{sorted}\Module{solution}\Default{true}
+    Sort solutions given by \acs{id} or don't.
+\end{options}
+
+\section{Conditional Printing of Questions}\label{sec:cond-print-quest}
+\subsection{Using Classes}\label{sec:classes}
+For creating different variants of a written exam or different difficulty
+levels of an exercise sheet it comes in handy if one can assign certain
+classes to questions and then tell \ExSheets\ only to use one ore more
+specific classes.
+\begin{options}
+  \keyval{use-classes}{list of classes}\Default
+    When this option is used only the questions belonging to the specified
+    classes are printed and have their solutions saved.
+\end{options}
+\begin{example}
+  \SetupExSheets{use-classes={A,C}}
+  \begin{question}[class=A]
+    Belonging to class A.
+  \end{question}
+  \begin{question}[class=B]
+    Belonging to class B.
+  \end{question}
+  \begin{question}[class=C]
+    Belonging to class C!
+  \end{question}
+\end{example}
+Questions of classes that are not used are fully discarded. \emph{This also
+  means that questions that don't have a class assigned are discarded.}
+
+\ExplSyntaxOn
+ \bool_set_false:N \g__exsheets_use_classes_bool
+\ExplSyntaxOff
+
+\subsection{Using Topics}\label{sec:topics}
+Similarly to classes one can assign topics to questions. The usage is
+practically identical, the semantic meaning is different.
+\begin{options}
+  \keyval{use-topics}{list of topics}\Default
+    When this option is used only the questions belonging to the specified
+    topics are printed and have their solutions saved.
+\end{options}
+\begin{example}
+  \SetupExSheets{use-topics={trigonometry}}
+  \begin{question}[topic=trigonometry]
+    A trigonometry question.
+  \end{question}
+  \begin{question}[topic=arithmetics]
+    A arithmetics question
+  \end{question}
+\end{example}
+Questions of topics that are not used are fully discarded. \emph{This also
+  means that questions that don't have a topic assigned are discarded.}
+
+If you set both \option{use-classes} and \option{use-topics} then only
+questions will be used that \emph{match both categories}.
+
+Ideally one could assign more than one topic to a question but this is
+\emph{not} supported yet.
+
+\ExplSyntaxOn
+ \bool_set_false:N \g__exsheets_use_topics_bool
+\ExplSyntaxOff
+
+\subsection{Own Dividing Concepts}
+Actually\sinceversion{0.8} both classes and topics are introduced into
+\ExSheets\ internally this way:
+\begin{sourcecode}
+  \DeclareQuestionClass{class}{classes}
+  \DeclareQuestionClass{topic}{topics}
+\end{sourcecode}
+which means you can do the same introducing your own dividing concepts.
+\begin{commands}
+  \command{DeclareQuestionClass}[\marg{singular name}\marg{plural name}]
+    Introduces a new dividing concept and defines both new options for the
+    \env{question} environment and new global options.
+\end{commands}
+
+For example you could decide you want to group your questions according to
+their difficulty.  You could place the following line in your preamble:
+\begin{sourcecode}
+  \DeclareQuestionClass{difficulty}{difficulties}
+\end{sourcecode}
+This would define an option \option*{use-difficulties} analogous to
+\option{use-classes} and \option{use-topics}.  It would also define an option
+\option{difficulty} for the \env{question} environment.  This means you could
+now do something like the following:
+\begin{example}
+  \SetupExSheets{use-difficulties={easy,hard}}
+  \begin{question}[difficulty=easy]
+    An easy question.
+  \end{question}
+  \begin{question}[difficulty=medium]
+    This one's a bit harder.
+  \end{question}
+  \begin{question}[difficulty=hard]
+    Now let's see if you can solve this one.
+  \end{question}
+\end{example}
+
+\subsection{Retrieving the Class Value in a Question}\label{sec:retr-class-value}
+Sometimes it may be desirable to retrieve the value of a class defined by
+\cs{DeclareQuestionClass} that a question has in order to be able to print,
+say.  This is possible with the following commands:
+\begin{commands}
+  \expandable\command{GetQuestionClass}[\marg{class}]
+    Prints the value of \meta{class} a question has.  The command is
+    expandable.  If the class does not exist or the value is empty the command
+    expands to nothing.
+  \command{PrintQuestionClassTF}[\marg{class}\marg{true}\marg{false}]
+    Test if a question has a non-empty value for class \meta{class} and either
+    leaves \meta{true} or \meta{false} in the input stream.  In the
+    \meta{true} argument you can refer to the value with \code{\#1} where you
+    want it printed.
+  \command{PrintQuestionClassT}[\marg{class}\marg{true}]
+    Like \cs{PrintQuestionClassTF} but only has the \meta{true} branch.
+  \command{PrintQuestionClassF}[\marg{class}\marg{false}]
+    Like \cs{PrintQuestionClassTF} but only has the \meta{false} branch.
+\end{commands}
+
+\begin{example}
+  \begin{question}[difficulty=hard]
+    This question has the difficulty level
+    ``\PrintQuestionClassTF{difficulty}{#1}{??}''.
+  \end{question}
+\end{example}
+
+\ExplSyntaxOn
+ \bool_set_false:N \g__exsheets_use_difficulties_bool
+\ExplSyntaxOff
+
+\subsection{Tagging Questions}
+There\sinceversion{0.20} is another way of dividing questions: you can assign
+tags to questions:
+\begin{sourcecode}
+  \begin{question}[tags={foo,bar,baz}]
+    ...
+  \end{question}
+\end{sourcecode}
+You can then decide to print only questions with certain tags by using the
+following option:
+\begin{options}
+  \keyval{use-tags}{csv list of tags to include}
+    Select tags.  When used only questions being tagged with at least one of
+    the tags in \meta{csv list of tags to include} are printed.
+\end{options}
+
+\section{Adding and Using Additional Information to
+  Questions}\label{sec:additional_info}
+\subsection{Question Properties -- the Basics}
+
+For managing lots of questions and corresponding solutions it can be very
+useful to be able to save and recover additional information to the questions.
+This is possible with the following commands.  First the ones for saving:
+\begin{commands}
+  \command{DeclareQuestionProperty}[\marg{name}]
+    This command defines a question property \meta{name}.  It can only be
+    used in the document preamble.
+  \command{SetQuestionProperties}[\Marg{\meta{name}=\meta{value},...}]
+    Set the properties for a specific question. this command can only be used
+    inside the \env{question} environment.
+\end{commands}
+Now the commands for recovering the properties:
+\begin{commands}
+  \command{QuestionNumber}[\marg{id}]
+    Recover the number of the question with the \acs{id} \meta{id}.  The
+    number is displayed according to the format set with
+    \option{counter-format}.
+  \expandable\command{GetQuestionProperty}[\marg{name}\marg{id}]
+    Recover the property \meta{name} of the question with the \acs{id}
+    \meta{id}.  Of course the property must have been declared before.  The
+    command is expandable.  Since\changedversion{0.12} the properties of a
+    question are written to the \code{aux} file it is possible to retrieve
+    them before the corresponding \env{question} environment has been used.
+  \expandable\command{IfQuestionPropertyTF}[\marg{name}\marg{id}\marg{true}\marg{false}]
+    A command\sinceversion{0.15} that returns \meta{true} if the question with
+    the \acs{id} \meta{id} has the property \meta{name} and \meta{false}
+    otherwise.  The variants \cs{IfQuestionPropertyT} and
+    \cs{IfQuestionPropertyF} also exist which only have the \meta{true} or the
+    \meta{false} branch.
+\end{commands}
+  
+Let's say we have declared the properties \code{notes}, \code{reference} and
+\code{topic}.  By default the property \code{points} is available and gets the
+value of the optional argument of the \code{question} environment.
+
+We can now do the following:
+\begin{example}
+  % uses `biblatex'
+  \begin{question}[ID=center,topic=LaTeX]{3}
+    Explain how you could center text in a \LaTeX\ document.
+    \SetQuestionProperties{
+       topic     = \TeX/\LaTeX ,
+       notes     = {How to center text.},
+       reference = {\textcite{companion}}}
+  \end{question}
+  \begin{solution}
+    To center a short part of the text body one can use the \env*{center}
+    environment (\points{1}). Inside an environment like \env*{table} one
+    should use \cs*{centering} (\points{1}). For single lines there is also
+    the \cs*{centerline} command (\points{1}).
+  \end{solution}
+  \begin{question}[ID=knuthbooks,topic=LaTeX]{2}
+    Name two books by D.\,E.\,Knuth.
+    \SetQuestionProperties{
+       topic     = \TeX/\LaTeX ,
+       notes     = {Books by Knuth.},
+       reference = {\textcite{knuth:ct:a,knuth:ct:b,knuth:ct:c,knuth:ct:d,knuth:ct:e}}}
+  \end{question}
+  \begin{solution}
+    For example two volumes from \citetitle{knuth:ct}:
+    \citetitle{knuth:ct:a,knuth:ct:b,knuth:ct:c,knuth:ct:d,knuth:ct:e}. Each
+    valid answer is worth \points{1}
+  \end{solution}
+\end{example}
+
+It is now possible to recover these values later:
+\begin{example}
+  % uses `booktabs'
+  \begin{center}
+    \begin{tabular}{lll}
+      \toprule
+        Question & Property & \\
+      \midrule
+      \QuestionNumber{center}
+        & Points     & \GetQuestionProperty{points}{center} \\
+        & Topic      & \GetQuestionProperty{topic}{center} \\
+        & References & \GetQuestionProperty{reference}{center} \\
+        & Note       & \GetQuestionProperty{notes}{center} \\
+      \midrule
+      \QuestionNumber{knuthbooks}
+        & Points     & \GetQuestionProperty{points}{knuthbooks} \\
+        & Topic      & \GetQuestionProperty{topic}{knuthbooks} \\
+        & References & \GetQuestionProperty{reference}{knuthbooks} \\
+        & Note       & \GetQuestionProperty{notes}{knuthbooks} \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+\end{example}
+
+Please note that properties \emph{are not the same} as the dividing concepts
+explained in section~\ref{sec:cond-print-quest} although they may seem
+similar in meaning or even have the same name.
+
+When properties are set they are also written to the \code{aux} file which
+means they can be retrieved \emph{before} the corresponding question.  Of
+course this means that two compilation runs are necessary.
+
+\subsection{Pre-defined Properties}
+
+A few properties are already defined by \ExSheets:
+\begin{itemize}
+  \item \code{counter}:\sinceversion{0.14} this property holds the actual
+    question number formatted according to the formatting set with option
+    \option{counter-format}.
+  \item \code{subtitle}:\sinceversion{0.12} this property holds the subtitle
+    of the question if given.
+  \item \code{question-body}:\sinceversion{0.14} this property holds the body
+    of the corresponding \env{question} environment.  Unlike the other
+    properties it is per default \emph{not} written to the \code{aux} file.
+  \item \code{points}: this property holds the sum of points given to a
+    question.
+  \item \code{bonus-points}:\sinceversion{0.14} this property holds the sum of
+    bonus points given to a question.
+  \item \code{ref}:\sinceversion{0.7f} when the option \option{auto-label} is
+    used this property is defined and expands to the corresponding \cs*{ref}.
+    Also see section~\ref{sec:auto-label-opti}.
+  \item \code{page-ref}:\sinceversion{0.7f} when the option
+    \option{auto-label} is used this property is defined and expands to the
+    corresponding \cs*{pageref}.  Also see section~\ref{sec:auto-label-opti}.
+\end{itemize}
+
+There is one option affecting the property \code{question-body}:
+\begin{options}
+  \keybool{save-to-aux}\Module{question}\Default{false}
+    When set to \code{true} the property \code{question-body} is also written
+    to the \code{aux} file.
+\end{options}
+
+\subsection{Advanced Usage}
+
+There are additional commands\sinceversion{0.3} that might prove useful.  They
+allow advanced usage of defined properties.  Below an example is shown how
+they can be used to generate a grading table.
+\begin{commands}
+  \command{ForEachQuestion}[\marg{code to be executed for each used question}]
+    \changedversion{0.14}Inside the argument one can refer to the \ac{id} of a
+    question with \code{\#1}.  You can also refer to the number of the
+    question with \code{\#2}.  \emph{Number} means that if you \emph{use}
+    seven questions then those questions have numbers~1 to~7.
+  \expandable\command{numberofquestions}
+    \changedversion{0.14} returns the complete number of used questions.
+  \expandable\command{iflastquestion}[\marg{true code}\marg{false code}]
+    Although this command is available in the whole document it is only useful
+    inside \cs{ForEachQuestion}.  It tells you if the end of the loop is
+    reached or not.
+\end{commands}
+
+One could use these commands to create a grading table, for instance:
+\begin{sourcecode}
+  \begin{tabular}{|l|*{\numberofquestions}{c|}c|}\hline
+    Question &
+      \ForEachQuestion{\QuestionNumber{#1}\iflastquestion{}{&}} &
+      Total \\ \hline
+    Points   &
+      \ForEachQuestion{\GetQuestionProperty{points}{#1}\iflastquestion{}{&}} &
+      \pointssum* \\ \hline
+    Reached  &
+      \ForEachQuestion{\iflastquestion{}{&}} & \\ \hline
+  \end{tabular}
+\end{sourcecode}
+For four questions the table now would look similar to
+figure~\ref{fig:grading-table}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tabular}{|l|*{4}{c|}c|}\hline
+    Question & 1. & 2. & 3. & 4. & Total \\ \hline
+    Points   &  3 &  5 & 10 &  8 & 26 \\ \hline
+    Reached  &    &    &    &    &    \\ \hline
+  \end{tabular}
+  \caption{An example for a grading table. (Actually this is a fake. See the
+    \code{grading-table.tex} file shipped with exsheets for the real use case.)}
+  \label{fig:grading-table}
+\end{figure}
+
+
+\section{Variations of an Exam}
+
+It is a quite common task\sinceversion{0.6} to design an exam in two different
+variants.  This is of course possible with \ExSheets' classes (see
+section~\ref{sec:classes}).  However, often not the whole question is to be
+different but only small details, the numbers in a maths exam, say.  For this
+purpose \ExSheets\ provides the following commands:
+\begin{commands}
+  \command{SetVariations}[\marg{num}]
+    Set the number of different variants.  This will determine how many
+    arguments the command \cs{vary} will get.  \meta{num} must at least be
+    \code{2} and is initially set to \code{2}.
+  \command{variant}[\marg{num}]
+    Choose the active variant.  The argument must be a number between \code{1}
+    and the number set with \cs{SetVariations}.  Initially set to \code{1}.
+  \command{vary}[\marg{variant 1}\marg{variant 2}]
+    This command is the one actually used in the document.  It has a number of
+    required arguments equal to the number set with \cs{SetVariations}.  All
+    of its arguments are discarded except the one specified with
+    \cs{variant}.
+  \command{lastvariant}
+    \sinceversion{0.7b}Each time \cs{vary} is called it stores the value it
+    chose in \cs{lastversion}.  This might be convenient to use if one
+    otherwise would have to repeatedly write the same \cs{vary}.
+\end{commands}
+
+\begin{example}
+  \SetVariations{6}%
+  \variant{6}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+  \variant{1}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+  \variant{5}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+  \variant{2}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+  \variant{4}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+  \variant{3}\vary{A}{B}{C}{D}{E}{F}
+  (last variant: \lastvariant)
+\end{example}
+
+\section{A Grade Distribution}
+Probably this is a rather esoteric feature but it could proof useful in some
+cases.  Suppose you are a German math teacher and want to grade exactly
+corresponding to the number of points relative to the sum of total points,
+regardless of how big that might be.  You could do something like this to
+present your grading decisions for the exam:
+\begin{example}
+  % preamble:
+  % \DeclareRelGrades{
+  %   1     = 1 ,
+  %   {1,5} = .9167 ,
+  %   2     = .8333 ,
+  %   {2,5} = .75 ,
+  %   3     = .6667 ,
+  %   {3,5} = .5833 ,
+  %   4     = .5
+  % }
+  \small\setlength\tabcolsep{2pt}
+  \begin{tabular}{r|*8c}
+    Punkte
+    & $\grade*{1}$      & $\le\grade*{1}$ & $\le\grade*{1,5}$ & $\le\grade*{2}$
+    & $\le\grade*{2,5}$ & $\le\grade*{3}$ & $\le\grade*{3,5}$ & $<\grade*{4}$ \\
+    Note
+    & 1 & 1--2 & 2 & 2--3 & 3 & 3--4 & 4 & 5
+  \end{tabular}
+\end{example}
+
+These are the available commands and options:
+\begin{commands}
+  \command{DeclareRelGrades}[\Marg{\meta{grade}=\meta{num},...}]
+    This command is used to define grades and assign the percentage of total
+    points to them.
+  \command{grade}[\sarg\marg{grade}]
+    Gives the number of points corresponding to a grade depending on the value
+    of \cs{pointssum} with or without (starred version) ``unit''.
+\end{commands}
+\begin{options}
+  \keyval{round}{num}\Module{grades}\Default{0}
+    The number of decimals the points of a grade are rounded to.  This doesn't
+    apply to the maximum number of points if the rounded number would be
+    bigger than the actual sum.
+  \keybool{half}\Module{grades}\Default{false}
+    If set to \code{true} points are rounded either to full or to half
+    points.
+\end{options}
+
+\section{Selectively Include Questions from External Files}\label{sec:include}
+\subsection{Caveat}
+I need to say some words of caution: the \cs{includequestions} that will be
+presented shortly is probably \ExSheets' most experimental one at the time of
+writing (\today).  Thanks to feedback of users it is constantly improved and
+bugs are fixed.  It is not a very efficient way to insert question regarding
+performance and you shouldn't wonder if compilation slows down when you use
+it.  It probably needs to be re-written all over but on the one hand that
+would introduce new bugs and on the other hand for the time being I don't have
+the capacities, anyway, so you'll have to live it, I'm afraid.
+
+\subsection{How it works}
+Suppose you have one or more files with questions prepared to use them as a
+kind of database.  One for class A, say, one for class B, one for class C and
+so one, something like this:
+\begin{sourcecode}
+  % this is file classA.tex
+  \begin{question}[class=A,ID=A1,topic=X]
+    First question of class A, topic X.
+  \end{question}
+  \begin{solution}
+    First solution of class A.
+  \end{solution}
+  \begin{question}[class=A,ID=A2,topic=Y]
+    Second question of class A, topic Y.
+  \end{question}
+  \begin{solution}
+    Second solution of class A.
+  \end{solution}
+  ...
+  % end of file classA.tex
+  \endinput
+\end{sourcecode}
+You can of course just \cs*{input} or \cs*{include} it but that would of
+course include the whole file into your document.  But would't it be nice to
+just include selected questions?  Or maybe a five random questions from the
+file?  That is possible with the following command:
+\begin{commands}
+  \command{includequestions}[\oarg{options}\marg{list of filenames}]
+    Include questions from external files.
+\end{commands}
+If you use it without options it will have the same effect as \cs*{input}.
+There are however the following options:
+\begin{options}
+  \keybool{all}\Module{include}
+  \keyval{IDs}{list of IDs}\Module{include}\Default
+    Includes only the specified questions.
+  \keyval{random}{num}\Module{include}\Default
+    Includes \meta{num} randomly selected questions.  This option uses the
+    \pkg{pgfcore} package to create the pseudo-random numbers.
+  \keyval{exclude}{list of IDs}\Module{include}\Default
+    Questions who's \acp{id} are specified here are \emph{not} included.  This
+    option can be combined with the \option{random} option.
+\end{options}
+
+The usage should be self-explainable:
+\begin{sourcecode}
+  % include questions A1, A3 and A4:
+  \includequestions[IDs={A1,A3,A4}]{classA.tex}
+  % or include 3 random questions:
+  \includequestions[random=3]{classA}
+\end{sourcecode}
+In order to be able to select the questions \ExSheets\ needs to \cs*{input}
+the file twice.  The first time the available questions are determined, the
+second time the selected questions are used.  This unfortunately means that
+anything that is \emph{not} part of a question or solution is also input
+twice.  Either don't put anything else into the file or use one of the
+following commands for control:
+\begin{commands}
+  \command{PrintIfIncludeActiveTF}[\marg{true code}\marg{false code}]
+    Checks if the questions are actively included or not and puts \meta{true
+      code} or \meta{false code} in the input stream depending on the answer.
+  \command{PrintIfIncludeActiveT}[\marg{true code}]
+    Checks if the questions are actively included or not and puts \meta{true
+      code} in the input stream if the answer is yes.
+  \command{PrintIfIncludeActiveF}[\marg{false code}]
+    Checks if the questions are actively included or not and puts \meta{false
+      code} in the input stream if the answer is no.
+\end{commands}
+
+The selection can be refined further by selecting questions belonging to a
+specific class of questions (see section~\ref{sec:cond-print-quest}) before
+using \cs{includequestions}.
+
+\sinceversion{0.8}After you've used \cs{includequestions} the \acp{id} of the
+included questions is available as an unordered comma separated list in the
+following macro:
+\begin{commands}
+  \command{questionsincludedlast}
+    Unordered comma separated list of question \acp{id} included with the last
+    usage of \cs{includequestions}.
+\end{commands}
+
+\section{The \option*{auto-label} Option}\label{sec:auto-label-opti}
+The\sinceversion{0.12} package option \option{auto-label} sets a
+\cs*{label}\Marg{qu:\meta{id}} every time the question environment is used.
+Both the used command and the automated label can be customized using the
+following options:
+
+\begin{options}
+  \keyval{label-format}{code}\Default{qu:\#1}
+    The pattern for generating the automatic label.  \code{\#1} gets replaced
+    by the \ac{id} of the corresponding question.
+  \keyval{label-cmd}{macro}\Default{\cs*{label}}
+    The command used for generating the label.  A command that should take one
+    mandatory argument.
+  \keyval{ref-cmd}{macro}\Default{\cs*{ref}}
+    The command used in the \code{ref} property created by the
+    \option{auto-label} option, also see section \ref{sec:additional_info}.
+    The command should take one mandatory argument.
+  \keyval{pageref-cmd}{macro}\Default{\cs*{pageref}}
+    The command used in the \code{pageref} property created by the
+    \option{auto-label} option, also see section \ref{sec:additional_info}.
+    The command should take one mandatory argument.
+\end{options}
+
+\section{Own Question/Solution Pairs}
+\ExSheets\changedversion{0.9} provides the possibility to create new
+environments that behave like the \env{question} and \env{solution}
+environments.  This would allow, for example, to define a
+\env*{question*}/\env*{solution*} environment pair for bonus questions.  The
+following commands may be used in the document preamble:
+\begin{commands}
+  \command{NewQuSolPair}[\marg{question}\oarg{question options}\oarg{general
+    options}\marg{solution}\oarg{solution options}\oarg{general options}]
+    Define a new pair of question and solution environments.
+  \command{RenewQuSolPair}[\marg{question}\oarg{question options}\oarg{general
+    options}\marg{solution}\oarg{solution options}\oarg{general options}]
+    Redefine an existing pair of question and solution environments.
+\end{commands}
+The standard environments are defined as follows:
+\begin{sourcecode}
+  \NewQuSolPair{question}{solution}
+\end{sourcecode}
+
+Let's say we want the possibility to add bonus questions.  A simple way would
+be to define starred variants that add a star in the margin left to the title:
+\begin{example}
+  % preamble:
+  % - \texorpdfstring is provided by `hyperref'
+  % - \bigstar is provided by `amssymb'
+  % \DeclareRobustCommand*\questionstar{\texorpdfstring{\bonusquestionsign}{* }}
+  % \DeclareRobustCommand*\bonusquestionsign{\llap{$\bigstar$\space}}
+  %
+  % \NewQuSolPair
+  %   {question*}[name=\questionstar Bonus Question]
+  %   {solution*}[name=\questionstar Solution]
+  \begin{question*}
+    This is a bonus question.
+  \end{question*}
+  \begin{solution*}[print]
+    This is what the solution looks like.
+  \end{solution*}
+\end{example}
+As you can see the environments take the same options as are described for the
+standard \env{question} and \env{solution} environments.
+
+\section{Filling in the Blanks}
+\subsection{Cloze}
+Both\changedversion{0.4} in exercise sheets and in exams it is sometimes
+desirable to be able to create \blank{blanks} that have to be filled in.  Or
+maybe some more lines: \blank[width=5\linewidth]{}
+
+\begin{commands}
+  \command{blank}[\sarg\oarg{options}\marg{text to be filled in}]
+    creates a blank in normal text or in a question but fills the text of its
+    argument if inside a solution.  If used at the \emph{begin of a paragraph}
+    \cs{blank} will do two things: it will set the linespread according to an
+    option explained below and will insert \cs*{par} after the lines.  If you
+    don't want that use the starred version.
+\end{commands}
+
+The options are these:
+\begin{options}
+  \keychoice{style}{line,wave,dline,dotted,dashed}\Module{blank}\Default{line}
+    The style of the line.  This uses the corresponding command from the
+    \pkg{ulem} package and is the whole reason why \ExSheets\ loads it in the
+    first place.
+  \keyval{scale}{num}\Module{blank}\Default{1}
+    Scales the width of the blank by factor \meta{num} unless the width is
+    explicitly set.
+  \keyval{width}{dim}\Module{blank}\Default
+    The width of the line.  If it is not used the width of the filled in text
+    is used.
+  \keyval{linespread}{num}\Module{blank}\Default{1}
+    Set the linespread for the blank lines.  This only has an effect if
+    \cs{blank} is used at the begin of a paragraph.
+  \keyval{line-increment}{dim}\Module{blank}\Default{1pt}
+    \sinceversion{0.21h}When the blank line ist built it is built in multiples
+    of this value.  If the value is too large you may end up with uneven
+    lines.  If the value is too small you may end up with a non-ending
+    compilation.
+  \keyval{line-minimum-length}{dim}\Module{blank}\Default{2em}
+    \sinceversion{0.21h}The minimal length a line must have before it is built
+    step by step.
+\end{options}
+\begin{example}
+  \begin{question}
+    Try to fill in \blank[width=4cm]{these} blanks. All of them
+    \blank[style=dotted]{are created} by using the \cs{blank}
+    \blank[style=dashed]{command}.
+  \end{question}
+  \begin{solution}[print]
+    Try to fill in \blank[width=4cm]{these} blanks. All of them
+    \blank[style=dotted]{are created} by using the \cs{blank}
+    \blank[style=dashed]{command}.
+  \end{solution}
+\end{example}
+A number of empty lines are easily created by setting the width option:
+\begin{example}
+  \blank[width=4.8\linewidth,linespread=1.5]{}
+\end{example}
+
+\subsection{Vertical Space for answers}
+When\sinceversion{0.3} you're creating an exam you might want to add some
+vertical space where the students can write down their answers.  While you can
+always use \cs*{vspace} this is not always handy when the space left on the
+page is less than you want.  In this case it would be nice if a) there would
+be no warning and b) the rest of the space would be added at the top of the
+next page.  This is what the following command is for:
+\begin{commands}
+  \command{examspace}[\sarg\marg{dim}]
+    Add space as specified in \meta{dim}. If the space available on the
+    current page is not enough the rest of the space will be added at the top
+    of the next page.  The starred version will silently drop any leftover
+    space instead of adding it to the next page.
+\end{commands}
+\begin{example}[side-by-side]
+  \begin{question}
+   What do you think of this feature?
+   \examspace{3cm}
+  \end{question}
+  This line comes after the space.
+\end{example}
+
+\section{Styling your Exercise/Exam Sheets}\label{part:style}
+\subsection{Background}
+The \ExSheets\ package makes extensive use of \LaTeX3's coffins\footnote{See
+  the documentation to the \pkg{xcoffins} package for more information on
+  that.} as well as its templates concept\footnote{Have a look into the
+  documentation to the \pkg{xtemplate} package.}.  The latter allows a
+rather easy extension and customization of some of \ExSheets' environments.
+To be more precise: you can define your own instances for the headings used
+for questions and solutions.
+
+What this package doesn't provide is changing the background of questions or
+framing them.  But this is easily possible using the \pkg{mdframed} package
+and its \cs*{surroundwithmdframed} command.
+
+\ExSheets{} also provides the options \option{pre-hook}, \option{post-hook},
+\option{pre-body-hook} and \option{post-body-hook} to both the question and
+the solution environment.  With them it is rather straightforward to add a
+\pkg{mdframed} frame for instance:
+\begin{sourcecode}
+  \SetupExSheets{
+    solution/pre-hook = \mdframed ,
+    solution/post-hook = \endmdframed
+  }
+\end{sourcecode}
+
+Then\sinceversion{0.18} there is the macro
+\cs{exsheetsprintsolution}\marg{heading}\marg{body}\label{exsheetsprintsolution}
+which may be redefined to suit your needs. The default definition is
+equivalent to
+\begin{sourcecode}
+  \newcommand\exsheetsprintsolution[2]{#1#2}
+\end{sourcecode}
+
+\subsection{The \code{exsheets-headings} Object}\label{sec:exsheets-headings}
+\ExSheets\ defines the object \code{exsheets-headings} and one template for it,
+the `default' template.  The package also defines two instances of this
+template, the `block' instance and the `runin' instance.
+
+\begin{example}
+  \SetupExSheets{headings=block}
+  \begin{question}{1}
+    a `block' heading
+  \end{question}
+  \SetupExSheets{headings=runin}
+  \begin{question}{1}
+    a `runin' heading
+  \end{question}
+\end{example}
+
+\subsubsection{Available Options}
+This section only lists the options that can be used when defining an instance
+of the `default' template.  The following subsections will give loads of
+examples of their usage.  The options are listed in the definition for the
+template interface:
+
+\begin{sourcecode}
+  \DeclareTemplateInterface{exsheets-heading}{default}{3}{
+    % option           : type      = default
+    inline             : boolean   = false ,
+    runin              : boolean   = false ,
+    indent-first       : boolean   = false ,
+    toc-reversed       : boolean   = false ,
+    vscale             : real      = 1     ,
+    above              : length    = 2pt   ,
+    below              : length    = 2pt   ,
+    main               : tokenlist =       ,
+    pre-code           : tokenlist =       ,
+    post-code          : tokenlist =       ,
+    title-format       : tokenlist =       ,
+    title-pre-code     : tokenlist =       ,
+    title-post-code    : tokenlist =       ,
+    number-format      : tokenlist =       ,
+    number-pre-code    : tokenlist =       ,
+    number-post-code   : tokenlist =       ,
+    subtitle-format    : tokenlist =       ,
+    subtitle-pre-code  : tokenlist =       ,
+    subtitle-post-code : tokenlist =       ,
+    points-format      : tokenlist =       ,
+    points-pre-code    : tokenlist =       ,
+    points-post-code   : tokenlist =       ,
+    join               : tokenlist =       ,
+    attach             : tokenlist =
+  }
+\end{sourcecode}
+
+Each heading is built with at most five coffins available with the names
+`main', `title', `subtitle', `number' and `points'.  Those coffins place
+possibly the whole heading, the title, the subtitle, the question number and
+the assigned points.  The only coffin that's always typeset is the `main'
+coffin, which is empty per default.
+
+Coffins can be joined (two become one, the first extends its bounding box to
+contain the second) using the following syntax:
+\begin{sourcecode}
+  join = coffin1[handle11,handle12]coffin2[handle21,handle22](x-offset,y-offset)
+\end{sourcecode}
+The syntax for attaching (two become one, the first does \emph{not} extend its
+bounding box around the second) is the same.
+
+More on coffin handles is described in the documentation for the
+\pkg{xcoffins}.  Figure~\ref{fig:handles} briefly demonstrates the available
+handle pairs.
+
+\begin{figure}[ht]
+ \centering
+ \parbox{4.5cm}{%
+   \NewCoffin\ExampleCoffin
+   \SetHorizontalCoffin\ExampleCoffin{\color{gray!30}\rule{4cm}{4cm}}%
+   \DisplayCoffinHandles\ExampleCoffin{blue}%
+ }
+ \caption{Available handles for a horizontal coffin.}\label{fig:handles}
+\end{figure}
+
+It is possible\sinceversion{0.20} to add own static coffins:
+\begin{commands}
+  \command{DeclareExSheetsHeadingContainer}[\marg{name}\marg{code}]
+    Defines a new coffin \meta{name} containing \meta{code}.  You can refer to
+    the current question's \ac{id} with \cs{CurrentQuestionID}.
+\end{commands}
+
+The following subsections will show all definitions of the instances available
+and how they look.  This will hopefully give you enough ideas to create your
+own instance if you want to have another heading style than the ones
+available.  Each of the following instances is available through the option
+\key{headings}{instance}.
+
+The following examples use a sample text defined as follows:
+\begin{sourcecode}
+  \def\s{This is some sample text we will use to create a somewhat
+    longer text spanning a few lines.}
+  \def\sample{\s\ \s\par\s}
+\end{sourcecode}
+\def\s{This is some sample text we will use to create a somewhat longer text
+ spanning a few lines.}
+\def\sample{\s\ \s\par\s}
+
+All of the following examples use the same question call:
+\begin{sourcecode}
+  \SetupExSheets{headings=<name>}
+  \begin{question}[subtitle=The subtitle of the question]{1}
+    A `<name>' heading. \sample
+  \end{question}
+\end{sourcecode}
+
+\subsubsection{The `block' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block}{default}{
+    join             = { title[r,B]number[l,B](.333em,0pt) } ,
+    attach           =
+      {
+        main[l,vc]title[l,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block' heading. \sample
+\end{question}
+
+\subsubsection{The `runin' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin}{default}{
+    runin            = true ,
+    number-post-code = \space ,
+    attach           =
+      { main[l,vc]points[l,vc](\linewidth+\marginparsep,0pt) } ,
+    join             =
+      {
+        main[r,vc]title[r,vc](0pt,0pt) ;
+        main[r,vc]number[l,vc](.333em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin' heading. \sample
+\end{question}
+
+\subsubsection{The `simple' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{simple}{default}{
+    title-format     = \normalsize ,
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    attach           = { main[l,t]number[l,t](0pt,0pt) } ,
+    join             =
+      {
+        number[r,b]title[l,b](.333em,0pt) ;
+        main[l,b]points[l,t](1em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=simple}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `simple' heading. \sample
+\end{question}
+
+\subsubsection{The `empty' Instance}
+\sinceversion{0.9a}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{empty}{default}{
+    runin  = true ,
+    above  = \parskip ,
+    below  = \parskip ,
+    attach = { main[l,vc]points[l,vc](\linewidth+\marginparsep,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=empty}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  An `empty' heading. \sample
+\end{question}
+
+\subsubsection{The `block-rev' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-rev}{default}{
+    toc-reversed     = true ,
+    join             = { number[r,B]title[l,B](.333em,0pt) } ,
+    attach           =
+      {
+        main[l,vc]number[l,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-rev}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-rev' heading. \sample
+\end{question}
+
+\subsubsection{The `block-subtitle' Instance}
+\sinceversion{0.10}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-subtitle}{default}{
+    join = {
+      title[r,B]number[l,B](.333em,0pt) ;
+      title[r,B]subtitle[l,B](1em,0pt)
+    } ,
+    attach = {
+      main[l,vc]title[l,vc](0pt,0pt) ;
+      main[r,vc]points[l,vc](\marginparsep,0pt)
+    }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-subtitle}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-subtitle' heading. \sample
+\end{question}
+\subsubsection{The `block-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-wp}{default}{
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    join             =
+      {
+        title[r,B]number[l,B](.333em,0pt) ;
+        title[r,B]points[l,B](.333em,0pt)
+      } ,
+    attach           = { main[l,vc]title[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-wp' heading. \sample
+\end{question}
+
+\subsubsection{The `block-wp-rev' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-wp-rev}{default}{
+    toc-reversed     = true ,
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    join             =
+      {
+        number[r,B]title[l,B](.333em,0pt) ;
+        number[r,B]points[l,B](.333em,0pt)
+      } ,
+    attach           = { main[l,vc]number[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-wp-rev}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-wp-rev' heading. \sample
+\end{question}
+
+\subsubsection{The `block-nr' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-nr}{default}{
+    attach           =
+      {
+        main[l,vc]number[l,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-nr}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-nr' heading. \sample
+\end{question}
+
+\subsubsection{The `block-nr-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{block-nr-wp}{default}{
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    join             = { number[r,vc]points[l,vc](.333em,0pt) } ,
+    attach           = { main[l,vc]number[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=block-nr-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `block-nr-wp' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-rev' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-rev}{default}{
+    toc-reversed     = true ,
+    runin            = true ,
+    title-post-code  = \space ,
+    attach           =
+      { main[l,vc]points[l,vc](\linewidth+\marginparsep,0pt) } ,
+    join             =
+      {
+        main[r,vc]number[r,vc](0pt,0pt) ;
+        main[r,vc]title[l,vc](.333em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-rev}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-rev' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-wp}{default}{
+    runin            = true ,
+    points-pre-code  = ( ,
+    points-post-code = )\space ,
+    join             =
+      {
+        main[r,vc]title[r,vc](0pt,0pt) ;
+        main[r,vc]number[l,vc](.333em,0pt) ;
+        main[r,vc]points[l,vc](.333em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-wp' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-wp-rev' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-wp-rev}{default}{
+    toc-reversed     = true ,
+    runin            = true ,
+    points-pre-code  = ( ,
+    points-post-code = )\space ,
+    join             =
+      {
+        main[r,vc]number[r,vc](0pt,0pt) ;
+        main[r,vc]title[l,vc](.333em,0pt) ;
+        main[r,vc]points[l,vc](.333em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-wp-rev}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-wp-rev' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-nr' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-nr}{default}{
+    runin            = true ,
+    number-post-code = \space ,
+    attach           =
+      { main[l,vc]points[l,vc](\linewidth+\marginparsep,0pt) } ,
+    join             = { main[r,vc]number[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-nr}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-nr' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-fixed-nr' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-fixed-nr}{default}{
+    runin            = true ,
+    number-pre-code  = \hbox to 2em \bgroup ,
+    number-post-code = \hfil\egroup ,
+    attach           =
+      { main[l,vc]points[l,vc](\linewidth+\marginparsep,0pt) } ,
+    join             = { main[r,vc]number[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-fixed-nr}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-fixed-nr' heading. \sample
+\end{question}
+
+\subsubsection{The `runin-nr-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{runin-nr-wp}{default}{
+    runin            = true ,
+    points-pre-code  = ( ,
+    points-post-code = )\space ,
+    join             =
+      {
+        main[r,vc]number[l,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](.333em,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=runin-nr-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `runin-nr-wp' heading. \sample
+\end{question}
+
+\subsubsection{The `inline' Instance}
+\sinceversion{0.5}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{inline}{default}{
+    inline           = true ,
+    number-pre-code  = \space ,
+    number-post-code = \space ,
+    join             =
+      {
+        main[r,vc]title[r,vc](0pt,0pt) ;
+        main[r,vc]number[l,vc](0pt,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=inline}
+Text before
+\begin{question}[subtitle=The subtitle of the question]{1}
+  An `inline' heading. \sample
+\end{question}
+ Text after
+
+\subsubsection{The `inline-wp' Instance}
+\sinceversion{0.5}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{inline-wp}{default}{
+    inline           = true ,
+    number-pre-code  = \space ,
+    number-post-code = \space ,
+    points-pre-code  = ( ,
+    points-post-code = )\space ,
+    join             =
+      {
+        main[r,vc]title[r,vc](0pt,0pt) ;
+        main[r,vc]number[l,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](0pt,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=inline-wp}
+Text before
+\begin{question}[subtitle=The subtitle of the question]{1}
+  An `inline-wp' heading. \sample
+\end{question}
+ Text after
+
+\subsubsection{The `inline-nr' Instance}
+\sinceversion{0.5}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{inline-nr}{default}{
+    inline           = true ,
+    number-post-code = \space ,
+    join             = { main[r,vc]number[l,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=inline-nr}
+Text before
+\begin{question}[subtitle=The subtitle of the question]{1}
+  An `inline-nr' heading. \sample
+\end{question}
+ Text after
+
+\subsubsection{The `centered' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{centered}{default}{
+    join             = { title[r,B]number[l,B](.333em,0pt) } ,
+    attach           =
+      {
+        main[hc,vc]title[hc,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=centered}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `centered' heading. \sample
+\end{question}
+
+\subsubsection{The `centered-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{centered-wp}{default}{
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    join             =
+      {
+        title[r,B]number[l,B](.333em,0pt) ;
+        title[r,B]points[l,B](.333em,0pt)
+      } ,
+    attach           = { main[hc,vc]title[hc,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=centered-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `centered-wp' heading. \sample
+\end{question}
+
+\subsubsection{The `margin' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{margin}{default}{
+    runin            = true ,
+    number-post-code = \space ,
+    points-pre-code  = ( ,
+    points-post-code = )\space ,
+    join             = { title[r,b]number[l,b](.333em,0pt) } ,
+    attach           =
+      {
+        main[l,vc]title[r,vc](0pt,0pt) ;
+        main[l,b]points[r,t](0pt,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=margin}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `margin' heading. \sample
+\end{question}
+
+\subsubsection{The `margin-nr' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{margin-nr}{default}{
+    runin  = true ,
+    attach =
+      {
+        main[l,vc]number[r,vc](-.333em,0pt) ;
+        main[r,vc]points[l,vc](\linewidth+\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=margin-nr}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `margin-nr' heading. \sample
+\end{question}
+
+\subsubsection{The `raggedleft' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{raggedleft}{default}{
+    join             = { title[r,B]number[l,B](.333em,0pt) } ,
+    attach           =
+      {
+        main[r,vc]title[r,vc](0pt,0pt) ;
+        main[r,vc]points[l,vc](\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=raggedleft}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `raggedleft' heading. \sample
+\end{question}
+
+\subsubsection{The `fancy' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{fancy}{default}{
+    toc-reversed     = true ,
+    indent-first     = true ,
+    vscale           = 2 ,
+    pre-code         = \rule{\linewidth}{1pt} ,
+    post-code        = \rule{\linewidth}{1pt} ,
+    title-format     = \large\scshape\color{rgb:red,0.65;green,0.04;blue,0.07} ,
+    number-format    = \large\bfseries\color{rgb:red,0.02;green,0.04;blue,0.48} ,
+    points-format    = \itshape ,
+    join             = { number[r,B]title[l,B](.333em,0pt) } ,
+    attach           =
+      {
+        main[hc,vc]number[hc,vc](0pt,0pt) ;
+        main[l,vc]points[r,vc](-\marginparsep,0pt)
+      }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=fancy}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `fancy' heading. \sample
+\end{question}
+
+\subsubsection{The `fancy-wp' Instance}
+\begin{sourcecode}
+  \DeclareInstance{exsheets-heading}{fancy-wp}{default}{
+    toc-reversed     = true ,
+    indent-first     = true ,
+    vscale           = 2 ,
+    pre-code         = \rule{\linewidth}{1pt} ,
+    post-code        = \rule{\linewidth}{1pt} ,
+    title-format     = \large\scshape\color{rgb:red,0.65;green,0.04;blue,0.07} ,
+    number-format    = \large\bfseries\color{rgb:red,0.02;green,0.04;blue,0.48} ,
+    points-format    = \itshape ,
+    points-pre-code  = ( ,
+    points-post-code = ) ,
+    join             =
+      {
+        number[r,B]title[l,B](.333em,0pt) ;
+        number[r,B]points[l,B](.333em,0pt)
+      } ,
+    attach           = { main[hc,vc]number[hc,vc](0pt,0pt) }
+  }
+\end{sourcecode}
+\SetupExSheets{headings=fancy-wp}
+\begin{question}[subtitle=The subtitle of the question]{1}
+  A `fancy-wp' heading. \sample
+\end{question}
+
+\subsection{Using an \ExSheets{} Heading in Custom Code}\label{sec:using-an-exsheets}
+
+It can be useful to have access to \ExSheets{} headings in custom code.  This
+is possible with the following command\sinceversion{0.14}:
+
+\begin{commands}
+  \command{ExSheetsHeading}[\marg{instance}\marg{title}\marg{number}%
+    \marg{points}\marg{bonus}\marg{id}]
+    The meaning of the arguments is as follows:
+    \begin{itemize}
+      \item \meta{instance}: the name of the headings instance to be used.
+      \item \meta{title}: the contents of the \code{title} coffin.
+      \item \meta{number}: the contents of the \code{number} coffin.
+      \item \meta{points}: The number of points given to the question.  If
+        non-zero this will cause the points to be printed in the \code{points}
+        coffin.
+      \item \meta{bonus}: the same as \meta{points} but for bonus points.
+      \item \meta{id}: the \acs{id} of the question this heading belongs to.
+    \end{itemize}
+\end{commands}
+
+In combination with \cs{ForEachQuestion} the command can be used to build a
+custom list of questions.  An example of its usage can be seen at the German
+Q\&A~site \TeX welt: \url{http://texwelt.de/wissen/fragen/6698#6738}.
+
+\subsection{Load Custom Configurations}
+If you have custom configurations you want to be loaded automatically then save
+them in a file \code{exsheets\_configurations.cfg}. If this file is present it
+will be loaded \cs*{AtBeginDocument}.
+
+\SetupExSheets{headings=block}
+
+\part{The \ExSheetslistings\ Package}\label{part:listings}
+\section{The Problem}
+I knew the day would come when people would ask how to include verbatim
+material in the \env{question} and \env{solution} environments.  Since they're
+defined with the \pkg{environ} package they're reading their environment
+bodies like macros read their arguments.  This makes it impossible to use
+verbatim material inside them\footnote{See the \TeX\ \acs{faq}
+  \url{http://www.tex.ac.uk/cgi-bin/texfaq2html?label=verbwithin} for reasons
+  why.}.  Now the day has come~\cite{tex.sx:131546}.  Soon after the first
+question appeared I wrote the first draft for \ExSheetslistings\ for a question
+on \TeX.sx~\cite{tex.sx:133907}.
+
+\section{The Proposed Solution}
+
+The \ExSheetslistings\ package defines \pkg{listings} environments that place
+their contents inside \env{question} and \env{solution} environments.  They do
+this by writing the listing to a unique auxiliary file --
+questions to \code{\cs*{jobname}-ex\meta{num}.lst} and solutions to
+\code{\cs*{jobname}-sol\meta{num}.lst} where \meta{num} is an increasing
+integer that ensures that each listing gets a unique file name.  Those files
+are then included with \cs{lstinputlisting} if and when the question or
+solution is printed.
+
+\begin{environments}
+  \environment{lstquestion}[\oarg{options}]
+    A \pkg{listings} environment placed in a \env{question}.
+  \environment{lstsolution}[\oarg{options}]
+    A \pkg{listings} environment placed in a \env{solution}.
+\end{environments}
+
+All you have to do to use the package is loading it the usual way:
+\begin{sourcecode}
+  \usepackage{exsheets-listings}
+\end{sourcecode}
+This will also load the packages \ExSheets\ and \pkg{listings} if they're not
+loaded already.
+
+\begin{example}
+  % this uses my listings style used in this documentation for all pieces of
+  % code:
+  \begin{lstquestion}[%
+      pre=Explain what this piece of \TeX\ code does:,
+      listings={style=cnltx}]
+    \begingroup\expandafter\expandafter\expandafter\endgroup
+    \expandafter\ifx\csname foo\endcsname\relax
+    ...
+    \else
+    ...
+    \fi
+  \end{lstquestion}
+\end{example}
+
+The example already shows two options of these environments.  Here is the
+complete list:
+\begin{options}
+  \keyval{pre}{text}
+    \meta{text} is placed before the code in the \env{question} or
+    \env{solution} environment.
+  \keyval{post}{text}
+    \meta{text} is placed after the code in the \env{question} or
+    \env{solution} environment.
+  \keyval{options}{options}
+    Options passed to underlying the \env{question} or \env{solution}
+    environment.
+  \keyval{points}{points}
+    The points assigned to the underlying \env{question} environment.
+  \keyval{listings}{options}
+    Options passed to the underlying \pkg{listings} environment.
+\end{options}
+
+There are also two new options for \ExSheets\ that can be set with
+\cs{SetupExSheets}:
+\begin{options}
+  \keyval{listings}{options}\Module{question}
+    Options passed to the underlying \pkg{listings} environment of
+    \env{lstquestion}.
+  \keyval{listings}{options}\Module{solution}
+    Options passed to the underlying \pkg{listings} environment of
+    \env{lstsolution}.
+\end{options}
+
+\section{Own Environments}
+
+\begin{commands}
+  \command{NewLstQuSolPair}[\oarg{options for both environments}\marg{lst question
+    env}\marg{question env}\oarg{options for lst question env}\marg{lst
+    solution env}\marg{solution env}\oarg{options for lst solution env}]
+    Defines two new \pkg{listings} environments that place the listing in a
+    question environment \meta{question env} or a solution environment
+    \meta{solution env}.  Those underlying environments should be
+    environments as defined by \cs{NewQuSolPair}.  The different options
+    allow to preset options for the newly defined environments.
+\end{commands}
+
+The existing environments have been defined like this:
+\begin{sourcecode}
+  \NewLstQuSolPair{lstquestion}{question}{lstsolution}{solution}
+\end{sourcecode}
+
+\appendix
+\part{Appendix}
+\section{A List of all Solutions used in this Manual}\label{sec:solutions:list}
+\SetupExSheets{headings=block-wp,solutions-totoc}
+\printsolutions
+
+\end{document}

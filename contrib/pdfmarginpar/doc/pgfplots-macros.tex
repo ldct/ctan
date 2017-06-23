@@ -1,0 +1,390 @@
+
+\def\eps{\textsc{eps}}
+
+\input pgfmanual-en-macros.tex
+
+\def\pgfmanualbar{\char`\|}
+\makeatletter
+\newenvironment{addplotoperation}[3][]{
+  \begin{pgfmanualentry}
+  	{%
+	\let\ltxdoc@marg=\marg
+	\let\ltxdoc@oarg=\oarg
+	\let\ltxdoc@parg=\parg
+	\let\ltxdoc@meta=\meta
+	\def\marg##1{{\normalfont\ltxdoc@marg{##1}}}%
+	\def\oarg##1{{\normalfont\ltxdoc@oarg{##1}}}%
+	\def\parg##1{{\normalfont\ltxdoc@parg{##1}}}%
+	\def\meta##1{{\normalfont\ltxdoc@meta{##1}}}%
+    \pgfmanualentryheadline{\textcolor{gray}{{\ttfamily\char`\\addplot\ }}%
+      \declare{\texttt{#2}} \texttt{#3;}}%
+	  \unskip
+	 \nobreak
+    \pgfmanualentryheadline{\textcolor{gray}{{\texttt{\char`\\addplot}\oarg{style options} \texttt{plot}\oarg{behavior options}}\ }%
+      \declare{\texttt{#2}} \texttt{#3} \textcolor{gray}{\meta{trailing path commands}}\texttt{;}}%
+    \def\pgfmanualtest{#1}%
+    \ifx\pgfmanualtest\@empty%
+      \index{#2@\protect\textcolor{gray}{\protect\texttt{plot}}\protect\texttt{ #2}}%
+      \index{Plot operations!plot #2@\protect\texttt{plot #2}}%
+    \fi%
+	}%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+
+\newenvironment{codekey}[1]{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\declare{#1}\textcolor{gray}{/.code}=\marg{...}}\hfill}%
+	\def\mykey{#1}%
+	\def\mypath{}%
+	\def\myname{}%
+	\firsttimetrue%
+	\decompose#1/\nil%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+
+\newenvironment{pgfplotscodekey}[1]{%
+	\begin{codekey}{/pgfplots/#1}%
+}
+{
+  \end{codekey}
+}
+\newenvironment{pgfplotscodetwokey}[1]{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\declare{/pgfplots/#1}\textcolor{gray}{/.code 2 args}=\marg{...}}\hfill}%
+	\def\mykey{/pgfplots/#1}%
+	\def\mypath{}%
+	\def\myname{}%
+	\firsttimetrue%
+	\decompose/pgfplots/#1/\nil%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+
+\newenvironment{pgfplotsxycodekeylist}[1]{%
+	\begingroup
+	\let\oldpgfmanualentryheadline=\pgfmanualentryheadline
+	\def\pgfmanualentryheadline##1{%
+		\pgfmanualentryheadline@##1\pgfplots@EOI
+	}%
+	\def\pgfmanualentryheadline@##1\hfill##2\pgfplots@EOI{%
+		\oldpgfmanualentryheadline{{\ttfamily\declare{##1}\textcolor{gray}{/.code}=\marg{...}}\hfill}%
+	}
+	\begin{pgfplotsxykeylist}{#1}%
+}
+{
+	\end{pgfplotsxykeylist}
+	\endgroup
+}
+
+\newenvironment{pgfplotskey}[1]{%
+  \begin{key}{/pgfplots/#1}%
+}
+{
+  \end{key}
+}
+
+\def\choicesep{$\vert$}%
+\def\choicearg#1{\texttt{#1}}
+
+\newif\iffirstchoice
+\newcommand\mchoice[1]{%
+	\begingroup
+	\firstchoicetrue
+	\foreach \mchoice@ in {#1} {%
+		\iffirstchoice
+			\global\firstchoicefalse
+		\else
+			\choicesep
+		\fi
+		\choicearg{\mchoice@}%
+	}%
+	\endgroup
+}%
+
+% \begin{xykey}{/path/\x label=value}
+% \end{xykey}
+%
+% has same features with 'default', 'initially' etc as key environment
+\newenvironment{xykey}[2][]{%
+	\begin{pgfmanualentry}
+    \def\extrakeytext{}
+	\insertpathifneeded{#2}{#1}%
+	\expandafter\pgfutil@in@\expandafter=\expandafter{\mykey}%
+	\ifpgfutil@in@%
+		\expandafter\xykey@eq\mykey\@nil
+	\else
+		\expandafter\xykey@noeq\mykey\@nil
+	\fi
+	\pgfmanualbody
+}{%
+	\end{pgfmanualentry}
+}%
+
+% \begin{xystylekey}{/path/\x label=value}
+% \end{xystylekey}
+%
+% has same features with 'default', 'initially' etc as key environment
+\newenvironment{xystylekey}[2][]{%
+	\begin{pgfmanualentry}
+    \def\extrakeytext{style, }
+	\insertpathifneeded{#2}{#1}%
+	\expandafter\pgfutil@in@\expandafter=\expandafter{\mykey}%
+	\ifpgfutil@in@%
+		\expandafter\xykey@eq\mykey\@nil
+	\else
+		\expandafter\xykey@noeq\mykey\@nil
+	\fi
+	\pgfmanualbody
+}{%
+	\end{pgfmanualentry}
+}%
+
+% \insertpathifneeded{a key}{/pgfplots} -> assign mykey={/pgfplots/a key}
+% \insertpathifneeded{/tikz/a key}{/pgfplots} -> assign mykey={/tikz/a key}
+%
+% #1: the key
+% #2: a default path (or empty)
+\def\insertpathifneeded#1#2{%
+	\def\insertpathifneeded@@{#2}%
+	\ifx\insertpathifneeded@@\empty
+		\def\mykey{#1}%
+	\else
+		\insertpathifneeded@#2\@nil
+		\ifpgfutil@in@
+			\def\mykey{#2/#1}%
+		\else
+			\def\mykey{#1}%
+		\fi
+	\fi
+}%
+\def\insertpathifneeded@#1#2\@nil{%
+	\def\insertpathifneeded@@{#1}%
+	\def\insertpathifneeded@@@{/}%
+	\ifx\insertpathifneeded@@\insertpathifneeded@@@
+		\pgfutil@in@true
+	\else
+		\pgfutil@in@false
+	\fi
+}%
+
+% \begin{keylist}[default path]
+% 	{/path/option 1=value,/path/option 2=value2}
+% \end{keylist}
+\newenvironment{keylist}[2][]{%
+	\begin{pgfmanualentry}
+    \def\extrakeytext{}%
+	\foreach \xx in {#2} {%
+		\expandafter\insertpathifneeded\expandafter{\xx}{#1}%
+		\expandafter\extractkey\mykey\@nil%
+	}%
+	\pgfmanualbody
+}{%
+  \end{pgfmanualentry}
+}%
+
+\newenvironment{pgfplotskeylist}[1]{%
+	\begin{keylist}[/pgfplots]{#1}%
+}{%
+	\end{keylist}%
+}
+
+% \begin{xykeylist}[default path]
+% 	{/path/option \x1=value,/path/option \x2=value2,/path/option \x3=value}
+% \end{xykeylist}
+\newenvironment{xykeylist}[2][]{%
+	\begin{pgfmanualentry}
+    \def\extrakeytext{}
+	\foreach \xx in {#2} {%
+		\expandafter\insertpathifneeded\expandafter{\xx}{#1}%
+		\expandafter\pgfutil@in@\expandafter=\expandafter{\mykey}%
+		\ifpgfutil@in@%
+			\expandafter\xykey@eq\mykey\@nil
+		\else
+			\expandafter\xykey@noeq\mykey\@nil
+		\fi
+	}%
+	\pgfmanualbody
+}{%
+  \end{pgfmanualentry}
+}%
+
+\newif\ifxykeyfound
+
+\def\xykey@eq#1=#2\@nil{%
+	\def\x{x}%
+	\xdef\mykey{#1}%
+	\def\xykey@@{#1}%
+	\ifx\xykey@@\mykey
+		\xykeyfoundfalse
+	\else
+		\xykeyfoundtrue
+	\fi
+    \expandafter\extractkey\mykey=#2\@nil%
+	\ifxykeyfound
+		\def\x{y}%
+		\xdef\mykey{#1}%
+		\expandafter\extractkey\mykey=#2\@nil%
+	\fi
+}
+\def\xykey@noeq#1\@nil{%
+	\def\x{x}%
+	\xdef\mykey{#1}%
+	\def\xykey@@{#1}%
+	\ifx\xykey@@\mykey
+		\xykeyfoundfalse
+	\else
+		\xykeyfoundtrue
+	\fi
+    \expandafter\extractkey\mykey\@nil%
+	\ifxykeyfound
+		\def\x{y}%
+		\xdef\mykey{#1}%
+		\expandafter\extractkey\mykey\@nil%
+	\fi
+}
+
+% \begin{pgfplotsxykey}{\x label=value}
+% \end{pgfplotsxykey}
+%
+% It introduces the path /pgfplots/ automatically.
+%
+% has same features with 'default', 'initially' etc as key environment
+\newenvironment{pgfplotsxykey}[1]{%
+	\begin{xykey}[/pgfplots]{#1}%
+}{%
+	\end{xykey}%
+}
+
+
+\newenvironment{pgfplotsxykeylist}[1]{%
+	\begin{xykeylist}[/pgfplots]{#1}%
+}{%
+	\end{xykeylist}%
+}
+
+
+\newenvironment{plottype}[1]{%
+	\begin{key}{/tikz/#1}%
+	\end{key}
+  \begin{pgfmanualentry}
+    \pgfmanualentryheadline{\textcolor{gray}{{\ttfamily\char`\\addplot+[\declare{#1}]}}}%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+
+\def\index@prologue{\section*{Index}\addcontentsline{toc}{section}{Index}
+}
+
+\newenvironment{pgfplotstablecolumnkey}{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\textcolor{gray}{/pgfplots/table/}\declare{columns/\meta{column name}}\textcolor{gray}{/.style}=\marg{key-value-list}}\hfill}%
+	\pgfplotsmanualkeyindex{/pgfplots/table/columns}%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+\newenvironment{pgfplotstabledisplaycolumnkey}{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\textcolor{gray}{/pgfplots/table/}\declare{display columns/\meta{index}}\textcolor{gray}{/.style}=\marg{key-value-list}}\hfill}%
+	\pgfplotsmanualkeyindex{/pgfplots/table/display columns}%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+\newenvironment{pgfplotstablealiaskey}{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\textcolor{gray}{/pgfplots/table/}\declare{alias/\meta{col name}}\textcolor{gray}{/.initial}=\marg{real col name}}\hfill}%
+	\pgfplotsmanualkeyindex{/pgfplots/table/alias}%
+    \pgfmanualbody
+}
+{
+  \end{pgfmanualentry}
+}
+
+
+\def\pgfplotsmanualkeyindex#1{%
+	\def\mypath{#1}%
+	\def\myname{}%
+	\firsttimetrue%
+	\decompose#1/\nil%
+}
+\newenvironment{pgfplotstablecreateonusekey}{%
+  \begin{pgfmanualentry}
+ 	\pgfmanualentryheadline{{\ttfamily\textcolor{gray}{/pgfplots/table/}\declare{create on use/\meta{col name}}\textcolor{gray}{/.style}=\marg{create options}}\hfill}%
+	\def\mykey{/pgfplots/table/create on use}%
+    \pgfmanualbody
+	\pgfplotsmanualkeyindex{/pgfplots/table/create on use}%
+}
+{
+  \end{pgfmanualentry}
+}
+
+\def\pgfplotsassertcmdkeyexists#1{%
+	\pgfkeysifdefined{/pgfplots/#1/.@cmd}\relax{%
+		\pgfplots@error{DOCUMENTATION ERROR: command key /pgfplots/#1 does not exist!}%
+	}%
+}%
+
+{
+\catcode`\ =12%
+\gdef\makespaceexpandable{\def\ { }}}%
+
+\def\pgfplotsassertXYcmdkeyexists#1{%
+	{\makespaceexpandable\def\x{x}\edef\pgfplotsassertXYcmdkeyexists@tmp{#1}%
+	\pgfkeysifdefined{/pgfplots/\pgfplotsassertXYcmdkeyexists@tmp/.@cmd}\relax{%
+		\pgfplots@error{DOCUMENTATION ERROR: command key /pgfplots/#1 does not exist!}%
+	}}%
+	{\makespaceexpandable\def\x{y}\edef\pgfplotsassertXYcmdkeyexists@tmp{#1}%
+	\pgfkeysifdefined{/pgfplots/\pgfplotsassertXYcmdkeyexists@tmp/.@cmd}\relax{%
+		\pgfplots@error{DOCUMENTATION ERROR: command key /pgfplots/#1 does not exist!}%
+	}}%
+}%
+
+\def\pgfplotsshortstylekey #1=#2;{%
+	\pgfplotsassertcmdkeyexists{#1}%
+	\pgfplotsassertcmdkeyexists{#2}%
+	\begin{pgfplotskey}{#1=\marg{key-value-list}}
+		An abbreviation for \texttt{#2/.append style=}\marg{key-value-list}.
+	\end{pgfplotskey}
+}
+\def\pgfplotsshortxystylekey #1=#2;{%
+	\pgfplotsassertXYcmdkeyexists{#1}%
+	\pgfplotsassertXYcmdkeyexists{#2}%
+	\begin{pgfplotsxykey}{#1=\marg{key-value-list}}
+		An abbreviation for {\def\x{x}\texttt{#2/.append style=}}\marg{key-value-list} (or the respective style for $y$, {\def\x{y}\texttt{#2}}).
+	\end{pgfplotsxykey}
+}
+\def\pgfplotsshortstylekeys #1,#2=#3;{%
+	\pgfplotsassertcmdkeyexists{#1}%
+	\pgfplotsassertcmdkeyexists{#2}%
+	\pgfplotsassertcmdkeyexists{#3}%
+	\begin{pgfplotskeylist}{%
+		#1=\marg{key-value-list},
+		#2=\marg{key-value-list}}
+		Different abbreviations for \texttt{#3/.append style=}\marg{key-value-list}.
+	\end{pgfplotskeylist}
+}
+\def\pgfplotsshortxystylekeys #1,#2=#3;{%
+	\pgfplotsassertXYcmdkeyexists{#1}%
+	\pgfplotsassertXYcmdkeyexists{#2}%
+	\pgfplotsassertXYcmdkeyexists{#3}%
+	\begin{pgfplotsxykeylist}{%
+		#1=\marg{key-value-list},
+		#2=\marg{key-value-list}}
+		Different abbreviations for {\def\x{x}\texttt{#3/.append style=}}\marg{key-value-list} (or the respective style for $y$, {\def\x{y}\texttt{#3}}).
+	\end{pgfplotsxykeylist}
+}
+
+\makeatother

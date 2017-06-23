@@ -1,0 +1,491 @@
+%\iffalse
+%
+% file: weekly.dtx
+% Copyright (C) 1996-1997 by Frank Bennett.  All rights reserved.
+%
+% IMPORTANT NOTICE:
+% 
+% You are not allowed to change this file.  You may however copy
+% this file to a file with a different name and then change the
+% copy if (a) you do not charge for the modified code, (b) you
+% acknowledge the author of this file in the new file, if it
+% is distributed to others, and (c) you attach these same
+% conditions to the new file.
+% 
+% You are not allowed to distribute this file alone.  You are not
+% allowed to take money for the distribution or use of this file
+% (or a changed version) except for a nominal charge for copying
+% etc.
+% 
+% You are allowed to distribute this file under the condition that
+% it is distributed with all of its contents, intact.
+% 
+% For error reports, or offers to help make this a more powerful,
+% friendlier, and altogether more thrilling package, please contact me on
+% fb@soas.ac.uk.  Better yet, make a contribution to
+% my pension.  Account details available on request.
+%
+%\fi
+%
+% \def\fileversion{3.1.1.1}
+% \def\filedate{1998/01/17 18:15:32}
+%
+% \iffalse
+%
+%<*driver>
+\documentclass{ltxdoc}
+%\CodelineIndex
+%\EnableCrossrefs
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{weekly.dtx}
+\end{document}
+%</driver>
+%\fi
+%
+% \changes{v1.0}{1997/10/18}{New public release of all styles
+%  and modules incorporating global bug-fixes.}
+%
+%\iffalse
+% Source tree moved under RCS
+% ---------------------------
+% weekly.dtx,v
+% Revision 3.1.1.1  1998/01/17 18:15:32  root
+% Release code, checksum verified
+%
+% Revision 3.1  1998/01/17 17:15:28  root
+% Release code
+%
+% Revision 2.4  1998/01/16 17:07:54  root
+% *** empty log message ***
+%
+% Revision 2.3  1997/12/06 09:52:13  root
+% Moved documentation to calguide.tex.
+%
+% Revision 2.2  1997/11/07 10:44:05  root
+% Release code.
+%
+% Revision 2.1.1.1  1997/11/04 05:06:07  root
+% Development branch
+%
+% Revision 2.1  1997/11/01 14:50:12  bennett
+% Release code.
+%
+% Revision 1.1  1997/10/29 08:17:52  root
+% Initial revision
+%
+%\fi
+%
+% \title{User's Guide to the Weekly Calendar 
+%    package\thanks{This file is version number
+%    \fileversion{}.  It was last revised on
+%    \filedate{}.}}
+%
+% \author{Frank G. Bennett, Jr.}
+%
+% \maketitle
+%
+% \setcounter{StandardModuleDepth}{1}
+% \DeleteShortVerb{\|}
+% \MakeShortVerb{\"}
+%
+% \CheckSum{343}
+%
+% \section{Brief Introduction}
+%
+% Please see the file \texttt{calguide.tex} for documentation
+% on this calendar style.
+%
+% \StopEventually{\PrintIndex}
+%
+% \section{The Class File}
+%
+% \subsection{Preliminaries}
+%
+% Use \LaTeXe, and tell the user who we are.
+%
+%    \begin{macrocode}
+%<*class>
+\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+\ProvidesClass{weekly}
+          [1998/01/17 18:15:32 3.1.1.1 Weekly Calendar (Frank Bennett)]
+%    \end{macrocode}
+% Define a boolean switch needed to process
+% the style options.
+%    \begin{macrocode}
+\newif\ifwk@usecolor
+%    \end{macrocode}
+% Define some more variables and switches for use in the body
+% of the style.
+%    \begin{macrocode}
+\newif\ifwk@overthetop
+\newcount\wk@firstday
+\newcount\wk@tempcount
+\newlength\wk@itemheight
+\parindent=0pt
+%    \end{macrocode}
+%
+% \subsection{Options}
+%
+% Things like page and type size go to the article class.
+%    \begin{macrocode}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+%    \end{macrocode}
+% We use the generic language options, the same as other parts
+% of the system.
+%    \begin{macrocode}
+\input calopts.cfg
+\InputIfFileExists{dates.cfg}{}{}
+\ProcessOptions
+%    \end{macrocode}
+%
+% \subsection{Option Postprocessing}
+%
+% Now that the options lists are available to us,
+% we can start loading packages.  The following packages
+% are always loaded.
+%    \begin{macrocode}
+\LoadClass{article}
+\RequirePackage{calendar}
+\RequirePackage{lscape}
+\RequirePackage{multicol}
+\RequirePackage{autofilo}
+\multicolsep=0pt\relax
+%    \end{macrocode}
+% It is now time to do the final page formatting.
+%    \begin{macrocode}
+\AtBeginDocument{%
+%    \end{macrocode}
+% Eliminate page numbers and indenting.
+%    \begin{macrocode}
+  \pagestyle{empty}
+  \parindent=0pt}
+%    \end{macrocode}
+%
+% \subsection{Calendar Setup}
+%
+% Define some key values for use by the calendar environment.
+%    \begin{macrocode}
+\define@key{opt}{firstday}{%
+  \wk@firstday=#1}
+%    \end{macrocode}
+% Define default values for the environment keys.
+%    \begin{macrocode}
+\wk@firstday=5%
+%    \end{macrocode}
+% We declare eight boxes, one for each day of the
+% week plus an extra.
+%    \begin{macrocode}
+\wk@tempcount=0
+\expandafter\newsavebox\csname wk@box\the\wk@tempcount\endcsname
+\loop\advance\wk@tempcount by1\relax
+\ifnum\wk@tempcount<8
+  \expandafter\newsavebox\csname wk@box\the\wk@tempcount\endcsname
+\repeat
+%    \end{macrocode}
+% We need a macro to lay the boxes out on a page.  We define
+% this now, with parameterized measurements that will be
+% determined by the settings given to the environment within
+% which this expands.
+%    \begin{macrocode}
+\def\wk@spitoutboxes{%
+    \wk@tempcount=-1\relax%
+    \loop\advance\wk@tempcount by1\relax%
+    \ifnum\wk@tempcount<3\relax%
+      \hbox to\linewidth{%
+        \expandafter\usebox\csname wk@box\the\wk@tempcount\endcsname}%
+    \repeat%
+      \hbox to\linewidth{\vbox to\wk@itemheight{%
+        \hrule width\linewidth height0.4pt depth0pt%
+        \hbox to\linewidth{\hfil}\vfill}}%
+    \wk@tempcount=2\relax%
+    \loop\advance\wk@tempcount by1\relax%
+    \ifnum\wk@tempcount<7\relax%
+      \hbox to\linewidth{%
+        \expandafter\usebox\csname wk@box\the\wk@tempcount\endcsname}%
+    \repeat}%
+%    \end{macrocode}
+% \textit{We define a macro that calculates the height of the date boxes.
+% The value of \cs{normallineskip} sneaks in between
+% stacked \cs{hbox}es, so we need to account for that.}
+%    \begin{macrocode}
+\def\wk@getitemheight{%
+  \setlength\wk@itemheight\textheight\relax%
+  \addtolength\wk@itemheight{-4pt}%
+  \addtolength\wk@itemheight{-5\normallineskip}%
+  \divide\wk@itemheight by4\relax}%
+%    \end{macrocode}
+%
+% \subsection{Calendar Definition}
+%
+% The calendar definition itself consists of a single command
+% and its associated arguments.
+%    \begin{macrocode}
+\newcalendar%
+%    \end{macrocode}
+% We give the environment a name.
+%    \begin{macrocode}
+{weekly}
+%    \end{macrocode}
+% We're producing DVI, so we use the standard
+% macro for dropping text into the hopper.
+%    \begin{macrocode}
+{\cal@insert}
+%    \end{macrocode}
+% Starting day for the calendar is not fixed here,
+% because we don't pad with blank entries.  Season to taste.
+% Use integers "0" through "6".  A value over 7 means no padding.
+%    \begin{macrocode}
+{8}
+%    \end{macrocode}
+% The length of a group is one day.
+%    \begin{macrocode}
+{7}
+%    \end{macrocode}
+% The length of a subgroup is seven days.
+%    \begin{macrocode}
+{7}
+%    \end{macrocode}
+% We don't need delimiters between output items, since
+% we're just building boxes.
+%    \begin{macrocode}
+{\relax}
+%    \end{macrocode}
+% Increment the date counter with every item.
+%    \begin{macrocode}
+{I}
+%    \end{macrocode}
+% Define the header.
+%    \begin{macrocode}
+{\expandafter\autofilo\expandafter{\cal@optionslist}\wk@getitemheight}
+%    \end{macrocode}
+% We define the end of the calendar.  This spits out
+% all of the boxes one last time, and closes the page
+% formatting environment.
+%    \begin{macrocode}
+{\wk@spitoutboxes\endautofilo}
+%    \end{macrocode}
+% We define a way to open a new group.  In this case,
+% we just relax.
+%    \begin{macrocode}
+{\wk@spitoutboxes}
+%    \end{macrocode}
+% We define the way to end a subgroup.  This spits out
+% all of the boxes built for a page of text.
+%    \begin{macrocode}
+{\relax}
+%    \end{macrocode}
+% We set up to require a month and day in the environment typed
+% into the user's document.
+%    \begin{macrocode}
+{\dates@requiremonthtrue\dates@requiredaytrue}
+%    \end{macrocode}
+% The next section runs after the calendar dates have been
+% scanned from the environment, but before the table is
+% opened.
+% \textit{We step back, if necessary, from the designated
+% first date to reach the starting day for pages.  (Default
+% is Friday.)}
+%
+%    \begin{macrocode}
+{\global\dates@date\cal@range@start%
+ \prevday\wk@firstday%
+ \cal@range@start\dates@date%
+ \caldate%
+%    \end{macrocode}
+% \textit{We tell the user where we're starting.}
+%    \begin{macrocode}
+  \message{^^JStart: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+%    \end{macrocode}
+% \textit{Then we jump forward, again if necessary,
+% to the next day just before the starting day of
+% the week.}
+%    \begin{macrocode}
+  \global\dates@date\cal@range@end%
+  \caldate%
+  \advance\wk@firstday by-1%
+  \ifnum\wk@firstday=7\wk@firstday=0\fi%
+  \nextday\wk@firstday%
+  \caldate%
+  \cal@range@end\dates@date%
+%    \end{macrocode}
+% \textit{We let the user know where we plan to stop.}
+%    \begin{macrocode}
+  \message{^^JEnd: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+%    \end{macrocode}
+% \textit{We jump back to the starting date and reset the
+% human-side values.}
+%    \begin{macrocode}
+  \global\dates@date=\cal@range@start%
+  \caldate}%
+%    \end{macrocode}
+% Events are delimited by \cs{par}.
+%    \begin{macrocode}
+{\par}%
+%    \end{macrocode}
+% The next argument is dropped on DVI for each item.
+% We use it here to fetch the text of appointments and
+% events to the standard list macros, using the
+% standard text-fetching commands.  Each generates a
+% stack delimited by the phrase that was set above.
+%    \begin{macrocode}
+{\cal@get@appointments\cal@get@events}%
+%    \end{macrocode}
+% This sets \cs{cal@entry@text}.  It is executed for every
+% event or appointment in the database that applies
+% to a given item.  We differentiate between whole-day events,
+% pinpointed events and ranged events.
+%    \begin{macrocode}
+{\relax%
+   \ifnum\dates@time@start>0\relax%
+    \ifnum\dates@time@start=\dates@time@end%
+      \protected@edef\cal@entry@text{%
+        \thetimestart\space%
+        \cal@textcolor{\calcolor}{\theshorttext}}%
+    \else%
+      \protected@edef\cal@entry@text{%
+        \thetimestart--\thetimeend\space%
+        \cal@textcolor{\calcolor}{\theshorttext}}%
+    \fi%
+  \else%
+      \protected@edef\cal@entry@text{%
+        \cal@textcolor{\calcolor}{\theshorttext}}%
+  \fi}%
+%    \end{macrocode}
+% Finally we tell the style how to create the
+% text for each item.
+% We stash the text in each of the numbered boxes,
+% for extraction at the end of each group and at the
+% end of the run.  In the event of an overfull \cs{vbox}, we
+% retry with two columns of text in a last-ditch attempt
+% to squeze everything in.
+%    \begin{macrocode}
+{\global\wk@overthetopfalse%
+ \expandafter\sbox\csname wk@box\the\cal@subgroup@count\endcsname{%
+    \vbox to\wk@itemheight{\hbox{\parbox{\linewidth}{%
+\hrule width\linewidth%
+\vskip1pt\relax%
+\ifnum\cal@subgroup@count<3\relax%
+      \textbf{\theweekday\hfill%
+              \theday\space\themonth\space\theyear}\par%
+\else%
+      \textbf{\theday\space\themonth\space\theyear\hfill%
+              \theweekday}\par%
+\fi%
+\vskip0.5pt\relax%
+\hrule width\linewidth%
+\vskip1pt\relax%
+      \raggedright\small%
+      \ifcat$\theevents$%
+      \else%
+        \theevents\par%
+      \fi%
+      \ifcat$\theappointments$%
+      \else%
+        \theappointments%
+      \fi}% parbox
+}%          hbox
+\vfill}%    vbox
+\ifnum\badness=1000000\relax\global\wk@overthetoptrue\fi%
+}%          sbox
+\ifwk@overthetop%
+  \message{Resetting this date in two-columns.}%
+\expandafter\sbox\csname wk@box\the\cal@subgroup@count\endcsname{%
+    \vbox to\wk@itemheight{\hbox{\parbox{\linewidth}{%
+\hrule width\linewidth%
+\vskip1pt\relax%
+\ifnum\cal@subgroup@count<3\relax%
+      \textbf{\theweekday\hfill%
+              \theday\space\themonth\space\theyear}\par%
+\else%
+      \textbf{\theday\space\themonth\space\theyear\hfill%
+              \theweekday}\par%
+\fi%
+\vskip0.5pt\relax%
+\hrule width\linewidth%
+\vskip1pt\relax%
+      \raggedright\small%
+      \begin{multicols}{2}%
+      \ifcat$\theevents$%
+      \else%
+        \theevents\par%
+      \fi%
+      \ifcat$\theappointments$%
+      \else%
+        \theappointments%
+      \fi%
+      \end{multicols}%
+}% parbox
+}%          hbox
+\vfill}%    vbox
+}%          sbox
+\fi%
+ \advance\wk@tempcount by1\relax%
+ \ifnum\wk@tempcount>6\relax%
+   \wk@tempcount=0\relax%
+ \fi}
+%</class>
+%    \end{macrocode}
+%
+%\iffalse
+%    \begin{macrocode}
+%<*installer>
+\def\batchfile{weekly.ins}
+\input docstrip.tex
+
+\keepsilent
+
+\preamble
+This file is part of the Calendar package,
+Copyright (C) 1996, 1997 Frank Bennett, Jr.
+All rights reserved.
+------------------------------------------
+
+IMPORTANT NOTICE:
+
+You are not allowed to change this file.  You may however copy
+this file to a file with a different name and then change the
+copy if (a) you do not charge for the modified code, (b) you
+acknowledge the author of this file in the new file, if it
+is distributed to others, and (c) you attach these same
+conditions to the new file.
+ 
+You are not allowed to distribute this file alone.  You are not
+allowed to take money for the distribution or use of this file
+(or a changed version) except for a nominal charge for copying
+etc.
+ 
+You are allowed to distribute this file under the condition that
+it is distributed with all of its contents, intact.
+
+For error reports, or offers to help make this a more powerful,
+friendlier, and altogether more thrilling package, please contact me on
+fb@soas.ac.uk.  Better yet, make a contribution to
+my pension.  Account details available on request.
+------------------------------------------
+
+\endpreamble
+
+\generate{\file{weekly.cls}{\from{weekly.dtx}{class}}
+   }
+
+\Msg{***********************************************************}
+\Msg{*}
+\Msg{* To finish the installation, you have to move the following}
+\Msg{* file into a directory searched by TeX:}
+\Msg{*}
+\Msg{* \space\space weekly.sty}
+\Msg{*}
+\Msg{***********************************************************}
+
+%</installer>
+%    \end{macrocode}
+%\fi
+% \Finale \PrintChanges
+
+
+
+
+

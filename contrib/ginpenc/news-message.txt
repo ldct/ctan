@@ -1,0 +1,76 @@
+Path: news.tu-bs.de!news-han1.dfn.de!news-stu1.dfn.de!news.belwue.de!news.uni-freiburg.de!not-for-mail
+From: Heiko Oberdiek <oberdiek@uni-freiburg.de>
+Newsgroups: de.comp.text.tex
+Subject: Re: Inputencoding herausfinden
+Date: Fri, 08 Aug 2003 02:34:27 +0200
+Organization: Rechenzentrum der Universitaet Freiburg, Germany
+Lines: 60
+Message-ID: <bguqq2$is4$2@n.ruf.uni-freiburg.de>
+References: <slrnbj46l6.hfp.h.harders@pc52.ifw.ing.tu-bs.de>
+NNTP-Posting-Host: merkur.informatik.uni-freiburg.de
+Mime-Version: 1.0
+Content-Type: text/plain; charset=ISO-8859-1
+Content-Transfer-Encoding: 8bit
+X-Newsreader: Forte Agent 1.91/32.564
+Xref: news.tu-bs.de de.comp.text.tex:138386
+
+Harald Harders <h.harders@tu-bs.de> wrote:
+
+> gibt es eine Möglichkeit, nach der Verwendung von
+>     \usepackage[...]{inputenc}
+> von LaTeX aus herauszufinden, welches Encoding geladen wurde?
+
+Ja:
+
+documentclass{article}
+\usepackage[latin1]{inputenc}
+
+%%% \inputenc %%% BEGIN %%%
+%%% * Package inputenc has to be loaded first.
+%%% * \inputenc: <empty>, if no input encoding is set
+%%%   otherwise it contains the name of the current input encoding.
+
+% default value for \inputenc
+\let\inputenc\empty
+% redefinition of \inputencoding to store the input encoding name
+\let\OrgInputencoding\inputencoding
+\def\inputencoding#1{%
+  \def\inputenc{#1}%
+  \OrgInputencoding{#1}%
+}
+% get current input encoding
+\begingroup
+  \makeatletter
+  \expandafter\ifx\csname @inpenc@undefined\endcsname\relax
+    \edef\x{\endgroup}%
+  \else
+    \def\@inpenc@undefined@#1{\def\noexpand\inputenc{#1}}%
+    \edef\x{\endgroup
+      \@inpenc@undefined
+    }%
+  \fi
+\x
+%%% \inputenc %%% END %%%
+
+\begin{document}
+
+\typeout{* Input encoding: `\inputenc'}
+
+\inputencoding{cp850}
+\typeout{* Input encoding: `\inputenc'}
+
+\end{document}
+
+>   Ich habe mal in inputenc.sty reingeschaut, aber mir ist nicht 
+> aufgefallen, dass irgendwo ein Makro oder so auf die Kodierung
+> gesetzt würde.
+
+Faellt doch sofort ins Auge, die Option (\DeclareOption*) fuehrt
+\inputencoding{\CurrentOption} aus, das Argument wird
+dreimal verwendet, gleich bei der ersten Verwendung wird das
+Argument von \inputencoding in \@inpenc@undefined gespeichert.
+Obiger Code speichert den Wert lediglich in \inputenc um (und
+entfernt das erste Token "\@inpenc@undefined@".
+
+Viele Gruesse
+  Heiko <oberdiek@uni-freiburg.de>

@@ -1,0 +1,2161 @@
+% \iffalse
+%
+% sesstime.dtx Copyright (C) 2016-2017 Niklas Beisert
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Niklas Beisert.
+%
+% This work consists of the files sesstime.dtx and sesstime.ins
+% and the derived files sesstime.sty and stimsamp.tex
+% with |stimsmp3.tex| and |stimsmp4.tex|.
+%
+%<package|sample>\NeedsTeXFormat{LaTeX2e}[1996/12/01]
+%<package>\ProvidesPackage{sesstime}[2017/05/01 v1.0 session timing marks]
+%<sample>\ProvidesFile{stimsamp.tex}[2017/05/01 v1.0 sample for sesstime]
+%<*driver>
+%\ProvidesFile{sesstime.drv}[2017/05/01 v1.0 sesstime reference manual file]
+\PassOptionsToClass{10pt,a4paper}{article}
+\documentclass{ltxdoc}
+
+\usepackage[margin=35mm]{geometry}
+\usepackage{hyperref}
+\usepackage[usenames]{color}
+
+\hypersetup{colorlinks=true}
+\hypersetup{pdfstartview=FitH}
+\hypersetup{pdfpagemode=UseNone}
+
+\begin{document}
+
+\title{The \textsf{sesstime} Package}
+\hypersetup{pdftitle={The sesstime Package}}
+\author{Niklas Beisert\\[2ex]
+  Institut f\"ur Theoretische Physik\\
+  Eidgen\"ossische Technische Hochschule Z\"urich\\
+  Wolfgang-Pauli-Strasse 27, 8093 Z\"urich, Switzerland\\[1ex]
+  \href{mailto:nbeisert@itp.phys.ethz.ch}
+  {\texttt{nbeisert@itp.phys.ethz.ch}}}
+\hypersetup{pdfauthor={Niklas Beisert}}
+\hypersetup{pdfsubject={Manual for the LaTeX2e Package sesstime}}
+\date{1 May 2017, \textsf{v1.0}}
+\maketitle
+
+\begin{abstract}\noindent
+\textsf{sesstime} is a \LaTeXe{} package
+to add timing marks to lecture notes
+in order to help managing the time available
+for presenting a given section of the document.
+It also provides tools to record and
+estimate the progress throughout the course.
+\end{abstract}
+
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\makeatletter
+\newcommand{\timingprint}[2][l]{%
+  \ifhmode\par\fi%
+  \ifvmode%
+    \@bsphack%
+    \dimen@\prevdepth%
+    \nointerlineskip%
+    \if r#1%
+      \smash{\rlap{\hspace{\textwidth}\parbox[t]{1cm}%
+        {\raggedright\renewcommand{\bfdefault}{b}#2}}}%
+    \else%
+      \smash{\llap{\parbox[t]{1cm}%
+        {\raggedleft\renewcommand{\bfdefault}{b}#2}}}%
+    \fi%
+    \prevdepth\dimen@%
+    \@esphack%
+  \fi}
+\newcommand{\printmark}[1]{\timingprint{\footnotesize#1}}
+\newcommand{\printremark}[1]{%
+  \timingprint[r]{\tiny\sffamily\hrule#1\hrule}}
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+
+A crucial step in designing a lecture course is to estimate
+the time needed for presenting the individual topics and to
+arrange them such that the overall teaching goals can be achieved
+within a predetermined amount of time.
+This step requires a lot of experience and the information is typically lost
+when (parts of) the lecture notes are recycled by different lecturer.
+While it is very useful to have timing information available
+for a number of purposes,
+it also takes patience and dedication to
+set it up and to keep it up to date when
+the presented material is changed (added, removed or shuffled).
+
+This package offers an interface to store such timing information
+in the \LaTeX{} source. It also offers some tools
+to process the raw data and display them in compiled form.
+The goals and features of this package include the following:
+\begin{itemize}
+\item
+Store timing information in the \LaTeX{} source
+(as absolute or relative times).
+\item
+Show small timing marks in the margin of the text.
+\item
+Indicate where sessions begin and end in the \LaTeX{} source
+and display session information in the text margin.
+\item
+Show the total time needed to present a given block, chapter or session
+at its start.
+\item
+Generate a table of sessions to track and estimate the progress
+throughout the course.
+\item
+Show brief comments regarding presentation,
+e.g.\ to skip certain parts or to pay particular attention.
+\item
+Maintain timing information in updates as conveniently as possible.
+\item
+Automatically generate the subdivision of sessions
+(based on the timing information provided).
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Usage}
+
+This section describes the structures, markup and mechanisms
+provided by the package and some hints how to structure and maintain
+the information within the document.
+A complete reference of commands
+and configuration options in given in section \ref{sec:commands}.
+
+To use the package \textsf{sesstime} add the command
+\begin{center}
+|\usepackage{sesstime}|
+\end{center}
+to the preamble of your \LaTeX{} document.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Blocks}
+
+The basic timing information is entered in a unit called \emph{block}.
+It has the following generic structure:
+%
+\begin{center}
+\begin{tabular}{l}
+|\timingstart{15}|\\
+|abc|\\
+|def|\\
+|\timingsplit{30}|\\
+|ghi|\\
+|jkl|\\
+|\timingsplit{40}|\\
+|mno|\\
+|pqr|\\
+|\timingstop{1:00}|\\
+\end{tabular}
+\end{center}
+%
+The above timing information is provided as absolute times
+(in [hours:]minutes),
+such that the block begins at 15 minutes and ends at 1 hour.
+It thus takes 45 minutes in total to present this block.
+Furthermore, two intermediate times are specified at 15 minutes
+and 25 minutes into the block
+(albeit in the form of absolute times).
+The timing information for the block will be displayed as:
+\vspace{2ex}
+\begin{center}
+\vrule\begin{minipage}{3em}
+\printmark{\textbf{90}\rlap{\vphantom{$\Updownarrow$}}\kern1.2em%
+  \hrule 45\rlap{\kern0.4em$\Downarrow$\vphantom{$\Updownarrow$}}\kern1.2em}
+abc\\
+def\par
+\printmark{\raisebox{-1ex}{15\rlap{\kern0.4em$\Updownarrow$}}\kern1.2em}
+ghi\\
+jkl\par
+\printmark{\raisebox{-1ex}{25\rlap{\kern0.4em$\Updownarrow$}}\kern1.2em}
+mno\\
+pqr\par
+\printmark{45\rlap{\kern0.4em$\Uparrow$\vphantom{$\Updownarrow$}}%
+  \kern1.2em\hrule%
+  \textbf{135}\rlap{\vphantom{$\Updownarrow$}}\kern1.2em}
+\end{minipage}
+\end{center}
+\vspace{2ex}
+Note that the displayed times are always relative to the block beginning.
+The bold numbers show the overall time outside the block
+(assuming that this block starts at 90 minutes).
+Furthermore, note that two \LaTeX{} passes are
+needed to display all data correctly
+(as for labels).
+
+Alternatively, the information can be entered as
+relative times with respect to the previous timing command:
+%
+\begin{center}
+\begin{tabular}{l}
+|\timingstart*{0}|\\
+|...|\\
+|\timingsplit*{15}|\\
+|...|\\
+|\timingsplit*{10}|\\
+|...|\\
+|\timingstop*{20}|
+\end{tabular}
+\end{center}
+%
+This markup has the same effect as the above timing commands
+using absolute times.
+There are some benefits and shortcomings to the two modes
+of entering the information,
+and the choice is left to the user.
+Note that relative and absolute times can be mixed
+(one absolute reference point should be specified previously).
+
+Some remarks and considerations are in order
+for setting up timing blocks
+and maintaining them when changing the presented material:
+\begin{itemize}
+\item
+If the duration of some presented material is estimated,
+it makes sense to specify relative times.
+\item
+If the duration is determined by periodically
+noting the present time displayed on a clock,
+it makes sense to specify these absolute times directly.
+\item
+When absolute times are specified, the duration of a block
+is determined by the final |\timingstop| (only).
+Split times given by |\timingsplit|[|*|] do not change
+the overall length.
+In order to change the duration of a block
+when some presented material is added or removed,
+all subsequent absolute times have to be adjusted.
+Alternatively, additional time can be specified by:
+%
+\begin{center}
+|\timinglapse{5}|
+\end{center}
+%
+This command conveniently adds 5 minutes to the block
+without modifying the current absolute time.
+When using relative times throughout the block,
+this has the same effect as |\timingsplit*{5}|.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Chapters}
+
+The package provides an additional layer
+of structure called \emph{chapters}.
+A chapter combines several blocks in order to display
+the overall required time as well as relative times within the chapter.
+
+A chapter is enclosed by two commands
+%
+\begin{center}
+\begin{tabular}{l}
+|\timingchapter|\\
+|abc|\\
+|def|\\
+|ghi|\\
+|\timingchapterend|
+\end{tabular}
+\end{center}
+%
+Closing a chapter is optional,
+it will be closed automatically by starting any subsequent chapter.
+
+There are three uses to declaring chapters.
+The total time for presenting the chapter is computed and
+it is displayed at the start:
+%
+\vspace{2ex}
+\begin{center}
+\vrule\begin{minipage}{3em}
+\printmark{\textbf{180}\rlap{\kern0.4em$\star$}\kern1.2em}
+abc\\
+def\\
+ghi
+\end{minipage}
+\end{center}
+%
+Furthermore, the bold numbers shown in the above examples
+for blocks indicate the present time relative to the beginning of the chapter.
+Finally, one can also show the total time needed for any chapter
+anywhere within the document,
+e.g.\ for a customised table of contents
+or next to the chapter title in a customised form.
+
+It will be useful to match the chapters and blocks
+to certain structures in the document.
+For example, chapters could correspond to chapters or sections
+depending on which documentclass is used.
+If the |\include| mechanism of \LaTeX{} is used to structure the document
+into several files,
+it makes sense to use these units as chapters for timing purposes.
+Blocks would typically correspond to the next level of structure
+(sections or subsections, respectively)
+and split times could be inserted naturally
+at any finer levels of structure (subsubsections, paragraphs).
+
+Establishing some guidelines how to entering timing information
+will be useful because the package will then compute the total durations
+of these structures and display the times at their beginnings.
+
+For maintenance purposes, a typical block could last
+around 30 minutes to an hour and be split at no more than a handful instances;
+more split times will take more efforts in maintaining across updates.
+There is no practical limitation to the length of individual chapters
+as times are computed automatically;
+typically it would consist of a couple of blocks.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Sessions}
+
+Chapters will normally not map one-to-one to the units of presentation
+(individual lectures) which we shall call \emph{sessions}.
+It may be useful to keep track or estimate
+where each session will start (or end).
+There are two mechanisms to specify sessions.
+The manual declaration takes the form:
+%
+\begin{center}
+\begin{tabular}{l}
+|\timingsession|\\
+|abc|\\
+|def|\\
+|ghi|\\
+|\timingsessionend|
+\end{tabular}
+\end{center}
+%
+Again, closing a session is optional,
+it will be closed automatically by starting any subsequent session.
+Alternatively, the subdivision of sessions can be automatically
+estimated by the command:
+%
+\begin{center}
+|\timingconfigure{autosession=|\textit{duration}|}|
+\end{center}
+%
+This declares the duration of a session to be \textit{duration} minutes.
+New sessions will be started automatically when the available time for the
+previous session has elapsed
+(as far as possible with the timing information provided).
+
+Sessions have two uses.
+The start of a session is indicated in the margin
+together with its duration:
+%
+\begin{center}
+\begin{minipage}{3em}
+\printremark{session 4\\(35 min)}
+abc\\
+def\\
+ghi
+\end{minipage}\vrule
+\end{center}
+%
+Furthermore, a list of sessions can be displayed by the command:
+%
+\begin{center}
+|\timinglistofsessions|
+\end{center}
+%
+The list of sessions can serve two purposes in planning a lecture course.
+First, it outlines the (approximate) overall schedule and
+allows one to find out conveniently whether
+there will be sufficiently many sessions to cover the intended material.
+Second, the preview can help coordinating the
+topics for exercises to accompany the course.
+
+Note that the automatic assignment of sessions
+relies on the timing information provided in the blocks.
+On the one hand, the latter should be sufficiently fine-grained
+so that the session breaks can be located accurately.
+On the other hand, it will not be worth the effort
+to establish too detailed information.
+Providing one timing mark for around
+one third of the duration of a session
+will produce reasonable results.
+In the case of coarse-grained information,
+new sessions will be triggered such that
+the overall schedule remains approximately valid.
+The session marks will then be displayed some time
+after the session is expected is start, and the
+time difference is displayed.
+
+Note also that the list of sessions
+and total times rely on information stored in the |.aux| files.
+In order to update the information, it may be necessary
+to compile the complete document (without |\includeonly| statements) twice.
+
+Finally, it may be useful to emphasise that
+session marks can also be displayed without providing timing information.
+In that case, the subdivision of session evidently
+cannot be generated automatically, but must be stored manually.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Comments}
+
+Occasionally it is useful to write some brief comments or instructions
+in the margin of lecture notes.
+While there are native \LaTeX{} tools to do so,
+the package provides an integrated mechanism:
+%
+\begin{center}
+|\timingcomment{|\textit{comment}|}|
+\end{center}
+%
+Such comments can serve many purposes, such as:
+%
+\begin{itemize}
+\textwidth0.9\textwidth
+\printremark{skipped}
+\item
+`skipped': The following part is skipped in the presentation.\par
+\printremark{brief!}
+\item
+`brief!': Be brief! Do not waste time!\par
+\printremark{explain!}
+\item
+`explain!': Explain well! Take your time!\par
+\printremark{exercise}
+\item
+`exercise': Hint at an accompanying exercise.
+\item
+\ldots
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Flags}
+\label{sec:flags}
+
+The package allows to specify flags to distinguish
+different versions of the document
+or to set it up for different purposes
+(e.g.\ a particular iteration of the lecture course
+or lecture notes vs.\ textbook):
+%
+\begin{center}
+|\timingconfigure{flags={|\textit{flags}|}}|
+\end{center}
+%
+Here \textit{flags} is a comma-separated list of user-defined flags.
+Please avoid special characters and spaces (spaces next to
+comma separators are presently not ignored).
+
+Most timing commands provided by the package
+accept an optional argument which can be
+|[if=|\textit{flag}|]| or |[not=|\textit{flag}|]|
+(or combinations of these separated by comma).
+These commands will be processed only if the specified condition(s) hold.
+For example, the commands
+\begin{center}
+\begin{tabular}{l}
+|\timingcomment[if=2017]{skip}|\\
+|\timinglapse[if=2017]{-10}|
+\end{tabular}
+\end{center}
+can be used to indicate that the following part of the text is skipped
+in the 2017 iteration of the lecture course,
+and 10 minutes are saved by this omission.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Printing}
+
+Detailed timing information or comments may be intended for
+private purposes only,
+while these marks should be stripped in a public version of the document.
+The package supplies some global options to enable and disable
+the printing of timing marks.
+To turn off all marks, use the package option:
+%
+\begin{center}
+|\timingconfigure{print=false}|
+\end{center}
+%
+Also individual types of timing marks can be suppressed
+by similar package options,
+see section \ref{sec:packageoptions}.
+For a finer selection or suppression of comments,
+one could use an optional argument such as
+|[if=private]| (only in the private version)
+or |[not=public]| (only in the public version),
+see section \ref{sec:flags}.
+
+Please note that the package uses a simple
+mechanism to place timing marks and comments in the margin
+next to the current location. This mechanism
+requires \TeX{} to be in so-called vertical mode
+(loosely speaking the space between paragraphs);
+marks cannot be set in horizontal mode
+(text within the paragraphs).
+As timing marks are naturally placed between the paragraphs
+and to avoid complications, a paragraph is automatically broken
+when a timing mark is placed in horizontal mode.
+This has the effect of splitting the current paragraph in two
+or occasionally inserting some extra vertical space between paragraphs.
+Note that this applies only if timing marks are actually printed,
+otherwise the structure of paragraphs is left untouched.
+
+Relatedly, it makes no sense to place timing marks \emph{after}
+a (sub)paragraph command which enforces horizontal mode
+to stay on the same line as the (sub)paragraph title;
+place any marks before the (sub)paragraph command.
+Also place timing marks at your own risk
+within manually designed boxes or minipages
+and avoid using them in mathematical mode.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Customisation}
+
+The package provides some default layout for the various
+pieces of information to be displayed. However, it makes
+sense to customise some of these.
+
+For example, one could provide a list of session dates
+and customise the session display
+by changing the commands |\timingprintsession|
+and/or |\timingsessionline|
+to show the time instead of the session number.
+See appendix \ref{sec:sample} for a sample implementation.
+
+Please refer to the command reference in section \ref{sec:commands}
+as well as the implementation in appendix \ref{sec:implementation}
+to find out about commands to be customised:
+Commands suitable for customisation are among
+the public ones (prefix |timing|)
+and they should not make reference
+to internal commands (prefix |sti@|).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Command Reference}
+\label{sec:commands}
+
+This section describes the commands provided by the package \textit{sesstime}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Blocks}
+\label{sec:blocks}
+
+\DescribeMacro{\timingstart}
+\DescribeMacro{\timingsplit}
+\DescribeMacro{\timingstop}
+\DescribeMacro{\timingnext}
+Timing information is entered using the block commands:
+\begin{center}
+\begin{tabular}{l}
+|\timingstart[|\textit{cond}|]{|\textit{abstime}|}|\\
+|\timingsplit[|\textit{cond}|]{|\textit{abstime}|}|\\
+|\timingstop[|\textit{cond}|]{|\textit{abstime}|}|\\
+|\timingnext[|\textit{cond}|]{|\textit{abstime}|}|
+\end{tabular}
+\end{center}
+The optional argument \textit{cond}
+is a comma-separated list of options described in
+section \ref{sec:flagsref}.
+The argument \textit{abstime} represents the absolute time at this instant;
+it can be specified in minutes
+or in the format \textit{hour}|:|\textit{minutes}.
+The first three of the above commands
+start, split or stop a block, respectively.
+The last command stops a block and starts the next one at the same time.
+
+Each of these commands has an alternative form:
+\begin{center}
+\begin{tabular}{l}
+|\timingstart*[|\textit{cond}|]{|\textit{reltime}|}|\\
+|\timingsplit*[|\textit{cond}|]{|\textit{reltime}|}|\\
+|\timingstop*[|\textit{cond}|]{|\textit{reltime}|}|\\
+|\timingnext*[|\textit{cond}|]{|\textit{reltime}|}|
+\end{tabular}
+\end{center}
+Here the argument \textit{reltime} is a relative time (in minutes)
+based on the previous block command.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\timinglapse}
+\DescribeMacro{\timinggauge}
+There are two further commands to tweak the timers in useful ways:
+%
+\begin{center}
+|\timinglapse[|\textit{cond}|]{|\textit{reltime}|}|
+\end{center}
+%
+This command lets all timers evolve by \textit{reltime} minutes
+while keeping the absolute time fixed.
+It can be used to add or remove time from a block
+which is otherwise specified by absolute times.
+Instead of adjusting all later times by the lapse,
+it suffices to insert this command between two
+absolute time commands.
+
+The other command implements the opposite effect:
+%
+\begin{center}
+|\timinggauge[|\textit{cond}|]{|\textit{abstime}|}|
+\end{center}
+%
+This command adjusts the current reference time to \textit{abstime}
+(specified as minutes or in the format \textit{hour}|:|\textit{minutes})
+without evolving any of the timers.
+This can be used if a block stretches over several sessions
+where the absolute time changes between sessions.
+Gauging the time allows one to enter absolute times
+as read off from a clock.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\timingblocktotal}
+The total time of the current block (in minutes) can be obtained
+by the command:
+\begin{center}
+|\timingblocktotal|[|*|]|[|\textit{error}|]|
+\end{center}
+The duration is saved into the macro |\timingreturn|.
+The starred form returns the duration of the subsequent block
+instead of the current block.
+If the time cannot be determined the optional argument \textit{error}
+(default value `??') is returned.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Chapters}
+\label{sec:chapters}
+
+\DescribeMacro{\timingchapter}
+\DescribeMacro{\timingchapterend}
+Chapters are started and ended by the commands:
+\begin{center}
+\begin{tabular}{l}
+|\timingchapter[|\textit{cond}|]|\\
+|\timingchapterend[|\textit{cond}|]|
+\end{tabular}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\timingchapterlabel}
+\DescribeMacro{\timingchaptertotal}
+The total duration of a chapter is determined by the commands:
+\begin{center}
+\begin{tabular}{l}
+|\timingchapterlabel{|\textit{label}|}|\\
+|\timingchaptertotal[|\textit{error}|]{|\textit{label}|}|\\
+|\timingchaptertotal*[|\textit{error}|]{|\textit{chapter}|}|
+\end{tabular}
+\end{center}
+The first one must be invoked within
+a chapter to assign the label \textit{label}.
+The second one saves the duration
+for the chapter labelled by \textit{label}
+into the macro |\timingreturn|.
+The third (starred) form selects the chapter by the number \textit{chapter}.
+If undetermined, the optional argument \textit{error} (default value `??')
+is returned.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Sessions}
+\label{sec:sessions}
+
+\DescribeMacro{\timingsession}
+\DescribeMacro{\timingsessionend}
+Sessions are started and ended by the commands:
+%
+\begin{center}
+\begin{tabular}{l}
+|\timingsession[|\textit{cond}|]|\\
+|\timingsessionend[|\textit{cond}|]|
+\end{tabular}
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\timinglistofsessions}
+The list of sessions is printed by the command:
+\begin{center}
+|\timinglistofsessions|
+\end{center}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Comments}
+\label{sec:comments}
+
+\DescribeMacro{\timingcomment}
+A comment is displayed by the command:
+%
+\begin{center}
+|\timingsession[|\textit{cond}|]{|\textit{comment}|}|
+\end{center}
+%
+As space in the margin is typically very limited,
+it makes sense to be as concise as possible,
+e.g.\ use just a single word or two.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Flags}
+\label{sec:flagsref}
+
+The optional argument \textit{cond} for most of the above commands
+is a comma-separated list to specify the conditions
+under which the command is to be processed:
+%
+\begin{itemize}
+\item |if=|\textit{flag} --
+Process command only if \textit{flag} is among the currently declared flags.
+\item |not=|\textit{flag} --
+Process command unless \textit{flag} is among the currently declared flags.
+\end{itemize}
+%
+Note that the conditionals are processed in the same order as specified.
+After the first one is evaluated, all subsequent ones
+change the status only if
+\textit{flag} is among the currently declared flags.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\medskip
+\noindent
+\DescribeMacro{\timingif}
+A command for optional processing is:
+%
+\begin{center}
+|\timingif[|\textit{cond}|]{|\textit{code}|}|
+\end{center}
+%
+The code \textit{code} is processed
+only if the conditions \textit{cond} are met.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Package Options}
+\label{sec:packageoptions}
+
+\DescribeMacro{\timingconfigure}
+Options can be passed to the package by the commands:
+\begin{center}
+\begin{tabular}{rl}
+&|\usepackage[|\textit{opts}|]{sesstime}|
+\\
+or&|\PassOptionsToPackage{|\textit{opts}|}{sesstime}|
+\\
+or&|\timingconfigure[|\textit{cond}|]{|\textit{opts}|}|
+\end{tabular}
+\end{center}
+%
+|\PassOptionsToPackage| must be used before |\usepackage|;
+|\timingconfigure| must be used afterwards (for selected options).
+\textit{opts} is a comma-separated list of options.
+Below we provide a complete list of available options:
+%
+\begin{itemize}
+\item |print|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing all timing marks.
+
+\item |block|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing block marks.
+
+\item |chapter|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing chapter marks.
+
+\item |session|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing session marks.
+
+\item |comment|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing comments.
+
+\item |warning|[|=true|$\vert$|false|]
+(no value implies |true|, initially set to |true|) --
+Enable/disable printing warnings.
+
+\item |width=|\textit{dimen}
+(initially set to |1cm|) --
+Specify width of timing marks in both margins.
+
+\item |widthl=|\textit{dimen}
+(initially set to |1cm|) --
+Specify width of timing marks in the left margin
+which are typically related to blocks and chapters.
+
+\item |widthr=|\textit{dimen}
+(initially set to |1cm|) --
+Specify width of timing marks in the right margin
+which are typically related to sessions and comments.
+
+\item |autosession=|\textit{duration}
+(initially set to |0|) --
+Set duration of automatically determined sessions;
+|0| disables automatic determination.
+
+\item |flags=|\textit{flags}
+--
+Specify a comma-separated list of flags.
+Avoid spaces between flags.
+\end{itemize}
+%
+Note that one can specify conditional evaluation for
+the command |\timingconfigure| to, e.g.,
+conditionally turn on automatic determination of sessions.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Information}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Copyright}
+
+\begingroup
+\parskip1ex
+\parindent0pt
+
+Copyright \copyright{} 2016--2017 Niklas Beisert
+
+This work may be distributed and/or modified under the
+conditions of the \LaTeX{} Project Public License, either version 1.3
+of this license or (at your option) any later version.
+The latest version of this license is in
+  \url{http://www.latex-project.org/lppl.txt}
+and version 1.3 or later is part of all distributions of \LaTeX{}
+version 2005/12/01 or later.
+
+This work has the LPPL maintenance status `maintained'.
+
+The Current Maintainer of this work is Niklas Beisert.
+
+This work consists of the files |sesstime.dtx| and |sesstime.ins|
+and the derived files |sesstime.sty| and |stimsamp.tex|
+with |stimsmp3.tex| and |stimsmp4.tex|.
+
+\endgroup
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Files and Installation}
+
+The package consists of the files:
+%
+\begin{center}
+\begin{tabular}{ll}
+    |README|       & readme file \\
+    |sesstime.ins| & installation file \\
+    |sesstime.dtx| & source file \\
+    |sesstime.sty| & package file \\
+    |stimsamp.tex| & sample file \\
+    |stimsmp3.tex| & sample include file \\
+    |stimsmp4.tex| & sample include file \\
+    |sesstime.pdf| & manual
+\end{tabular}
+\end{center}
+%
+The distribution consists of the files
+|README|, |sesstime.ins| and |sesstime.dtx|.
+%
+\begin{itemize}
+\item
+Run (pdf)\LaTeX{} on |sesstime.dtx|
+to compile the manual |sesstime.pdf| (this file).
+\item
+Run \LaTeX{} on |sesstime.ins| to create the package |sesstime.sty|
+and the samples |stimsamp.tex| with include files
+|stimsmp3.tex| and |stimsmp4.tex|.
+Copy the file |sesstime.sty| to an appropriate directory of your \LaTeX{}
+distribution, e.g.\ \textit{texmf-root}|/tex/latex/sesstime|.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Related CTAN Packages}
+
+The package relies on other packages and software:
+\begin{itemize}
+\item
+This package uses the package \textsf{keyval}
+from the \textsf{graphics} bundle
+to process the options for the package, environments and macros.
+Compatibility with the \textsf{keyval} package
+has been tested with v1.15 (2014/10/28).
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Feature Suggestions}
+\label{sec:suggestions}
+
+The following is a list of features which may be useful for future
+versions of this package:
+%
+\begin{itemize}
+\item
+Option to display times as \textit{hh}|:|\textit{mm}.
+% (or sessions:mm?!)
+%\item
+%start new block within block behaviour: ignore or next?
+%\item
+%flexible storage of section / paragraph titles
+%in list of sessions? depending on numbering depth?
+\item
+Warnings for unknown or multiply defined labels or times.
+%note that aux is read again at enddocument in order to
+%compare the labels for changes.
+%different signs for these two in the text?
+\item
+Display position of timing marks in two-sided documents.
+\item
+Ignore leading and trailing spaces in the list of flags.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Revision History}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v1.0:} 2017/05/01
+
+\begin{itemize}
+\item
+first version published on CTAN
+\item
+manual and install package
+\item
+bugfix chapter total
+\item
+minor display changes
+\item
+specify absolute times as \textit{hour}|:|\textit{minutes}
+\item
+block gauge
+\item
+conditional depending on flags
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v0.7:} 2017/04/17
+
+\begin{itemize}
+\item
+multiple flags
+\item
+chapter labels to access total times
+\item
+bugfix for open chapters and sessions at end of document (write immediately)
+\item
+display tuned, deactivate selected marks
+\item
+public interface streamlined
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v0.55 / v0.6:} 2017/04/01
+
+\begin{itemize}
+\item
+block display and preview
+\item
+made flags mechanism more flexible
+\item
+block start/split/stop/next uniformised; lapse added
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\paragraph{v0.5:} 2016/11/03
+
+\begin{itemize}
+\item
+basic functionality
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+
+\settowidth\MacroIndent{\rmfamily\scriptsize 000\ }
+\parskip1ex
+\parindent0pt
+
+ \DocInput{sesstime.dtx}
+
+\end{document}
+%</driver>
+% \fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \section{Sample File}
+% \label{sec:sample}
+%\iffalse
+%<*sample>
+%\fi
+%
+% In this section we provide an example of how to use
+% some of the \textsf{sesstime} features.
+% We also test the behaviour in some special cases.
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Preamble.}
+%
+% Standard document class:
+%    \begin{macrocode}
+\documentclass[12pt]{article}
+%    \end{macrocode}
+
+% Use package \textsf{geometry} to adjust the page layout,
+% adjust the paragraph shape:
+%    \begin{macrocode}
+\usepackage{geometry}
+\geometry{layout=a4paper}
+\geometry{paper=a4paper}
+\geometry{margin=3cm}
+\parindent0pt
+%    \end{macrocode}
+
+% Include the \textsf{sesstime} package:
+%    \begin{macrocode}
+\RequirePackage{sesstime}
+%    \end{macrocode}
+
+% Enable automatic assignment of sessions at 30 minutes each.
+% Optionally turn off all timing marks:
+%    \begin{macrocode}
+\timingconfigure{autosession=30}
+%%\timingconfigure{print=false}
+%    \end{macrocode}
+
+% Declare schedule of lectures for a customised display:
+%    \begin{macrocode}
+\newcommand{\sessiondate}[1]{\ifcase#1\\
+  \or Mon 09:00%
+  \or Mon 10:00%
+  \or Tue 09:00%
+  \or Fri 11:00%
+  \or Fri 12:00%
+  \else END%
+  \fi}
+%    \end{macrocode}
+
+% Overwrite display of session marks:
+%    \begin{macrocode}
+\renewcommand{\timingprintsession}[2]{\timingprintremark{%
+  lecture #1\\
+  \sessiondate{#1}%
+  \timingsessiontotal[0]{#1}\ifnum\timingreturn>0%
+  \\(\timingreturn\ min)%
+  \ifnum #2>0\\at #2 min\fi\fi\vphantom{g}}}
+%    \end{macrocode}
+
+% Overwrite display of sessions list:
+%    \begin{macrocode}
+\renewcommand{\timingsessionline}[5]{\ \\%
+  \makebox[2em][r]{#1. }%
+  \makebox[5em][l]{\sessiondate{#1}:}%
+  \makebox[2.5em][r]{#3. }%
+  \makebox[10em][l]{\def\tmp{#5}\def\empty{}%
+  \ifx\tmp\empty #4\else\S\ #5\fi}%
+  \timingsessiontotal[0]{#1}\ifnum\timingreturn>0%
+  \ [\timingreturn\ min\ifnum #2>0; #2 min into\fi]\fi}
+%    \end{macrocode}
+
+% Define a macro |\lorem| to write out some paragraph of text:
+%    \begin{macrocode}
+\def\lorem{Lorem ipsum dolor sit amet, consectetur adipisici elit,
+  sed eiusmod tempor incidunt ut labore et dolore magna aliqua.
+  Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris
+  nisi ut aliquid ex ea commodi consequat.
+  Quis aute iure reprehenderit in voluptate velit esse
+  cillum dolore eu fugiat nulla pariatur.
+  Excepteur sint obcaecat cupiditat non proident,
+  sunt in culpa qui officia deserunt mollit anim id est laborum.\par}
+%    \end{macrocode}
+
+% Start document body:
+%    \begin{macrocode}
+\begin{document}
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapter 1.}
+%
+% Basic test of functionality:
+% First block before subsections provides several intermediate times.
+% Both subsections are in individual blocks
+% separated by |\timingnext|.
+% Most times are specified in absolute terms,
+% merely last block is stopped after a relative time.
+% Manual display of total time in chapter:
+%    \begin{macrocode}
+\section{one}
+\timingchapter
+\timingchapterlabel{one}
+\timingstart{0}
+total chapter duration: \timingchaptertotal{one}\timingreturn\ min\par
+\lorem
+\lorem
+\timingsplit{10}
+\lorem
+\timingsplit{15}
+\lorem
+\lorem
+\timingstop{25}
+\subsection{one.one}
+\timingstart{0}
+\lorem
+\subsection{one.two}
+\timingnext{15}
+\lorem
+\timingstop*{10}
+\timingchapterend
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapter 2.}
+%
+% Test of some special cases.
+% Block started without previous block closed.
+% Specified absolute time leads to negative time evolved.
+% Absolute time specified as \textit{hour}:\textit{minutes}.
+% Manual display of time in block (before or after start).
+% Behaviour within paragraph (display active/disabled):
+%    \begin{macrocode}
+\section{two}
+\timingchapter
+total following block: \timingblocktotal*\timingreturn\ min\par
+\timingstart{0:15}
+total current block: \timingblocktotal\timingreturn\ min\par
+\lorem
+\subsection{two.one}
+\timingsplit*{10}
+\lorem
+\timingstart{0}
+\subsection{two.two}
+\timingsplit{40}
+\lorem
+\timingsplit{30}
+\lorem
+\timingstop{1:00}
+\subsection{two.three}
+\timingstart{0}
+\lorem
+some text broken
+\timingsplit{10}
+by active timing mark\par
+\lorem
+some text broken
+{\timingconfigure{print=false}\timingsplit{15}}%
+by inactive timing mark\par
+\lorem
+\timingstop{30}
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Included Chapters 3 and 4.}
+%
+% Test of interoperability with |\include| mechanism:
+%    \begin{macrocode}
+\include{stimsmp3}
+\include{stimsmp4}
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapter 5.}
+%
+% Just another chapter with paragraphs:
+%    \begin{macrocode}
+\section{five}
+\timingchapter
+\paragraph{five.paragraph.}
+\lorem
+\timingstart{0}
+\lorem
+\timingsplit*{15}
+\lorem
+\timingsplit*{15}
+\subsection{five.one}
+\lorem
+\timingsplit*{15}
+\paragraph{five.one.paragraph.}
+\lorem
+\timingsplit*{15}
+\subsection{five.two}
+\paragraph{five.two.paragraph.}
+\lorem
+\timingsplit*{15}
+\lorem
+\timingstop*{15}
+\timingchapterend
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapter 6.}
+%
+% Test of |\timinglapse| and |\timinggauge|:
+%    \begin{macrocode}
+\section{six}
+\timingchapter
+\timinglapse{5}
+\timingstart{10}
+\lorem
+\timinglapse{-5}
+\lorem
+\timingstop{20}
+\lorem
+\timinglapse{5}
+\timingstart{20}
+\lorem
+\timingsplit{30}
+\timinggauge{10}
+\lorem
+\timingstop{20}
+\timingchapterend
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Comments and Flags.}
+%
+% Test comments and flags/conditionals:
+%    \begin{macrocode}
+\section{flags}
+\timingcomment{test comments}
+set flags `two' and `three':\timingconfigure{flags={two,three}}\par
+one? \timingif[if=one]{yes}\par
+two? \timingif[if=two]{yes}\par
+one or two? \timingif[if=one,if=two]{yes}\par
+not one? \timingif[not=one]{yes}\par
+not two? \timingif[not=two]{yes}\par
+not one or not two? \timingif[not=one,not=two]{yes}\par
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{List of Sessions.}
+%
+% Test the List of Sessions.
+%    \begin{macrocode}
+\appendix
+\section{list of sessions}
+the list of sessions
+\timinglistofsessions
+%    \end{macrocode}
+
+% End of document body:
+%    \begin{macrocode}
+\end{document}
+%    \end{macrocode}
+%\iffalse
+%</sample>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapters 3 and 4 Include Files.}
+%
+% A standard chapter in an included file |stimsmp3.tex|:
+%\iffalse
+%<*sample3>
+%\fi
+%    \begin{macrocode}
+\section{three}
+\timingchapter
+\timingstart{30}
+\lorem
+\subsection{three.one}
+\timingsplit{35}
+\lorem
+\subsection{three.two}
+\timingsplit{40}
+\lorem
+\timingsplit{50}
+\lorem
+\timingstop{60}
+\timingchapterend
+%    \end{macrocode}
+%\iffalse
+%</sample3>
+%\fi
+%
+% Another chapter in an included file |stimsmp4.tex|.
+% Test a very long interval to let automatic session generation overflow:
+%\iffalse
+%<*sample4>
+%\fi
+%    \begin{macrocode}
+\section{four}
+\timingchapter
+\timingstart{0}
+\lorem
+\subsection{four.one}
+\timingstop{25}
+\lorem
+\timingstart{-20}
+\subsection{four.two}
+\timingsplit{40}
+\lorem
+\timingsplit{50}
+\lorem
+\timingstop{60}
+\timingchapterend
+%    \end{macrocode}
+%\iffalse
+%</sample4>
+%\fi
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \section{Implementation}
+% \label{sec:implementation}
+%\iffalse
+%<*package>
+%\fi
+%
+% In this section we describe the package |sesstime.sty|.
+%
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Required Packages.}
+%
+% The package loads the package
+% \textsf{keyval}
+% if not yet present.
+% \textsf{keyval} is used for extended options processing:
+%    \begin{macrocode}
+\RequirePackage{keyval}
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Flags.}
+%
+% The following code compares flags for a command
+% against a global list of flags for optional processing of the command.
+%
+% \begin{macro}{\sti@processflags}
+% \begin{macro}{\ifsti@flag}
+% Declare variables for processing.
+% |\sti@flags| stores the list of selected flags.
+% |\ifsti@flag| is set by |\sti@processflags|.
+% |\ifsti@flaginit| is used to detect the first specified key:
+%    \begin{macrocode}
+\def\sti@flags{}
+\newif\ifsti@flag
+\newif\ifsti@flaginit
+%    \end{macrocode}
+% Compare given flag to list of flags stored in |\sti@flags|;
+% set |\ifsti@flag| accordingly.
+% First key sets default to opposite of specified condition:
+%    \begin{macrocode}
+\define@key{sti@flag}{if}{%
+  \ifsti@flaginit\else\sti@flagfalse\fi\sti@flaginittrue%
+  \def\sti@tmpa{#1}%
+  \@for\sti@tmpb:=\sti@flags\do{\ifx\sti@tmpb\sti@tmpa\sti@flagtrue\fi}}
+\define@key{sti@flag}{not}{%
+  \ifsti@flaginit\else\sti@flagtrue\fi\sti@flaginittrue%
+  \def\sti@tmpa{#1}%
+  \@for\sti@tmpb:=\sti@flags\do{\ifx\sti@tmpb\sti@tmpa\sti@flagfalse\fi}}
+%    \end{macrocode}
+% Initialise and process keys:
+%    \begin{macrocode}
+\newcommand{\sti@processflags}[1]{\sti@flagtrue\sti@flaginitfalse%
+  \setkeys{sti@flag}{#1}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingif}
+% Conditional processing:
+%    \begin{macrocode}
+\newcommand{\timingif}[2][]{\sti@processflags{#1}\ifsti@flag#2\fi}
+%    \end{macrocode}
+% \end{macro}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Internal Definitions.}
+%
+% The following definitions store package options.
+% The conditional |\ifsti@print|[|...|]
+% indicates whether timing marks (of particular kind) should be printed.
+% The dimensions |\sti@widthl| and |\sti@widthr| store
+% the width of timing marks on the left and right, respectively.
+% |sti@autosession| stores the duration of automatically generated sessions:
+%    \begin{macrocode}
+\newif\ifsti@print\sti@printtrue
+\newif\ifsti@printblock\sti@printblocktrue
+\newif\ifsti@printsession\sti@printsessiontrue
+\newif\ifsti@printchapter\sti@printchaptertrue
+\newif\ifsti@printwarning\sti@printwarningtrue
+\newif\ifsti@printcomment\sti@printcommenttrue
+\newdimen\sti@widthl\setlength{\sti@widthl}{1cm}
+\newdimen\sti@widthr\setlength{\sti@widthr}{1cm}
+\newcounter{sti@autosession}
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Package Options.}
+%
+% Declare package options:
+%    \begin{macrocode}
+\define@key{sti@}{print}[true]{\csname sti@print#1\endcsname}
+\define@key{sti@}{block}[true]{\csname sti@printblock#1\endcsname}
+\define@key{sti@}{chapter}[true]{\csname sti@printchapter#1\endcsname}
+\define@key{sti@}{session}[true]{\csname sti@printsession#1\endcsname}
+\define@key{sti@}{warning}[true]{\csname sti@printwarning#1\endcsname}
+\define@key{sti@}{comment}[true]{\csname sti@printcomment#1\endcsname}
+\define@key{sti@}{width}{\setlength{\sti@widthl}{#1}%
+  \setlength{\sti@widthr}{#1}}
+\define@key{sti@}{widthl}{\setlength{\sti@widthl}{#1}}
+\define@key{sti@}{widthr}{\setlength{\sti@widthr}{#1}}
+\define@key{sti@}{autosession}{\setcounter{sti@autosession}{#1}}
+\define@key{sti@}{flags}{\def\sti@flags{#1}}
+%    \end{macrocode}
+
+% \begin{macro}{\timingconfigure}
+% Configure package options:
+%    \begin{macrocode}
+\newcommand{\timingconfigure}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \setkeys{sti@}{#2}%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% Pass undeclared options on to \textsf{keyval} processing:
+%    \begin{macrocode}
+\DeclareOption*{\expandafter\timingconfigure\expandafter{\CurrentOption}}
+%    \end{macrocode}
+%
+% Process package options:
+%    \begin{macrocode}
+\ProcessOptions
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Internal Variables.}
+%
+% Declare internal variables and counters.
+% As they describe the status which may change
+% in include files, they are declared as counters
+% which are automatically stored in |.aux| files.
+% Status variables for sessions (counter, within session, time elapsed):
+%    \begin{macrocode}
+\newcounter{sti@session}
+\newcounter{sti@insession}
+\newcounter{sti@sessiontime}
+%    \end{macrocode}
+% Status variables for chapters (counter, within session, time elapsed):
+%    \begin{macrocode}
+\newcounter{sti@chapter}
+\newcounter{sti@inchapter}
+\newcounter{sti@chaptertime}
+%    \end{macrocode}
+% Status variables for blocks (counter, within session,
+% reference time, time elapsed):
+%    \begin{macrocode}
+\newcounter{sti@block}[sti@chapter]
+\newcounter{sti@inblock}
+\newcounter{sti@blockgauge}
+\newcounter{sti@blocktime}
+%    \end{macrocode}
+% Temporary counter:
+%    \begin{macrocode}
+\newcount\c@sti@tmp
+%    \end{macrocode}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Print Marks.}
+%
+% \begin{macro}{\timingprint}
+% Print a timing mark into left or right margin.
+% Leave horizontal mode and print only in vertical mode:
+%    \begin{macrocode}
+\newcommand{\timingprint}[2][l]{%
+  \ifsti@print%
+    \ifhmode\par\fi%
+    \ifvmode%
+      \@bsphack%
+      \dimen@\prevdepth%
+      \nointerlineskip%
+      \if r#1%
+        \smash{\rlap{\hspace{\textwidth}\parbox[t]{\sti@widthr}%
+          {\raggedright\renewcommand{\bfdefault}{b}#2}}}%
+      \else%
+        \smash{\llap{\parbox[t]{\sti@widthl}%
+          {\raggedleft\renewcommand{\bfdefault}{b}#2}}}%
+      \fi%
+      \prevdepth\dimen@%
+      \@esphack%
+    \fi%
+  \else%
+    \ignorespaces%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingprintmark}
+% \begin{macro}{\timingprintremark}
+% Print a timing mark or a remark:
+%    \begin{macrocode}
+\providecommand{\timingprintmark}[1]{%
+  \timingprint{\footnotesize#1}}
+\providecommand{\timingprintremark}[1]{%
+  \timingprint[r]{\tiny\sffamily\hrule#1\hrule}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\sti@warn}
+% Print a warning message:
+%    \begin{macrocode}
+\newcommand{\sti@warn}[2][l]{\ifsti@printwarning%
+  \timingprint[#1]{\scriptsize\textbf{warn}\\#2}\fi}
+%    \end{macrocode}
+% \end{macro}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Comments.}
+%
+% \begin{macro}{\timingprintcomment}
+% Print a comment:
+%    \begin{macrocode}
+\newcommand{\timingcomment}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifsti@printcomment\timingprintremark{#2}\fi%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Sessions.}
+%
+% \begin{macro}{\sti@notesessiontotal}
+% \begin{macro}{\sti@writesessiontotal}
+% The following code remembers the duration of sessions.
+% The duration is stored in the macro |\sti@sessiontotal@|\textit{session}:
+%    \begin{macrocode}
+\newcommand{\sti@notesessiontotal}[2]{%
+  \expandafter\gdef\csname sti@sessiontotal@#1\endcsname{#2}}
+%    \end{macrocode}
+% A blank definition of the above macro is written
+% to the |.aux| file to avoid compile errors
+% in case the package is removed:
+%    \begin{macrocode}
+\AtBeginDocument{\immediate\write\@auxout{%
+  \string\providecommand{\string\sti@notesessiontotal}[2]{}}}
+%    \end{macrocode}
+% Writes the duration of the current session to the |.aux| file:
+%    \begin{macrocode}
+\newcommand{\sti@writesessiontotal}[1]
+  {\immediate\write\@auxout{\string\sti@notesessiontotal%
+    {\arabic{sti@session}}{#1}}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingsessiontotal}
+% Save the duration of session number in the argument into |\timingreturn|.
+% Return the optional argument if the duration is unavailable:
+%    \begin{macrocode}
+\newcommand\timingsessiontotal[2][??]{%
+  \expandafter\let\expandafter\timingreturn%
+    \csname sti@sessiontotal@#2\endcsname%
+  \ifx\timingreturn\relax\def\timingreturn{#1}\fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@secnum}
+% \begin{macro}{\sti@secmark}
+% \begin{macro}{\sti@parmark}
+% The following code remembers the present sectioning titles
+% as well as the section number
+% for usage in the list of sections.
+% It does so by hooking into the definitions of |\chaptermark|,
+% |\|[|sub|\textbar|subsub|]|sectionmark| and |\|[|sub|]|paragraphmark|:
+%    \begin{macrocode}
+\providecommand{\chaptermark}[1]{}
+\let\sti@oldchaptermark=\chaptermark
+\let\sti@oldsectionmark=\sectionmark
+\let\sti@oldsubsectionmark=\subsectionmark
+\let\sti@oldsubsubsectionmark=\subsubsectionmark
+\let\sti@oldparagraphmark=\paragraphmark
+\let\sti@oldsubparagraphmark=\subparagraphmark
+\renewcommand{\chaptermark}[1]{%
+  \expandafter\gdef\expandafter\sti@secnum\expandafter{\thechapter}%
+  \expandafter\gdef\expandafter\sti@secmark\expandafter{#1}%
+  \xdef\sti@parmark{}\sti@oldchaptermark{#1}}
+\renewcommand{\sectionmark}[1]{%
+  \expandafter\gdef\expandafter\sti@secnum\expandafter{\thesection}%
+  \expandafter\gdef\expandafter\sti@secmark\expandafter{#1}%
+  \xdef\sti@parmark{}\sti@oldsectionmark{#1}}
+\renewcommand{\subsectionmark}[1]{%
+  \expandafter\gdef\expandafter\sti@secnum\expandafter{\thesubsection}%
+  \expandafter\gdef\expandafter\sti@secmark\expandafter{#1}%
+  \xdef\sti@parmark{}\sti@oldsubsectionmark{#1}}
+\renewcommand{\subsubsectionmark}[1]{%
+  \expandafter\gdef\expandafter\sti@secnum\expandafter{\thesubsubsection}%
+  \expandafter\gdef\expandafter\sti@secmark\expandafter{#1}%
+  \xdef\sti@parmark{}\sti@oldsubsectionmark{#1}}
+\renewcommand{\paragraphmark}[1]{%
+  \expandafter\gdef\expandafter\sti@parmark\expandafter{#1}%
+  \sti@oldparagraphmark{#1}}
+\renewcommand{\subparagraphmark}[1]{%
+  \expandafter\gdef\expandafter\sti@parmark\expandafter{#1}%
+  \sti@oldsubparagraphmark{#1}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingprintsession}
+% Print the mark for the current session.
+% Indicate the number and duration of the session as well as
+% the time into the session at which the label is printed (if applicable).
+% The arguments are
+% |#1| session number,
+% |#2| time into session:
+%    \begin{macrocode}
+\providecommand{\timingprintsession}[2]{\timingprintremark{%
+  session #1%
+  \timingsessiontotal[0]{#1}\ifnum\timingreturn>0%
+  \\(\timingreturn\ min)%
+  \ifnum #2>0\\at #2 min\fi\fi\vphantom{g}}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@startsession}
+% Initialise a new session:
+%    \begin{macrocode}
+\newcommand{\sti@startsession}{%
+  \setcounter{sti@insession}{1}%
+  \stepcounter{sti@session}%
+  \ifsti@printsession%
+    \timingprintsession{\arabic{sti@session}}{\arabic{sti@sessiontime}}%
+  \fi%
+  \sti@addsessionline}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@checksession}
+% Check whether a new session should be started in autosession mode
+% based on the time elapsed since the start of the present session.
+% Assumes that the session has a fixed duration so that the
+% total number of sessions approximates well the total duration.
+% In case of coarse graining of timing information,
+% the actual start of a session may be earlier.
+% Recurse if necessary:
+%    \begin{macrocode}
+\newcommand{\sti@checksession}{%
+  \ifnum\value{sti@autosession}>0%
+    \ifnum\value{sti@insession}=0%
+      \setcounter{sti@sessiontime}{0}%
+      \timingsession%
+    \else%
+      \ifnum\value{sti@sessiontime}<\value{sti@autosession}\else%
+        \sti@writesessiontotal{\arabic{sti@autosession}}%
+        \addtocounter{sti@sessiontime}{-\value{sti@autosession}}%
+        \sti@startsession%
+        \sti@checksession%
+      \fi%
+    \fi%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingsession}
+% Start a new session. End old session if necessary:
+%    \begin{macrocode}
+\newcommand{\timingsession}[1][]{%
+  \timingsessionend[#1]%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \setcounter{sti@sessiontime}{0}%
+    \sti@startsession%
+  \fi\ignorespaces}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingsessionend}
+% End the session (if started).
+% Remember session duration:
+%    \begin{macrocode}
+\newcommand{\timingsessionend}[1][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@insession}=1%
+      \sti@writesessiontotal{\thesti@sessiontime}%
+      \setcounter{sti@insession}{0}%
+      \setcounter{sti@sessiontime}{0}%
+    \fi%
+  \fi\ignorespaces}
+%    \end{macrocode}
+% End the session at the end of the document:
+%    \begin{macrocode}
+\AtEndDocument{\timingsessionend}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timinglistofsessions}
+% \begin{macro}{\timingsessionline}
+% \begin{macro}{\sti@addsessionline}
+% Display the list of sessions (without a section title):
+%    \begin{macrocode}
+\newcommand\timinglistofsessions{\@starttoc{los}}
+%    \end{macrocode}
+% Display one line within the list of session.
+% The arguments are
+% |#1| session number,
+% |#2| time into session,
+% |#3| section identifier,
+% |#4| section title,
+% |#5| paragraph title:
+%    \begin{macrocode}
+\providecommand{\timingsessionline}[5]{\ \\%
+  \makebox[3em][r]{#1: }\makebox[2.5em][r]{#3. }%
+  \def\sti@tmp{#5}\ifx\sti@tmp\@empty #4\else\S\ #5\fi%
+  \timingsessiontotal[0]{#1}\ifnum\timingreturn>0%
+  \ [\timingreturn\ min\ifnum #2>0; #2 min into\fi]\fi}
+%    \end{macrocode}
+% Add a line to the list of sessions:
+%    \begin{macrocode}
+\newcommand{\sti@addsessionline}{%
+  \addtocontents{los}{\protect\timingsessionline%
+    {\thesti@session}{\thesti@sessiontime}%
+    {\sti@secnum}{\sti@secmark}{\sti@parmark}}}%
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Chapters.}
+%
+% \begin{macro}{\sti@notechaptertotal}
+% \begin{macro}{\sti@writechaptertotal}
+% The following code remembers the duration of chapters.
+% Store the duration in the macro
+% |\sti@chaptertotal@|\textit{chapter}:
+%    \begin{macrocode}
+\newcommand{\sti@notechaptertotal}[2]{%
+  \expandafter\gdef\csname sti@chaptertotal@#1\endcsname{#2}}
+%    \end{macrocode}
+% A blank definition of the above macro is written
+% to the |.aux| file to avoid compile errors
+% in case the package is removed:
+%    \begin{macrocode}
+\AtBeginDocument{\immediate\write\@auxout{%
+  \string\providecommand{\string\sti@notechaptertotal}[2]{}}}
+%    \end{macrocode}
+% Write the duration of the current chapter to the |.aux| file:
+%    \begin{macrocode}
+\newcommand{\sti@writechaptertotal}
+  {\immediate\write\@auxout{\string\sti@notechaptertotal%
+    {\arabic{sti@chapter}}{\thesti@chaptertime}}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingchapterlabel}
+% \begin{macro}{\sti@notechapterlabel}
+% The following code remembers labels for chapters.
+% Store the chapter number in the macro
+% |\sti@chapterlabel@|\textit{label}:
+%    \begin{macrocode}
+\newcommand{\sti@notechapterlabel}[2]{%
+  \expandafter\gdef\csname sti@chapterlabel@#1\endcsname{#2}}
+%    \end{macrocode}
+% A blank definition of the above macro is written
+% to the |.aux| file to avoid compile errors
+% in case the package is removed:
+%    \begin{macrocode}
+\AtBeginDocument{\immediate\write\@auxout{%
+  \string\providecommand{\string\sti@notechapterlabel}[2]{}}}
+%    \end{macrocode}
+% Write a label for the current chapter to the |.aux| file:
+%    \begin{macrocode}
+\newcommand{\timingchapterlabel}[1]
+  {\immediate\write\@auxout{\string\sti@notechapterlabel%
+    {#1}{\arabic{sti@chapter}}}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingchaptertotal}
+% Save the total duration of a chapter into the macro |\timingreturn|.
+% Return the optional argument if unavailable.
+% Version specifying the chapter by its number:
+%    \begin{macrocode}
+\newcommand\sti@chaptertotalnumber[2][??]{%
+  \expandafter\let\expandafter\timingreturn%
+    \csname sti@chaptertotal@#2\endcsname%
+  \ifx\timingreturn\relax\def\timingreturn{#1}\fi}
+%    \end{macrocode}
+% Version specifying the chapter by its label:
+%    \begin{macrocode}
+\newcommand\sti@chaptertotallabel[2][??]{%
+  \expandafter\let\expandafter\timingreturn%
+    \csname sti@chapterlabel@#2\endcsname%
+  \ifx\timingreturn\relax\else%
+    \expandafter\let\expandafter\timingreturn%
+      \csname sti@chaptertotal@\timingreturn\endcsname\fi%
+  \ifx\timingreturn\relax\def\timingreturn{#1}\fi}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand\timingchaptertotal{%
+  \@ifstar{\sti@chaptertotalnumber}{\sti@chaptertotallabel}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingprintchapter}
+% Print the mark for the present chapter:
+%    \begin{macrocode}
+\providecommand\timingprintchapter[1]{\timingprintmark{\raisebox{2.8ex}{%
+  \textbf{\timingchaptertotal*{#1}\timingreturn}%
+  \rlap{\kern0.4em$\star$}\kern1.2em}}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingchapter}
+% Start a new chapter. End old chapter if necessary:
+%    \begin{macrocode}
+\newcommand{\timingchapter}[1][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=1%
+      \PackageWarning{sesstime}{chapter: still in block; stopped}%
+      \sti@warn{chap}%
+      \sti@blockstopby{0}%
+    \fi%
+    \timingchapterend%
+    \setcounter{sti@inchapter}{1}%
+    \setcounter{sti@chaptertime}{0}%
+    \stepcounter{sti@chapter}%
+    \ifsti@printchapter\timingprintchapter{\arabic{sti@chapter}}\fi%
+  \fi\ignorespaces}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingchapterend}
+% End the chapter (if started).
+% Remember chapter duration:
+%    \begin{macrocode}
+\newcommand{\timingchapterend}[1][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=1%
+      \PackageWarning{sesstime}{chapterend: still in block; stopped}%
+      \sti@warn{chap}%
+      \sti@blockstopby{0}%
+    \fi%
+    \ifnum\value{sti@inchapter}=1%
+      \sti@writechaptertotal%
+      \setcounter{sti@inchapter}{0}%
+      \setcounter{sti@chaptertime}{0}%
+    \fi%
+  \fi\ignorespaces}
+%    \end{macrocode}
+% End the chapter at the end of document:
+%    \begin{macrocode}
+\AtEndDocument{\timingchapterend}
+%    \end{macrocode}
+% \end{macro}
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \paragraph{Blocks.}
+%
+% \begin{macro}{\sti@writeblocktotal}
+% \begin{macro}{\sti@noteblocktotal}
+% The following code remembers the duration of blocks.
+% Store the duration in the macro
+% |\sti@blocktotal@|\textit{chapter}|@|\textit{block}:
+%    \begin{macrocode}
+\newcommand{\sti@noteblocktotal}[3]{%
+  \expandafter\gdef\csname sti@blocktotal@#1@#2\endcsname{#3}}
+%    \end{macrocode}
+% A blank definition of the above macro is written
+% to the |.aux| file to avoid compile errors
+% in case the package is removed:
+%    \begin{macrocode}
+\AtBeginDocument{\immediate\write\@auxout%
+  {\string\providecommand{\string\sti@noteblocktotal}[3]{}}}
+%    \end{macrocode}
+% Write the duration of the current block to the |.aux| file:
+%    \begin{macrocode}
+\newcommand{\sti@writeblocktotal}
+  {\immediate\write\@auxout{\string\sti@noteblocktotal%
+    {\arabic{sti@chapter}}{\arabic{sti@block}}{\thesti@blocktime}}}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+
+% \begin{macro}{\timingblocktotal}
+% Save the duration of the current block
+% (in starred form: subsequent block) into the macro |\timingreturn|.
+% Return optional argument if the duration is unavailable.
+% Version for current block:
+%    \begin{macrocode}
+\newcommand\sti@blocktotalcurrent[1][??]{%
+  \expandafter\let\expandafter\timingreturn%
+    \csname sti@blocktotal@\arabic{sti@chapter}@\arabic{sti@block}\endcsname%
+  \ifx\timingreturn\relax\def\timingreturn{#1}\fi}
+%    \end{macrocode}
+% Version for subsequent block:
+%    \begin{macrocode}
+\newcommand\sti@blocktotalnext[1][??]{%
+  \setcounter{sti@tmp}{\arabic{sti@block}}\stepcounter{sti@tmp}%
+  \expandafter\let\expandafter\timingreturn%
+    \csname sti@blocktotal@\arabic{sti@chapter}@\arabic{sti@tmp}\endcsname%
+  \ifx\timingreturn\relax\def\timingreturn{#1}\fi}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand\timingblocktotal{\@ifstar%
+  {\sti@blocktotalnext}{\sti@blocktotalcurrent}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingprintblock}
+% Print block timing mark:
+%    \begin{macrocode}
+\newcommand{\timingprintblock}[3]{\timingprintmark{%
+  \def\sti@tmp{#2}\ifx\sti@tmp\@empty%
+    \raisebox{-1ex}{#1\rlap{\kern0.4em$\Updownarrow$}}\kern1.2em%
+  \else%
+    \def\sti@tmp{#1}\ifx\sti@tmp\@empty\else%
+      #1\rlap{\kern0.4em$\Uparrow$%
+      \vphantom{$\Updownarrow$}}\kern1.2em\hrule\fi%
+    \textbf{#2}\rlap{\vphantom{$\Updownarrow$}}\kern1.2em%
+    \def\sti@tmp{#3}\ifx\sti@tmp\@empty\else%
+      \hrule#3\rlap{\kern0.4em$\Downarrow$%
+      \vphantom{$\Updownarrow$}}\kern1.2em\fi%
+  \fi}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@advanceby}
+% Advance all running clocks by some amount of time:
+%    \begin{macrocode}
+\newcommand{\sti@advanceby}[1]{%
+  \ifnum\value{sti@inblock}=1\addtocounter{sti@blocktime}{#1}\fi%
+  \ifnum\value{sti@inchapter}=1\addtocounter{sti@chaptertime}{#1}\fi%
+  \ifnum\value{sti@insession}=1\addtocounter{sti@sessiontime}{#1}\fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@hoursminutes}
+% Convert hours:minutes format to minutes:
+%    \begin{macrocode}
+\def\sti@hoursminutes#1:#2!{%
+  \multiply\value{sti@tmp}60\addtocounter{sti@tmp}{#1}%
+  \def\sti@tmp{#2}\ifx\sti@tmp\@empty\else\sti@hoursminutes#2!\fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@computedelta}
+% Convert an absolute time to a relative time:
+%    \begin{macrocode}
+\newcommand{\sti@computedelta}[1]{%
+  \setcounter{sti@tmp}{0}%
+  \sti@hoursminutes#1:!%
+  \addtocounter{sti@tmp}{-\value{sti@blockgauge}}%
+  \addtocounter{sti@tmp}{-\value{sti@blocktime}}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\sti@warnneg}
+% Warn if negative time elapsed:
+%    \begin{macrocode}
+\newcommand{\sti@warnneg}[1]{%
+  \ifnum #1<0%
+    \PackageWarning{sesstime}{block: negative time elapsed}%
+    \sti@warn{neg}%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingstart}
+% Start new block.
+% Version specifying the absolute time:
+%    \begin{macrocode}
+\newcommand{\sti@blockstartat}[2][]{%
+  \sti@computedelta{#2}%
+  \sti@blockstartby[#1]{\value{sti@tmp}}}
+%    \end{macrocode}
+% Version specifying the relative time:
+%    \begin{macrocode}
+\newcommand{\sti@blockstartby}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=1%
+      \PackageWarning{sesstime}{already in block}%
+      \sti@warn{block}%
+    \else%
+      \setcounter{sti@inblock}{1}%
+      \addtocounter{sti@blockgauge}{\arabic{sti@blocktime}}%
+      \addtocounter{sti@blockgauge}{#2}%
+      \setcounter{sti@blocktime}{0}%
+      \stepcounter{sti@block}%
+      \sti@checksession%
+      \ifsti@printblock\timingblocktotal%
+        \timingprintblock{}{\thesti@chaptertime}{\timingreturn}%
+      \fi%
+    \fi%
+  \fi\nopagebreak}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand{\timingstart}{\@ifstar{\sti@blockstartby}{\sti@blockstartat}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingsplit}
+% Split current block.
+% Version specifying the absolute time:
+%    \begin{macrocode}
+\newcommand{\sti@blocksplitat}[2][]{%
+  \sti@computedelta{#2}%
+  \sti@blocksplitby[#1]{\value{sti@tmp}}}
+%    \end{macrocode}
+% Version specifying the relative time:
+%    \begin{macrocode}
+\newcommand{\sti@blocksplitby}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=0%
+      \PackageWarning{sesstime}{not in block}%
+      \sti@warn{block}%
+    \else%
+      \sti@warnneg{#2}%
+      \sti@advanceby{#2}%
+      \sti@checksession%
+      \ifsti@printblock%
+        \timingprintblock{\thesti@blocktime}{}{}%
+      \fi%
+    \fi%
+  \fi}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand{\timingsplit}{\@ifstar{\sti@blocksplitby}{\sti@blocksplitat}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingstop}
+% Stop current block.
+% Version specifying the absolute time:
+%    \begin{macrocode}
+\newcommand{\sti@blockstopat}[2][]{%
+  \sti@computedelta{#2}%
+  \sti@blockstopby[#1]{\value{sti@tmp}}}
+%    \end{macrocode}
+% Version specifying the relative time:
+%    \begin{macrocode}
+\newcommand{\sti@blockstopby}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=0%
+      \PackageWarning{sesstime}{not in block}%
+      \sti@warn{block}%
+    \else%
+      \sti@warnneg{#2}%
+      \sti@advanceby{#2}%
+      \sti@writeblocktotal%
+      \ifsti@printblock%
+        \timingprintblock{\thesti@blocktime}{\thesti@chaptertime}{}%
+      \fi%
+      \setcounter{sti@inblock}{0}%
+      \setcounter{sti@blocktime}{0}%
+    \fi%
+  \fi}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand{\timingstop}{\@ifstar{\sti@blockstopby}{\sti@blockstopat}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timingnext}
+% Stop current block and start next block.
+% Version specifying the absolute time:
+%    \begin{macrocode}
+\newcommand{\sti@blocknextat}[2][]{%
+  \sti@computedelta{#2}%
+  \sti@blocknextby[#1]{\value{sti@tmp}}}
+%    \end{macrocode}
+% Version specifying the relative time:
+%    \begin{macrocode}
+\newcommand{\sti@blocknextby}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=0%
+      \PackageWarning{sesstime}{not in block}%
+      \sti@warn{block}%
+    \else%
+      \sti@warnneg{#2}%
+      \sti@advanceby{#2}%
+      \sti@writeblocktotal%
+      \stepcounter{sti@block}%
+      \ifsti@printblock\timingblocktotal%
+        \timingprintblock{\thesti@blocktime}%
+          {\thesti@chaptertime}{\timingreturn}%
+      \fi%
+      \addtocounter{sti@blockgauge}{\arabic{sti@blocktime}}%
+      \setcounter{sti@blocktime}{0}%
+      \sti@checksession%
+    \fi%
+  \fi}
+%    \end{macrocode}
+% Version selection:
+%    \begin{macrocode}
+\newcommand{\timingnext}{\@ifstar{\sti@blocknextby}{\sti@blocknextat}}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timinglapse}
+% Insert some time to the current block
+% without changing the current absolute time:
+%    \begin{macrocode}
+\newcommand{\timinglapse}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \ifnum\value{sti@inblock}=1%
+      \addtocounter{sti@blockgauge}{-#2}%
+    \fi%
+    \sti@advanceby{#2}%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+% \begin{macro}{\timinggauge}
+% Change the current absolute time
+% without advancing any timers:
+%    \begin{macrocode}
+\newcommand{\timinggauge}[2][]{%
+  \sti@processflags{#1}%
+  \ifsti@flag%
+    \sti@computedelta{#2}%
+    \addtocounter{sti@blockgauge}{\value{sti@tmp}}%
+  \fi}
+%    \end{macrocode}
+% \end{macro}
+
+%\iffalse
+%</package>
+%\fi
+%
+\endinput
+%
+%% \CheckSum{3381}

@@ -1,0 +1,480 @@
+\documentclass[granma]{svjour}
+\usepackage{graphicx}
+%\input{totalin.grm}
+%\idline{Granular Matter 1, 1-6}{1}
+%
+\begin{document}
+\title{A Fast Model for the Simulation of Non-round Particles}
+\author{Alexander V. Potapov and Charles S. Campbell}
+\institute{Department of Mechanical Engineering \\
+University of Southern California \\
+Los Angeles, Ca. 90089-1453, USA}
+\date{}
+\maketitle
+
+\abstract{%
+This paper describes a new, computationally efficient model for the discrete
+element simulation of a certain class of non-round particles. The boundaries
+of the particles in this model are constructed from the circular segments of
+different radii in such a way that connections between these segments are
+continuous. As such, the model does not permit the simulation of arbitrarily
+shaped particles, but it does allow a wide enough variety of shapes to assess
+the effects of non-round shapes (in particular, particle interlocking) in an
+efficient maner. A direct test of the model's performance demonstrates that
+the model is much more efficient than other models for non-round particles
+currently available and is less than two times slower than models for the
+same number of round particles.}
+
+\section{Introduction}
+
+In recent years, soft particle discrete element simulations have pro\-ven to be
+a powerful tool for investigating the behavior of granular systems. All of
+these simulations (see the reviews in \cite{camp86,camp97}) follow individual
+particles as they move, rotate and interact with their neighbors. In a real
+granular system the forces generated when particles are in contact result in
+small changes in the particle shape, particularly around the points of
+contact. However, in the simulation, it is generally assumed for simplicity's
+sake, that individual particles do not change shape. Instead their surfaces
+are allowed to overlap slightly and, in an approximation of the true elastic
+response, generate a repulsive response which is a function of that overlap.
+Virtually any imaginable dependence of the contact force on the overlap may
+be incorporated into the model, e.g. simple linear elastic, Hertzian or some
+other.
+
+At present time, the majority of the soft particle discrete element
+simulations have been performed using round particles for both
+two-dimensional and three-dimensional systems \cite{camp86,camp97}. The
+round
+shape is very easy to simulate in the sense that every point on its surface
+can be determined simply by knowing the position of the center and its
+diameter; in particular, there is no dependence on the orientation of the
+particle. As a result, it is easy to determine the overlap between two
+particles simply as the distance between their centers minus the sum of their
+radii. Also, it reduces memory requirements as only the center position need
+be stored.
+
+However the use of round particles has several limitations. Near\-ly all
+natural particles are not round, a quality which is shared even by artificial
+particles that are intended to be round (e.g. commercial glass beads).
+Furthermore, non-round particle shape can create a vast difference in the
+mechanical behavior because they do not roll easily. For example, bulk
+materials composed of round particles have angles of repose that are much
+smaller than natural materials (see, for example \cite{posch93}). One
+solution to this problem is to not allow the particles to rotate at all, but
+instead interact only frictionally. Realistic angles of repose may be
+obtained using this technique, but it in no way clear that the resulting
+material accurately simulates all the effects of non-round particles. In
+particular, realistic particles may interlock with one another and produce
+behavior that cannot be approximated by a simple friction at the surface of
+round particles. Another technique is to introduce the special force term
+\cite{cund79} to account for the \ Coulomb's law behavior commonly
+associated with granular materials, but this moves the simulation even
+farther from real situation.
+
+The most natural solution for this problem is to use particles that are not
+round. Several such model have been proposed. In general they can be divided
+into two classes. In the first, an analytic representation of the shape of a
+particle is used for which it is possible to simplify the contact and overlap
+determinations. For example, algorithms have been developed for particles
+with elliptic (e.g. \cite{roth91,roth92,ting92,kohr93}) or superquadric (e.g.
+\cite{will89,must93}) shapes (the superquadric particle shape is described by the
+same equation as elliptic one with the only difference is that the
+degree is above two). Such particle can interlock like real materials,
+but they
+do not resemble natural materials. Also, aspect ratios for elliptical
+particles must be significantly different from unity in order to obtain
+realistic angles of repose, which may present other problems as the majority
+of natural granular materials have aspect ratios that are close to unity. \ \
+The second type of model assumes that the particles are in the shapes of
+arbitrary convex polygons \cite{hogue93,hop92,kohr95,till95,posch95}. (Such a
+model forms the basis
+of the fracture simulations presented in \cite{pota95a,pota95b,pota96a,pota96b}.) More
+realistic looking particles may be created in this manner, but at tremendous
+computational costs. Polygonal simulations can take up to an order of
+magnitude more computer time than their round counterparts. For analytically
+represented particle shapes, (elliptic or superquadric cases) the majority
+of the computer time is spent in iterative solutions of the non-linear
+equations used to calculate the particle overlap. In the polygonal
+simulations, the majority of the computer time is spent calculating
+intersections of the sides of contacting polygons which is a necessary part
+of the overlap determination.
+
+\begin{figure}
+\includegraphics[width=\hsize]{p1.ps}
+\caption{The picture of a typical oval. The
+boundary of this oval consists
+of four arches drawn around points $O_1$, $O_2$, $O_3$ and $O_4$, arches
+drawn around points $O_1$ and $O_3$ have the same radius and angles
+$\alpha_1$ and $\alpha_3$ are the same. The same is true about the arches
+drawn around points $O_2$ and $O_4$ and angles $\alpha_2$ and $\alpha_4$.
+Points $O_1$ and $O_3$ are situated in such a way that line connecting these
+points pass through the center of an oval, the same is true about the line
+connecting the points $O_2$ and $O_4$.}\label{fig1}
+\end{figure}
+
+
+\section{The Description of the Model}
+
+
+Here we propose a soft particle discrete element model for the simulation of
+non-round particles which exhibits a performance that is comparable to the
+performance of round particle models and is able to accommodate a much wider
+variety of shapes (and more realistic shapes) than the elliptic or
+superquadric models. The idea for this model was born from the way the
+ellipses are sometimes approximated in technical drawings; when appropriate
+elliptical templates are not available, an oval with the same aspect ratio is
+often used to approximate the ellipse. An oval is geometric figure whose
+boundary is determined by four circular arches of two different radii which
+are joined together in a continuous way (i.e. the first derivative is
+continuous between the arches) and thus can be drawn with compasses and other
+standard tools used to draw circles. However, it is possible to generate more
+complex shapes, many nearly polygonal in shape, from circular arches. At the
+same time, the determination of contact and overlap between two circular
+arches segments is nearly identical to the same procedures for circles. Thus
+a simulation of particles generated from circular arches will allow a variety
+of shapes to be studied at only a small computational cost beyond that of
+round particles.
+
+
+To illustrate this technique, consider the typical oval presented in
+Fig. \ref{fig1}.
+The boundary consists of four arches drawn around points $O_1$, $O_2$,
+$O_3$ and $O_4$. In a classical oval, the arches drawn around points $O_1$
+and $O_3$ have the same radius (we shall call this radius ``large'') and the
+angles $\alpha_1$ and $\alpha_3$ are identical. The same is true about the
+arches drawn around points $O_2$ and $O_4$ (we shall call this radius
+``small'') and the angles $\alpha_2$ and $\alpha_4$. Points $O_1$ and $O_3$
+are situated in such a way that line connecting these points passes through
+the center of an oval, as does the line connecting the points $O_2$ and $O_4$.
+
+\begin{figure}
+\includegraphics[width=\hsize]{p2.ps}
+\caption{This picture illustrates the procedure of the calculation of the
+contact parameters between a pair of ovals. After the contacting arches are
+determined (arches corresponding to angles $\alpha_1$ and $\alpha_2$), the
+calculation of the contact parameters can be carried out in the same way as
+it is done for the round particles.}\label{fig2}
+\end{figure}
+
+Now suppose that we have a granular medium consisting of oval shaped
+particles which will be simulated using an otherwise standard soft-particle
+discrete element model. To do this, we must at every time step find the
+particles which are overlapping, calculate the distance of this overlap and
+determine the center of this overlap in order to know the point at which
+contact forces are to be applied to the contacting particles. Let us suppose
+that we have a contact between two ovals as is shown in Fig. \ref{fig2}.
+Any possible
+contact must occur between the arch of one oval and the arch of the other
+oval. This type of contact can be treated in the same way as the contact of
+the two circular particles. Thus the overlap distance is simply the sum of
+the two radii of the contacting arches minus distance between the points
+around which these arches are drawn (i.e. distance between the points $O_1$
+and $O_2$ in Figure \ref{fig2}). The center of the overlap lies in the
+line connecting
+$O_1$ and $O_2$ \ midway between the points of intersection of this line and
+the two arches (point $C$ in the Figure \ref{fig2}).
+
+Compared to the case of round particles, the only additional operation which
+is required here is to determine which of the arches may be involved in the
+contact. This can be carried out in very simple and effective way. Note that
+two ovals can have the contact along a pair of arches if and only if the line
+connecting the points around which these arches are drawn lies within the
+limits of the angle of both arches (in Figure \ref{fig2} this requires
+determining
+that the \ line $O_1O_2$ lies between angles $\alpha_1$ and $\alpha_2$). This
+is easy to check by calculating the dot products of the unit vector
+connecting the points around which the arches are drawn with unit vectors of
+the bisectors of the angles of the arches. Plus, the dot product of the
+vector connecting the centers of gravity of the ovals and the vector
+connecting the points around which the arches are drawn should be calculated
+to ensure, by its sign, that the potential contacting arches are oriented
+towards rather than away from each other. The calculation of these three dot
+products is an additional computational step with respect to the case of the
+round particles. However, it is not necessary to perform all three
+calculations at each time step. Since the particles do not drastically change
+their orientation during a single time step, in the vast majority of cases,
+it will only be necessary to check at each time step whether the same two
+arches remain in contact. This means the calculation of only the first two
+dot products, which is rather fast and straightforward procedure. Also, it is
+quite likely that any two arches that are in contact, were in contact during
+the previous time step. Consequently, much computer time can be saved by
+simply verifying that the contact continues on subsequent time steps. The
+calculation of the contacts of the ovals with the straight boundary walls is
+performed in much the same way.  \enlargethispage{3pt}
+
+\begin{figure}
+\includegraphics[width=\hsize]{p3.ps}
+\caption{Examples of the construction of the particles out of the
+arches continuously joined to each other (the first derivative is the
+same on the both sides of the arch to arch transition point): (a)
+approximation of a triangle, (b) approximation of a square, (c)
+approximation of a pentagon and (d) approximation of a heptagon.}\label{fig3}
+\end{figure}
+
+The model described above is easily extended beyond the case of ovals. Ovals,
+like ellipses, have the disadvantage of requiring relatively large aspect
+ratios to obtain realistic values of the angles of repose. Much more
+complex particles may be constructed in the same way the ovals are
+constructed. If the boundary of a particle consists of any number of arches
+which are continuously connected together, one can see that the algorithm for
+determining contact as described above still holds true. Some examples of
+this sort of particles are presented in Fig. \ref{fig3}. For these
+particles, a large
+radius is used to construct the ``sides'' of the particles and a smaller
+radius is used to connected them smoothly together at the ``vertices.''
+Clearly, one can easily construct an approximation to a triangle, square,
+pentagon and so on, and one can get very close to an actual polygonal shape
+as one wishes by making the corresponding radius of curvature of the arches
+that form the sides very large and those that form the corners, very small.
+(This process is limited only by roundoff errors in the determination of the
+overlap. I.e. as the overlap is computed by taking differences, high accuracy
+requires that its magnitude be large enough relative to the radius to be
+represented by several number significant digits in its floating point
+representation within the computer.) If these particles are constructed of
+the arches with only two values of radii as it was done for the oval and all
+of the shapes in Fig. \ref{fig3}, no additional memory (beyond that
+required for an
+oval) need be used for the storage of the information about position and
+orientation of the particles.
+
+One additional advantage and one additional disadvantage of the model
+proposed here should be mentioned. The advantage is that this model has a
+fixed value of the radius of curvature at every point of the surface of the
+particles that is bounded by continuously joined arches. This makes it
+possible to use the Hertzian contact model (which describes the contact
+between particles with arbitrary, but finite and non-zero, radii of
+curvature) without any additional assumptions - which would be a questionable
+for the case of the angular particles. The disadvantage of the model is that
+for the moment we can not see its simple three-dimensional implementation.
+
+
+\section{Demonstration of the Performance of the Mo\-del}
+
+It is clear from the material presented above that the performance of the
+proposed model should be only marginally worse than a round particle model as
+only a few additional calculations are required. A direct test of this fact
+is described in the following.
+
+For the test, we have chosen the problem of settling the particles into a
+rectangular box under the influence of the gravity. In the first case, the
+particles are round, in the second case, the particles are the same number of
+quasi-triangles (Figure 3a), in the third case the particles are
+quasi-squares (Figure 3b), in the forth case, particles are of superquadric
+shape with superquadric degree 3.0 which are simulated by the technique
+described in \cite{must93} and finally, in the fifth case
+particles are
+square and simulated by the algorithm described in \cite{hop92}.
+Linear spring contact laws are assumed for all cases except for the case of
+square particles for which the normal contact force was based on the area of
+overlap (see \cite{hop92}). The geometry of the boundary walls,
+the
+particle masses, particle densities, the time step and the coefficient of the
+restitution of the particles were the same in all cases. The models were run
+on the same Sparcstation 20 computer (75 MHZ processor), for the same period
+of simulation time (4.69$\cdot 10^4$ time steps), and the amount of CPU time
+expended was determined and compared. The same contact search routine for
+near neighbors \cite{hop92} was used in all simulations.
+
+\begin{figure}
+\includegraphics[width=\hsize]{p4.ps}
+\caption{Results of the simulation of gravity settling round particles.
+This simulation has been performed in order to compare the efficiencies of
+the models. (a) Initial positions of the particles; (b) positions of the
+particles at the end of the simulation.}\label{fig4}
+\end{figure}
+
+\begin{figure}[!t]
+\includegraphics[width=\hsize]{p5.ps}
+\caption{Results of the simulation of the gravity settling of the
+quasi-triangular particles in a rectangular box. It was performed for the
+same particle mass, same time stepand same time elapsed in the system (same
+number of time steps) as the simulation for round particles presented on
+Figure 4. (a) Initial positions of the particles; (b) positions of the
+particles at the end of the simulation.}\label{fig5}
+\end{figure}
+
+\begin{figure}[!t]
+\includegraphics*[height=7.3cm,bb=118 219 494 572,angle=-90]{p6.ps}
+\caption{Same as Figure 5, but for quasi-square particles}\label{fig6}
+\end{figure}
+
+\begin{figure}[!t]
+\includegraphics[width=\hsize]{p7.ps}
+\caption{Results of the simulation of gravity settling of the same number of
+superquadric particles \cite{will89} as on Figure 4. It was
+performed
+for the same particle mass, same time step and same time elapsed in the
+system (same number of time steps) as the simulation for round particles
+presented on Figure 4. \ (a) Initial positions of the particles; (b)
+positions of the particles at the end of the simulation}\label{fig7}
+\end{figure}
+
+\begin{figure}[!t]
+\includegraphics*[height=7.1cm,bb=118 219 494 572,angle=-90]{p8.ps}
+\caption{Results of the simulation of gravity settling of the same number of
+square particles as on Figure 4. It was performed for the same particle mass,
+same time step and same time elapsed in the system (same number of time
+steps) as the simulation for non-round particles presented on Figure 4. (a)
+Initial positions of the particles; (b) positions of the particles at the end
+of the simulation.
+}\label{fig8}
+\end{figure}
+
+The initial positions of the particles are presented in Figure
+\ref{fig4}a for the
+case of round particles, in Figure \ref{fig5}a for the case of
+quasi-triangular
+particles, in Figure \ref{fig6}a for quasi-square particles, in Figure
+\ref{fig7}a for the
+superquadric particles and in Figure \ref{fig8}a for square particles.
+Figures
+\ref{fig4}b,
+\ref{fig5}b and \ref{fig6}b, \ref{fig7}b and \ref{fig8}b depict the
+final positions of the particles for these five cases.
+
+\begin{table}
+\caption{CPU time spent on SPARC-20 for performimg of $4.69
+\cdot
+10^4$ time steps}\label{tab1}
+\begin{tabular}[t]{|l|l|}
+\hline
+Particle shape&CPU$\,$time (seconds)\\
+\hline
+Round &29\\
+\hline
+Quasi-triangle&48\\
+\hline
+Quasi-square&51\\
+\hline
+Superquadric&347\\
+\hline
+Square&114\\
+\hline
+\end{tabular}%
+\end{table}
+
+The results of the simulation of these cases on a SPARC-20 workstation are
+presented in Table \ref{tab1}. These results show the CPU difference of
+about
+66\%
+between the case of round particles and case of the quasi-triangular
+particles composed of arches. The case of quasi-square particles is just 4\%
+slower than the case of quasi-triangular particles, this time difference is
+due to slightly longer procedure of the determination of contacting arches
+for quasi-square particles than for quasi-triangular particles due to larger
+number of arches. The case of superquadric particles was more than one
+order of magnitude slower than the case of round particles. (It is hard to do
+exact performance comparisons for this case since the procedure is
+iterational and ``exact'' solution is never reached. We used four iterations
+per time step here, different number of iterations may produce different
+results.) Finally, the model with square particles was almost four times
+slower than the model for round particles and thus more than two times slower
+that the model proposed in this paper. Thus, the model presented here easily
+outperforms every other model for non-round particles available at the
+present time.
+
+
+\section{Conclusions}
+
+In this paper, a model has been proposed for a soft-particle discrete element
+simulation of the motion of non-round particles. This model is based on the
+construction of a particle boundary out of a set of arches which are
+connected to each other so that the first derivative at the point of
+transition from one arch to another is the same from both sides. The model
+allows us to vary considerably the degree of roughness of a particle surface,
+and it performs approximately 60\% slower than a model for the round
+particles, thus easily outperforming any other model currently available for
+non-round particles.
+
+The model is capable of efficiently simulating nearly polygonal particles.
+The main use of this type of simulation is not necessarily to simulate the
+actual shapes of the particles in naturally occurring materials, but to
+provide a way of adding the effects of non-round shapes (in particular,
+particle interlocking) into existing simulations.
+
+
+\begin{thebibliography}{19}
+\bibitem{camp86} Campbell, C.S., Computer simulation of rapid granular
+flows, Proc. 10$^{th}$ US National Congress of Applied Mechanics, Austin
+Texas, June 1986, ASME, New York, p.327-338.
+
+\bibitem{camp97} Campbell, C.S., Computer simulation of powder flows, to
+appear in Powder Techology Handbook, Second Edition. (Gotoh et al. eds)
+Dekker, New York, 1997, 777-793.
+
+\bibitem{posch93} Poschel, T. \& Buchholtz, V., Static
+Friction Phenomena in
+Granular Materials: Coulomb Law versus Particle Geometry, Physical Review
+Letters 71 (1993), p. 3963-3966.
+
+\bibitem{cund79} Cundall, P.A. \& Strack, O.D.L., A discrete numerical model
+for granular assemblies, Geotechnique 29 (1979), p.47-65.
+
+\bibitem{roth91} Rothenberg, L. \& Bathurst, R.J., Numerical Simulation of
+Idealized Granular Assemblies with Plane Elliptical Particles, Computers and
+Geotechnics 11 (1991), p.315-329.
+
+\bibitem{roth92} Rothenburg, L. \& Bathurst, R.J., Micromechanical features
+of granular assemblies with plane elliptical particles, Geotechnique 1
+(1992), p.79-95.
+
+\bibitem{ting92} Ting, J.M., A robust algorithm for ellipse-based discrete
+element modeling of granular materials, Computers and Geotechnics 13 (1992),
+p.175-186.
+
+\bibitem{kohr93} Kohring, G.A., Computer simulations of
+sintering via granular dynamics, Physica A 195 (1993), p.1-11.
+
+\bibitem{will89} Williams, J.R. \& Pentland, A.P., Superquadric and Modal
+Dynamics for Discrete Elements in Concurrent Design, Proc. $1^{st}$ US
+Conference on Discrete Element Methods, Golden Colorado, October 1989, (Eds.
+Mustoe, G.G.W., Henriksen, M. \& Huttelmaier, H.P.)
+
+\bibitem{must93} Mustoe, G.G.W. \& DePooter, G., A numerical model for the
+mechanical behavior of particulate media containing non-circular shaped
+particles, Powders and Grains 93, 1993, (Ed. Thornton, C.) Balkena,
+Rotterdam, p.421-427.
+
+\bibitem{hogue93} Hogue, C. \& Newland, D.E., Efficient
+computer modeling of
+the motion of arbitrary grains, Powders and Grains 93, 1993, (Ed. Thornton,
+C.) Balkena, Rotterdam, p.413-419.
+
+\bibitem{hop92} Hopkins, M.A., The Numerical Simulation of Systems of
+Multitudinous Polygonal Blocks, US Army Cold Regions Research and Engineering
+Laboratory, USACRREL Report CR 99-22, 1992.
+
+\bibitem{kohr95}  Kohring, G.A., Melin, S., Puhl, H.,
+Tillemans, H.J.,
+Vermohlen, W., Computer simulations of critical, non-stationary granular flow
+through a hopper, Computer Methods in Applied Mechanics and Engineering 124
+(1995), p.273-281.
+
+\bibitem{till95} Tillemans, H.J. \& Herrmann, H.J., Simulating deformations
+of granular solids under shear, Physica A 217 (1995), p.261-288.
+\newpage
+
+\bibitem{posch95} Poschel, T. \& Buchholtz, V., Molecular Dynamics of
+Arbitrarily Shaped Granular Particles, Journal de Physique I 5 (1995),
+p.1431-1455.
+
+\bibitem{pota95a} Potapov, A.V., Hopkins, M.A. \& Campbell, C.S., A
+Two-dimensional Dynamic Simulation of Solid Fracture.
+Part I: Description of the Model, International Journal of Modern
+Physics C 6 (1995), p.371-398.
+
+\bibitem{pota95b} Potapov, A.V., Campbell, C.S. \& Hopkins, M.A., A
+Two-dimensional Dynamic Simulation of Solid Fracture. Part II: Examples,
+International Journal of Modern Physics C 6 (1995), p.399-425.
+
+\bibitem{pota96a} Potapov, A.V. \& Campbell, C.S., A Hybrid
+Finite-element
+simulation of Solid Fracture, International Journal of Modern Phy\-sics C 7
+(1996), p.155-180.
+
+\bibitem{pota96b} Potapov, A.V. \& Campbell, C.S., A Three-dimensional
+Dynamic Simulation of Solid Fracture, International Journal of Modern Physics
+C 7 (1996), p.717-730.
+
+\end{thebibliography}
+\end{document}

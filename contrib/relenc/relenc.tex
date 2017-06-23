@@ -1,0 +1,1285 @@
+\documentclass[a4paper]{article}
+
+\usepackage{doc}
+% Stuff more or less from ltxdoc.cls:
+\DeclareFontShape{OT1}{cmtt}{bx}{n}{<-> ssub * cmtt/m/n}{}
+\DeclareFontShape{OT1}{cmss}{m}{it}{<->ssub*cmss/m/sl}{}
+\DeclareFontFamily{OMS}{cmtt}{\skewchar\font'60}
+\DeclareFontShape{OMS}{cmtt}{m}{n}{<-> ssub * cmsy/m/n}{}
+\DeclareFontShape{OMS}{cmtt}{bx}{n}{<-> ssub * cmsy/b/n}{}
+
+\setlength{\textwidth}{355pt}
+\addtolength\marginparwidth{30pt}
+\addtolength\oddsidemargin{20pt}
+\addtolength\evensidemargin{20pt}
+
+\makeatletter
+\def\cmd#1{\cs{\expandafter\cmd@to@cs\string#1}}
+\def\cmd@to@cs#1#2{\char\number`#2\relax}
+\DeclareRobustCommand\cs[1]{\texttt{\char`\\#1}}
+\makeatother
+
+\setcounter{StandardModuleDepth}{1}
+
+
+\usepackage{2sidedoc}
+
+\newcommand\B{\penalty300\relax}
+\DeclareTextFontCommand{\textcmtt}{\usefont{OT1}{cmtt}{m}{n}}
+\newcommand\package[1]{\textsf{#1}}
+\CodelineNumbered
+
+
+\makeatletter
+\newenvironment{cmdusage}{%
+   \setbox\z@=\vbox\bgroup
+      \color@begingroup
+      \hsize=0.75\textwidth
+      \parindent=-1em%
+      \everypar={\hangindent=1em\hangafter=0}%
+      \rightskip=\z@ \@plus 1fil\relax
+      \let\par\@@par
+}{%
+      \color@endgroup
+   \egroup
+   \@@par
+   \medskip
+   \noindent
+   \fbox{\usebox\z@}\@@par
+   \medskip
+}
+\makeatother
+
+\newcommand*{\marg}[1]{%
+   \begingroup\MacroFont\char`\{\endgroup
+   \meta{#1}%
+   \begingroup\MacroFont\char`\}\endgroup
+}
+\newcommand*{\oarg}[1]{%
+   \begingroup\MacroFont\char`\[\endgroup
+   \meta{#1}%
+   \begingroup\MacroFont\char`\]\endgroup
+}
+
+\MakeShortVerb{\|}
+
+
+\title{The \package{relenc} package}
+\author{Lars Hellstr\"om%
+  \thanks{E-mail: \texttt{Lars.Hellstrom@math.umu.se}}%
+}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Motivation}
+\label{Motivation}
+%
+This paper is about some shortcomings that, in my humble opinion, 
+exists in the way \LaTeX\ handles fonts. I also point out a way in 
+which these shortcomings can be overcome.
+
+The primary problem is ligatures, but as there are a few different 
+ligature concepts that are of interest, let me begin with specifying 
+my terms. A \emph{ligature} is a sequence of characters 
+(almost always letters) that have been given an appearance somewhat 
+different from the one the characters would have if simply put side to 
+side, almost always because they would otherwise not look very 
+pleasing to the eye. Despite this difference in appearence, it is 
+still meant to be read as the entire character sequence, not as a 
+completely new character. The canonical example of this is the `fi' 
+ligature.
+
+In \TeX\ fonts, there is a special mechanism to implement this, and 
+everything that is implemented using this mechanism will be 
+called \emph{font ligatures}. It is almost always the case however, 
+that some font ligartures are not ligatures as defined above, but 
+simply a handy way to type characters that are hard or impossible to 
+type using a standard keyboard; the canonical example of this is the 
+`\texttt{--}' (two hyphens) to `--' (endash) conversion that is 
+present in most \TeX\ fonts. Such nonproper ligatures will be called 
+\emph{syntactic ligatures}, and proper ligatures will sometimes be 
+called \emph{aestetic ligatures} to stress their origin.
+
+A \emph{font-dependent command} in \LaTeX\ is a command whose 
+actions depend directly or indirectly on which font is the current. (I 
+would not consider a command |\foo| defined by
+\begin{verbatim}
+  \def\foo{\char65 }
+\end{verbatim}
+as a font-dependent command since it always does the same thing. 
+The results need not always be identical, but that is because 
+the command is executed under different conditions.) An example of a 
+font-dependent command is |\"|, which is (roughly) |\accent 127| when 
+the current font is \texttt{OT1}-encoded and |\accent 4| when the 
+current font is \texttt{T1}-encoded. (The dependence is indirect since 
+the command directly depends on a macro which is set during the font 
+selection process, but there is a dependence.)
+
+For the purposes of this paper, if would also suffice to define a 
+font-dependent command as a command that is defined by some of the 
+commands |\DeclareTextCommand|, |\ProvideTextCommand|, 
+|\DeclareTextSymbol|, |\Declare|\B|Text|\B|Command|\B|Default|, 
+|\Provide|\B|Text|\B|Command|\B|Default|, or |\Declare|\B|TextAccent|. 
+\LaTeX\ documentation uses the term `encoding-specific command' for 
+these, but for reasons that will soon be appearent, that term would be 
+somewhat inappropriate here. 
+
+Thus, with these definitions taken care of, it is now time to get to 
+the point.
+
+The recommended latin font encoding these days is the 
+\texttt{T1}/`Cork'\slash`Extended \TeX\ text' 
+encoding, and this is rightfully so. It is clearly superior to the old 
+\texttt{OT1} encoding, as it adds more than a hundred accented 
+characters to those which can be used to form a word that \TeX\ can 
+automatically hyphenate, but there is at least one case in which the 
+\texttt{OT1} encoding is preferable. This case is when the font has many 
+ligatures.
+
+In the \texttt{T1} encoding, there are seven slots available 
+for ligatures, and these have been assigned to the `ff', `fi', `fl', 
+`ffi', `ffl', `IJ', and `ij' ligatures. Since all slots have been 
+assigned to something, there is no place to put an additional ligature, 
+even if it is needed. Thus the conclusion is that if a font is to be 
+\texttt{T1} encoded, it cannot contain any ligatures in addition to the 
+aforemensioned; to put it the other way, if a font design requires the 
+presence of a ligature other than the aforemensioned, it cannot be 
+\texttt{T1} encoded.
+
+In the \texttt{OT1} encoding, there are only five slots assigned to 
+ligatures, but there are 128 unassigned slots that can be used for 
+anything the font designer wants. Thus having more than five ligatures 
+in an \texttt{OT1} encoded font is no problem, but a recourse to using 
+\texttt{OT1} is not a very good option, as it leaves the hyphenation 
+problem unsolved. The solution, then, would seem to be the creation of 
+a new encoding, and part of it will, but this will not be quite 
+sufficient for reasons I will shortly describe.
+
+For the moment though, let us, as an intellectual experiment, assume 
+that we shall solve this problem with \texttt{T1} having too few slots 
+for ligatures by creating a new encoding for a hypothetical font that 
+would need more than seven ligatures. Let us also assume that the new 
+encoding shall be a modified version of the \texttt{T1} encoding, where 
+some accented characters will have been left out to make room for the 
+ligatures. Finally, let us assume that we want to be as international 
+as possible and include as many of the accented characters as we can 
+squeeze in. These are three simple assumptions, and there are good 
+reasons for all of them.
+
+How \emph{many} slots do we need to assign to ligatures, then? This 
+varies, of course, between different font families, but it might vary 
+\emph{even more} between fonts in the same family. The \texttt{it} 
+shapes might need a few more than the \texttt{n} shapes, while the 
+\texttt{sc} shapes might not need any at all (`\textsc{fi}' (|fi|) and 
+`\textsc{f{}i}' (|f{}i|) look exactly the same in most font families). 
+Instead, there are some accents which are harder to put on in the 
+\texttt{sc} shapes (in many font families the ring on \textsc{a} in 
+\textsc{\r{a}} should touch the main letter; this is not what the 
+default definition does), so it appears that the optimal thing to do 
+would be to have slightly different encodings for different fonts, even 
+if they belong to the same family. This is theoretically no problem; 
+\TeX's macro facilities are flexible enough to allow user level 
+commands that do different things in different fonts. It becomes, 
+however, a problem to do this in a reasonably universal way, so that 
+the macros produced work in general and not only for a single font 
+family.
+
+Standard \LaTeX\ has a mechanism for doing precisely this. Using the 
+commands |\DeclareTextCommand|, |\DeclareTextSymbol|, 
+|\DeclareTextAccent|, or one of their relatives, one can give a 
+definition of a command that is used with one particular font encoding 
+and not with any other. The problem with using this mechanism here is 
+that one might have to have the normal and italic variants declared 
+as having different encoding attributes (as well as different 
+shapes), so one would have to either device a whole new set of font 
+changing commands or redefine \LaTeX's own high-level font changing 
+commands (such as |\textit|) to change encoding as well as shape or 
+series. Neither alternative is good, and one can expect several 
+incompability problems to arise for both of them.
+
+A better solution starts with recognizing that there are actually two 
+different `encoding' concepts that can be found here. One is the 
+attribute by which fonts are selected in \LaTeX, the other is the 
+actual layout of a font. I will call this latter concept a 
+\emph{coding scheme} and reserve \emph{encoding} for the former. 
+(Formally, one may start by defining a \emph{slot} to be an integer in 
+the range 0--255 and a \emph{glyph} to be a pattern (usually 
+recognicable as a letter, digit, punctuation mark, or some other part 
+of written language, but it need not always be). A coding scheme can 
+then be defined as a mapping of slots to classes of glyphs. A font 
+complies to a particular coding scheme if, for every slot $n$ in the 
+domain of the coding scheme, the glyph occupying slot $n$ of the font 
+is a member of the class that the encoding scheme maps $n$ to. But I 
+digress.) As far as I know, there is no strict defintion of what an 
+encoding is, apart from the operational given in \cite{fntguide} as 
+something that is part of the specification of a font. (The canonical 
+source for such a definition would be \cite{encguide}, but that paper 
+is, according to its author, ``still in an embryo state''.) In font 
+discussions, an encoding is often taken to imply a specific coding 
+scheme, and many encoding definition files seem to be all about listing 
+the coding scheme, but is this implication suitable? I would claim that 
+in this case, it is not.
+
+A more constructive definition would be to see an encoding as a 
+specification of which font-dependent commands are available to the 
+author. An encoding definition file, on the other hand, is a 
+specification of the interface between \LaTeX\ macros and the 
+information in a \TeX\ font. It does not matter to the author whether 
+\H{o} is |\char174| of the current font, generated as |\accent125o| 
+by \TeX, or whatever. The only thing that matters is that when the 
+author types |Erd\H{o}s|, it comes out as Erd\H{o}s.
+
+Consequently, there is really no need for the font-dependent commands in 
+\LaTeX\ to do the same thing for any two fonts with the same encoding 
+attribute, it is merely the case that standard \LaTeX\ does not offer 
+an interface for defining font-dependent commands in any other way. The 
+natural remedy for this then, would be to write a package which offers 
+such an interface. This is what I have done; the package is called 
+\package{relenc} and this paper is its documentation. Its usage and  
+implementation are described in the following sections, and the 
+appendices describe some accompanying files.
+
+I shall however conclude this section by an attempt to elaborate the 
+above view on what an encoding is, or perhaps rather, what it should be.
+
+The encoding property of a font is a set of rules that determines how 
+the author's manuscript is interpreted---the input character 
+\texttt{q} for example has not the same interpretation in a 
+\texttt{T1} encoded font (where it is the letter `q') as in an 
+\texttt{OT2} encoded font (where it is a cyrillic letter whose closest 
+latin equivalent is the Czech `\v{c}'). An encoding specification should 
+therefore be a formalization of an agreement between the font designer 
+on one hand and the author on the other---it specifies which rules each 
+side must comply with and which results that can then be expected. An 
+example of the author's rules may be to refrain from writing \TeX\ code 
+like |\char 166|, because the font designer may have an option on what 
+to put in that slot. If the author breaks the rules, he or she may find 
+that the manuscript produced contains text whose meaning is not the same 
+if typeset with two different fonts even if they do have the same 
+encoding property. In practice, the author's rules for the standard text 
+encodings are pretty much the same as the rules on how write \TeX\ code 
+we find in every elementary book on the subject, so they are hardly new 
+to us.
+
+An example of the font designer's rules may be to put an exclamation 
+mark in slot 33, so that \texttt{!} actually print as one, or to 
+include a font ligature that converts two consequtive hyphens to an 
+endash, so that |--| actually will print as an endash, which the 
+author by tradition expects it to do. If the font designer breaks the 
+rules then authors who follow their rules might find that they do not 
+get the right results anyway and such a font designer is likely to get 
+complaints from authors about this. In practice however, the font 
+designer rules are often vaugely specified if specified at all and 
+hence there are gray areas for most encodings where there are no rights 
+and wrongs. The \texttt{OT1} encoding is probably the one most plauged 
+by these; the dollar versus sterling problem (an excellent example of 
+how changing the glyph of a single slot many completely alter the 
+interpretation of a text) is a classic. One of my intentions with 
+writing this text is to work for that these gray areas are shrunken 
+or even completely eliminated, although I do not think there is 
+anything that can be done for the \texttt{OT1} encoding---its 
+irregularities are much too well known and exploited.
+
+Now if an encoding is (a formalization of) an agreement, how do the 
+parties agree to it? On the font designer's side this happens when 
+the font designer gives a font a specific encoding by writing a font 
+definition file that defines that font with that encoding. On the 
+author's side this happens when the author selects a font with that 
+encoding property.
+
+So far the informal description, now it is time to get to the 
+formalization. Which exactly are the rules for the author and for the 
+font designer? This varies between different encodings, but only in 
+the details. The areas the encoding specification must cover can be 
+listed and are:
+\begin{itemize}
+  \item
+    Which input characters that can be used directly to produce 
+    some of the font's glyphs in the output and what they will 
+    generate. This pertains to the author, who shouldn't use other 
+    input characters. The allowed ones do however have well-defined 
+    results.
+  \item
+    Which coding scheme the font must comply with. The pertains to 
+    the font designer. There are no direct restrictions on the use of 
+    slots not listed in this coding scheme.\footnote{There may be 
+    indirect restrictions, see below.}
+  \item
+    Which the required syntactic ligatures are. This pertains to both 
+    author and font designer. The author cannot trust any in addition 
+    to these, the font designer must include them.\footnote{It could 
+    well be that there \emph{should not} be any syntactic ligatures 
+    in addition to these. I know of no situation where there would be 
+    an advantage in adding syntactic ligatures.}
+  \item
+    Which the font-dependent commands are and what they will generate. 
+    This pertains to the author in the same manner as does the input 
+    character rules.
+  \item
+    Which the required font dimensions are and what they stand for. 
+    This pertains to both the author and the font designer in the same 
+    manner as does the syntactic ligature rules.\footnote{Even though 
+    very few physical authors access any font dimensions, the same 
+    does not hold for packages, and these also count as authors in 
+    this context.}
+\end{itemize}
+After these have been specified, the grey areas should be very small 
+indeed! There are however a few additional twists that must be sorted 
+out.
+
+If the required coding scheme listed in the encoding specification does 
+not cover all the 256 slots, then one must be aware that in particular 
+the required syntactic ligatures, but also the font-dependent commands, 
+may impose some restrictions on the font's coding scheme in 
+addition to those expressed by the given coding scheme that the font 
+must comply with. These restrictions are then of the form that a 
+glyph from a specific class must be assigned to some slot, but the 
+font designer may freely choose exactly which slot. Thus any single 
+slot not specified by the required coding scheme may be used for just 
+about anything.
+
+The use of the \package{relenc} package requires that the following 
+area has to be added the ones listed above.
+\begin{itemize}
+  \item
+    The font designer must see to that for every combination of a 
+    variable command and a font, there is a variant that will give the 
+    specified result.\footnote{The terms \emph{variable command} and 
+    \emph{variant} are explained in Subsubsection~\ref{Tekn.bakgr.}.}
+\end{itemize}
+% With encodings that depend on the \package{relenc} package (I call 
+% such encodings \emph{relaxed}), 
+Hyphentation patterns do also offer theoretical problems to the use of 
+the \package{relenc} package, as these refer explicitly to the coding 
+scheme of the font. Problems with these can however not result in 
+anything worse than bad hyphenation, so the interpretation of a text 
+should not be affected. It is furthermore the case that in practice 
+the problems can often be avoided (see Subsection~\ref{Hyph}).
+
+Finally, there are two font parameters---|\hyphenchar| and 
+|\skewchar|---that do explicitly relate to the coding scheme of the 
+font and which are not stored in the font itself. It is possible that 
+the value of at least one of these should be specified in an 
+encoding specification, but that particular question is not of 
+immediate interest to the \package{relenc} package, as \LaTeX\ itself 
+already provides the font designer with the ability to set these for 
+each font individually (using the sixth argument of 
+|\Declare|\B|Font|\B|Shape|).
+
+
+
+\section{Usage}
+
+\subsection{Author usage}
+
+All the author has to do to use fonts with a relaxed encoding, as 
+opposed to fonts with for example the \texttt{T1} encoding, is to 
+include the command
+\begin{verbatim}
+  \usepackage{relenc}
+\end{verbatim}
+in the preamble and load the encoding definition file, for example 
+using the \package{fontenc} package. It is however important that the 
+\package{relenc} package is loaded \emph{before} the encoding 
+definition file, as the latter uses commands defined in the former.
+
+
+\subsection{Font designer usage}
+
+For a font designer, it is important to know at least in broad 
+outline how the mechanisms made available through the \package{relenc} 
+package work, which is why this subsection starts with a description of 
+that. There is however a convention followed in the remainder of this 
+paper that the reader should be aware of and this convention has to do 
+with how control sequences are written.
+
+In this paper, there are many control sequences with ``strange'' 
+names, meaning names that mixes letters and non-letters in pretty 
+arbitrary ways, so that these names cannot be read as one normally 
+reads \TeX\ code. Therefore thin spaces are inserted around names of 
+control sequences, regardless of whether a space character at that 
+place would automatically be skipped by \TeX\ while it is reading the 
+code or not. A space character that is really meant to ``be there'' will 
+be written as a visible space (\textvisiblespace). All control sequences 
+will, as usual, be written with an opening backslash, but this 
+backslash is not part of the name of the control sequence.
+
+Excepted from the above convention about spaces is the actual \TeX\ %
+source code for that appear in Section~\ref{Implementation} and onwards 
+(the lines of this is numbered, so it should be easily distinguishable) 
+and some pieces of ``alternative'' source code in the same sections. 
+These exceptions should be easy to recognise for the readers who are 
+interested in that particular material.
+
+
+\subsubsection{Some technical background}
+\label{Tekn.bakgr.}
+
+The main feature added by the \package{relenc} package is that of 
+the \emph{variable commands}; it is through making commands variable 
+that their definition may depend on which font is the current. This is 
+not how \TeX\ would see it, since the definition of a variable 
+command (as a \TeX\ control sequence) actually does not change after 
+the command has been made variable! Rather, a variable command is a 
+macro which expands to different things depending on which the current 
+font is.
+
+With overwhelming probability, this is something you have encountered 
+before, although you might not have realised it. Under \LaTeXe, all 
+accenting commands and all commands for letters other than a--z (such 
+as \ae, \o, and \ss) are like this. The only difference lies is what 
+will affect the eventual outcome of the command. The \LaTeXe\ kernel 
+only supports dependence on which the current encoding is. The variable 
+command concept makes dependence on the current family, series, and 
+shape possible as well.
+
+Both systems are quite similar in that they rely on |\csname| lookups. 
+What happens to, for example, the command |\foo| is the following: 
+First it gets |\string|ed. This converts the single control sequence token 
+to the sequence of character tokens which would form the name of the 
+command; in this case to |\|, |f|, |o|, and |o|. Then a piece of text 
+is put in front of that character sequence, and finally the result of 
+that is taken to be the name of a new control sequence. This process 
+mainly generates control sequnces with very peculiar names; if the bit 
+of text is, say, |T1| then the new control sequnce will be |\T1\foo| 
+(this is \emph{one} control sequence). Such names are impossible to type 
+without a lot of trickery, but that is deliberate, since they should 
+not be accessed directly. If the control sequence thus formed is defined, 
+then the definition of that control sequence will be taken as the intended 
+definition of the control sequence |\foo| it all started with.
+
+The systems differ in what pieces of text they put before the name of 
+the command and what they do if the control sequence formed is not 
+defined. The \LaTeXe\ kernel starts by using the name of the current 
+encoding as the prefix text. If that fails, it tries with |?| instead. 
+If that fails too, an error message is issued. The variable commands 
+defined using the \package{relenc} package have a more general approach.
+
+This approach relies on the concept of a \emph{search path}, about 
+the structure of which more will be said later. For the moment, it is 
+sufficient to say that it consists of a sequence of \emph{blocks} of 
+text. The looking up process consists of a loop in which the following 
+is done: The first block is removed from the search path, and the text 
+it contains is used to form the name of a control sequence, as described 
+above. The rest of the search path is saved away as the \emph{remaining 
+search path}. If the control sequence formed is defined, then it is used 
+as the definition of the command, and if it is not, then the process 
+is repeated. When the process is repeated however, it starts by 
+removing the first block of the remaining search path, which is the 
+second (or third, or fourth, depending on which iteration of the loop 
+is the current) block of the entire search path, while once again 
+saving the rest as the new remaining search path. Not until the 
+entire search path has been scanned in this way will an error message 
+be issued.
+
+This means arbitrarily many possibilities can be tested in searching 
+for the definition of a command, but about six is probably a 
+realistic upper bound on how many there will be in practical 
+applications. In many cases it will be even fewer.
+
+What has been mensioned so far does not mean there necessarily is any 
+dependence on the current font, but it opens the possibility. The 
+trick is that the pieces of text, which are the blocks in the search 
+path, can contain not only characters but also macros (and other 
+expandable stuff)---as long as everything eventually expands to 
+character tokens, everything is fine. The point here is that the 
+control sequences that contains the names of the current encoding, 
+family, series, and shape---|\f@encoding|\footnote{For technical 
+reasons, it is probably better to use \cs{cf@encoding} instead. See page 
+\pageref{Why cf@encoding} for a discussion of this.}, |\f@family|, 
+|\f@series|, and |\f@shape| respectively---are of this kind. Thus 
+making the definition of a variable command depend on these attributes 
+of the current font is simply a matter of making the corresponding 
+control sequences part of the texts in the search path.
+
+The above might give the impression that the variable commands are 
+ment to be used instead of the encoding-specific commands of standard 
+\LaTeX, but that is not the case. What actually happens is that the 
+control sequences of type |\T1\foo| that the \LaTeXe\ kernel looks up 
+will themselves be variable commands. This means that to \LaTeX, the 
+commands in a relaxed encoding whose definitions depend on the current 
+font are just normal encoding-specific commands, even though they do a 
+lot of peculiar things before they actually generate any typeset 
+material, but on the other hand \LaTeX\ doesn't care what they do, as 
+long as it finds a definition.\footnote{It also saves me a lot of 
+work, since I won't have to bother with trying to make the variable 
+commands robust---\LaTeX\ already makes the encoding-specific commands 
+robust.}
+
+This has probably been a bit abstract, so an explicit example might be 
+in place. Let's say that the current encoding is \texttt{T1R} (this is 
+an existing relaxed encoding), the current family is \texttt{zcm} 
+(this is an example family\footnote{The \texttt{zcm} font family is 
+described in Appendix \ref{zcm-family}.}), the current series is 
+\texttt{m}, and the current shape is \texttt{n}. Furthermore let's say 
+the user has just issued the font-dependent command |\foo| (this is not 
+really a font-dependent command, but let's assume it is). What will happen?
+
+\begin{enumerate}
+\item
+  The actual control sequence |\foo| causes the \LaTeXe\ kernel to start 
+  look for a definition. It first tries |\T1R\foo|, then |\?\foo|, and 
+  if neither is defined then an error message is given. The case of 
+  interest here is that |\T1R\foo| is defined, because then the 
+  \LaTeXe\ kernel is content and \TeX\ will act as if |\T1R\foo| was 
+  issued instead.
+\item
+  If the final definition of |\foo| is to depend on family\slash 
+  series\slash shape then |\T1R\foo| must be a variable command. The 
+  first thing which happens then is that \package{relenc} starts 
+  looking for a search path to use. Search paths are stored in 
+  macros, and the names of these macros are formed in a manner 
+  similar to that in which the other lookup names here are formed.
+  
+  The two macros which can contain the search path are 
+  |\T1R/zcm-path| and |\T1R-path| (these are still only single 
+  control sequences), and they are tried in that order. If none of 
+  them exists, then an error message is given. The second of the two 
+  is common to all fonts using the \texttt{T1R} encoding and must be 
+  defined by the encoding designer. A font designer can choose to 
+  define a search path of his or hers own, and that will then be named 
+  as the first of the two above. A family specific search path 
+  completely overrides the encoding specific (the latter is in that 
+  case not even considered), but in many cases the encoding specific 
+  will do just fine.
+  
+  Let's assume that |\T1R/zcm-path| is defined and consists of
+  \begin{verse}
+    |{|\meta{enc}|/|\meta{family}|/|\meta{series}|/|\meta{shape}|}|\\
+    |{|\meta{enc}|/|\meta{family}|/?/|\meta{shape}|}|\\
+    |{|\meta{enc}|/|\meta{family}|/?/?}|\\
+    |{|\meta{enc}|/?/?/?}|
+  \end{verse}
+  (Each block is written on a separate line. The text of the block is 
+  everything between (but not including) the braces, which act as 
+  delimiters of the block. \meta{enc}, \meta{family}, \meta{series}, and 
+  \meta{shape} denote the \LaTeX\ macros listed above which contain the 
+  names of the current encoding, family, series, and shape respectively.)
+\item
+  Once the search path is found, it is scanned. In this particular 
+  case this means that the control sequences |\T1R/zcm/m/n\foo|, 
+  |\T1R/zcm/?/n\foo|, |\T1R/zcm/?/?\foo|, and |\T1R/?/?/?\foo| are 
+  tried in that order. If none of them is defined, an error message is 
+  given, but let's assume that |\T1R/zcm/?/?\foo| is defined and 
+  neither |\T1R/zcm/m/n\foo| nor |\T1R/zcm/?/n\foo| are. This 
+  corresponds to the case that there is a definition of the variable 
+  command that is specific for the family, but not any specific for 
+  the shape or series.
+\item
+  The final stage is that |\T1R/zcm/?/?\foo| gets executed.
+\end{enumerate}
+
+There are now only a few more things to sort out before the 
+description of the commands a font designer has available can commence. 
+Firstly, control sequences like the above |\T1R/zcm/?/?\foo|, that hold 
+an actual definition of a variable command, are called \emph{variants} 
+of that command. The processing during the scan of the search path that 
+is connected to one block in the search path is called a \emph{step} in 
+that scan.
+
+Secondly, there is another thing which might affect the definition of a 
+command, viz.\ the first argument of the command. Commands for which 
+the first argument is checked before the actual definition is determined 
+are called \emph{composite commands}, or are said to be \emph{composed}. 
+The alternative definitions of them are called \emph{compositions}. Each 
+composition is used for exactly one value of the argument, and the main 
+composite command contains a definition which is used for all values for 
+which there is no composition.
+
+This too is a mechanism that is present in the \LaTeXe\ kernel, what 
+\package{relenc} does is that it introduces some commands to make 
+variable commands composed or vice versa. Very much like variable 
+commands, composite commands rely on |\csname| lookups, but instead of 
+adding a prefix to the command name, the composition mechanism adds a 
+suffix consisting of a hyphen (|-|) and the first token of the first 
+argument (as a precaution, this token is |\string|ed beforehand, to 
+convert it to character tokens if it was not already).
+
+An example of this, from the \texttt{T1} encoding, is the acute accent 
+command |\'|. The command that actually is composed is |\T1\'|, which 
+holds the definition of |\'| in the \texttt{T1} encoding, and one of 
+its compositions are |\\T1\'-a|. This is a macro which expands to the 
+letter \'{a}, which is the expected result of |\'{a}|. There is no 
+composition for the argument |\ae| in the \texttt{T1} encoding, so if 
+the user issues |\'{\ae}| the lookup mechanism finds nothing and the 
+default definition is used, yielding `\'{\ae}'. Had there been a 
+composition however, it would have called |\\T1\'-\ae|. Cases like 
+these are why the |\string|ing precaution is necessary; most 
+commands generate errors when \TeX\ meets with them inside a |\csname| 
+\textellipsis\ |\endcsname| pair.
+
+With that description completed, it is now time to describe the usage 
+and purpose of the commands available to the font designer. It should 
+perhaps be pointed out that most of them are about defining variants 
+of commands, as making a command variable lies within the powers of 
+the encoding designer.
+
+
+\subsubsection{Defining variants of font-dependent commands}
+
+Among the arguments of every variant defining command is the sequence 
+\marg{encoding}\B\marg{family}\B\marg{series}\B\marg{shape}, 
+which specifies which variant of a command is being defined. The 
+arguments should consist of letters and\slash or figures, but any 
+combination of these parameter fields might be left empty. A field 
+left empty signifies that the intended variant may be used regardless 
+of what value that attribute may take. Thus |{T1R}{zcm}{m}{n}| is used 
+when defining a variant specific to this encoding, family, series, and 
+shape, whilst |{T1R}{zcm}{}{}| is used when defining a variant that 
+applies for every font in the \texttt{T1R}-encoded \texttt{zcm} family. 
+Technically, a field left empty will be filled with a question mark. 
+Thus the |{T1R}{zcm}{}{}| variant of |\foo| will be stored in the 
+control sequence |\T1R/zcm/?/?\foo|.
+
+\DescribeMacro\DefineTextSymbolVariant
+\DescribeMacro\DefineTextAccentVariant
+|\DefineTextSymbolVariant| and |\DefineTextAccentVariant| are the two 
+simplest commands for defining a variant. The former makes the variant 
+output a single character, whose slot in the font is given as the 
+argument \meta{slot}. The latter should be used for variants of accent 
+commands, as an accenting command is precisely what it defines. The 
+character used for the accent is the one with slot number 
+\meta{slot}. |\DefineTextSymbolVariant| and 
+|\DefineTextAccentVariant| parallell the commands |\DeclareTextSymbol| 
+and |\DeclareTextAccent| respectively that are found in standard 
+\LaTeX.
+
+\DescribeMacro\DefineTextCommandVariant
+If the above are not sufficient for the definition of a variant of 
+some command (they are not, for example, general enough to define any 
+of the accents put \emph{under} letters), complete generality is 
+offered through the |\DefineTextCommandVariant| command, which can be 
+used to define any \TeX\ macro. (It consists simply of a |\gdef| to 
+the control sequence that stores the variant in question.) This means 
+the \meta{parameter text} should be formated as for the |\def| 
+command, without any surrounding braces or such. Also notice that every 
+token in the \meta{parameter text} counts, including spaces and end of 
+lines.
+
+Apart from the arguments mensioned, all the above commands have an 
+argument \meta{cmd}. This is the name of the base font-dependent command of 
+which you want to define a variant. It is not the name of the actual 
+variable command, so you should write |\foo|, not |\T1R\foo|. 
+The syntaxes of the commands are as follows:
+\begin{cmdusage}
+  |\DefineTextSymbolVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \marg{slot}
+  
+  |\DefineTextAccentVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \marg{slot}
+  
+  |\DefineTextCommandVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \meta{parameter~text}~|{|~\meta{replacement~text}~|}|
+\end{cmdusage}
+\medskip
+
+\DescribeMacro\NewTextCommandVariant
+\DescribeMacro\RenewTextCommandVariant
+\DescribeMacro\ProvideTextCommandVariant
+\package{relenc} does also offer some |\newcommand|-style commands for 
+defining variants of font-dependent commands, for font designers who prefer 
+that. They do offer some additional functionality, as they can make 
+commands which take an optional argument, but I am not currently aware 
+of any font-dependent command that uses this feature. One reason the 
+feature is offered is that variable command processing comes before 
+optional argument processing, hence if a variable font-dependent command 
+can have an optional argument then all its variants must be able to cope 
+with that argument when it is present.
+
+Technically the commands boil down to an application of 
+|\newcommand|, |\renewcommand|, or |\providecommand| respectively 
+(the starred forms, to be exact). Thus you may get error messages 
+if the variant is already defined or not defined, depending on which 
+command you use. As the error messages are the standard \LaTeX\ %
+error messages, they may be somewhat confusing. Still, a somewhat 
+confusing error message may be better than none at all.
+\begin{cmdusage}
+  |\NewTextCommandVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \oarg{numargs} \oarg{default} \marg{replacement text}
+  
+  |\RenewTextCommandVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \oarg{numargs} \oarg{default} \marg{replacement text}
+  
+  |\ProvideTextCommandVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \oarg{numargs} \oarg{default} \marg{replacement text}
+\end{cmdusage}
+\medskip
+
+
+\subsubsection{Defining variants of compositions}
+\label{Var. of comp.}
+
+As compositions can be variable, there are commands for defining 
+variants of them. The situation here is simpler than for font-dependent 
+commands in general since compositions cannot have any arguments, 
+consequently there is no need to provide such a large variety of 
+definition commands as for defining command variants.
+
+\DescribeMacro\DefineTextCompositionVariant
+\DescribeMacro\DefineTextCompositionVariantCommand
+The most important is |\DefineTextCompositionVariant| which 
+corresponds to |\DefineTextSymbolVariant|---it makes a variant which 
+simply typesets one of the characters in the font. The most general 
+command is |\DefineText|\B|Composition|\B|VariantCommand| which defines 
+the variant to be a parameterless macro without other restictions.
+
+\DescribeMacro\DefineTextUncomposedVariant
+A special, but probably rather common macro to define a variant of a 
+composition to be, is the macro consisting of the noncomposite 
+definition applied on the argument for the composition, because 
+defining the variant this way is probably the easiest way to free a slot 
+in the font for other purposes. Hence there is a special command for 
+doing this: |\DefineTextUncomposedVariant|. It resembles the other 
+two, but there is of course no argument that gives the definition of 
+the variant and there is a special restriction, namely that 
+the \meta{encoding} argument must not be empty!
+
+The arguments of these commands are as for the commands for defining 
+variants of font-dependent commands, except for one designated 
+\marg{argument}. This is the argument which is passed to the 
+font-dependent command that corresponds to the current composition---the 
+composition of which a variant is to be defined.
+
+\begin{cmdusage}
+   |\DefineTextCompositionVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \marg{argument} \marg{slot}
+  
+   |\DefineTextCompositionVariantCommand| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \marg{argument} \marg{replacement text}
+  
+  |\DefineTextUncomposedVariant| \marg{cmd}
+  \marg{encoding} \marg{family} \marg{series} \marg{shape}
+  \marg{argument}
+\end{cmdusage}
+
+
+\subsubsection{Defining compositions of variants}
+\label{Comp av var}
+%
+Things can be done the other way round too---a variant of a font-dependent 
+command may have compositions. These compositions are then completely 
+independent of any compositions of the base font-dependent command. Unlike 
+compositions of a font-dependent command (which must be \emph{declared} 
+in the encoding definition file and are common to all fonts in a 
+particular encoding), compositions of a variant can be \emph{defined} 
+whenever a variant can be defined. Thus making compositions of variants 
+lies within the powers of the font designer.
+
+\DescribeMacro\DefineTextVariantComposition
+\DescribeMacro\DefineTextVariantCompositionCommand
+There are two commands for defining compositions of variants: 
+|\Define|\B|Text|\B|Variant|\B|Composition| and 
+|\Define|\B|Text|\B|Variant|\B|Composition|\B|Command|. The difference 
+between them is simply that the latter command defines the composition 
+to be a macro with the given replacement text, while the former defines 
+it to be a chardef token for the given slot. What is more interesting is 
+what these commands do if the variant they are to make a composition of 
+is not defined, because in this case they define the default definition 
+to be a macro that resumes the scan of the search path. This means that 
+the font designer can choose to specify some compositions early in the 
+search path and others later---and perhaps more importantly---can give 
+special definitions for some compositions early in the search path 
+without having to copy the default definition to that level.
+
+As it happens, the names of the control sequences, in which the 
+definitions of compositions of variants and variants of compositions 
+respectively are stored, are slightly different (a backslash appears 
+at different positions). Hence it is possible to have both for exactly 
+the same \meta{encoding} \meta{family} \meta{series} \meta{shape} 
+\meta{argument} combination for a composition of variant and variant 
+of composition without having them overwriting each other, although 
+there is hardly any point in having things set up this way.
+
+\begin{cmdusage}
+   |\DefineTextVariantComposition| \marg{cmd}
+   \marg{encoding} \marg{family} \marg{series} \marg{shape} 
+   \marg{argument} \marg{slot}
+   
+   |\DefineTextVariantCompositionCommand| \marg{cmd}
+   \marg{encoding} \marg{family} \marg{series} \marg{shape} 
+   \marg{argument} \marg{replacement text}
+\end{cmdusage}
+
+
+\subsubsection{Setting the family search path}
+
+Setting the family search path is pretty straightforward: The search 
+path is the last argument, encoding and family in question the two 
+other. A useful feature here is that inside the search path argument, 
+|@| will be a letter and all spaces and newlines are ignored. This 
+means the example search path from Subsubsection \ref{Tekn.bakgr.} can 
+be set even by a command call as spaced out as the following
+\begin{verbatim}
+  \SetFamilySearchPath{T1R}{zcm}{
+     { \cf@encoding / \f@family / \f@series / \f@shape }
+     { \cf@encoding / \f@family / ? / \f@shape }
+     { \cf@encoding / \f@family / ? / ? }
+     { \cf@encoding / ? / ? / ? }
+  }
+\end{verbatim}
+and even if it appears in the preamble of a document (this is handy when 
+debugging a font family).
+
+Search paths \emph{must} be set using the |\SetFamilySearchPath| or 
+|\SetEncoding|\B|SearchPath| commands, otherwise the case that no 
+definition of a variable command is found cannot be handled 
+correctly, with the effect that \TeX\ gets hung in an infinite loop.
+
+\begin{cmdusage}
+   |\SetFamilySearchPath| \marg{encoding} \marg{family}
+   \marg{search~path}
+\end{cmdusage}
+
+
+\subsubsection{Where to put it all}
+%
+One topic that has not been delt with above is where the font designer 
+is to put all these commands for defining variants and setting search 
+path. In my opinion, there is only one possible place---the font 
+definition file\footnote{I am well aware of the rules for which 
+commands may be used in font definition files that are described in 
+\cite{fntguide}. I have however chosen to disregard from these rules 
+in the case of commands defined by the \package{relenc} package, as 
+this case could hardly have been foreseen by the prescribers of these 
+rules.}. This is also the logical place to put the commands, 
+since this is the file in which the font designer describes his or her 
+font family to \LaTeX. In particular, one cannot expect full 
+functionality if the commands are put in a package, since it is 
+perfectly possible to select a font without using a standard package 
+for this.
+
+Of course, definition commands can also appear in an encoding 
+definition file and anything that can appear in an encoding definition 
+file may also appear in a package file, even though packages containing 
+such code are often of a rather special nature.
+
+% There is however a complication of a technical nature with using 
+% commands from the \package{relenc} package in font definition files. 
+% Most of the commands defined in the \package{relenc} package assume 
+% that the value of the \TeX\ parameter |\escapechar| is $92$, denoting 
+% the backslash character (|\|). This is normally the case in \LaTeX, 
+% but unfortunately this is not always the case when a font definition 
+% file is loaded. \LaTeX\ locally sets |\escapechar| to $-1$ during some 
+% important operations, most notably the loading of a new font done in 
+% |\define@newfont|, and it is often at this time that font definition 
+% files get loaded.
+% 
+% To work around this, include the line
+% \begin{verbatim}
+%   \begingroup \escapechar=`\\
+% \end{verbatim}
+% somewhere in every font definition file using commands from the 
+% \package{relenc} package and put it before the first such command; also 
+% include the line
+% \begin{verbatim}
+%   \endgroup
+% \end{verbatim}
+% somewhere after the last such command. This temporarily resets 
+% |\escapechar| to its normal value. I believe the group is necessary 
+% (and it doesn't harm), since the value of |\escapechar| is not 
+% neccessarily $-1$ at the time a font definition file is loaded. Sigh.
+% 
+% IMHO, the best way to fix this would be to change \LaTeX\ itself so 
+% that it doesn't change |\escapechar| at this particular 
+% time\footnote{One could easily achieve the same results using a 
+% combination of \cs{expandafter}s and \cs{@gobble}s. This would also 
+% have the positive effect that backslashes will appear where one is 
+% used to see them in the tracing messages \TeX\ writes out if 
+% \cs{tracingcommands} or \cs{tracingmacros} are positive, instead of 
+% being missing inside a neighbourhood of every font change.}, but that 
+% is of course for the \LaTeX3 project team to decide.
+ 
+
+\subsection{Encoding designer usage}
+%
+The encoding designer's work in making a relaxed encoding is very 
+much like the work in making a normal encoding. There are only two 
+additional steps: It must be decided which commands and compositions 
+that should be variable, and an encoding search path must be set. Both 
+of these are more a matter of planning than writing \TeX\ code, but it 
+seems best to treat the coding first.
+
+Each of the commands for declaring a variable font-dependent command or 
+composition corresponds to a command for declaring a non-variable 
+font-dependent command which is part of standard \LaTeX, as is shown in the 
+following table. The correspondence is not one to one, but it is pretty 
+close.
+
+\begin{center}
+  \small\DeleteShortVerb{\|}
+  \begin{tabular}{|ll|}
+    \hline
+    Standard declaration command&  Variable declaration command%
+      \\[-0.9\ht\strutbox]
+    \hrulefill&\hrulefill\\
+    \relax\MakeShortVerb{\|}|\DeclareTextCommand|& 
+                    \relax|\DeclareTextVariableCommand|\\
+    \relax|\DeclareTextCommand|& 
+                    \relax|\DeclareTextVariableCommandNoDefault|\\
+    \relax|\ProvideTextCommand|& 
+                    \relax|\ProvideTextVariableCommand|\\
+    \relax|\DeclareTextSymbol|& 
+                    \relax|\DeclareTextVariableSymbol|\\
+    \relax|\DeclareTextAccent|& 
+                    \relax|\DeclareTextVariableAccent|\\
+    \relax|\DeclareTextComposite|& 
+                    \relax|\DeclareVariableTextComposition|\\
+    \relax|\DeclareTextCompositeCommand|& 
+                    \relax|\DeclareVariableTextComposition|\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\DescribeMacro\DeclareTextVariableSymbol
+\DescribeMacro\DeclareTextVariableCommand
+\DescribeMacro\ProvideTextVariableCommand
+\DescribeMacro\DeclareTextVariableAccent
+The difference between on one hand the commands |\Declare|\B|Text|\B
+|Variable|\B|Symbol|, |\Declare|\B|Text|\B|Variable|\B|Command|, 
+|\Provide|\B|Text|\B|Variable|\B|Command|, and |\Declare|\B|Text|\B
+|Variable|\B|Accent| and their non-variable counterparts on the other is 
+that the font-dependent command they declare will become a variable 
+command, while the definitions given will be used to define the 
+encoding-level variant of the command. The arguments are exactly the 
+same as for the commands' non-variable counterparts of standard \LaTeX.
+
+\DescribeMacro\DeclareTextVariableCommandNoDefault
+The |\DeclareTextVariableCommandNoDefault| command only declares a 
+font-dependent command and makes it variable, but does not define any of 
+its variants. This can actually be useful if one is writing an encoding 
+that is a relaxed version of another encoding, such as the \texttt{T1R} 
+encoding, since many commands will have the same encoding-level 
+definition in both encodings. It is then possible to include the name of 
+that other encoding in the search path, so that the same control 
+sequence will hold the definition of a command in two different 
+encodings.
+
+\DescribeMacro\DeclareVariableTextComposition
+The |\DeclareVariableTextComposition| command declares a composition of 
+a command, like |\Declare|\B|Text|\B|Composite| or 
+|\DeclareTextCompositeCommand|, and makes that composition variable. 
+But it is also like |\Declare|\B|Variable|\B|Text|\B|CommandNo|\B|Default| 
+in that it does not define any variant of the composition. To define a 
+variant, one of the commands in Subsection \ref{Var. of comp.} must be 
+used as well\footnote{I am not sure that this is a good way to organise 
+it. Perhaps there should be commands combining these functions.}. 
+|\DeclareVariableTextComposition| takes three arguments: the command, 
+the encoding, and the argument for which a composition is to be 
+declared.
+
+\begin{cmdusage}
+  |\DeclareTextVariableSymbol| \marg{cmd} \marg{encoding} 
+  \marg{slot}
+  
+  |\DeclareTextVariableCommand| \marg{cmd} \marg{encoding} 
+  \oarg{arguments} \oarg{default} \marg{replacement~text}
+  
+  |\DeclareTextVariableCommandNoDefault| \marg{cmd} \marg{encoding}
+  
+  |\ProvideTextVariableCommand| \marg{cmd} \marg{encoding} 
+  \oarg{arguments} \oarg{default} \marg{replacement~text}
+  
+  |\DeclareTextVariableAccent| \marg{cmd} \marg{encoding} 
+  \marg{slot}
+  
+  |\DeclareVariableTextComposition| \marg{cmd} \marg{encoding} 
+  \marg{argument}
+\end{cmdusage}
+\bigskip
+
+\DescribeMacro\SetEncodingSearchPath
+This is very much like |\SetFamilySearchPath|; the main difference to 
+setting a family search path is that a relaxed encoding \emph{must} set 
+its encoding search path. 
+
+\begin{cmdusage}
+   |\SetEncodingSearchPath| \marg{encoding} \marg{search~path}
+\end{cmdusage}
+
+\medskip
+
+Now to the part which is not coding. As noone, at the time this is 
+written, is particularly experienced in the creation of relaxed 
+encodings, this is not a guide of how to do that. This is only a 
+collection of some observations I made when I created the 
+\texttt{T1R} encoding and the \package{relenc} package.
+
+\begin{itemize}
+  \item
+    When making a relaxed encoding: If you mainly want to free some 
+    slots, so that you can include some new set of glyphs (for example 
+    additional ligatures) in the font, the obvious place to start is to 
+    reduce the number of slots that are assigned to compositions, by 
+    implementing these in a variable way. 
+  \item
+    When relaxing a composition, there are two ways of doing this: 
+    making the composition variable, or making the command variable 
+    and defining a composition of some variant. The cost (i.e., the 
+    number of special definitions you have to make) is connected to 
+    different things in these methods.
+    
+    In the case of a composition of a variant, there is a cost 
+    connected to having a composition. In the case of a variable 
+    composition, the cost is rather connected to not using the default 
+    definition for the composition. In the usual case that one either 
+    uses a special glyph for a composition or uses the default 
+    definition of the accenting command, this means that composition of 
+    variant is cheaper if a minority of the compositions  uses the 
+    default definition and variable composition is cheaper if a 
+    majority uses the default definition.
+  \item
+    In some cases, the default definition of an accenting command 
+    tends to be suitable for some font families, but inappropriate 
+    for others. An example from the \texttt{OT1} encoding is that the 
+    definition of |\c| starts by looking at the \emph{height} (!!!) of 
+    the character it is to put a cedilla under. If the height is 
+    exactly $1\,\textrm{ex}$ then the |\accent| primitive is used, 
+    otherwise the accent is put in place using a |\vtop| construction. 
+    This works fine (I suppose, trusting DEK to have known what he was 
+    doing) for fonts with idealized heights and depths of characters, 
+    such as the Computer Modern family of fonts, but is a pure waste 
+    of time if the heights and depths are computed from the bounding 
+    boxes of the glyphs (like \textit{fontinst} \cite{fontinst} does).
+    
+    The conclusion of all this is that it might be a good idea to 
+    make accenting commands that have such a specific default definition 
+    variable, regardless of how any compositions of these commands might 
+    be implemented, so that font designers can override the definitions 
+    in case they want to.
+
+\end{itemize}
+
+Apart from this, there is not much advice I can give. It is however 
+likely to be a good idea to try to make a specification of the 
+encoding---like described in Section \ref{Motivation} or in some other 
+way, detailed or only in loose sketches---before starting to do the 
+coding.
+
+
+\subsection{Power user commands}
+%
+This subsection treats some commands that may be useful to advanced 
+users of the \package{relenc} package (this includes all font and 
+encoding designers); in any case, the novice author users can do 
+perfectly well without using the commands described here.
+
+\subsubsection{Debugging assistance}
+%
+\DescribeMacro\ShowVariantSearchResult
+As the way from user level command to definition given is quite long 
+if the command is variable, there are many instances in which things 
+can go wrong. |\ShowVariantSearchResult| may help in sorting out what 
+exactly happened. Its primary function is to print the contents of 
+all internal variables in \package{relenc} on the terminal and then 
+wait for a command, just like after the primitive \TeX\ command |\show|. 
+As an extra service, |\ShowVariantSearchResult| also prints the current 
+encoding, family, series, and shape.
+
+As most of the processing in \package{relenc} is done in \TeX's mouth, 
+there is not very much left to show. The most important piece of data 
+there is is the \emph{remaining search path}. This is the part of the 
+search path that was \emph{not} scanned in looking for a definition; 
+by comparing it to the whole of the search path used, one can 
+determine at which stage a definition was found. The other thing shown 
+is the definition of |\RE@first@search@item|, which normally is 
+defined to be a parameterless macro that expands to the first block 
+in the search path most recently used. There are however two cases 
+when it is not: (i) If a definition was found in the first stage 
+of the most recent search, |\RE@first@search@item| is not altered. 
+(ii) If the search has been restarted (see Subsubsection \ref
+{Comp av var}) then |\RE@first@search@item| is a macro with a 
+parameter.
+
+Despite these reservations, |\ShowVariantSearchResult| provides about 
+all the information there is to get about what a search has found. It 
+might also be instructive if you want to understand the inner workings 
+of the \package{relenc} package in more detail.
+
+\begin{cmdusage}
+  |\ShowVariantSearchResult|
+\end{cmdusage}
+
+Should |\ShowVariantSearchResult| not give you enough information, you 
+can of course always set |\tracingmacros| to 1 and |\tracingcommands| 
+to 2 for the time it takes to execute the command you are trying to 
+debug, this will give you the whole picture of what \package{relenc} 
+does. Before attempting this drastic action however, you should 
+familiarise yourself with the implementation of the \package{relenc} 
+package.
+
+
+\subsubsection{The `define first' mechanism}
+%
+The `define first' mechanism, which has not been mensioned until now 
+because it is not really related to anything else in the package, is 
+something very few users should ever have to bother with. It can 
+however speed up the typesetting process, as demonstrated in Table 
+\ref{Tab:Tid}.
+
+\begin{table}
+  \begin{center}
+    \DeleteShortVerb{\|}
+  \begin{tabular}{|rr@{.}lr@{.}lr@{.}l|}
+    \hline
+    &\multicolumn{6}{c|}{Default encoding}\\[-0.9\ht\strutbox]
+    &\multicolumn{6}{c|}{\hrulefill}\\
+    & \multicolumn{2}{c}{\texttt{OT1}}&\multicolumn{2}{c}{\texttt{T1}}& 
+      \multicolumn{2}{c|}{\texttt{T1R}}
+      \\[-0.9\ht\strutbox]
+    & \multicolumn{2}{c}{\hrulefill}& \multicolumn{2}{c}{\hrulefill}& 
+      \multicolumn{2}{c|}{\hrulefill}\\
+    \parbox[c]{0.3\columnwidth}{Time taken using \texttt{T1}}& 
+      253&4\,s& 197&5\,s& 255&2\,s\\[1ex]
+    \parbox[c]{0.3\columnwidth}{Time taken using \texttt{T1R}\\
+        (DFM on, no FSP)}& 
+      339&7\,s& 349&5\,s& 294&2\,s\\[2ex]
+    \parbox[c]{0.3\columnwidth}{Time taken using \texttt{T1R}\\
+        (DFM off, no FSP)}& 
+      446&4\,s& 458&3\,s& 400&5\,s\\[2ex]
+    \parbox[c]{0.3\columnwidth}{Time taken using \texttt{T1R}\\
+        (DFM off, has FSP)}& 
+      334&4\,s& 350&9\,s& 293&2\,s\\[2ex]
+    \parbox[c]{0.3\columnwidth}{Time taken using \texttt{T1R}\\
+        (DFM on, has FSP)}& 
+      316&7\,s& 327&5\,s& 269&9\,s\\[2ex]
+    \hline
+  \end{tabular}%
+    \MakeShortVerb{\|}
+  \end{center}\medskip
+  
+  \begingroup\footnotesize \parindent=1em
+    DFM = Define First Mechanism
+    
+    FSP = Family Search Path. The family search path used was 
+    optimised to examine only the levels at which there actually 
+    existed some variant.
+    
+    The `default encoding' in this table is the encoding whose 
+    encoding definition file was read in last. As explained in 
+    \cite{ltoutenc}, this means that all commands declared in that 
+    encoding will execute somewhat faster when that encoding is the 
+    current.
+    
+    The test text used consisted of all non-accented letters declared 
+    in the \texttt{T1} encoding (a--z, as well as \ae, \ss, \i, and a 
+    few others) in both upper and lower case, as they are as well as 
+    accented with every accent command available (|\`|, |\'|, |\^|, |\~|, 
+    |\"|, |\H|, |\r|, |\v|, |\u|, |\=|, |\.|, |\b|, |\c|, |\d|, and 
+    |\k|). These 32 lines were then repeated 100 times, to reduce the 
+    relaive amount of time taken to start the process.\par
+  \endgroup
+  
+  \caption{A comparision of typesetting speed}\label{Tab:Tid}
+\end{table}
+
+What the define first mechanism (DFM) does, when it is active, is 
+that if a definition is not found in the first step of the search 
+path scan and a definition is found in some later step, then that 
+definition is copied to the control sequence scanned in the first step. 
+Thus the next time that the same command is issued, the scan of the 
+search path will find a definition in the first step.
+
+This can speed up the search considerably, but there is a price to pay: 
+More control sequnces gets defined, meaning more of \TeX's memory is 
+being used for storing definitions of variable commands.\footnote{Or 
+so it would appear \textellipsis\ Some things I've recently learnt 
+about how \TeX's internal tables work has made me wonder about whether 
+it really takes more memory, so I am currently not sure. Perhaps 
+someone competent in the area of \TeX's memory management will 
+volunteer to sort things out for me?} If you run out of memory while 
+typesetting a document with the DFM on, turning it off will lower the 
+memory requirements. If your \TeX\ is generally low on memory however, 
+you should probably not be using relaxed encodings at all, since the 
+basic deal of the entire package is to loosen the restrictions on fonts 
+for a particular encoding by increasing the number of control sequences 
+needed for the typesetting process.
+
+But these differences should be seen for what they really are, 
+differences in speed for one of the many things \TeX\ have to do to 
+typeset something. \TeX\ does no linebreaking during the tests in 
+Table \ref{Tab:Tid} (hence no hyphentaing either), does not read any 
+input after the first five seconds (the entire text is generated through 
+expanding macros), has a very simple job pagebreaking, and so forth. 
+In addition, the percentage of letters generated through font-dependent 
+commands is much greater in the test text than what one would find in 
+a normal \TeX\ manuscript. This circumstance also reduces the effect 
+that the tabulated differences in speed will have on the overall 
+typesetting speed for a normal \TeX\ manuscript.
+
+If you have not noticed that your document is being typeset slower due 
+to the fact that the encoding used is not the encoding whose definition 
+file was read in last, then chances are you would not notice any drop 
+in speed if it was typeset using a relaxed encoding either.
+
+\medskip
+
+\DescribeMacro\ActivateDefineFirst
+\DescribeMacro\DeactivateDefineFirst
+The DFM is turned on and off using the commands 
+|\ActivateDefineFirst| and |\DeactivateDefineFirst|, none of which 
+have any parameters. As it is currently implemented, the activation 
+state of the DFM is affected by grouping, but the defining it does 
+is global.
+
+\begin{cmdusage}
+  |\ActivateDefineFirst|
+  
+  |\DeactivateDefineFirst|
+\end{cmdusage}
+
+
+% The implementation
+% \part{\texttt{relenc.dtx}}
+\DocInput{relenc.dtx}\Finale
+
+
+\appendix
+
+\part*{The \texttt{T1R} encoding}
+\addcontentsline{toc}{part}{The \texttt{T1R} encoding}
+\DocInput{t1renc.dtx}\Finale
+
+\part*{The \texttt{zcm} example font family}
+\addcontentsline{toc}{part}{The \texttt{zcm} example font family}
+\DocInput{t1rzcm.fdd}\Finale
+
+
+\begin{thebibliography}{99}
+%
+\bibitem{ltoutenc}
+  Johannes Braams, David Carlisle, Alan Jeffrey, Frank Mittelbach, 
+  Chris Rowley, Rainer Sch\"opf: \texttt{ltoutenc.dtx} (part of the 
+  \LaTeXe\ base distribution).
+%
+\bibitem{fontinst}
+  Alan Jeffrey, Rowland McDonnell (manual), Sebastian Rahtz, 
+  Ulrik Vieth: \emph{The fontinst utility} (v\,1.8), 
+  \texttt{fontinst.dtx}, in CTAN at \texttt{ftp:/\slash 
+  ftp.tex.ac.uk\slash tex-archive\slash fonts\slash utilities\slash 
+  fontinst\slash}\textellipsis
+%
+\bibitem{fntguide}
+  \LaTeX3 Project Team: \emph{\LaTeXe\ font selection},
+  \texttt{fntguide.tex} (part of the \LaTeXe\ base distribution).
+%
+\bibitem{encguide}
+  Frank Mittelbach [et al. ?]: \texttt{encguide.tex}. To appear as 
+  part of the \LaTeXe\ base distribution. Sometime. Or at least, that 
+  is the intention.
+%
+\end{thebibliography}
+
+
+\end{document}

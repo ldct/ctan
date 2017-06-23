@@ -1,0 +1,129 @@
+\documentclass{article}
+% useverses=none avoids a warning in the log when there is not value for
+% userverses. In this document we define our verses 'by hand' using the
+% declareBVs environment.
+\usepackage[ignorecfg,useverses=none]{fetchbibpes}[2016/09/21]
+\usepackage{fancyvrb}
+
+\providecommand\cs[1]{\texttt{\char`\\#1}}
+\let\pkg\texttt
+\def\ameta#1{$\langle\textit{\texttt{#1}}\rangle$}
+
+
+\addtoBibles{NKJV}
+\defaultBible{NKJV}
+
+
+\begin{declareBVs}
+\BV(Gal 1:15 NKJV) But when it pleased God, who separated me from my mother's womb and called me through His grace,\null
+\BV(Gal 1:16 NKJV) to reveal His Son in me, that I might preach Him among the Gentiles, I did not immediately confer with flesh and blood,\null
+\end{declareBVs}
+
+\begin{document}
+
+\section{Testing replace with \cs{fetchverses}}
+
+This demonstration file features the \texttt{replace} key within the
+optional argument of \cs{fetchverses}. We use as our test passes \textsf{Gal
+1:15-16}.
+
+\medskip\noindent\textbf{Unmodified passage}
+\begin{quote}
+\eSQ\fetchverses*{Gal 1:15-16}
+\end{quote}
+
+\medskip\noindent
+We declare the following verses:
+\begin{Verbatim}[xleftmargin=\leftmargini,fontsize=\small]
+\fetchverses[%
+    replace={But when}{\leavevmode\ldots when}
+        {blood,}{blood, \ldots (\textit{continues with verse 17})}
+]{Gal 1:15-16}
+\end{Verbatim}
+which displays as,
+\begin{quote}
+\fetchverses[%
+    replace={But when}{\leavevmode\ldots when}
+        {blood,}{blood, \ldots (\textit{continues with verse 17})}
+]{Gal 1:15-16}
+\end{quote}
+
+\medskip\noindent
+A more extensive example of \texttt{replace} is the following one, which requires
+special techniques.
+\begin{Verbatim}[xleftmargin=\leftmargini,fontsize=\small]
+\gobbleto{and}{\gobbletoand}%
+\fetchverses*[replace={But when}{\leavevmode\ldots when}
+    {who separated}{who\gobbletoand}
+%   {who separated me from my mother's womb and}{who}
+    {, that I might preach Him among the Gentiles,
+        I did not immediately confer with flesh and blood,}
+    { \ldots}
+]{Gal 1:15-16}
+\end{Verbatim}
+\begin{quote}
+\gobbleto{and}{\gobbletoand}%
+\fetchverses*[replace={But when}{\leavevmode\ldots when}
+     {who separated}{who\gobbletoand}
+%    {who separated me from my mother's womb and}{\textbf{who}}
+    {, that I might preach Him among the Gentiles,
+        I did not immediately confer with flesh and blood,}{ \ldots}
+]{Gal 1:15-16}
+\end{quote}
+The original \ameta{find} text is `\texttt{who separated me from my mother's
+womb and}'. The fact that this \ameta{find} text contains an apostrophe is a
+problem. Apostrophises (right single quotes), left single quotes, and double
+quotes are \emph{active characters}  (within the Bible passages);
+consequently, they prevent a correct match. To circumvent this problem, we
+gobble all text past any active characters (an apostrophe, in this example).
+This is where \cs{gobbleto} comes in. Declare
+\verb|\gobbleto{and}{\gobbletoand}|, this defines a macro \cs{gobbletoand}
+that gobbles all text from where it is placed to the next occurrence of the
+word `and', in this example. Now, instead of using a \ameta{find} text
+containing an apostrophe, we use `\texttt{who separated}' as the \ameta{find}
+text, and for the \ameta{replace} text, we use `\texttt{who\cs{gobbletoand}},
+which, incredibly, works!
+
+\medskip
+The use of the gobble trick is not restricted to passages containing active
+characters. For example, the third \ameta{find} text is rather long. We can do the
+following:
+\begin{Verbatim}[xleftmargin=\leftmargini]
+\gobbleto{and}{\gobbletoand}%
+\gobbleto{blood,}{\gobbletoblood}%
+\fetchverses*[replace=
+    {But when}{\leavevmode\ldots when}
+    {who separated me}{who\gobbletoand}
+    {, that I might}{\ldots{}.\gobbletoblood}
+]{Gal 1:15-16}
+\end{Verbatim}
+\begin{quote}\eSQ
+\gobbleto{and}{\gobbletoand}\gobbleto{blood,}{\gobbletoblood}
+\fetchverses*[replace=
+    {But when}{\leavevmode\ldots when}
+    {who separated me}{who\gobbletoand}
+    {, that I might}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+\end{quote}
+
+To make the `\cs{gobbleto}' definitions local, put them in a group, as in the \texttt{quote} environment as above, or
+they can be passed into a group in which \cs{fetchverse} and \cs{fetchverses} operate using the \texttt{localdefs} key.
+\begin{Verbatim}[xleftmargin=\leftmargini,fontsize=\small]
+\fetchverses*[%
+    localdefs={\gobbleto{and}{\gobbletoand}%
+        \gobbleto{blood,}{\gobbletoblood}},
+    replace={But when}{\leavevmode\ldots when}
+        {who separated me}{who\gobbletoand}
+        {, that I might}{\ldots{}.\gobbletoblood}
+]{Gal 1:15-16}
+\end{Verbatim}
+\eSQ
+\fetchverses*[%
+    localdefs={\gobbleto{and}{\gobbletoand}%
+        \gobbleto{blood,}{\gobbletoblood}},
+    replace={But when}{\leavevmode\ldots when}
+    {who separated me}{who\gobbletoand}
+    {, that I might}{ \ldots\gobbletoblood}
+]{Gal 1:15-16}
+
+\end{document}

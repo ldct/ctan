@@ -1,0 +1,644 @@
+% arara: pdflatex: { shell: on }
+% arara: pdflatex: { shell: on }
+% --------------------------------------------------------------------------
+% the SUBSTANCES package
+% 
+%   A Chemical Database
+% 
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://bitbucket.org/cgnieder/substances/
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% Copyright 2012--2016 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% --------------------------------------------------------------------------
+% The substances package consists of the files
+%  - substances.sty, substances-default.def, substances-examples.sub,
+%    substances_en.tex, substances_en.pdf, README
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+%
+% if you want to compile this documentation you'll need the document class
+% `cnpkgdoc' which you can get here:
+%    https://bitbucket.org/cgnieder/cnpkgdoc/
+% the class is licensed LPPL 1.3 or later
+%
+\documentclass[load-preamble+]{cnltx-doc}
+\usepackage[utf8]{inputenc}
+\usepackage[index]{substances}
+
+\LoadSubstances{substances-examples}
+
+\usepackage{imakeidx}
+\makeindex[name=\jobname-chem,title=Chemicals]
+
+\setcnltx{
+  package  = {substances},
+  url      = http://www.mychemistry.eu/forums/forum/substances/ ,
+  authors  = Clemens Niederberger ,
+  email    = contact@mychemistry.eu ,
+  abstract = {%
+    The \substances\ package allows you to create a database like file that
+    contains data of various chemicals. These data can be retrieved in the
+    document. An index creation of the chemicals used in the document is
+    directly supported.
+  } ,
+  quote-format = \small\biolinumLF ,
+  add-cmds = {
+    @CAS, @EC,
+    ac, AllSubstancesClist, AllSubstancesSequence, arraybackslash,
+    bottomrule,
+    CAS, celsius, centi, ch, chem, chemfig, chemsetup, cmc, cubic,
+    DeclareSubstance, DeclareSubstanceProperty,
+    EC, endinput,
+    ForAllSubstancesDo,
+    GetSubstanceProperty, ghs, ghspic, ghspictograms, ghsstatements, gram,
+    IfSubstanceExistF, IfSubstanceExistT, IfSubstanceExistTF,
+      IfSubstanceFieldF, IfSubstanceFieldT, IfSubstanceFieldTF,
+      IfSubstancePropertyF, IfSubstancePropertyT, IfSubstancePropertyTF,
+      iupac,
+    kilo,
+    Lewis, LoadSubstances,
+    metre, midrule, milli, MolMass,
+    NewDocumentCommand, newindex, normal, num,
+    ProvideChemIUPAC,
+    per, printindex,
+    RetrieveSubstanceProperty,
+    SI, sisetup, SubstanceIndexAltEntry, SubstanceIndexNameAltEntry,
+      SubstanceIndexNameEntry, SubstancesDatabase, SubstancesStyle,
+    toprule
+  } ,
+  index-setup = { level = \section , othercode = \small }
+}
+
+\defbibheading{bibliography}{\section{References}}
+
+\usepackage{booktabs}
+
+\expandafter\def\csname libertine@figurestyle\endcsname{LF}
+\usepackage[libertine]{newtxmath}
+\expandafter\def\csname libertine@figurestyle\endcsname{OsF}
+
+\usepackage[biblatex]{embrac}
+\ChangeEmph{[}[,.02em]{]}[.055em,-.08em]
+\ChangeEmph{(}[-.01em,.04em]{)}[.04em,-.05em]
+
+\usepackage{acro}
+\acsetup{short-format=\scshape}
+\DeclareAcronym{CAS}{
+  short = cas ,
+  long = Chemical Abstract Service
+}
+\DeclareAcronym{EC}{
+  short = ec ,
+  long  = European Commission Number
+}
+\DeclareAcronym{LD50}{
+  short = ld50 ,
+  long  = Median Lethal Dose
+}
+\DeclareAcronym{IUPAC}{
+  short = iupac ,
+  long  = International Union of Pure and Applied Chemistry
+}
+\DeclareAcronym{ghs}{
+  short = ghs ,
+  long  = Globally Harmonized System of Classification and Labelling of
+  Chemicals
+}
+
+\ExplSyntaxOn
+\DeclareExpandableDocumentCommand \substancesdatabase {m}
+  { \__substances_database:n {#1} }
+\DeclareExpandableDocumentCommand \substancesstyle {m}
+  { \__substances_style:n {#1} }
+\ExplSyntaxOff
+
+\newidxcmd\substyle{\texttt{#1}}[ (\substances\ style)]
+
+\begin{document}
+
+\part{Preliminaries}
+
+\section{Licence and Requirements}
+\license
+
+\substances\ loads and needs the following packages:
+\pkg{expl3}~\cite{bnd:l3kernel}, \pkg{xparse}, \pkg{xtemplate} and
+\pkg{l3keys2e}~\cite{bnd:l3packages}. It also needs the chemistry packages
+\pkg{chemmacros}~\cite{pkg:chemmacros}, \pkg{chemfig}~\cite{pkg:chemfig} and
+\pkg{ghsystem}~\cite{pkg:ghsystem}.
+
+\section{About}
+The \substances\ package allows you to create a database like file that contains
+data of various chemicals. These data can be retrieved in the document. An index
+creation of the chemicals used in the document is directly supported.
+
+\part{Package Description}
+
+\section{Options}\label{sec:options}
+The \substances\ package has a few options:
+\begin{options}
+  \keybool{draft}\Default{false}
+    If set to true all warnings will be errors.
+  \keybool{final}\Default{true}
+    The opposite of \option{draft}.
+  \keybool{index}\Default{false}
+    Add index entries when \cs{chem} is called, see section~\ref{sec:index}.
+  \keyval{style}{style}\Default{default}
+    Load specific style, see sections~\ref{ssec:styles}
+    and~\ref{sec:default-style}.
+  \keybool{strict}\Default{false}
+    If set to true all warnings will be errors. This option overwrites any
+    \option{draft} or \option{final} option that is passed on by the document
+    class.
+\end{options}
+
+The most important option is \option{style}.  Details concerning this option
+are explaind in sections~\ref{ssec:styles} and~\ref{sec:default-style}.
+
+\section{The Database}
+\subsection{Declaring the Chemicals}
+The data about substances are stored via the command
+\begin{commands}
+  \command{DeclareSubstance}[\marg{id}\marg{list of properties}]
+    This declares substance \meta{id}.
+\end{commands}
+An entry could look like this:
+\begin{sourcecode}
+  \DeclareSubstance{NaCl}{
+    name    = Sodiumchloride ,
+    sum     = NaCl ,
+    CAS     = 7647-14-5,
+    mass    = 58.44 ,
+    mp      = 801 ,
+    bp      = 1465 ,
+    phase   = solid ,
+    density = 2.17
+  }
+\end{sourcecode}
+
+Such\changedversion{0.2} entries can either be declared in the document
+preamble or probably more useful in a database file. Such a file can be input
+in the document via
+\begin{commands}
+  \command{LoadSubstances}[\marg{database name}]
+    Input the database \meta{database name}.  The name of a database file must
+    follow the structure
+    \code{\substancesdatabase{\meta{database name}}}.
+\end{commands}
+Suppose you have the file \code{\substancesdatabase{mydatabase}} then you
+input it in the document preamble via \cs{LoadSubstances}\Marg{mydatabase}.  A
+database file should typically start with the following declaration:
+\begin{commands}
+  \command{SubstancesDatabase}[\marg{database name}]
+    Declare\sinceversion{0.2} the database \meta{database name}
+\end{commands}
+
+\subsection{Available Fields}
+\subsubsection{Always Defined Fields}
+Below all fields defined by \substances\ are listed\footnote{Look in the file
+  \code{\substancesdatabase{substances-examples}} which is part of this
+  package and should be in the same place as this documentation for example
+  uses.}.
+\begin{options}
+  \keyval{name}{name}\Default!
+    The \acs{IUPAC} name of the substance. This is the only field that
+    \emph{has} to be used. The field's input is parsed with
+    \pkg{chemmacros}' command \cs{iupac}.
+  \keyval{sort}{sort name}
+    If you plan to use the \option{index} option you should specify this field
+    to get the sorting of the index right. This then creates index entries
+    \cs{index}\Marg{\meta{sort field}@\meta{name field}}.
+  \keyval{alt}{alt name}
+    An alternative name. The field's input is parsed with \pkg{chemmacros}'
+    command \cs{iupac}.
+  \keyval{altsort}{sort alt name}
+    This is the same as the \option{sort} field but for the alternative name.
+  \keyval{CAS}{CAS number}
+    The \ac{CAS} number. The input needs to be input in the form
+    \code{\meta{num}-\meta{num}-\meta{num}}.
+  \keyval{PubChem}{PubChem number}
+    The PubChem number.
+\end{options}
+
+The \option{CAS} field processes the number using the macro
+\cs{CAS}\marg{number} which is defined like this:
+\begin{sourcecode}
+  \def\@CAS#1-#2-#3\relax{\iupac{#1-#2-#3}}
+  \NewDocumentCommand\CAS{m}{\@CAS#1\relax}
+\end{sourcecode}
+You're free to redefine it to your needs.
+
+\subsubsection{Style-dependend Fields}
+\substances\ defines the style \substyle{default} (see also
+sections~\ref{sec:options}, \ref{ssec:styles}, and~\ref{sec:default-style})
+which is loaded if no other style has been specified. It defines the following
+additional fields and loads the packages \pkg{chemfig}~\cite{pkg:chemfig} and
+\pkg{siunitx}~\cite{pkg:siunitx}.
+\begin{options}
+  \keyval{formula}{formula}
+    The molecular formula of the substance. The field's input is parsed with
+    \pkg{chemmacros}' command \cs{ch}.
+  \keyval{structure}{structure}
+    The structural formula of the substance. The field's input is parsed with
+    \pkg{chemfig}'s command \cs{chemfig}.
+  \keyval{mp}{melting point}
+    The melting point. The field's entry is input into the \pkg{siunitx}
+    command \cs{SI} in the following way: \\
+    \cs{SI}\marg{field}\Marg{\cs{celsius}}.
+  \keyval{bp}{boiling point}
+    The boiling point. The field's entry is input into the \pkg{siunitx}
+    command \cs{SI} in the following way: \\
+    \cs{SI}\marg{field}\Marg{\cs{celsius}}.
+  \keyval{density}{density}
+    The density. The field's entry is input into the \pkg{siunitx} command
+    \cs{SI} in the following way: \\
+    \cs{SI}\marg{field}\Marg{\cs{gram}\cs{per}\cs{cmc}}.
+  \keyval{phase}{phase}
+    The state of aggregation.
+  \keyval{pKa}{\pKa}
+    The \pKa\ value. The field's entry is input into the \pkg{siunitx} command
+    \cs{num}.
+  \keyval{pKa1}{\pKa[1]}
+    The first of several \pKa\ values. The field's entry is input into the
+    \pkg{siunitx} command \cs{num}.
+  \keyval{pKa2}{\pKa[2]}
+    The second of several \pKa\ values. The field's entry is input into the
+    \pkg{siunitx} command \cs{num}.
+  \keyval{pKb}{\pKb}
+    The \pKb\ value. The field's entry is input into the \pkg{siunitx} command
+    \cs{num}.
+  \keyval{pKb1}{\pKb[1]}
+    The first of several \pKb\ values. The field's entry is input into the
+    \pkg{siunitx} command \cs{num}.
+  \keyval{pKb2}{\pKb[2]}
+    The second of several \pKb\ values. The field's entry is input into the
+    \pkg{siunitx} command \cs{num}.
+  \keyval{pictograms}{csv list of pictograms}
+    The \acs{ghs} pictograms. This field takes a list of pictogram names as
+    they're input into \pkg{ghsystem}'s command
+    \cs{ghspic}~\cite{pkg:ghsystem}.
+  \keyval{H}{csv list of hazard statements}
+    The H statements. This field takes a list of numbers as they're input into
+    \pkg{ghsystem}'s command \cs{ghs}\Marg{h}\marg{number}.
+  \keyval{P}{csv list of precautionary statements}
+    The P statements. This field takes a list of pictogram names as they're
+    input into \pkg{ghsystem}'s command \cs{ghs}\Marg{p}\marg{number}.
+  \keyval{EUH}{csv list of EUH statements}
+    The EUH statements. This field takes a list of pictogram names as they're
+    input into \pkg{ghsystem}'s command \cs{ghs}\Marg{euh}\marg{number}.
+  \keyval{LD50}{\acl{LD50}}
+    The \ac{LD50} in \si{\milli\gram\per\kilo\gram}. The field's entry is
+    input into the \pkg{siunitx} command \cs{SI} in the following way: \\
+    \cs{SI}\marg{field}\Marg{\cs{milli}\cs{gram}\cs{per}\cs{kilo}\cs{gram}}.
+\end{options}
+
+\section{Define Custom Styles}\label{ssec:styles}
+\subsection{Background}
+You might have other needs for fields than the ones defined by \substances\
+and the \substyle{default} style.  \emph{All fields except the required
+  \option{name} field whixh are explained in this manual are defined by the
+  \substyle{default} style.}
+
+You can easily define your own style which means that you save a file with the
+name \code{\substancesstyle{\meta{style}}}. In it you both define the commands
+you need and you declare substance properties with the command
+\cs{DeclareSubstanceProperty} (which is explained in
+section~\ref{sec:declare-new-fields}) to declare your own fields.
+
+Such a style file should start with a \cs{SubstancesStyle} declaration:
+\begin{commands}
+  \command{SubstancesStyle}[\sarg\marg{style name}]
+    This\sinceversion{0.2} declares the style \meta{style name}. The starred
+    version also switches to the expl3 programming environment.  Either way
+    \code{@} has category code~11 in a style file.
+  \command{LoadSubstancesStyle}[\marg{style name}]
+    This\sinceversion{0.2} loads the style \meta{style name}. It can be used
+    inside of a style file.  This can be useful if you want to extend the
+    default style without copy-pasting every definition of the default style.
+    Outside of a style file this command does nothing.
+\end{commands}
+
+The implementation of the \substyle{default} style is shown in
+section~\ref{sec:default-style} as an example.
+
+\subsection{Declare New Fields or Change Existing Fields}\label{sec:declare-new-fields}
+You might want other fields or change the definition of the predefined ones.
+For this there's
+\begin{commands}
+  \command{DeclareSubstanceProperty}[\sarg\marg{field name}\oarg{pre
+    code}\oarg{post code}]
+    This command declares a new property field for a substance. The star makes
+    the property a required one which means an error will be issued if a
+    substance is declared without it. The optional arguments \meta{pre code}
+    and \meta{post code} specify any code that should be input directly before
+    or after the field entry, respectively. The \meta{pre code} may end with a
+    command that takes one mandatory argument. In this case the field entry
+    will be its argument.
+\end{commands}
+
+The following example would define a field \option*{EC} which uses a custom
+command to parse the field entry. The \ac{EC} is assigned to chemical
+substances for regulatory purposes within the European Union by the regulatory
+authorities.
+\begin{sourcecode}
+  \makeatletter
+  \def\@EC#1-#2-#3\relax{#1-#2-#3}
+  \newcommand*\EC[1]{\@EC#1\relax}
+  \makeatother
+  \DeclareSubstanceProperty{EC}[\EC]
+\end{sourcecode}
+For further examples of the usage of pre and post code look at the definition of
+the \option{name} and the \option{mp} field:
+\begin{sourcecode}
+  \DeclareSubstanceProperty*{name}[\iupac]
+  \DeclareSubstanceProperty{mp}[\SI][{\celsius}]
+\end{sourcecode}
+
+\section{Retrieving the Data}
+There are two commands defined by \substances\ that allow the retrieving of
+the data. The command \cs{chem} is intended as user command, the command
+\cs{GetSubstanceProperty} can be used to define your own user command (perhaps
+in your own style file, see section~\ref{ssec:styles}).
+\begin{commands}
+  \command{chem}[\sarg\oarg{pre}\oarg{post}\marg{id}\oarg{property}]
+    If the command \cs{chem} is called without the optional \meta{property}
+    argument the \option{name} entry will be called. The starred version calls
+    the \option{alt} entry if it is defined and the \option{name} entry
+    otherwise. The arguments \meta{pre} and \meta{post} add arbitrary input
+    before or after the output, respectively.
+  \command{GetSubstanceProperty}[\marg{id}\marg{property}]
+    Retrieves \meta{property} for substance \meta{id}.
+\end{commands}
+
+All of the next examples use the data defined in the file
+\code{substances-examples.sub} that is part of this package, see
+section~\ref{sec:examples}.
+\begin{example}
+  \chem{H2SO4}[structure] \newline
+  \chem{H2SO4} has the boiling point $\chem[T_b =]{H2SO4}[bp]$ and a
+  density of $\chem[\rho =]{H2SO4}[density]$.
+
+  Compare the melting points of methane and ethane,
+  $\chem[T_m=]{methane}[mp]$ and $\chem[T_m=]{ethane}[mp]$,
+  with the boiling points $\chem[T_b=]{methane}[bp]$ and
+  $\chem[T_b=]{ethane}[bp]$.
+ 
+  \chem{NaCl} has the \ac{CAS} number \chem{NaCl}[CAS].
+  
+  \chem{acetone} (\chem*{acetone}) is the most simple ketone:
+ 
+  \chem{acetone}[structure]
+\end{example}
+
+The following code creates table~\ref{tab:methane}.
+\begin{example}[outside]
+  \begin{table}[htp]
+    \centering
+    \ghssetup{hide}
+    \sisetup{scientific-notation=fixed,fixed-exponent=0,per-mode=symbol}
+    \begin{tabular}{l>{\raggedright\arraybackslash}p{.6\linewidth}}
+      \toprule
+        name              & \chem{methane} \\
+        formula           & \chem{methane}[formula] \\
+                          & \chem{methane}[structure] \\
+      \midrule
+        \ac{CAS}          & \chem{methane}[CAS] \\
+        PubChem           & \chem{methane}[PubChem] \\
+      \midrule
+        boiling point     & \chem{methane}[bp] \\
+        melting point     & \chem{methane}[mp] \\
+        density           & \chem{methane}[density] \\
+        molar mass        & \chem{methane}[mass] \\
+      \midrule
+                          & \chem{methane}[pictograms] \\
+        H statements      & \chem{methane}[H] \\
+        P statements      & \chem{methane}[P] \\
+      \bottomrule
+    \end{tabular}
+    \caption{\label{tab:methane}All properties of \chem{methane} that have
+      been saved in the example database.}
+  \end{table}
+\end{example}
+
+\section{Additional Commands}
+\substances\ provides a few commands that maybe are useful in building custom
+macros for styles. A field exists if it has been defined with
+\cs{DeclareSubstanceProperty} regardless if it has been used or not. A
+substance exists if it has been defined with \cs{DeclareSubstance}.
+
+\begin{commands}
+  \command{GetSubstanceProperty}[\marg{id}\marg{field}]
+    Retrieve the property specified in \meta{field} for substance \meta{id}.
+    This command is \emph{not} expandable.
+  \expandable\command{RetrieveSubstanceProperty}[\marg{id}\marg{field}]
+    The same as \cs{GetSubstanceProperty} but expandable.
+  \expandable\command{ForAllSubstancesDo}[\marg{code}]
+    Loops through all existing substances. Inside \meta{code} \code{\#1} may
+    be used to refer to the \meta{id} of the current substance. This command
+    is expandable.
+  \expandable\command{AllSubstancesSequence}
+    A sequence of all substances. This is a sequence of balanced groups each
+    containing the \meta{id} of a substance. This command is expandable.
+  \expandable\command{AllSubstancesClist}
+    A comma separated list of all substances. Every \meta{id} is separated
+    from the next with a comma. This command is expandable.
+  \expandable\command{IfSubstancePropertyTF}[\marg{id}\marg{field}\marg{true
+    code}\marg{false code}]
+    Tests if the property \meta{field} is defined for the substance \meta{id}
+    and returns either \meta{true code} or \meta{false code}. This command is
+    expandable.
+  \expandable\command{IfSubstancePropertyT}[\marg{id}\marg{field}\marg{true
+    code}]
+    Tests if the property \meta{field} is defined for the substance \meta{id}
+    and returns \meta{true code} if it is. This command is expandable.
+  \expandable\command{IfSubstancePropertyF}[\marg{id}\marg{field}\marg{false
+    code}]
+    Tests if the property \meta{field} is defined for the substance \meta{id}
+    and returns \meta{false code} if it isn't. This command is expandable.
+  \expandable\command{IfSubstanceFieldTF}[\marg{field}\marg{true
+    code}\marg{false code}]
+    Tests if the property \meta{field} exists and returns either
+    \meta{true code} or \meta{false code}. This command is expandable.
+  \expandable\command{IfSubstanceFieldT}[\marg{field}\marg{true code}]
+    Tests if the property \meta{field} exists and returns \meta{true code} if
+    it does. This command is expandable.
+  \expandable\command{IfSubstanceFieldF}[\marg{field}\marg{false code}]
+    Tests if the property \meta{field} exists and returns \meta{false code} if
+    it doesn't. This command is expandable.
+  \expandable\command{IfSubstanceExistTF}[\marg{id}\marg{true code}\marg{false
+    code}]
+    Tests if the substance \meta{id} exists and returns either \meta{true
+      code} or \meta{false code}. This command is expandable.
+  \expandable\command{IfSubstanceExistT}[\marg{id}\marg{true code}]
+    Tests if the substance \meta{id} exists and returns \meta{true code} if
+    it does. This command is expandable.
+  \expandable\command{IfSubstanceExistF}[\marg{id}\marg{false code}]
+    Tests if the substance \meta{id} exists and returns \meta{false code} if
+    it doesn't. This command is expandable.
+\end{commands}
+
+\begin{example}
+  Just to demonstrate how these commands can be used. And to get
+  our demonstration index filled.\par
+  \newcounter{substances}
+  \ForAllSubstancesDo{%
+    \ifnum0=\value{substances}\relax
+    \else,
+    \fi
+    \stepcounter{substances}%
+    \chem{#1}%
+    \IfSubstancePropertyT{#1}{alt}{ (\chem*{#1})}%
+  }
+\end{example}
+
+\section{Create an Index}\label{sec:index}
+When \substances\ is called with \keyis{index}{true} the command \cs{chem}
+will add index entries each time it is used. In this case the entries of the
+fields \option{name}, \option{sort}, \option{alt} and \option{altsort} will be
+expanded during the process. You should keep that in mind if some error
+arises. It might be due to a \cs*{textbf} or similar in your database. In this
+case you either need to replace it with some robust command or put a
+\cs*{noexpand} in front of it.
+
+Alternative names as specified in the \option{alt} also get an index entry
+with a reference to the one of the corresponding \option{name} field. The
+entry of the \option{name} field in this case gets the \option{alt} name
+appended in braces.
+
+This behaviour is not customizable for the time being. It is planned for future
+versions of this package, though.
+
+As a demonstration an index for all chemicals used in this documentation is
+created with the help of the package \pkg{imakeidx}~\cite{pkg:imakeidx}.
+
+\subsection{Formatting Commands}
+The index entries are formatted with the following commands. You can redefine
+them to your needs. If you do make sure they have the same number of required
+arguments and are expandable!
+\begin{commands}
+  \expandable\command{SubstanceIndexNameEntry}[\marg{sort}\marg{name}]
+    Formats the name if no \option{alt} field is given. The default definition
+    is \code{\#1@\#2}.
+  \expandable\command{SubstanceIndexNameAltEntry}[\marg{sort}\marg{name}\marg{alt}]
+    Formats the name if the \option{alt} field is given. The default definition is
+    \code{\#1@\#2 (\#3)}.
+  \expandable\command{SubstanceIndexAltEntry}[\marg{alt sort}\marg{name}\marg{alt}]
+    Formats the entry for the \option{alt} field.  The default definition is
+    \code{\#1@\#3|see\#2}
+\end{commands}
+
+\subsection{Using makeidx}
+Using the option \keyis{index}{true} with the standard way to create an index
+will add the entries \cs{index}\marg{name} to the index. This means you would
+mix them with other entries if you have any. Below a sample document is shown.
+
+\begin{sourcecode}
+  \documentclass{article}
+  \usepackage[T1]{fontenc}
+  \usepackage[index]{substances}
+  \LoadSubstances{substances-examples}
+
+  \usepackage{makeidx}
+  \makeindex
+  \begin{document}
+
+  \newcounter{substances}
+  \ForAllSubstancesDo{%
+    \ifnum0=\value{substances}\relax
+    \else, \fi
+    \stepcounter{substances}\chem{#1}
+  }
+
+  \printindex
+  \end{document}
+\end{sourcecode}
+
+\subsection{Using \pkg*{splitidx}}
+Maybe a seperate index for the chemicals will make more sense. In this case
+you could use the package \pkg{splitidx}~\cite{pkg:splitidx}. \substances\
+will recognize this and create \cs{sindex}\Oarg{\cs*{jobname}-chem}\marg{name}
+entries each time \cs{chem} is used.
+
+\begin{sourcecode}
+  \documentclass{article}
+  \usepackage[T1]{fontenc}
+  \usepackage[index]{substances}
+  \LoadSubstances{substances-examples}
+  
+  \usepackage{splitidx}
+  \makeindex
+  \newindex[Chemicals]{\jobname-chem}
+  \begin{document}
+  
+  \newcounter{substances}
+  \ForAllSubstancesDo{%
+    \ifnum0=\value{substances}\relax
+    \else, \fi
+    \stepcounter{substances}\chem{#1}
+  }
+
+  \printindex[\jobname-chem]
+  \end{document}
+\end{sourcecode}
+
+\subsection{Using \pkg*{imakeidx}}
+Another way to create multiple indexes is the package
+\pkg{imakeidx}~\cite{pkg:imakeidx}. \substances\ recognizes its usage and
+creates index entries \cs{index}\Oarg{\cs*{jobname}-chem}\marg{name}.
+
+\begin{sourcecode}
+  \documentclass{article}
+  \usepackage[T1]{fontenc}
+  \usepackage[index]{substances}
+  \LoadSubstances{substances-examples}
+
+  \usepackage{imakeidx}
+  \makeindex[name=\jobname-chem,title=Chemicals]
+  \begin{document}
+  
+  \newcounter{substances}
+  \ForAllSubstancesDo{%
+    \ifnum0=\value{substances}\relax
+    \else, \fi
+    \stepcounter{substances}\chem{#1}
+  }
+
+  \printindex[\jobname-chem]
+  \end{document}
+\end{sourcecode}
+
+\part{Appendix}
+\appendix
+
+\section{The Default Style}\label{sec:default-style}
+The following code shows the contents of the file
+\code{\substancesstyle{default}} which defines the \substyle{default} style
+which is part of this package.
+
+\implementation[basicstyle=\ttfamily\footnotesize]{\substancesstyle{default}}
+
+\section{The Example Database}\label{sec:examples}
+The following code shows the example database
+\code{\substancesdatabase{substances-examples}} that is part of this package.
+
+\implementation[basicstyle=\ttfamily\footnotesize]{\substancesdatabase{substances-examples}}
+
+\printindex[\jobname-chem]
+
+\end{document}

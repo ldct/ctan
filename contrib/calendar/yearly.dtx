@@ -1,0 +1,340 @@
+%\iffalse
+%
+% File yearly.dtx
+% Copyright (C) 1996 by Frank Bennett.  All rights reserved.
+%
+% This sub-package is provided for demonstration
+% purposes.   Please feel free to edit it in any way whatsoever,
+% but do not distribute it in an altered condition to others
+% without permission.
+%
+% For error reports, or offers to help make this a more powerful,
+% friendlier, and altogether more thrilling package, please contact me on
+% fb@soas.ac.uk
+%
+%<*dtx>
+          \ProvidesFile{yearly.dtx}
+%</dtx>
+%<style,class>\NeedsTeXFormat{LaTeX2e}[1995/06/01]
+%<style>\ProvidesPackage{yearly}
+%<style>          [1997/11/06 07:33:21 2.1.1.6 Trivial yearly calendar (Frank Bennett)]
+% \fi
+%
+% \def\fileversion{2.1.1.6}
+% \def\filedate{1997/11/06 07:33:21}
+%
+%
+% \iffalse
+%<*driver>
+\documentclass{ltxdoc}
+%\CodelineIndex
+%\EnableCrossrefs
+\begin{document}
+\OnlyDescription    % Comment out for implementation details
+\DocInput{yearly.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \changes{v1.0}{1996/12/26}{Initial Version}
+% \changes{v1.1}{1997/10/18}{New public release of all styles
+%  and modules incorporating global bug-fixes.}
+%
+%\iffalse
+% Source tree moved under RCS
+% ---------------------------
+% yearly.dtx,v
+% Revision 2.1.1.6  1997/11/06 07:33:21  root
+% Changed \yrly@theweekday to \theweekday.
+%
+% Revision 2.1.1.5  1997/11/06 07:31:25  root
+% Changed erroneous reference to \mon@firstday to
+% \yrly@firstday
+%
+% Revision 2.1.1.4  1997/11/06 07:30:04  root
+% Added declaration of \yrly@firstday
+%
+% Revision 2.1.1.3  1997/11/06 07:27:56  root
+% Second round of changes necessary to hook up the three new
+% options.
+%
+% Revision 2.1.1.2  1997/11/06 07:19:47  root
+% First draft of changes to introduce firstday, labels and
+% title options.
+%
+% Revision 2.1.1.1  1997/11/04 05:06:07  root
+% Development branch
+%
+% Revision 2.1  1997/11/01 14:43:45  bennett
+% Release code.
+%
+% Revision 1.3  1997/10/29 20:15:54  bennett
+% *** empty log message ***
+%
+% Revision 1.2  1997/10/29 15:41:56  root
+% Globalized assignments to dates@date, dates@day and dates@month.
+% Apparently save size overflow problems persist with the demo
+% of this style on small systems.  Drat.
+%
+% Revision 1.1  1997/10/29 08:17:52  root
+% Initial revision
+%
+%\fi
+%
+% \title{User's Guide to the Yearly Calendar package\thanks{This file is version number
+%    \fileversion{}.  It was last revised on
+%    \filedate{}.}}
+%
+% \author{Frank G. Bennett, Jr.}
+%
+%  \maketitle
+%
+% \setcounter{StandardModuleDepth}{1}
+% \DeleteShortVerb{\|}
+% \MakeShortVerb{\"}
+%
+% \begin{abstract}
+% \noindent This package makes a yearly calendar
+% on one side of A4.
+% \end{abstract}
+%
+%
+% \CheckSum{171}
+%
+% Please see the file \texttt{calguide.tex} for documentation
+% on this calendar style.
+%
+%\StopEventually{\PrintIndex}
+%
+% \section{The Macros}
+% We use the usual language options.
+%    \begin{macrocode}
+\input calopts.cfg
+\InputIfFileExists{dates.cfg}{}{}
+\ProcessOptions
+%    \end{macrocode}
+% Load some useful code.
+%    \begin{macrocode}
+%<*style>
+\RequirePackage{calendar}
+%    \end{macrocode}
+% Define some key values for use by the calendar environment.
+%    \begin{macrocode}
+\define@key{opt}{title}{%
+  \def\yrly@title{#1}}
+\define@key{opt}{labels}{%
+  \@storelabels#1,,{}}
+\define@key{opt}{firstday}{%
+  \yrly@firstday=#1}
+\def\yrly@title{\theyear}
+\newcount\yrly@firstday
+\yrly@firstday=0\relax
+%    \end{macrocode}
+% Define a utility macro for use by the \texttt{labels} key.
+% This stores a comma-delimited list of labels to a single
+% macro, which can then be used as a line in the table
+% environment that makes up the calendar.
+%    \begin{macrocode}
+\newtoks\yrly@tempreg@a
+\newcount\yrly@tempcount
+\def\@storelabels{%
+  \def\yrly@labeltext{}%
+  \@@storelabels}
+\def\@@storelabels#1,#2#{%
+  \ifcat$#1$%
+    \yrly@tempreg@a=\expandafter\expandafter\expandafter{%
+      \expandafter\@gobble\yrly@labeltext}%
+    \edef\yrly@labeltext{\the\yrly@tempreg@a}%
+    \let\next\@gobble%
+  \else%
+    \let\next\@@storelabels%
+    \yrly@tempreg@a=\expandafter{\yrly@labeltext}%
+    \protected@edef\yrly@labeltext{\the\yrly@tempreg@a&#1}%
+  \fi%
+    \next#2{}}
+%    \end{macrocode}
+% The environment is defined using "\newcalendar" and 17 arguments.
+%    \begin{macrocode}
+\newcalendar%
+%    \end{macrocode}
+% The name to be used in calling the calendar style.
+%    \begin{macrocode}
+ {yearly}
+%    \end{macrocode}
+% A command or group of commands used to print.  This should end in a command
+% that takes one argument.
+% If we're making DVI,
+% we need to use the command "\cal@insert" to strip away the braces that surround this
+% in the Calendar style internals.
+%    \begin{macrocode}
+ {\cal@insert}
+%    \end{macrocode}
+% First day.
+% This is expressed as an integer.
+% Sunday is "0", Saturday is "6".  Set this to "7" or more to
+% start the calendar and each line without any padding to
+% line up the day of the week.
+%    \begin{macrocode}
+ {\yrly@firstday}
+%    \end{macrocode}
+% Group Length.
+% This is an integer, or a macro that expands to an integer.
+% The table generator will increment a group counter by 1
+% each time a new ``item'' is output.  It is set to 0 every
+% time a new group is started.
+%
+%    \begin{macrocode}
+ {\dates@days}
+%    \end{macrocode}
+% Subgroup length.
+% This may be an integer or a macro that expands to an integer.
+% The table generator will increment a subgroup counter by 1
+% each time a new ``item'' is output.  It is set to 0 every
+% time a new subgroup is started.
+%    \begin{macrocode}
+ {7}
+%    \end{macrocode}
+% Item separator.
+% The item separator is placed before every item in the table
+% but the first in a subgroup.
+%    \begin{macrocode}
+ {&}
+%    \end{macrocode}
+% Increment event.
+% The date can be incremented after every item, every subgroup
+% or every group.  The letters I, S and G carry these meanings,
+% respective.
+%    \begin{macrocode}
+ {I}
+%    \end{macrocode}
+% Calendar header.
+% Text to issue at the start of a calendar.
+% You can call on this elsewhere under the nickname
+% "\cal@header"
+%    \begin{macrocode}
+ {\begin{tabular}[t]{ccccccc}%
+    \multicolumn{7}{c}{\textbf{\themonth}}\\\hline%
+    \yrly@labeltext\\\hline}%
+%    \end{macrocode}
+%
+% \subsubsection{Calendar Footer}
+% Commands and text for the end of the calendar.  You
+% can call on this in other macros as "\cal@footer".
+%
+%    \begin{macrocode}
+ {\end{tabular}}
+%    \end{macrocode}
+%
+% \subsubsection{Group Break}
+% This is issued at the end of every group but the last.
+%
+%    \begin{macrocode}
+ {\cal@footer%
+  \ifodd\thumbnails%
+    \\%
+  \else%
+    \rule{0.25in}{0pt}%
+  \fi%
+  \advance\thumbnails by 1%
+  \cal@header}
+%    \end{macrocode}
+%
+% \subsubsection{Sub-group Break}
+% This is issed at the end of every subgroup but the last
+% one in a calendar or a group.
+%
+%    \begin{macrocode}
+ {\\}
+%    \end{macrocode}
+%
+% \subsubsection{Range Initialization}
+% Preliminary macros to run before scanning the
+% overall range go here.
+%
+%    \begin{macrocode}
+ {}
+%    \end{macrocode}
+%
+% \subsubsection{Range Postprocessing}
+% These commands massage the date scanned for use in the
+% current calendar.
+%
+%    \begin{macrocode}
+ {\global\dates@month=1%
+  \global\dates@day=1%
+  \dates@fix%
+  \cal@range@start\dates@date%
+  \message{^^JStart: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+  \global\dates@month=12%
+  \global\dates@day=31%
+  \dates@fix%
+  \caldate%
+  \cal@range@end\dates@date%
+  \message{^^JEnd: \theshortweekday\space%
+    \theday\space\theshortmonth\space\theyear}%
+  \global\dates@date=\cal@range@start%
+  \caldate%
+  \addtolength{\tabcolsep}{-0.5\tabcolsep}%
+  \newcount\thumbnails%
+  \@ifundefined{yrly@labeltext}{%
+    \def\yrly@defaultlabels{}%
+    \yrly@tempcount=1%
+    \global\advance\dates@date by-\dates@weekd%
+    \global\advance\dates@date by\yrly@firstday%
+    \caldate%
+    \loop%
+      \yrly@tempreg@a=\expandafter{\yrly@defaultlabels}%
+      \edef\yrly@defaultlabels{\the\yrly@tempreg@a\theshortweekday,}%
+    \ifnum\yrly@tempcount<7%
+     \global\advance\dates@date by1%
+     \caldate%
+     \advance\yrly@tempcount by 1\relax%
+    \repeat%
+    \expandafter\@storelabels\yrly@defaultlabels,,{}%
+    \dates@date\cal@range@start%
+    \caldate}%
+    {}%
+  \yrly@title\par\bigskip}%
+%    \end{macrocode}
+%
+% \subsubsection{Entry Separator}
+% This is placed before every entry but the first in a list.
+%
+%    \begin{macrocode}
+ {}%
+%    \end{macrocode}
+%
+% \subsubsection{Item Initialization}
+% Commands that set registers and perform other non-printable
+% operations on a date by date basis should go here.  This can be used to prepare
+% chunks of extractable text to place in a calendar that
+% is not being sent to DVI output.
+%
+%    \begin{macrocode}
+  {\getanycolor}%
+%    \end{macrocode}
+%
+% \subsubsection{Entry Initialization}
+% Commands that are dumped on DVI to define the
+% macro "\cal@entry@text" for every event entry
+% that matches the conditions, if any, given to
+% "\cal@get@appointments" or "\cal@get@events".
+% The content of this macro is then assembled with
+% other matching items in "\theappointments"
+% and "\theevents", so that it can be dropped
+% into the Item Text field as literal text.  And
+% voil\`a, we can write HTML in \LaTeX.
+%
+%    \begin{macrocode}
+  {}%
+%    \end{macrocode}
+%
+% \subsubsection{Item Text}
+% And at last, that note we've been looking for!
+%
+%    \begin{macrocode}
+ {\cal@textcolor{\calcolor}{\theday}}
+%</style>
+%    \end{macrocode}
+% \Finale \PrintChanges

@@ -1,0 +1,345 @@
+% ----------------------------------------------------------------------------
+% the XSIM package - environments module
+% 
+%   eXercise Sheets IMproved
+% 
+% ----------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://github.com/cgnieder/xsim
+% E-Mail: contact@mychemistry.eu
+% ----------------------------------------------------------------------------
+% Copyright 2017 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% ----------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% ----------------------------------------------------------------------------
+\XSIMmodule{environments}{generic code for exercise and solution environments}
+
+\xsim_load_modules:n {templates,verbwrite}
+
+\tl_new:N   \l__xsim_file_name_signature_tl
+\tl_new:N   \l__xsim_file_path_tl
+\tl_new:N   \l__xsim_file_path_and_name_tl
+\tl_new:N   \l__xsim_file_name_tl
+\bool_new:N \l__xsim_options_given_bool
+\bool_new:N \l__xsim_insert_mode_bool
+
+% ----------------------------------------------------------------------------
+
+\keys_define:nn {xsim}
+  { path .tl_set:N = \l__xsim_file_path_tl }
+
+% ----------------------------------------------------------------------------
+
+\tl_const:Nn \c__xsim_comment_line_tl { \c__xsim_percent_char_tl }
+\tl_const:Nn \c__xsim_comment_line_fill_tl { \prg_replicate:nn {72} {-} }
+\tl_const:Nn \c__xsim_comment_line_indent_tl { \c_space_tl \c_space_tl }
+
+\cs_new:Npn \__xsim_comment_line_and_feed:n #1
+  { \__xsim_comment_line:n {#1} ^^J }
+
+\cs_new:Npn \__xsim_comment_line:n #1
+  {
+    \c__xsim_comment_line_tl
+    \tl_if_blank:nF {#1} { \c_space_tl }
+    #1
+  }
+
+\cs_new:Npn \__xsim_two_digits:n #1
+  { \int_compare:nT { #1 < 10 } {0} \int_eval:n {#1} }
+  
+% #1: type
+% #2: id
+% #3: exercise|solution
+\cs_new_protected:Npn \__xsim_set_file_signature:nnn #1#2#3
+  { \tl_set:Nn \l__xsim_file_name_signature_tl {#1-#2-#3} }
+\cs_generate_variant:Nn \__xsim_set_file_signature:nnn {nx,nV}
+
+\tl_set:Nn \l__xsim_file_name_tl
+  { \c_sys_jobname_str - \l__xsim_file_name_signature_tl -body.tex }
+
+\tl_set:Nn \l__xsim_file_path_and_name_tl
+  {
+    \tl_if_blank:VF \l__xsim_file_path_tl
+      { \l__xsim_file_path_tl / }
+    \l__xsim_file_name_tl
+  }
+
+% #1: type
+% #2: id
+% #3: exercise|solution
+% #4: file name
+% #5: path
+\cs_new_protected:Npn \__xsim_file_info:nnnnn #1#2#3#4#5
+  {
+    \tl_set:Nn \l_xsim_file_begin_tl
+      {
+        \__xsim_comment_line_and_feed:n { \c__xsim_comment_line_fill_tl }
+        \__xsim_comment_line_and_feed:n {file~ `#4'}
+        \tl_if_blank:nF {#5}
+          {
+            \__xsim_comment_line_and_feed:n
+              { \c__xsim_comment_line_indent_tl in~ folder~ `#5/'}
+          }
+        \__xsim_comment_line_and_feed:n {}
+        \__xsim_comment_line_and_feed:n
+          {
+            \c__xsim_comment_line_indent_tl
+            \c__xsim_comment_line_indent_tl
+            #3~ of~ type~ `#1'~ with~ id~ `#2'
+          }
+        \__xsim_comment_line_and_feed:n {}
+        \__xsim_comment_line_and_feed:n
+          {generated~ by~ the~ `\@currenvir'~ environment~ of~ the}
+        \__xsim_comment_line_and_feed:n
+          {
+            \c__xsim_comment_line_indent_tl
+            `xsim'~ package~ v \c_xsim_version_tl
+            \c_space_tl (\c_xsim_date_tl)
+          }
+        \__xsim_comment_line_and_feed:n
+          {
+            from~ source~ `\c_sys_jobname_str'~ on~
+            \int_use:N \c_sys_year_int /
+            \__xsim_two_digits:n { \c_sys_month_int } /
+            \__xsim_two_digits:n { \c_sys_day_int } ~
+            \msg_line_context:
+          }
+        \__xsim_comment_line:n { \c__xsim_comment_line_fill_tl }
+      }
+  }
+\cs_generate_variant:Nn \__xsim_file_info:nnnnn {nnnVV}
+
+% ----------------------------------------------------------------------------
+
+% #1: type
+% #2: id
+% #3: exercise|solution
+\cs_new_protected:Npn \xsim_save_environment_body:nnn #1#2#3
+  {
+    \xsim_verbose:n
+      { Starting~ to~ write~ #3~ environment~ type~ `#1'~ id~ `#2' }
+    \__xsim_set_file_signature:nnn {#1} {#2} {#3}
+    \__xsim_file_info:nnnVV {#1} {#2} {#3}
+      \l__xsim_file_name_tl
+      \l__xsim_file_path_tl
+    \int_zero:N \l_xsim_line_gobble_int
+    \xsim_file_write_start:nV
+      { \l__xsim_options_given_bool }
+      \l__xsim_file_path_and_name_tl
+  }
+
+\cs_new_protected:Npn \xsim_save_environment_body_end:
+  { \xsim_file_write_stop: }
+
+% ----------------------------------------------------------------------------
+% #1: type
+% #2: exercise|solution
+% #3: hook
+\cs_new_protected:Npn \xsim_new_hook:nnn #1#2#3
+  {
+    \xsim_verbose:n { Defining~ new~ #1~ (#2)~ hook~ `#3' }
+    \tl_new:c {l__xsim_#1_#2_#3_hook_tl}
+    \keys_define:nx {xsim}
+      {
+        \xsim_get_parameter:nn {#1} {#2-env}/#3-hook .tl_set:N =
+          \exp_not:c {l__xsim_#1_#2_#3_hook_tl}
+      }
+  }
+
+% #1: type
+% #2: exercise|solution
+% #3: hook
+\cs_new:Npn \xsim_use_hook:nnn #1#2#3
+  { \exp_not:v {l__xsim_#1_#2_#3_hook_tl} }
+
+% #1: type
+% #2: exercise|solution
+% #3: hook
+% #4: code
+\cs_new_protected:Npn \xsim_set_hook:nnnn #1#2#3#4
+  {
+    \xsim_verbose:n { Setting~ #1~ (#2)~ hook~ `#3' }
+    \tl_set:cn {l__xsim_#1_#2_#3_hook_tl} {#4}
+  }
+
+% #1: type
+% #2: exercise|solution
+% #3: hook
+% #4: code
+\cs_new_protected:Npn \xsim_addto_hook:nnnn #1#2#3#4
+  {
+    \xsim_verbose:n { Adding~ to~ #1~ (#2)~ hook~ `#3' }
+    \tl_put_right:cn {l__xsim_#1_#2_#3_hook_tl} {#4}
+  }
+
+% ----------------------------------------------------------------------------
+
+% #1: type
+% #2: id
+% #3: exercise|solution
+\cs_new_protected:Npn \xsim_start_environment:nnn #1#2#3
+  { \xsim_save_environment_body:nnn {#1} {#2} {#3} }
+\cs_generate_variant:Nn \xsim_start_environment:nnn {nV}
+
+% #1: type
+% #2: id
+% #3: exercise|solution
+\cs_new_protected:Npn \xsim_stop_environment:nnn #1#2#3
+  {
+    \xsim_save_environment_body_end:
+    \xsim_if_print:nnnTF {#1} {#2} {#3}
+      { \xsim_typeset_environment:nnn {#1} {#2} {#3} }
+      { \xsim_use_hook:nnn {#1} {#3} {print-false} }
+  }
+\cs_generate_variant:Nn \xsim_stop_environment:nnn {nV}
+
+% #1: type
+% #2: id
+% #3: exercise|solution
+\cs_new_protected:Npn \xsim_typeset_environment:nnn #1#2#3
+  {
+    \xsim_verbose:n
+      { Typesetting~ #3~ environment~ type~ `#1'~ id~ `#2' }
+    \use:x
+      {
+        \exp_not:N \par
+        \xsim_use_hook:nnn {#1} {#3} {pre}
+        \xsim_use_template:nn
+          {begin}
+          { \xsim_get_parameter:nn {#1} {#3-template} }
+        \xsim_use_hook:nnn {#1} {#3} {begin}
+        \file_if_exist:nTF { \exp_not:V \l__xsim_file_path_and_name_tl }
+          { \file_input:n { \exp_not:V \l__xsim_file_path_and_name_tl } }
+          {
+            \xsim_verbose:n
+              { File~ `\l__xsim_file_path_and_name_tl'~ doesn't~ exist. }
+          }
+        \xsim_use_hook:nnn {#1} {#3} {end}
+        \xsim_use_template:nn
+          {end}
+          { \xsim_get_parameter:nn {#1} {#3-template} }
+        \xsim_use_hook:nnn {#1} {#3} {post}
+        \exp_not:N \par
+      }
+  }
+
+% #1: type
+% #2: id
+% #3: options
+% #4: exercise|solution
+\cs_new_protected:Npn \xsim_insert:nnnn #1#2#3#4
+  {
+    \__xsim_set_file_signature:nnn {#1} {#2} {#4}
+    \file_if_exist:VTF \l__xsim_file_path_and_name_tl
+      {
+        \xsim_verbose:n
+          { Inserting~ #4~ type~ `#1'~ id~ `#2'. }
+        \group_begin:
+          \xsim_insert_mode:
+          \use:c {xsim_start_#4:nn} {#1} {#3}
+          \tl_set:Nn \ExerciseType {#1}
+          \tl_set:Nn \ExerciseID {#2}
+          \str_if_eq:nnT {#4} {exercise}
+            {
+              \xsim_if_boolean_property:nnnF {#1} {#2} {used}
+                {
+                  \xsim_step_exercise_counter:nn {#1} {#2}
+                  \xsim_set_properties:nnx {#1} {#2}
+                    {
+                      page-value = \arabic{page} ,
+                      page = \thepage ,
+                      section-value = \arabic{section} ,
+                      section = \thesection
+                    }
+                }
+              \xsim_if_property_exist:nT {chapter}
+                {
+                  \xsim_set_properties:nnx {#1} {#2}
+                    {
+                      chapter-value = \arabic{chapter} ,
+                      chapter = \thechapter
+                    }
+                }
+              \xsim_set_properties:nnn {#1} {#2}
+                { print=true , used=true }
+            }
+          \use:x
+            {
+              \xsim_use_hook:nnn {#1} {#4} {pre}
+              \xsim_use_template:nn
+                {begin}
+                { \xsim_get_parameter:nn {#1} {#4-template} }
+              \xsim_use_hook:nnn {#1} {#4} {begin}
+              \file_input:n { \exp_not:V \l__xsim_file_path_and_name_tl }
+              \xsim_use_hook:nnn {#1} {#4} {end}
+              \xsim_use_template:nn
+                {end}
+                { \xsim_get_parameter:nn {#1} {#4-template} }
+              \xsim_use_hook:nnn {#1} {#4} {post}
+            }
+        \group_end:
+      }
+      {
+        \xsim_verbose:n
+          { File~ `\l__xsim_file_path_and_name_tl'~ doesn't~ exist. }
+      }
+  }
+\cs_generate_variant:Nn \xsim_insert:nnnn {nV,VV,nnnV}
+
+\prg_new_conditional:Npnn \xsim_if_insert_mode: {T,F,TF}
+  {
+    \bool_if:NTF \l__xsim_insert_mode_bool
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
+
+\cs_new_protected:Npn \xsim_insert_mode:
+  { \bool_set_true:N \l__xsim_insert_mode_bool }
+
+% ----------------------------------------------------------------------------
+
+% #1: type
+% #2: exercise|solution
+\cs_new_protected:Npn \xsim_new_environment:nn #1#2
+  {
+    \xsim_verbose:n { Defining~ #2~ environment~ type~ `#1'. }
+    \xsim_new_hook:nnn {#1} {#2} {pre}
+    \xsim_new_hook:nnn {#1} {#2} {begin}
+    \xsim_new_hook:nnn {#1} {#2} {end}
+    \xsim_new_hook:nnn {#1} {#2} {post}
+    \xsim_new_hook:nnn {#1} {#2} {print-false}
+    \NewDocumentEnvironment
+      { \xsim_get_parameter:nn {#1} {#2-env} } {o}
+      {
+        \IfNoValueTF {##1}
+          {
+            \bool_set_false:N \l__xsim_options_given_bool
+            \use:c {xsim_start_#2:nn} {#1} {}
+          }
+          {
+            \bool_set_true:N \l__xsim_options_given_bool
+            \use:c {xsim_start_#2:nn} {#1} {##1}
+          }
+        \xsim_start_environment:nVn {#1} \g_xsim_exercise_id_tl {#2}
+      }
+      {
+        \xsim_stop_environment:nVn {#1} \g_xsim_exercise_id_tl {#2}
+        \use:c {xsim_stop_#2:n} {#1}
+      }
+  }
+
+% ----------------------------------------------------------------------------
+\tex_endinput:D

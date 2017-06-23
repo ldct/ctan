@@ -1,0 +1,587 @@
+eval '(exit $?0)' && eval 'exec perl -S $0 ${1+"$@"}' && eval 'exec perl -S $0 $argv:q' # -*-perl-*-
+        if 0;
+# The expression in the previous line replaces the unix specific line 
+# {#!/usr/bin/perl}.   
+# ps2eps - convert PostScript to EPS (Encapsulated PostScript) files
+# -------------------------------------------------------------------
+# (C)opyright 1999-2002 Roland Bless
+#
+# This program is free software; you can redistribute it and/or modify     
+# it under the terms of the GNU General Public License as published by     
+# the Free Software Foundation; either version 2 of the License, or        
+# (at your option) any later version.                                      
+#                                                                          
+# This program is distributed in the hope that it will be useful,          
+# but WITHOUT ANY WARRANTY; without even the implied warranty of           
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+# GNU General Public License for more details.                             
+#                                                                          
+# You should have received a copy of the GNU General Public License        
+# along with this program; if not, write to the Free Software              
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Author: Roland Bless
+# Send bug reports to roland@bless.de
+# -------------------------------------------------------------------
+# Additional filtering is done when Windows generated PostScript files
+# are processed. Some instructions will otherwise lead to bad output
+# if EPS-file gets embedded into other PostScript files.
+# Requirements:
+# + perl
+# + gs   (ghostscript supporting pbm output)
+# + bbox (a little C program [ANSI-C - should work on every platform]
+#         for calculation of the actual BoundingBox)
+# -------------------------------------------------------
+# $Id: ps2eps,v 1.39 2002/07/10 09:50:28 bless Exp $
+# -------------------------------------------------------
+$prgname= "ps2eps";
+$ghostscriptname= "gs";
+$bboxname= "bbox";
+$version= '$Id: ps2eps,v 1.39 2002/07/10 09:50:28 bless Exp $'; #'
+$insertPScode= 1;     # Insert surrounding Postscript code
+$infhandle = STDIN;   # Standard input is the default input file
+$outfhandle = STDOUT; # Standard output is default output if STDIN is input
+$infname= '-';
+$outfname= '-';
+$forceoverwrite= 0;   # do not overwrite existing files
+$ignoreBB= 0;         # ignore existing Bounding Box comment
+$removeDSC= 1;        # remove Adobe document structure comments
+$removeADO= 1;        # remove Adobe printer Driver console Output [Page: ...]
+$ignoreEOFDSC= 0;     # ignore %%EOF DSC hint
+$removePreview= 0;    # remove preview
+$quiet= 0;            # write progress to stdout
+$resolution= 144;     # resolution for bounding box calculation is 2x72 dpi
+$trytofixps= 1;       # try to fix postscript code
+$forcefixps= 0;       # fix postscript code unconditionally if eq 1
+$clip=0;              # do not clip
+$inch=2.54;           # one inch is 2.54cm
+$fullcolors= 1;       # use ppm format (24-bit full color)
+$trailerseen= 0;      # Trailer comment seen?
+$PSversion="2.0";     # default Postscript Version
+$PSDSCversion="2.0";  # default Postscript DSC Version
+$gpar="";
+$trigger= 0;
+
+#$debug=1; # Turn this on if you want to see the gs call
+
+@ver= split(/ /,$version);
+
+# filename for temporary files
+if (defined($ENV{'TMP'}))
+    { 
+      $tmpdir= $ENV{'TMP'};
+      $filesep= ($tmpdir =~ /^?\:\\/) ? '\\' : '/';
+      if ($tmpdir =~ /$filesep$/)  
+        { $tmpfname= $tmpdir . "$prgname.$$"; }
+      else 
+        { $tmpfname= $tmpdir . "$filesep$prgname.$$"; }
+    }
+else #assume we're on a UNIXBOX
+    { $tmpfname= "/tmp/" . "$prgname.$$"; }
+
+$licensetxt= "\
+    This program is free software; you can redistribute it and/or modify\
+    it under the terms of the GNU General Public License as published by\
+    the Free Software Foundation; either version 2 of the License, or\
+    (at your option) any later version.\
+\
+    This program is distributed in the hope that it will be useful,\
+    but WITHOUT ANY WARRANTY; without even the implied warranty of\
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\
+    GNU General Public License for more details.\
+\
+    You should have received a copy of the GNU General Public License\
+    along with this program; if not, write to the Free Software\
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\n";
+
+@prgidtxt= ( "$prgname - convert PostScript to EPS (Encapsulated PostScript) files\n",
+	     "(C)opyright 1998-2002 Roland Bless\n\n" );
+
+@helptxt= ("Version: @ver[2]\n",
+          "Operation:\n",
+          " Without any argument, $prgname reads from standard input\n",
+          " and writes to standard output.\n",
+          " If filenames are given as arguments they are processed\n",
+          " one by one and output files are written to filenames\n",
+          " with extension '.eps'. If input filenames have the extension\n",
+          " '.ps' or '.prn', this extension is replaced with '.eps'.\n",
+          " In all other cases '.eps' is appended to the input filename.\n",
+          " Please note that PostScript files for input should contain\n",
+          " only one single page.\n\n");
+
+@usagetxt= ("Syntax:\n",
+            " $prgname [-f] [-q] [-N] [-n] [-P] [-c] [-C] [-m] [-B] [-E] [-s<pagedim>] [-l] [-h|--help] [-L] [-V|--version] [--] [psfile1] [psfile2] [...]\n",
+            "Options:\n",
+            " -f     force overwriting existing files\n",
+            " -q     quiet operation (no output while processing files)\n",
+            " -N     do not insert any postscript code\n",
+            " -n     do not try to fix postscript code\n",
+            " -P     remove preview image (smaller file, but no preview)\n",
+            " -F     fix postscript code unconditionally\n",
+            " -c     preserve document structure comments\n",
+	    " -C     insert postscript code for clipping\n",
+            " -m     use black/white bitmap as base for calculation\n",
+            " -s<pagedim> pagesize in cm (default) or in, format XxY[cm|in], where X and Y are numbers\n",
+            " -l     expand the original bounding box by one point in each direction\n",
+	    " -B     do not use existing bounding box as page size for rendering\n",
+	    " -E     do not use %%EOF as hint for end of file\n",
+            " --help, \n",
+            " -h     help information\n",
+            " -L     show licensing information\n",
+            " --version,\n",
+            " -V     show version information\n",
+            " --     all following arguments are treated as files\n",
+            "        (allows filenames starting with -)\n",
+            "\n",
+            "Arguments:\n",
+            " One or more names of PostScript files for input\n");
+
+
+
+# -- argument checking
+$no_of_files= 0;
+ARGCHECK:
+while ($arg= shift) # process options
+{
+  if ( $arg =~ /^-/ ) #it is an option
+  {
+    if ( $arg =~ /^--$/ ) # after -- only filenames can follow
+    {
+      while ($arg= shift) { @filenames[$no_of_files]= $arg; $no_of_files++; };
+      last ARGCHECK;
+    }
+    if ( $arg eq '-f' ) { $forceoverwrite= 1; next ARGCHECK; }
+    if ( $arg eq '-q' ) { $quiet= 1; next ARGCHECK; }
+    if ( $arg eq '-m' ) { $fullcolors= 0; next ARGCHECK; }
+    if ( $arg eq '-n' ) { $trytofixps= 0; next ARGCHECK; }
+    if ( $arg eq '-F' ) { $forcefixps= 1; $trytofixps= 1; next ARGCHECK; }
+    if ( $arg eq '-N' ) { $insertPScode= 0; next ARGCHECK; }
+    if ( $arg eq '-P' ) { $removePreview= 1; next ARGCHECK; }
+    if ( $arg eq '-c' ) { $removeDSC= 0; next ARGCHECK; }
+    if ( $arg eq '-C' ) { $clip= 1; next ARGCHECK; }
+    if ( $arg eq '-l' ) { $looseBB= '-l'; next ARGCHECK; }
+    if ( $arg eq '-B' ) { $ignoreBB= 1; next ARGCHECK; }
+    if ( $arg eq '-E' ) { $ignoreEOFDSC= 1; next ARGCHECK; }
+    if ( $arg =~ '^-s' )
+    {
+      # if explicit size is given, ignore existing BoundingBox always
+      $ignoreBB= 1; 
+      $pagedimension= substr($arg,2); # dimension follows -s directly
+      ($x_dim, $x, $y_dim, $unit)= split(/(x|cm|in)/,$pagedimension);
+      if ( $x_dim !~ /^\d*\.?\d*$/ ) 
+         { die "$x_dim in $arg is not a valid number"; } 
+      if ( $y_dim !~ /^\d*\.?\d*$/ ) 
+         { die "$y_dim in $arg is not a valid number"; } 
+      
+      #print STDERR "xdim: $x_dim ydim: $y_dim unit:$unit\n" ;
+      if ( $unit ne 'in' ) # assume centimeters
+      { # calculate dimension in pixels (remember: resolution is in dpi)
+        $xpixels= int(($x_dim * $resolution) / $inch)+1;
+        $ypixels= int(($y_dim * $resolution) / $inch)+1;
+        $gpar= "-g${xpixels}x${ypixels}";
+      }
+      else
+      {
+        $xpixels= int($x_dim * $resolution)+1;
+        $ypixels= int($y_dim * $resolution)+1;
+        $gpar= "-g${xpixels}x${ypixels}";
+      }
+      next ARGCHECK;
+    }
+    if ( $arg eq '-h' || $arg eq '--help' ) 
+    { 
+      die @prgidtxt,@helptxt,@usagetxt,
+      "\nAuthor: Roland Bless (roland\@bless.de)\n\n"
+    } #end -h
+    if ( $arg eq '-L' ) 
+    { 
+      die @prgidtxt,$licensetxt,
+      "\nAuthor: Roland Bless (roland\@bless.de)\n\n"
+    } #end -L
+    if ( $arg eq '-V' || $arg eq '--version') 
+    { 
+	die @prgidtxt,"Version: @ver[2]\n";
+    } #end -V
+    die "$prgname: unknown option $arg\n",@usagetxt;
+  }
+  else
+  {
+    # it is a filename
+    @filenames[$no_of_files++]= $arg;
+  }
+} #end while ARGCHECK
+
+
+
+if ($no_of_files == 0) # no file arguments, use STDIN as input
+{
+  @filenames[0]= '-';
+}
+
+if (!$quiet) { print STDERR "Input files: @filenames\n"; }
+
+$device= $fullcolors ? "ppmraw" : "pbmraw";
+
+PROCESSFILE:
+while ($infname= (shift @filenames))
+{
+  # reset filter definitions for each file
+  undef $linefilter; 
+  undef $rangefilter_begin;
+  undef $rangefilter_end;
+  $fixthisps= $trytofixps;
+  $fixmsgprinted= 0;
+
+  if (!$quiet) { print STDERR "Processing: $infname\n"; }
+  unless (open($infhandle,"<$infname"))
+  { # skip over this file 
+    print STDERR "$prgname: Can't open $infname: $!\n";
+    next PROCESSFILE;
+  }
+ 
+  # buffer input from stdin into temporary file, because it has to be read twice
+  # one for ghostscript, the other for generating output
+  if ($infname eq '-') # input is stdin
+  {
+    $tmpfhandle='';
+    open($tmpfhandle,">$tmpfname") or 
+       die "Cannot open temporary file $tmpfname for writing: $!\n";
+  }
+  else # input is not stdin
+  {
+    undef $tmpfhandle;
+    #if filename ends with .ps or .prn, replace the extension with .eps
+    if ($infname =~ /\.(ps|prn)$/i) 
+    { 
+      $outfname= $infname; $outfname =~ s/\.(ps|prn)$/.eps/i; 
+    }
+    else # otherwise simply append the extension .eps
+    {
+        $outfname= $infname . ".eps";
+    }
+    if (!$forceoverwrite and -s "$outfname") 
+      { 
+        die "$prgname: Sorry, file named $outfname already exists,",
+            " will not overwrite it.\n",
+            " You will have to use the -f option, delete it or rename it",
+            " before running $prgname again.\n";   
+      }
+    else
+    {
+      open($outfhandle,">$outfname") or die "Can't open file $outfname for writing: $!\n";
+    }
+  } #end else input is not stdin
+  
+  $linefilter= '^$'; # filter empty lines by default
+  while (<$infhandle>)
+  {
+    if (/%!PS-Adobe-(\S+).*EPSF-(\S+)/)
+    {
+      $PSversion=$1;
+      $PSDSCversion=$2;
+      if (! ($PSversion =~ /\d+\.\d+/))
+      {
+        $PSDSCversion="2.0";
+      }
+      if (! ($PSDSCversion =~ /\d+\.\d+/))
+      {
+        $PSDSCversion="2.0";
+      }
+    }
+    if (!$ignoreBB)
+    {
+      if ( /^%%\s*BoundingBox:\s*(.*)/ && !defined($eBBllx) )
+      {
+        ($eBBllx,$eBBlly,$eBBurx,$eBBury,$rest)= split /\s/,$1;
+        # print STDERR "$eBBllx,$eBBlly,$eBBurx,$eBBury\n";
+        $xpixels= int(($eBBurx * $resolution)/72)+1;
+        $ypixels= int(($eBBury * $resolution)/72)+1;
+        $gpar= "-g${xpixels}x${ypixels}";
+        # check for meaningful values
+        if (($xpixels <= 1) || ($ypixels <= 1))
+        {
+	    $gpar=""; undef $eBBllx;
+        }
+	else
+	{
+	    if (!$quiet) 
+	    {
+		print STDERR "Rendering with existing $_";
+	    }
+	}
+      }
+    }
+    if ($fixthisps) # try to fix bad postscript code
+    {
+      # check for Windows 3.x output
+      if ( /^Win.*Dict/ )
+      { 
+        if (!$quiet && !$fixmsgprinted) 
+           { print STDERR "Windows 3.5 generated Postscript file detected, fixing\n"; }
+        $linefilter= '^(EJ|RS)';
+        $rangefilter_begin= '^statusdict';
+        $rangefilter_end= 'cvx\ settransfer$';  #'
+        $fixmsgprinted= 1; # stop printing message
+      }
+      else
+      {
+        if ( /^%%Creator:\s*Wind.U\s*Xprinter/ )
+        { 
+	    if (!$quiet && !$fixmsgprinted) 
+	    { print STDERR "StarOffice generated Postscript file detected, fixing\n"; }
+	    $linefilter= '^rs';
+	    $fixmsgprinted= 1; # stop printing message
+	}
+      else
+      {
+        if ( $forcefixps || 
+             /^\/NTPS/ || 
+             /Creator:\s*(AdobePS|Pscript|.*Windows)/i ) #check for NT generated output
+        {
+          if (!$quiet && !$fixmsgprinted) 
+          { 
+            print STDERR "Windows generated Postscript file detected, fixing\n"; 
+	  }
+	  $rangefilter_begin= '^(\[\{|featurebegin\{)$'; #'
+	  $rangefilter_end= '^(\} stopped cleartomark|\}featurecleanup)';
+	  $triggered_rangefilter_begin= '^(1 1 1 SC)$'; #'
+	  $triggered_rangefilter_end= '^(AF)$';
+	  $fixmsgprinted= 1; # stop printing message
+        } # end if NTPS
+      } #end else
+    }
+    } #end if trytofixps
+
+    if (defined($tmpfhandle))
+    { 
+      print $tmpfhandle $_ or die "$prgname: Failure during writing to temporary file $tmpfname";
+    }
+
+    if (/^%%EOF\s*$/) 
+    {
+	$totalEOFDSC++
+    }
+  } #end while <$infhandle>
+  
+  if (defined($tmpfhandle)) 
+    { close($tmpfhandle); }
+  else
+    { 
+      $tmpfhandle= $infhandle;
+      $tmpfname= $infname; 
+    }
+  
+
+  # calculate the bounding box
+  if (!$quiet) { print STDERR "Calculating Bounding Box..."; }
+  $cmdline="$ghostscriptname -dNOPAUSE -q $gpar -r$resolution -sDEVICE=$device -sOutputFile=- $tmpfname -c showpage -c quit | $bboxname $looseBB -r $resolution";
+  if ($debug) { print STDERR "\ncalling: $cmdline\n"; }
+
+  $boundingbox=`$cmdline`;
+    
+  #check result
+  if ($boundingbox !~ /^%%BoundingBox/)
+  {
+    print STDERR "Error: Could not determine bounding box!\n",
+    "I suppose $ghostscriptname had some trouble interpreting the ps-file\n",
+    "or $bboxname is not in your search path of executables\n";
+  }
+  if ($clip)
+  {
+    # extend clipping box by 1 point
+    $boundingbox =~ /^%%.*BoundingBox:\s*(.*)/;
+    ($cBBllx,$cBBlly,$cBBurx,$cBBury,$rest)= split(/\s/,$1);
+    if ($cBBllx > 0) { $cBBllx--; }
+    if ($cBBlly > 0) { $cBBlly--; }
+    $cBBurx++; $cBBury++;
+    $boundingbox = "%%BoundingBox: $cBBllx $cBBlly $cBBurx $cBBury\n";
+  }
+
+  if (!$quiet) { print STDERR "ready. $boundingbox" };
+  
+  $before_startps= 1;
+  $inserted_prolog= 0;
+  $prolog_passed= 0;
+  
+  if (!$quiet) { print STDERR "Creating output file $outfname..."; }
+  
+  open($tmpfhandle,"<$tmpfname") or die "Cannot open file $tmpfname for reading";
+  CREATEOUTPUT: 
+  while (<$tmpfhandle>) 
+  {
+    $binarysection=/^(%%BeginBinary)|(beginimage)$/ ... /^(%%EndBinary)|^(endimage)/;
+    if ( !$binarysection )
+    {
+      s/\r?\n?$//;       # remove CR and/or LF at end of line
+    }
+    if ($before_startps)
+    {
+      if ( /%!PS-Adobe.*/ ) { $before_startps= 0; }
+        next CREATEOUTPUT;
+    }
+    else # we are in regular postscript code
+    {
+      if ( /^%%EOF\s*$/ )
+      {
+	$seenEOF++
+      }
+            
+      if (! $inserted_prolog)
+      {
+        print $outfhandle "%!PS-Adobe-$PSversion EPSF-$PSDSCversion\n";
+        print $outfhandle $boundingbox;
+        print $outfhandle "% EPSF created by ps2eps @ver[2]\n";
+        $inserted_prolog= 1;
+        redo CREATEOUTPUT;
+      }
+      else #inserted_prolog
+      {
+        if (! $prolog_passed)
+        {   
+          #ignore the following lines in the prolog
+          if ( /^%%BoundingBox/ ||
+               /^%%Pages/       ||
+               /^%%BeginProlog/ ||
+               /^%%EndProlog/   ||
+               ($removeDSC && /^%%.*: \(atend\)/) ||
+	       ($removePreview && (/^%%BeginPreview/ ... /^%%EndPreview/)) ) 
+          { next CREATEOUTPUT; }
+          else
+          {
+            if ( /^[^%].*/ ||
+                 /^%%EndComments/ ) # line is not a comment
+            { 
+              #output postscript code for proper EPS file
+              if ($insertPScode) 
+              { print $outfhandle "%%EndComments\n", 
+                                  "%%BeginProlog\n";
+              }
+              if ($clip)
+              {
+                 printf $outfhandle "newpath %d %d moveto %d %d lineto %d %d lineto %d %d lineto closepath clip\n",$cBBllx,$cBBlly,$cBBurx,$cBBlly,$cBBurx,$cBBury,$cBBllx,$cBBury
+              }
+              if ($insertPScode) 
+              {              
+                print $outfhandle  "save\n",
+                                   "countdictstack\n",
+                                   "mark\n",
+                                   "newpath\n",
+                                   "/showpage {} def\n",
+		                   "/setpagedevice {pop} def",
+                         	   "%%EndProlog\n",
+                                   "%%Page 1 1\n";
+              }
+              $prolog_passed= 1;
+              if (/^%%EndComments/) { next CREATEOUTPUT; }
+            }
+          }
+        } 
+        else # main part of postscript file
+        {
+          #end of postscript file reached?
+	  #Usually the DSC %%EOF signifies the end
+          if ( eof($tmpfhandle) || 
+	       ($ignoreEOFDSC == 0 && /^%%EOF\s*$/ && $seenEOF == $totalEOFDSC)
+               || ( $trailerseen && /^II\*\000.*/ )	       
+             ) 
+          { 
+	    #do not forget to print last line if not terminated by LF
+	    if ( eof($tmpfhandle) && !/^$/ && !/^%%EOF\s*$/ ) # do not insert %%EOF twice
+	    {
+		print $outfhandle $_,"\n";
+	    }
+            #add appropriate trailer
+            if ($insertPScode) 
+	    {              
+		print $outfhandle "%%Trailer\n",
+		                  "cleartomark\n", 
+		                  "countdictstack\n", 
+                                  "exch sub { end } repeat\n",
+		                  "restore\n",
+		                  "%%EOF\n"; 
+	    }
+            last CREATEOUTPUT; 
+          } # stop output
+
+	  if ( /^%%Trailer\s*$/ )
+	  {
+	    $trailerseen=1;
+	  }
+	  else
+	  {
+	    if (!/^/s*$/)
+	    {
+		$trailerseen=0;
+	    }
+	  }
+          # check for trigger
+          if (/^eoclip$/)
+          {
+            $trigger= 1;
+          };
+          # remove the following lines
+          if ( !$binarysection # only when not in binary section
+	       &&
+	       (
+	       ($removePreview && (/^%%BeginPreview/ ... /^%%EndPreview/))
+	       ||                        # no preview
+               (defined($rangefilter_begin) && 
+                 (/$rangefilter_begin/ ... /$rangefilter_end/)
+               ) 
+               ||
+               (defined($triggered_rangefilter_begin) && 
+                $trigger &&
+                (/$triggered_rangefilter_begin/ ... /$triggered_rangefilter_end/)
+               ) 
+	       ||
+               /$linefilter/             # lines by linefilter
+	       ||
+	       ($removeDSC && (/^%( |!)(\w )+/ || /^%%/)) # any type of structured comment
+	       ||
+	       ($removeADO && 
+		(/^statusdict begin.*ProductName.*print product print.*flush end\r?\n?$/ ||
+                 /^\(%%\[\s*(Page:.*|LastPage)\s*\]%%\)\s*=\s*\r?\n?/ ))
+	       ||                    
+	       /^$/                       # empty lines
+               )
+             )
+          { 
+	      next CREATEOUTPUT; 
+	  }
+  
+          # sanity check
+          if ( /clear|erasepage|initmatrix|initclip|initgraphics|startjob|\
+                cleardictstack|setmatrix|setpagedevice|copypage|grestoreall|\
+                exitserver|quit/ )
+             { $notsane= 1; }
+          else
+             { $notsane= 0; }
+        } # end else (this is main part) 
+
+        # Output the postscript line
+        print $outfhandle $_;
+	if (!$binarysection)
+	{
+	    print $outfhandle "\n"; 
+	}
+      } # end else prolog_passed 
+    } # end else inserted_prolog
+  } # end while CREATEOUTPUT
+
+  close($tmpfhandle);
+
+  if ($tmpfname ne $infname) { unlink "$tmpfname"; } #remove temporary file
+
+  close ($outfhandle);
+  if (!$quiet) { print STDERR "ready.\n"; }
+  if ($notsane and !$quiet)
+  { 
+    print STDERR "Warning: EPS-output for $infname is not sane, at least one\n",
+                 "of the following commands was still present:\n",
+                 "clear erasepage initmatrix initclip initgraphics startjob\n",
+                 "cleardictstack setmatrix setpagedevice copypage grestoreall\n",
+                 "exitserver quit\n";
+  }
+} #end while PROCESSFILE
+
+# ---- end of perl-script -------

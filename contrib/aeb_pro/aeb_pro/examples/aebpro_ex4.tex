@@ -1,0 +1,346 @@
+% dvips/Distiller workflow only
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[%
+    web={
+        pro,
+        designv,
+        tight,
+%        forcolorpaper,
+        centertitlepage,
+        dvipsnames,
+        usesf
+    },
+    uselayers,
+    eforms,
+    aebxmp,
+]{aeb_pro}
+\usepackage{graphicx}
+\usepackage[nomessages]{fp}
+%
+% The versions of pstricks-add and pstricks should be
+% fairly recent.
+%
+\usepackage{pstricks-add}
+\usepackage[absolute,overlay]{textpos}
+
+\DeclareDocInfo
+{
+    title=The AeB Pro Package\texorpdfstring{\\[1ex]}{: }Layers and Rollovers,
+    author=D. P. Story,
+    university=Acro\negthinspace\TeX.Net,
+    email=dpstory@acrotex.net,
+    subject=Test file for the AeB Pro package,
+    keywords={Adobe Acrobat, JavaScript},
+    talksite=http://www.acrotex.net,
+    talkdate={January 12, 2007},
+    copyrightStatus=True,
+    copyrightNotice={Copyright (C) \the\year, D. P. Story},
+    copyrightInfoURL=http://www.acrotex.net
+}
+\talkdateLabel{Published:}
+
+\newcommand{\cs}[1]{\texttt{\char`\\#1}}
+\newcommand\newtopic{\par\ifdim\lastskip>0pt\relax\vskip-\lastskip\fi
+\vskip\medskipamount\noindent}
+\newenvironment{sverbatim}
+{\par\footnotesize\verbatim}{\endverbatim}
+\def\AcroTeX{Acro\negthinspace\TeX}
+
+\begin{document}
+
+\maketitle
+
+\section{Layers}
+
+When the \texttt{uselayers} option is taken, the necessary code is
+input to produce layers (Optional Content Groups). The
+\textcolor{blue}{{\AcroTeX} Presentation Bundle} (APB), which has a
+very sophisticated method of control over layers, by comparison, the
+\textcolor{blue}{AeB Pro} layer support is very primitive indeed. As
+a rule, after you create a layer, you will need a control of that
+layer. This could be a button or a link that executes JavaScript.
+
+The basic command for creating a layer is \cs{xBld}. The content of
+the layer is set off by the \cs{xBld}/\cs{eBld} pair.  The command
+\cs{xBld} takes two parameters: (1) the first is optional,
+\texttt{true} if the layer is initially visible or \texttt{false},
+the default, if the layer is hidden initially; (2) the name of the
+layer, this is used to reference the layer, to make it visible or
+hidden.
+
+The creation and control of layers are illustrated in the two
+subsequent sections.
+
+\newtopic When constructing a layer, there are two possible scenarios:
+\begin{enumerate}
+    \item The layer takes up ``tex'' space
+    \item The layer does not take up ``tex'' space
+\end{enumerate}
+Let's look at each of these in turn.
+
+\subsection{Layer takes up space}
+
+A layer that takes up space in tex is the easiest case.  For
+example, guess what I'm thinking thinking about: I'm thinking about
+my formerly favorite number, \xBld{mythoughts}the number is the
+value of the integral $\int_0^4 4x + \frac14\,dx$. \eBld Want a
+hint? \setLink[%
+\A{\JS{%
+    var oLayer = getxBld("mythoughts");
+    if ( oLayer != null )
+        oLayer.state = !oLayer.state;
+    }}
+]{\textcolor{red}{Click here}} I hope that hint worked for you.
+Click on the link to hide the layer again.
+
+\newtopic For those viewing this document in PDF, the relevant code
+code is seen below.
+
+First the layer is enclosed in a \cs{xBld}/\cs{eBld} pair, the
+default state is hidden, so we don't supply the optional parameter.
+The require (second) parameter is the name used to refer to the
+layer.
+
+The link text has a JavaScript action. First we get the OCG object
+for this layer by calling the \texttt{getxBld} function (this is
+part of the AeB Pro JavaScript) then if non-null (you may not have
+spelled the name correctly) we toggle the current state,
+\texttt{oLayer.state = !oLayer.state}.
+\begin{sverbatim}
+\xBld{mythoughts}the number is the value of the integral
+$\int_0^4 4x + \frac14\,dx$. \eBld Want a hint?
+\setLink[\A{\JS{%
+    var oLayer = getxBld("mythoughts");
+    if ( oLayer != null )
+        oLayer.state = !oLayer.state;
+    }}
+]{\textcolor{red}{Click here}}
+\end{sverbatim}
+
+An advantage of the layers approach is that the content of the
+layers are latexed as part of the content of the tex file;
+consequently, you can include virtually anything in your layer that
+tex can handle, math, figures, PSTricks, etc. Acrobat Pro 7.0 (and
+distiller) or later is required to build the layers, but only Adobe
+Reader 7.0 or later is needed to view the document, once
+constructed.
+
+\NewPage
+\subsection{Layer takes no space}\label{nospace}
+
+Perhaps the easiest way of creating layers that do not take up any tex space is to use a
+package such as \textsf{textpos}. In the preamble of this document, I've placed the following
+command:
+
+\begin{sverbatim}
+\usepackage{pstricks-add,pstricks}
+\usepackage[absolute,overlay]{textpos}
+\end{sverbatim}
+
+\begin{textblock*}{.67\linewidth}[.5,.5](.5\paperwidth,.5\paperheight)
+\xBld{crossinggraphcs}\psshadowbox[framesep=0pt]{\fcolorbox{red}{cornsilk}{%
+\parbox{\linewidth}
+{%
+\begin{center}
+\begin{pspicture}(-0.5,-1,0)(7,5)
+  \pscustom[linewidth=1pt,fillstyle=hlines,hatchcolor=red]{
+    \psplot[linewidth=1pt]{2}{5}{%
+     x x mul neg x 6 mul add 5 sub}
+    \psplot[linewidth=1pt]{5}{2}{%
+     x x mul neg 3 div x 4 mul 3 div add 5 3 div add}
+  }
+  \pscustom[linewidth=1pt,fillstyle=vlines,hatchcolor=blue]{
+    \psline(0,1.666667)
+    \psplot[linewidth=1pt]{0}{2}{%
+       x x mul neg 3 div x 4 mul 3 div add 5 3 div add}
+    \psplot[linewidth=1pt]{2}{1}{%
+     x x mul neg x 6 mul add 5 sub}
+  }
+  \psaxes{->}(0,0)(-0.5,-0.5)(7,5)
+  \uput[-90](7,0){$x$}
+  \uput[0](0,5){$y$}
+  \psplot[linewidth=1pt]{0.75}{5.25}{%
+     x x mul neg x 6 mul add 5 sub}
+  \psplot[linewidth=1pt]{0}{5.25}{%
+     x x mul neg 3 div x 4 mul 3 div add 5 3 div add}
+  \rput(5,2){$f$}
+  \rput(3,2){$g$}
+\end{pspicture}
+\end{center}
+}}}\eBld
+\end{textblock*}
+
+Now we can create a layer that takes up no space, but is overlaid on top of the tex content.
+We use the \textsf{textpos} commands to place the layer. Once created and placed, we must
+have a way of showing it and hiding it. This time, we'll use a button:
+\pushButton[
+    \CA{Push}
+\A{\JS{%
+    toggleSetThisLayer("crossinggraphcs");
+}}]{crossinggraphcsBtn}{}{12bp}
+
+\newtopic As you can see from this example, you must be very careful in the placement of your
+layers vis-\`{a}-vis the button.  Form fields are laid on top of
+content, and a layer is considered part of the content. This particular layer could be move to the
+upper left corner, for example, Let's see how a link works, shall we? \setLink[%
+\A{\JS{%
+    toggleSetThisLayer("crossinggraphcs");
+}}]{\textcolor{red}{Click here}}! The link is active even through the layer, you just have to find it!
+I could have set this link to that it has a visible bounding box, in which case the border of the
+bounding box shows through the layer, but hey, at least you can find the link!
+
+One thing you need to keep in mind is the placement of the code,
+within the \texttt{textblock} environment.  The overlaid material
+will appear on whatever page the \texttt{textblock} ends up on.
+Should you add more material before the \texttt{textblock}, the
+controls may drop off to the next page. When the user presses the
+control, nothing happens, actually, the layer is appearing on the previous page.
+Sometimes it makes sense to insert a \cs{newpage} to ensure the proper placement
+of the overlay relative to the placement of the controls.
+
+\NewPage % this is \newpage when for screen, does nothing when forpaper, defined in web
+
+\defineRC{help1}
+{%
+\psset{llx=-12pt, lly=-12pt,urx =12pt,ury =12pt,xAxisLabel=$x$,yAxisLabel=$y$}
+\begin{psgraph*}[arrows=->,trigLabels=true,trigLabelBase=2,dx=\psPiH](0,0)(-.5,-1.5)(6.75,1.5){.75\linewidth}{.25\linewidth}
+    \psset{algebraic=true}%
+    \rput(4,1){$y=\sin(x)$}%
+    \psplot[linecolor=blue]{0}{TwoPi}{sin(x)}
+\end{psgraph*}
+}
+
+\begin{rollover}
+\begin{textblock*}{.4\linewidth}[.5,.5](.5\paperwidth,.5\paperheight)
+\xBld{help1}\psshadowbox[framesep=0pt]{\fcolorbox{red}{cornsilk}{%
+\parbox{\linewidth}{\insertRC{help1}}}}\eBld
+\end{textblock*}
+\end{rollover}
+\begin{printRollover}
+\definePR{help1}{\parbox{.4\linewidth}{\insertRC{help1}}}\insertPR{help1}
+\end{printRollover}
+
+\section{Rollovers}
+
+The AeB Pro package offers you two rollovers, which ostensibly provides
+help to the document consumer.
+
+\subsection{\texorpdfstring{\protect\cs{texHelp}}{\textbackslash{texHelp}} uses Layers}
+
+The rollover is a special case of the techniques discussed in
+\hyperref[nospace]{section~\ref*{nospace}}. For a rollover, you
+create a form field, enclosing a word, when the user rolls across
+the word, a help box opens. For example, recall the graph of the
+\texHelp{help1}{$\sin(x)$,} isn't it pretty? Try rolling over the
+word that is tagged with the `\texHelpIndicator{}' symbol.
+
+You will have to look at the source file to see what goes on here,
+suffice it to say that the command \cs{texHelp} was used to create
+the rollover, the symbol that appears is defined in the
+\textsf{aeb\_pro} package by \cs{texHelpIndicator}, this command can
+be re-defined to have a different symbol.
+
+\subsection{\texorpdfstring{\protect\cs{pdfHelp}}{\textbackslash pdfHelp} does not}
+
+There is another type of rollover, \cs{pdfHelp}. The command takes three arguments,
+the first one is the name of the button field that is enclose around the third argument,
+the second argument is the help text. The help text is not part of the {\LaTeX} content
+of the document is is not compiled by the {\TeX} compiler, so it should be text. For example,
+can you remember the inventor of \pdfHelp{knuth}{Donald Knuth}{\TeX?}
+
+As with \cs{texHelp}, the symbol that tags the word as a help word
+is defined in \textsf{aeb\_pro.dtx} by the command
+\cs{pdf\-Help\-Indicator}. This command can be re-defined as needed.
+
+\section{Layers and Animation}
+
+Let's see if we can conjure up a little animation, shall we?
+
+\noindent\begin{minipage}{.65\linewidth}\centering
+\DeclareAnime{sinegraph}{10}{40}
+\def\thisframe{\animeBld\psplot[linecolor=red]{0}{\xi}{sin(x)}\eBld}
+\psset{llx =-12pt,lly=-12pt,urx =12pt,ury =12pt} % ,trigLabels=true,labelFontSize=\small
+\begin{psgraph*}[arrows=->,trigLabels=true,trigLabelBase=2,dx=\psPiH](0,0)(-.5,-1.5)(6.75,1.5){164pt}{70pt}
+    \psset{algebraic=true}%
+    \rput(4,1){$y=\sin(x)$}
+    \FPdiv{\myDelta}{\psPiTwo}{\nFrames}%
+    \def\xi{0}%
+    \multido{\i=1+1}{\nFrames}{\FPadd{\xi}{\xi}{\myDelta}\thisframe}
+\end{psgraph*}
+\end{minipage}\hfill
+\begin{minipage}{.3\linewidth}%\centering
+\backAnimeBtn{24bp}{12bp}\kern1bp\clearAnimeBtn{24bp}{12bp}\kern1bp\forwardAnimeBtn{24bp}{12bp}
+\end{minipage}
+
+\newtopic It is possible to combine the techniques of
+\hyperref[nospace]{section~\ref*{nospace}} with those of animation, to create
+an anime that pops up. We leave this as an exercise for the reader, that's you.
+
+\NewPage
+
+\newtopic\xBld{dialog1}This page illustrates how you can create a series of
+steps, all controlled by a button. \eBld\xBld{dialog2}Let us begin by
+drawing the $\sin(x)$ curve. \eBld\xBld{dialog3}Do you think that I can do it?
+\eBld\xBld{dialog4} Well, here goes!\eBld
+
+\begin{center}
+\DeclareAnime{graph}{10}{40}
+\def\frame{\animeBld\psplot[linecolor=red]{0}{\xi}{sin(x)}\eBld}
+\psset{llx=-12pt, lly=-12pt,urx =12pt,ury =12pt,xAxisLabel=$x$,yAxisLabel=$y$}
+\begin{psgraph*}[arrows=->,trigLabels=true,trigLabelBase=2,dx=\psPiH](0,0)(-.5,-1.5)(6.75,1.5){.5\linewidth}{.25\linewidth}
+    \psset{algebraic=true}%
+    \rput(4,1){$y=\sin(x)$}%
+    \FPdiv{\myDelta}{\psPiTwo}{\nFrames}%
+    \def\xi{0}%
+    \multido{\i=1+1}{\nFrames}{\FPadd{\xi}{\xi}{\myDelta}\frame}
+    \xBld{step1}\psplot[linecolor=blue]{0}{Pi 2 div}{sin(x)}\eBld
+    \xBld{step2}\psplot[linecolor=webgreen]{Pi 2 div}{Pi}{sin(x)}\eBld
+    \xBld{step3}\psplot[linecolor=Plum]{Pi}{3 Pi mul 2 div}{sin(x)}\eBld
+    \xBld{step4}\psplot[linecolor=yellow]{3 Pi mul 2 div}{TwoPi}{sin(x)}\eBld
+\end{psgraph*}
+\end{center}
+
+\newtopic\xBld{step1}Notice that the function increases from $[\,0, \pi/2\,]$
+and attains it maximum value of $1$ at $ x = \pi/2$. \eBld\xBld{step2}The
+sine function then decreases to zero over the interval $[\,\pi/2, \pi\,]$.
+\eBld \xBld{step3}Continuing its sinusoidal path it decreases on the
+interval $[\,\pi,3\pi/2\,]$ down to its minimum value of $-1$ at $ x =
+3\pi/2$. \eBld \xBld{step4}Finally, it increases up to $0$ over the
+interval $[\,3\pi/2, 2\pi\,]$ completing the first cycle of its
+graph.\eBld
+
+\newtopic\xBld{wrapup}Try \texttt{shift-click} too. dps\eBld
+
+\begin{defineJS}[\catcode`*=0]{\stepwise}
+if ( typeof stepcounter == "undefined" )  stepcounter = 0;
+if ( !event.shift ) stepcounter++;
+if ( stepcounter > 10 ) stepcounter = 11;
+if ( stepcounter < 1 ) stepcounter = 0;
+switch (stepcounter)
+{
+    case 1:  toggleSetThisLayer("dialog1", !event.shift); break;
+    case 2:  toggleSetThisLayer("dialog2", !event.shift); break;
+    case 3:  toggleSetThisLayer("dialog3", !event.shift); break;
+    case 4:  toggleSetThisLayer("dialog4", !event.shift); break;
+    case 5:  if (event.shift) aebAnimeLayersBackward(*animSpeed,*nFrames,"*animBaseName");
+             else aebAnimeLayersForward(*animSpeed,*nFrames,"*animBaseName");
+             break;
+    case 6:  toggleSetThisLayer("step1", !event.shift); break;
+    case 7:  toggleSetThisLayer("step2", !event.shift); break;
+    case 8:  toggleSetThisLayer("step3", !event.shift); break;
+    case 9:  toggleSetThisLayer("step4", !event.shift); break;
+    case 10: toggleSetThisLayer("wrapup",!event.shift); break;
+    default:
+}
+if ( event.shift ) stepcounter--;
+\end{defineJS}
+
+\medskip
+\begin{center}
+    \pushButton[\CA{Step Through}\TU{Step Through}\A{\JS{\stepwise}}]%
+    {stepthru}{}{12bp}
+\end{center}
+
+
+\end{document}

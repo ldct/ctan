@@ -1,0 +1,1026 @@
+% arara: pdflatex: { shell: on }
+% arara: biber
+% arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the FNPCT package
+% 
+%   footnote kerning
+% 
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://bitbucket.org/cgnieder/fnpct/
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% Copyright 2012-2016 Clemens Niederberger
+% 
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Clemens Niederberger.
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+% the package is inspired by the following question on TeX.SE:
+%   http://tex.stackexchange.com/q/56094/5049
+% --------------------------------------------------------------------------
+\documentclass[load-preamble+]{cnltx-doc}
+\usepackage{sepfootnotes,fnpct}
+\setcnltx{
+  package = fnpct ,
+  authors = Clemens Niederberger ,
+  email   = contact@mychemistry.eu ,
+  url     = https://bitbucket.org/cgnieder/fnpct/ ,
+  abstract = {
+      The \fnpct\ package basically does two things to footnotes: if footnote
+      marks are followed by a punctuation mark the order of footnote and
+      punctuation mark is reversed and the kerning gets adjusted.  As a side
+      effect a new method of creating multiple footnotes and some other
+      features are provided.%
+  },
+  add-cmds = {
+    AdaptNote,
+    AdaptNoteMark,
+    innernote,
+    kfc,
+    kfp,
+    multfootnote,
+    setfnpct,
+    writeinnernotes
+  } ,
+  add-silent-cmds = {
+    anote,
+    anotecontent,
+    arabic,
+    DeclareNewFootnote,
+    endnote,
+    footnoteB,
+    multendnote,
+    multfootcite,
+    multparnote,
+    multsidenote,
+    myfn,
+    newfootnotes,
+    parnote,
+    parnotes,
+    sidenote,
+    theendnotes,
+    thempfootnote,
+  },
+  makeindex-setup = {options={-s cnltx.ist},columns=3,columnsep=1em} ,
+  index-setup = {othercode=\footnotesize,level=\addsec}
+}
+
+\defbibheading{bibliography}[\bibname]{\addsec{#1}}
+
+\usepackage{array,booktabs}
+
+\setfnpct{multiple,add-punct-marks=:[0pt][-.05em]}
+
+\usepackage{endnotes}
+\usepackage{parnotes}
+
+\newfootnotes{a}
+
+\renewcommand\thempfootnote{\arabic{mpfootnote}}
+
+\addbibresource{\jobname.bib}
+\addbibresource{biblatex-examples.bib}
+\usepackage{filecontents}
+\begin{filecontents*}{\jobname.bib}
+@book{bringhurst04,
+  title     = {The Elements of Typographic Style},
+  author    = {Robert Bringhurst},
+  year      = {2004},
+  version   = {3.2},
+  isbn      = {978-0-88179-205-5},
+  publisher = {Hartley \&\ Marks, Canada}
+}
+\end{filecontents*}
+
+\AdaptNoteOpt\footcite\multfootcite
+
+\newname\bringhurst{Robert Bringhurst}
+\newname\lefloch{Bruno Le Floch}
+
+\begin{document}
+
+\section{License and Requirements}
+\license\
+
+\fnpct\ depends on the packages \bnd{l3kernel}~\cite{bnd:l3kernel},
+\pkg{xparse} and \pkg{l3keys2e} from the \bnd{l3packages}
+bundle~\cite{bnd:l3packages}, \pkg{scrlfile} from the \KOMAScript\
+bundle~\cite{bnd:koma-script}, and \pkg{translations}~\cite{pkg:translations}.
+
+\section{What's it all about?}
+\subsection{Introduction}
+The purpose of this package is to offer kerning for footnote marks, \ie\ the
+superscripts. This is not appropriate for all superscripts.  Symbols must be
+handled differently than numbers.  And of course the amount depends on the
+chosen font.  \bringhurst\ says in \citetitle{bringhurst04}:
+
+\begin{cnltxquote}[\emph{\citetitle{bringhurst04}} \cite{bringhurst04}]
+  Superscripts frequently come at the ends of phrases or sentences.  If they
+  are high above the line, they can be kerned over a comma or period, but this
+  may endanger readability, especially if the text is set in a modest size.
+\end{cnltxquote}
+
+\fnpct\ can not make these decisions for you.  It sets some initial values for
+the comma and the full stop which looked good to me with the tested fonts.
+Additionally it kerns the superscripts away from words when it follows
+directly.  The amounts of the kerning can be changed using an option.
+
+As a side effect \fnpct\ switches the order of the superscript and the
+following comma or full stop.  Additional punctuation marks can be added to
+the switching behaviour and the amount of kerning can be set for each
+punctuation mark individually.
+
+\subsection{Basics}
+The \fnpct\ package basically does two things to footnotes: if footnote marks
+are followed by a comma or a full stop\footnote{More punctuation marks can be
+  added through a package option.} the order of footnote and punctuation mark
+is reversed and the kerning gets adjusted.  As a side effect a new method of
+creating multiple footnotes\footnote{like;this} is provided, see
+section~\ref{sec:multiple} for details.
+
+In what way is the kerning adjusted?  After being placed behind the
+punctuation mark the footnote mark is moved a little bit back, namely by the
+amount specified with the option \option{after-punct-space} (see
+section~\ref{sec:options}).  If the footnote mark follows a word
+\emph{without} being followed by a punctuation\footnote{Well, it does not
+  necessarily have to follow a \emph{word}.  The important point is \emph{not
+    being followed} by a punctuation mark.}, there (obviously) is no order
+switching and a little space is inserted before the footnote mark, namely the
+amount specified by the option \option{before-footnote-space} (see
+section~\ref{sec:options}).
+
+\begin{sourcecode}
+  \renewcommand\thempfootnote{\arabic{mpfootnote}}
+\end{sourcecode}
+
+Now, let's see some action:
+\begin{example}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}.
+  \end{minipage}
+\end{example}
+
+To ensure that the kerning is set the right way the footnote \emph{must} be
+placed \emph{before} the full stop or the comma. \emph{The command can look
+  ahead but not look back}.  This means if you place the \cs{footnote} command
+after a full stop or a comma it is treated as if following a word, \ie\ a thin
+space is inserted: effectively the opposite of the desired behaviour.
+
+The order-switching can be prevented using a package option since not all
+countries and languages have the same typographic conventions. In this case
+the full stop and the comma are moved a bit back.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tabular}{>{\setfnpct{dont-mess-around}}ll}
+    \toprule
+      without \fnpct &
+      with \fnpct \\
+    \midrule
+      \strut\quad text.\footnotemark[1] &
+      \strut\quad text\footnotemark[1]. \\
+      \strut\quad text\footnotemark[1]. &
+      \setfnpct{punct-after}\strut\quad text\footnotemark[1]. \\
+      \strut\quad text\footnotemark[1] &
+      \strut\quad text\footnotemark[1] \\
+    \bottomrule
+  \end{tabular}
+  \caption{The effect of \fnpct.}
+\end{figure}
+
+\begin{options}
+  \keybool{punct-after}\Default{false}
+    When \code{true} the punctuation sign will be placed \emph{after} the
+    footnote.
+\end{options}
+Like all options it can also be set using the setup command.
+\begin{commands}
+  \command{setfnpct}[\marg{options}]
+    Set up options.  Can be used anywhere in the document.  Some options can
+    only be set in the preamble, though.
+\end{commands}
+\begin{example}
+  \setfnpct{punct-after}
+    \begin{minipage}{\linewidth}
+    \noindent The three little pigs built
+    their houses out of straw\footnote{not
+      to be confused with hay},  sticks%
+    \footnote{or lumber according to some
+      sources} and bricks\footnote{probably
+      fired clay bricks}.
+  \end{minipage}
+\end{example}
+
+\subsection{Temporarily disable or enable switching}
+One maybe want to put some footnote marks \emph{before} the punctuation and
+some after, for example because the first one describes a single word but the
+second one a whole sentence.  For this purpose \fnpct\ adds a \sarg\ argument
+to \cs{footnote} and \cs{footnotemark}.  The complete new syntax now is as
+follows:
+\begin{commands}
+  \command{footnote}[\sarg\oarg{num>}\marg{footnote text}\meta{tpunct}]
+    new \sarg\ argument added.  \meta{tpunct} is the optional trailing
+    punctuation mark.
+  \command{footnotemark}[\sarg\oarg{num>}\meta{tpunct}]
+    new \sarg\ argument added.  \meta{tpunct} is the optional trailing
+    punctuation mark.
+\end{commands}
+The \sarg\ argument temporarily turns off the punctuation/footnote switching.
+In case you set \keyis{punct-after}{true} the \sarg\ argument temporarily
+\emph{enables} the switching.
+\begin{example}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote*{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}.
+  \end{minipage}\hfil
+  \setfnpct{punct-after}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote*{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}.
+  \end{minipage}
+\end{example}
+
+\subsection{Language Specific Settings}
+Package \pkg{babel}'s~\cite{pkg:babel} French settings redefine
+\cs*{@footnotemark}.  \fnpct\ resets this redefinition but sets the
+\option{before-footnote-space} equal to a thin space (\code{.16667em}).
+
+\section{Options}\label{sec:options}
+Most package options are listed below.  They all can be set as a package
+option or with the \cs{setfnpct} command.  Most of them are for adjusting the
+kerning.
+
+\default{Underlined} values are set if the option is used without value.
+\begin{options}
+  \keychoice{add-punct-marks}{\meta{mark}\oarg{space after}\oarg{space before}}
+    Add another punctuation mark for the position switching and spacify
+    kerning if necessary.  An existing entry will be overwritten.  This option
+    accepts a list of marks.
+  %
+  \keyval{remove-punct-marks}{mark}
+    Remove punctuation mark from the kerning/position switching behaviour.
+    This option accepts a list of marks.
+  %
+  \keyval{after-dot-space}{dim}\Default{-.06em}
+    Space to be inserted after a footnote mark and before the full stop
+    (``footnote \emph{after} dot'').  A negative space will move the full stop
+    further to the footnote mark.
+  %
+  \keyval{after-comma-space}{dim}\Default{-.06em}
+    Space to be inserted after a footnote mark and before the comma
+    (``footnote \emph{after} comma'').  A negative space will move the comma
+    further to the footnote mark.
+  %
+  \keyval{after-punct-space}{dim}
+    Set \emph{all} spaces, \ie\ also the ones for marks you've added with
+    \option{add-punct-marks}.
+  %
+  \keybool{punct-after}\Default{false}
+    When \code{true} the punctuation sign will be placed \emph{after} the
+    footnote.
+  %
+  \keyval{before-dot-space}{dim}\Default{-.16em}
+    Space to be inserted after a footnote mark and before the full stop
+    (``footnote \emph{before} dot''), \ie\ with \keyis{punct-after}{true}.
+  %
+  \keyval{before-comma-space}{dim}\Default{-.16em}
+    space to be inserted after a footnote mark and before the comma
+    (``footnote \emph{before} comma''), \ie\ with \keyis{punct-after}{true}.
+  %
+  \keyval{before-punct-space}{dim}
+    Set \emph{all} spaces, \ie\ also the ones for marks you've added with
+    \option{add-punct-marks}.
+  %
+  \keyval{before-footnote-space}{dim}\Default{.06em}
+    Space to be inserted between a word and the following footnote mark.
+  %
+  \keybool{dont-mess-around}\Default{false}
+    Sets all mentioned lengths to \code{0pt} and \keyis{punct-after}{true}.
+    Basically this should look like as if you hadn't loaded \fnpct\ except the
+    multiple footnote commands and \cs{innernote} are still available, see
+    sections~\ref{sec:multiple} and~\ref{sec:nested}, respectively.
+  %
+  \keybool{multiple}\Default{false}
+    Lets \cs{footnote} be equal to \cs{multfootnote}.
+  %
+  \keyval{mult-fn-delim}{delimiter}\Default{;}
+    Aets the delimiter for the \cs{multfootnote} command.
+  %
+  \keyval{mult-fn-sep}{separator}\Default{,}
+    Sets the separator between multiple footnote marks.
+  %
+  \keybool{normal-marks}\Default{false}\label{opt:normal-marks}
+    Sets the footnote marks in the foot not as superscripts but as normal
+    font.  If you're not using a \KOMAScript\ class this option will load
+    the package \pkg{scrextend}.  See section~\ref{sec:normal} for more
+    information.  \emph{This option can only be set in the preamble}.
+\end{options}
+
+So if you want to extend the punctuation switching and kerning to other punctuation
+marks you can do something like this:
+\begin{example}
+  \setfnpct{add-punct-marks=!?}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay}?
+    Sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}!
+  \end{minipage}
+\end{example}
+
+Or with some additional spacing:
+\begin{example}
+  \setfnpct{add-punct-marks=![.03em]?[.03em]}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay}?
+    Sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}!
+  \end{minipage}
+\end{example}
+
+Let's take a look at an example with some ridiculous settings:
+\begin{example}
+  % some ridiculous settings:
+  \setfnpct{after-punct-space=2pt,before-footnote-space=2pt}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}.
+  \end{minipage}
+\end{example}
+
+And now the same with switched order:
+\begin{example}
+  % some ridiculous settings:
+  \setfnpct{punct-after,before-punct-space=2pt,before-footnote-space=2pt}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}.
+  \end{minipage}
+\end{example}
+
+In case the automatic kerning doesn't work for whatever reason the spaces are
+available as user commands as well:
+\begin{commands}
+  \command{kfp}
+    Insert \option{after-dot-space} or (if \keyis{punct-after}{true})
+    \option{before-dot-space}. 
+  \command{kfc}
+    Insert \option{after-comma-space} or (if \keyis{punct-after}{true})
+    \option{before-comma-space}.
+\end{commands}
+
+Some of the options are explained in a bit more detail in the next sections.
+
+\section{Multiple footnotes}\label{sec:multiple}
+\subsection{Basics}
+Since multiple footnotes have to be treated differently\footnote{see these
+  footnotes;for an example}, \fnpct\ provides an extra command for that:
+\begin{commands}
+  \command{multfootnote}[\sarg\Marg{\meta{list};\meta{of};\meta{footnotes}}\meta{tpunct}]
+    Different footnotes are separated with a semicolon.  The \sarg\ turns the
+    footnote/punctuation switching temporarily off.
+\end{commands}
+\begin{example}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\multfootnote{probably fired clay bricks;or
+    something else}.
+  \end{minipage}
+\end{example}
+
+Every of the items of the list has an optional argument equivalent to the
+optional argument of \cs{footnotetext}:
+\begin{commands}
+  \command{multfootnote}[\Marg{\sarg\oarg{mark}\meta{footnote text};\ldots}]
+    The syntax of \cs{multfootnote}'s footnote text argument.
+\end{commands}
+\begin{example}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\multfootnote{probably fired clay bricks;[5]or
+    something else}.
+  \end{minipage}
+\end{example}
+
+Additionally every item has an optional \sarg\ which only invokes
+\cs{footnotetext}.  This enables for example to set nested footnotes without
+disrupting the multiple setting.  The following example is shown in
+figure~\ref{fig:nested:mult}:
+\begin{example}[compile,float,caption={Nested footnotes.\label{fig:nested:mult}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+  
+  \usepackage{fnpct}
+  
+  \begin{document}
+  \noindent The three little pigs built their houses
+  out of straw\footnote{not to be confused with hay},
+  sticks\footnote{or lumber according to some sources}
+  and bricks\multfootnote{probably fired clay bricks%
+  \footnotemark;*or something else;what do I know}.
+  \end{document}
+\end{example}
+
+\subsection{The delimiter and separator}
+Since the semicolon might be part of the footnote text you might have some
+trouble.  But there are ways around. Maybe try enclosing it in braces:
+\begin{example}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\multfootnote{probably fired clay bricks{;}
+    or something else;what do I know}.
+  \end{minipage}
+\end{example}
+
+There also are options which lets you choose the (input) delimiter and the (output)
+separator:
+\begin{options}
+  \keyval{mult-fn-delim}{delimiter}\Default{;}
+    Choose delimiter for the \cs{multfootnote}.
+  \keyval{mult-fn-sep}{separator}\Default{,}
+    Choose the separator that is put between footnote marks.
+\end{options}
+\begin{example}
+  \setfnpct{mult-fn-delim=//,mult-fn-sep=;}
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\multfootnote{probably fired clay bricks;
+    or something else//what do I know}.
+  \end{minipage}\hfil
+  \setfnpct{mult-fn-delim=;,mult-fn-sep=}
+  \renewcommand*\thempfootnote{\fnsymbol{mpfootnote}}
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\multfootnote{probably fired clay bricks;
+    or something else}.
+  \end{minipage}
+\end{example}
+
+\subsection{Automagic}
+If you want you can turn all footnotes into \cs{multfootnote}s.
+\begin{options}
+  \keybool{multiple}\Default{false}
+    Let \cs{footnote} behave like \cs{multfootnote}.  \emph{This option can
+      only be set in the preamble}.
+\end{options}
+\begin{example}
+  % in preamble: \setfnpct{multiple}
+  % or \usepackage[multiple]{fnpct}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks;or
+      something else}.
+  \end{minipage}
+\end{example}
+
+\section{Nested Footnotes}\label{sec:nested}
+\fnpct\ provides preliminary support for nested footnotes.  There are some
+restrictions, though.  The command below can be used inside \cs{footnote} and
+\cs{multfootnote}, but not inside another \cs{innernote}.  \cs{innernote}
+really is a ``inner footnote'', it doesn't work with endnotes, for example.
+\begin{commands}
+  \command{innernote}[\sarg\oarg{mark}\marg{text}\meta{tpunct}]
+    A nested footnote.
+\end{commands}
+The inner node uses a \cs{footnotemark} internally and the mark will be set
+with the definition it has at begin document.
+
+The output of the following code can be seen in figure~\ref{fig:nested:a}.
+\begin{example}[compile,float,caption={\cs*{innernote} example (a)\label{fig:nested:a}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+  
+  \usepackage{fnpct}
+  
+  \begin{document}
+  \noindent The three little pigs built their houses
+  out of straw\footnote{not to be confused with hay},
+  sticks\footnote{or lumber according to some sources}
+  and bricks\footnote{probably fired clay bricks%
+    \innernote{or not}}.
+  \end{document}
+\end{example}
+
+This is especially useful if you have more than one additional footnote inside
+a footnote, a case that can't be solved in a satisfying (\ie\ automatic) way
+with the method mentioned in section~\ref{sec:multiple}.  See
+figure~\ref{fig:nested:b} for the output of this code:
+\begin{example}[compile,float,caption={\cs*{innernote} example (b)\label{fig:nested:b}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+  
+  \usepackage{fnpct}
+  
+  \begin{document}
+  \noindent The three little pigs built their houses
+  out of straw\footnote{not to be confused with hay},
+  sticks\footnote{or lumber according to some sources}
+  and bricks\footnote{probably\innernote{just guessing}
+    fired clay bricks\innernote{or not}}.
+  \end{document}
+\end{example}
+
+\cs{innernote} can also be used to escape minipages.  In this case use
+\cs{innernote} as a replacement for \cs{footnote} and call this command later:
+\begin{commands}
+  \command{writeinnernotes}
+    Writes all \cs{footnotetext}s to the inner footnotes when invoked.  This
+    is usually done automatically by the \cs{footnote} command but there are
+    possible needs for it.
+\end{commands}
+See figure~\ref{fig:nested:c} for the output of the following code:
+\begin{example}[compile,float,caption={\cs*{innernote} example (c)\label{fig:nested:c}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+
+  \usepackage{fnpct}
+
+  \begin{document}
+  \noindent\fbox{%
+  \begin{minipage}{.9\linewidth}
+     The three little pigs built their houses
+     out of straw\innernote{not to be confused with hay},
+     sticks\innernote{or lumber according to some sources}
+     and bricks\innernote{probably}.
+  \end{minipage}}\writeinnernotes
+  \end{document}
+\end{example}
+
+\section{Normal notes}\label{sec:normal}
+The package option \option{normal-marks} (see p.\,\pageref{opt:normal-marks})
+changes the layout of the footnote marks in the foot by using \KOMAScript's
+\cs{deffootnote} command:
+\begin{commands}
+  \command{deffootnote}[\oarg{mark indent}\marg{indent}\marg{par
+    indent}\marg{format code}]
+    \KOMAScript's command to define the output of the footnote text in the
+    foot.
+\end{commands}
+
+The following code is shown in figure~\ref{fig:normal}.
+\begin{example}[compile,float,caption={Demonstration of the
+    \option*{normal-marks} option.\label{fig:normal}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+  
+  \usepackage[normal-marks]{fnpct}
+  
+  \begin{document}
+  
+  \noindent The three little pigs built their houses
+  out of straw\footnote{not to be confused with hay},
+  sticks\footnote{or lumber according to some sources}
+  and bricks\footnote{probably fired clay bricks}.
+  
+  \end{document}
+\end{example}
+
+The three indent values used by \fnpct\ can be changed with the following
+options:
+\begin{options}
+  \keyval{normal-mark-width}{dim}\Default{1em}
+    The width of the box within which the marks are set.
+  \keyval{normal-indent}{dim}\Default{1.5em}
+    The indent of each footnote line \emph{except} the first.
+  \keyval{normal-par-indent}{dim}\Default{1em}
+    Additional indent of a new paragraph inside the footnote text.
+\end{options}
+
+\section{Other packages}\label{sec:other:packages}
+\fnpct\ tries its best to support other footnote and related
+packages\footnote{If you find some package missing please let me know.}.  Each
+of the following subsections is dedicated to one of these packages and if and
+how they work together with \fnpct.  Fortunately most of them do quite well.
+
+\subsection{bigfoot}\label{ssec:bigfoot}
+The \pkg{bigfoot}~\cite{pkg:bigfoot} package extends the possibilities of the
+\pkg{manyfoot} package~\cite{pkg:manyfoot} (see section~\ref{ssec:manyfoot}).
+The main visible feature is to use different classes of footnotes which are
+typeset in different apparatus on the bottom of the page.
+
+\fnpct\ is compatible with \pkg{bigfoot}. You need to be a bit cautious,
+though.  You need to \emph{declare footnotes with \cs*{DeclareNewFootnote}
+  \emph{after} loading \fnpct\ but in the document \emph{preamble}.}
+
+\emph{Also verbatim material won't work inside footnotes anymore}.  But you
+can of course use \lefloch's \pkg{cprotect}~\cite{pkg:cprotect} if you really
+need verbatim material in footnotes \emph{and} want to use \fnpct.  Since
+\fnpct\ does not redefine any \cs{footnotetext} like command it will still
+work inside one of them.
+
+For every footnote class defined with \cs*{DeclareNewFootnote} the commands
+\cs*{footnote\meta{class}} and \cs*{footnotemark\meta{class}} are redefined
+with the starred variant and a \cs*{multfootnote\meta{class}} is defined. The
+\option{multiple} option will turn all \cs*{footnote\meta{class}} commands
+into the corresponding \cs*{multfootnote\meta{class}}.
+
+\fnpct\ has an additional package option which \emph{cannot} be set with
+\cs{setfnpct} and only has any effects if \pkg{bigfoot} has been loaded:
+\begin{options}
+  \keybool{bigfoot-default-top}\Default{false}
+    Sets the \code{default} footnote class as top layer.
+\end{options}
+
+Since this document cannot easily combine \emph{every} footnote package at the
+same time for demonstration purposes the following code is shown in
+figure~\ref{fig:bigfoot}:
+\begin{example}[compile,float,caption={\pkg*{bigfoot} example\label{fig:bigfoot}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.5\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+  
+  \usepackage{bigfoot}
+  \usepackage[bigfoot-default-top]{fnpct}
+  \setfnpct{multiple}
+  \DeclareNewFootnote[para]{B}[alph]
+  
+  \begin{document}
+  
+  \noindent The three little pigs built their houses
+  out of straw\footnote*{not to be confused with hay%
+  \footnoteB{let alone grass}}, sticks\footnote{or
+    lumber according to some sources} and bricks%
+  \footnote{probably fired clay bricks;or something}.
+  
+  \end{document}
+\end{example}
+
+\subsection{endnotes}
+The \pkg{endnotes}~\cite{pkg:endnotes} package povides the commands
+\cs{endnote} and \cs{endnotemark} which can be used to output all notes at the
+end of a chapter, say.
+
+If the package is loaded both commands are adapted\footnote*{see
+  section~\ref{sec:adapt} on manual adaption}:
+\begin{sourcecode}
+  % `fnpct' does this for you:
+  \AdaptNote\endnote\multendnote
+  \AdaptNoteMark\endnotemark
+\end{sourcecode}
+
+Everything else stays the same:
+\begin{example}
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\endnote{not to be confused with hay},
+    sticks\endnote{or lumber according to some sources}
+    and bricks\endnote{probably fired clay bricks}.
+  
+    \theendnotes
+  \end{minipage}\hfil
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\endnote*{not to be confused with hay},
+    sticks\endnote{or lumber according to some sources}
+    and bricks\multendnote{probably fired clay bricks;or
+    something else}.
+    
+    \theendnotes
+  \end{minipage}
+\end{example}
+
+\subsection{enotez}
+The \pkg{enotez}~\cite{pkg:enotez} package povides the command \cs{endnote}
+which can be used to output all notes at the end of a chapter, say.
+
+If the package is loaded the command is adapted\footnote*{see
+  section~\ref{sec:adapt} on manual adaption}:
+\begin{sourcecode}
+  % `fnpct' does this for you:
+  \AdaptNote\endnote\multendnote
+\end{sourcecode}
+
+\subsection{fixfoot}
+The \pkg{fixfoot}~\cite{pkg:fixfoot} package provides a possibility to create
+repeating footnotes.  \fnpct\ supports this package provided you take care of
+the following:
+
+\emph{Use \cs{DeclareFixedFootnote} only in the preamble but \emph{after}
+  loading \fnpct.}
+
+\cs*{DeclareFixedFootnote}\Marg{\cs*{cs}}\marg{footnote text} is used to store
+the \meta{footnote text} in \cs*{cs} which in turn creates a footnote mark for
+it but doesn't repeat the footnote text on the same page in the bottom.  The
+document needs several runs to get all the numbers and footnotes right.
+
+Every fixed footnote declared with \cs{DeclareFixedFootnote} gets an optional
+\sarg\ to prevent the punctuation switching.  \emph{There is \emph{no}
+  mult-variant of the fixed notes!}
+
+Since this document cannot easily combine \emph{every} footnote package at the
+same time for demonstration purposes the following code is shown in
+figure~\ref{fig:fixfoot}:
+\begin{example}[compile,float,caption={\pkg*{fixfoot}
+    example\label{fig:fixfoot}}]
+  \documentclass{article}
+  \usepackage[
+    paperwidth=.55\textwidth,
+    paperheight=12\baselineskip,
+    margin=5pt,
+    bottom=1.5cm]{geometry}
+    
+  \usepackage{fixfoot}
+  \usepackage{fnpct}
+  
+  \DeclareFixedFootnote{\myfn}{I'm confused: what do I want to say?}
+  
+  \begin{document}
+  
+  \noindent The three little pigs\myfn\ built their houses
+  out of straw\myfn*, sticks\footnote{or lumber according
+  to some sources} and bricks\footnote{probably fired clay
+    bricks}.
+  
+  \end{document}
+\end{example}
+
+\subsection{footmisc}\label{ssec:manyfoot}
+The \pkg{footmisc} package~\cite{pkg:footmisc} provides a range of options to
+customize footnotes, for example output them as margin notes or count
+footnotes per page.
+
+Testing showed no incompatibilities with \pkg{footmisc}.  The only thing is
+that you won't have to (and shouldn't) use its \option{multiple} option.
+
+\subsection{footnote}
+Unfortunately \fnpct\ is not compatible with the \pkg{footnote}
+package~\cite{pkg:footnote}.  Or more precisely it is not compatible if the
+command pair \cs*{savenotes}/\cs*{spewnotes} is invoked.  This disables
+\pkg{footnote}'s environments as well as its environment escaping mechanism
+through \cs{makesavenoteenv}.
+
+\subsection{manyfoot}
+The \pkg{manyfoot} package~\cite{pkg:manyfoot} is not and will not directly be
+supported.  It is loaded by \pkg{bigfoot} (see section~\ref{ssec:bigfoot}), anyway.
+And since the latter states in its documentation
+\begin{cnltxquote}[David Kastrup~\textup{\cite{pkg:bigfoot}}]
+  Purpose of this package is to provide a one-stop solution to almost all
+  problems related to footnotes. You can use it as a drop-in replacement of
+  the `\pkg{manyfoot}' package, but without many of its shortcomings, and
+  quite a few features of its own.
+\end{cnltxquote}
+you should probably prefer it anyway.
+
+If it is \emph{really} wanted by users I might change my opinion, though \ldots
+
+\subsection{pagenote}
+The package \pkg{pagenote}~\cite{pkg:pagenote} is supported and its
+\cs*{pagenote} command is treated the same way as all other note commands: it
+got an optional \sarg\ argument and an additional \cs*{multpagenote} is
+defined.
+
+\subsection{parnotes}
+The function of the package \pkg{parnotes}~\cite{pkg:parnotes} is similar to the
+\pkg{endnotes} package.  basically it allows to output the footnote text after
+a paragraph, either by using a special environment or by invoking
+\cs*{parnotes}.
+
+If \pkg{parnotes} is loaded \fnpct\ extends its functionality analogous to the
+one of \pkg{endnotes}.
+
+Again the \option{multiple} option turns all \cs*{parnote}s into
+\cs*{multparnote}s.
+\begin{example}
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\parnote{not to be confused with hay},
+    sticks\parnote{or lumber according to some sources}
+    and bricks\parnote{probably fired clay bricks}.
+    
+    \parnotes
+  \end{minipage}\hfil
+  \begin{minipage}[t]{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\parnote*{not to be confused with hay},
+    sticks\parnote{or lumber according to some sources}
+    and bricks\multparnote{probably fired clay bricks;or
+      something else}.
+    
+    \parnotes
+  \end{minipage}
+\end{example}
+
+\subsection{sepfootnotes}
+\fnpct\ supports the \pkg{sepfootnotes} package~\cite{pkg:sepfootnotes}.  Each
+note type you have created with with one of the commands
+\begin{description}
+  \item \cs*{newfootnotes}\marg{prefix},
+  \item \cs*{newendnotes}\marg{prefix} or
+  \item \cs*{newsymbolfootnotes}\marg{prefix}
+\end{description}
+gets the additional optional \sarg\ to prevent punctuation switching.  Also
+the corresponding mult-variant \cs*{\meta{prefix}multnote} is defined.  The
+option \option{multiple} again turns all note commands into their
+mult-variant.
+
+You have to use the \cs*{newfootnotes} commands in the document preamble after
+loading \fnpct.
+
+\begin{example}
+  % preamble \newfootnotes{a}
+  \anotecontent{first}{not to be confused with hay}
+  \anotecontent{second}{or lumber according to some sources}
+  \anotecontent{third}{probably fired clay bricks}
+  \begin{minipage}{.4\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\anote{first}, sticks\anote{second} and
+    bricks\anote{third}.
+  \end{minipage}
+\end{example}
+
+\subsection{sidenotes}
+The package \pkg{sidenotes}~\cite{pkg:sidenotes} is supported and its commands
+\cs*{sidenote} and \cs*{sidenotemark} are treated the same way as footnotes:
+they got an optional \sarg\ argument and the additional \cs*{multsidenote} is
+created.  The option \option{multiple} turns all note commands into their
+mult-variant.
+
+\subsection{snotez}
+The package \pkg{snotez}~\cite{pkg:snotez} is supported and its commands
+\cs*{sidenote} and \cs*{sidenotemark} are treated the same way as footnotes:
+they got an optional \sarg\ argument and the additional \cs*{multsidenote} is
+created.  The option \option{multiple} turns all note commands into their
+mult-variant.
+
+\subsection{tablefootnote}
+The package \pkg{tablefootnote}~\cite{pkg:tablefootnote} is supported and its
+\cs*{tablefootnote} command is treated the same way as all other note
+commands: it got an optional \sarg\ argument and an additional
+\cs*{multtablefootnote} is defined.  The option \option{multiple} turns all
+note commands into their mult-variant.
+
+\subsection{yafoot}
+Currently no issues are known when using \fnpct\ with one or all of the
+packages of the \bnd{yafoot}~\cite{bnd:yafoot} bundle.  Just for reference:
+these packages are \pkg*{pfnote}, \pkg*{fnpos} and \pkg*{dblfnote}.
+
+\section{Adapting note commands}\label{sec:adapt}
+If a package is not natively supported you can try and adapt commands yourself.
+You'll need to use one of the following commands. Please be aware that if the
+adapted command does not match the required syntax it will get the required syntax
+afterwards. This can result in dummy arguments or an overwritten \code{*} argument.
+
+\begin{commands}
+  % \AdaptNote
+  \command{AdaptNote}[\Marg{\cs*{cs}}\Marg{\cs*{multcs}}]
+    This lets \cs*{cs}  adapt to the kerning behaviour and adds an optional
+    \sarg.  It also creates a corresponding mult-variant.  The package option
+    \option{multiple} will now turn \cs*{cs} into its mult-variant.  Required
+    syntax: \cs*{cs}\oarg{oarg}\marg{marg}
+  % \AdaptNoteNoMult
+  \command{AdaptNoteNoMult}[\Marg{\cs*{cs}}]
+    Like \cs{AdaptNote} but doesn't create a mult-variant and thus there is no
+    change in behaviour when the option \option{multiple} is used.  Required
+    syntax: \cs*{cs}\oarg{oarg}\marg{marg}
+  % \AdaptNoteOpt
+  \command{AdaptNoteOpt}[\Marg{\cs*{cs}}\Marg{\cs*{multcs}}]
+    This lets \cs*{cs} adapt to the kerning behaviour and adds an optional
+    \sarg.  It also creates a corresponding mult-variant.  The package option
+    \option{multiple} will now turn \cs*{cs} into its mult-variant.  Required
+    syntax: \cs*{cs}\oarg{oarg}\oarg{oarg}\marg{marg}
+  % \AdaptNoteOptNoMult
+  \command{AdaptNoteOptNoMult}[\Marg{\cs*{cs}}]
+    Like \cs{AdaptNoteOpt} but doesn't create a mult-variant and thus there is
+    no change in behaviour when the option \option{multiple} is used.
+    Required syntax: \cs*{cs}\oarg{oarg}\oarg{oarg}\marg{marg}
+  % \AdaptNoteNoOpt
+  \command{AdaptNoteNoOpt}[\Marg{\cs*{cs}}\Marg{\cs*{multcs}}]
+    \sinceversion{0.3}Like \cs{AdaptNote} but requires \cs*{cs} not to have an
+    optional argument.  If it had one it wouldn't have it any more after the
+    adaption.  The package option \option{multiple} will now turn \cs*{cs}
+    into its mult-variant.  Required syntax: \cs*{cs}\marg{marg}
+  % \AdaptNoteNoOptNoMult
+  \command{AdaptNoteNoOptNoMult}[\Marg{\cs*{cs}}]
+    \sinceversion{0.3}Like \cs{AdaptNoteNoOpt} but doesn't create a
+    mult-variant.  Required syntax: \cs*{cs}\Marg{marg}
+  % \AdaptNoteMark
+  \command{AdaptNoteMark}[\Marg{\cs*{cs}}]
+    This lets \cs*{cs} adapt to the kerning behaviour and adds an optional
+    \sarg.  Required syntax: \cs*{cs}\oarg{oarg}
+  % strict
+\end{commands}
+\begin{options}
+  \keybool{strict}\Default{false} When \code{true}
+    \cs{AdaptNote} (and the others) will issue errors if the note command in
+    question has already been adapted.
+\end{options}
+
+\subsection{tufte-latex's side notes}
+For example using the \cs{sidenote} command from the \cls*{tufte-handout}
+class is easily possible, see also figure~\ref{fig:tufte}:
+\begin{example}[compile,float,caption={Adapt
+    \bnd*{tufte-latex}.\label{fig:tufte}},graphics={trim=2.5cm 24.5cm 2cm
+    1cm,scale=.65}]
+  \documentclass{tufte-handout}
+  \usepackage[multiple]{fnpct}
+  \AdaptNote\sidenote\multsidenote
+  \begin{document}
+  Some text in the document body\sidenote{Some
+  text in a sidenote.;A second sidenote.}.
+  \end{document}
+\end{example}
+
+\subsection{Adapting \cs*{footcite} and siblings}\label{ssec:adapt:footcite}
+If you're willing to sacrifice \cs*{footcite}'s \sarg\ argument (which it has
+in some styles) you can adapt the commands provided by
+\pkg{biblatex}~\cite{pkg:biblatex} as well:
+
+\begin{example}
+  % used in preamble: \AdaptNoteOpt\footcite\multfootcite
+  \begin{minipage}{.5\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}. The
+    companion has nothing on this topic\multfootcite{[see]
+      [but there's nothing there]companion;[or see][but there's
+      also nothing]knuth:ct:a}.
+  \end{minipage}
+\end{example}
+
+The option \option{multiple} turns all \cs*{footcite}s into
+\cs*{multfootcite}s now.  Remember that the optional arguments then are inside
+the braces!
+
+\begin{example}
+  % used in preamble: \AdaptNoteOpt\footcite\multfootcite
+  % with option `multiple':
+  \begin{minipage}{.5\linewidth}
+    \noindent The three little pigs built their houses
+    out of straw\footnote{not to be confused with hay},
+    sticks\footnote{or lumber according to some sources}
+    and bricks\footnote{probably fired clay bricks}. The
+    companion has nothing on this topic\footcite{[see][but
+      there's nothing there]companion;[or see][but there's also
+      nothing]knuth:ct:a}.
+  \end{minipage}
+\end{example}
+
+
+\appendix
+
+\end{document}
+
+% TODO: update documentation and explain what happens when babel's french is
+% used

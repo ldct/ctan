@@ -1,0 +1,852 @@
+% $Id: fiwi.cbx, v1.6c 2017/01/28 Simon Spiegel
+
+\ProvidesFile{fiwi.cbx}
+[\abx@cbxid $Id: fiwi.cbx, v1.6c 2017/01/28 spiegel $]
+
+\ExecuteBibliographyOptions{autocite=inline,uniquename=allfull,uniquelist=true,ibidtracker=constrict}
+
+\RequireBibliographyStyle{fiwi}  
+
+\providetoggle{cbx:filmindex}
+\providetoggle{cbx:filmindex-complete}
+\providetoggle{cbx:filmindex-separated}
+\togglefalse{cbx:filmindex-separated}
+\providetoggle{index:title:author}
+\togglefalse{index:title:author}
+\providetoggle{index:title}
+\togglefalse{index:title}
+\providetoggle{index:title:both}
+\togglefalse{index:title:both}
+\providetoggle{index:inindex}
+
+\DeclareBibliographyOption{filmindex}[true]{% Indexieren von Filmen
+  \ifstrequal{#1}{true}
+	{\typeout{biblatex-fiwi: Filmtitel werden indexiert}%
+	\toggletrue{cbx:filmindex}\togglefalse{cbx:filmindex-complete}}
+	{\togglefalse{cbx:filmindex}\togglefalse{cbx:filmindex-complete}}
+  \ifstrequal{#1}{complete}
+	{\toggletrue{cbx:filmindex}\toggletrue{cbx:filmindex-complete}}
+	{}
+  }%
+  
+\DeclareBibliographyOption{splitfilmindex}[true]{%
+  \ifstrequal{#1}{true}
+	{\typeout{biblatex-fiwi: Filmtitel erscheinen in einem getrennten Index}%
+	\toggletrue{cbx:filmindex-separated}}
+	{\togglefalse{cbx:filmindex-separated}}
+}
+  
+\DeclareBibliographyOption{titleindex}[true]{% Indexieren von Buchtiteln
+	\ifstrequal{#1}{true}
+	{\toggletrue{index:title}}
+	{\togglefalse{index:title}}
+  \ifstrequal{#1}{subitem}
+	{\toggletrue{index:title:author}}
+	{\togglefalse{index:title:author}}
+  \ifstrequal{#1}{both}
+	{\toggletrue{index:title:both}
+	\toggletrue{index:title:author}}
+	{\togglefalse{index:title:both}}
+}
+  
+\providetoggle{cbx:compactcite}
+\togglefalse{cbx:compactcite}
+\newbool{cbx@bool}
+\newbool{cbx:parens}
+\newbool{cbx:loccit}
+\providetoggle{citefullfilm} 
+\providetoggle{cbx:citefilmcountry} 
+\newcommand*{\fullcitefilm}{\settoggle{citefullfilm}{true}}
+\DeclareBibliographyOption{fullcitefilm}[false]{\settoggle{citefullfilm}{#1}}
+\DeclareBibliographyOption{compactcite}[true]{\settoggle{cbx:compactcite}{#1}}
+
+\providetoggle{citecompletefilm}
+\newcommand*{\completecitefilm}{\settoggle{citecompletefilm}{true}}
+
+\DeclareBibliographyOption{citefilm}[normal]{%
+\ifstrequal{#1}{normal}
+{}
+{}
+\ifstrequal{#1}{full}
+{\settoggle{citefullfilm}{true}}
+{}
+\ifstrequal{#1}{country}
+{\settoggle{cbx:citefilmcountry}{true}}
+{}
+\ifstrequal{#1}{complete}
+{\settoggle{citecompletefilm}{true}}
+{}
+}%
+
+\renewcommand*{\nameyeardelim}{\addspace}
+\renewcommand*{\bibindexnamedelimi}{\,}
+\renewcommand*{\bibindexinitdelim}{\,}
+\renewcommand*{\multicitedelim}{\addcomma\addspace}
+
+\providetoggle{xindy}
+\DeclareBibliographyOption{xindy}[true]{\settoggle{xindy}{#1}}
+
+\DeclareBibliographyOption{ibidpage}[true]{%
+  \ifstrequal{#1}{true}
+    {\ExecuteBibliographyOptions{loccittracker=constrict}}
+    {\ExecuteBibliographyOptions{loccittracker=false}}}
+
+%\def\sortentry#1{}
+%\newcommand{\sortentry}[1]{#1}
+\newrobustcmd{\sortentry}[1]{}
+
+%\the\numexpr\value{parenlevel}
+\DeclareFieldFormat{citeyear}{\ifnumcomp{\value{parenlevel}}{>}{0}{#1}{\mkbibparens{#1}}}
+\DeclareFieldFormat{citetitle:incollection}{\emph{#1}\isdot}
+\DeclareFieldFormat[misc,video,movie]{citetitle}{\film{#1}}
+\DeclareIndexFieldFormat[movie,misc,video]{indextitle}{%
+	\iftoggle{cbx:filmindex}
+		{\iftoggle{cbx:filmindex-complete}
+			{\usebibmacro{index:movietitle}{\iftoggle{cbx:filmindex-separated}
+				{\index[film]}{\index}}
+				{\iftoggle{xindy}%
+					{\sortentry{\thefield{indextitle}%
+					\ifuniquetitle{}{\thefield{year}}}}
+					{}
+		\fullcite{\thefield{entrykey}}}}
+			{\usebibmacro{index:movietitle}{\iftoggle{cbx:filmindex-separated}
+				{\index[film]}{\index}}{\textsc{#1}}}}
+	{}}
+	
+	
+\DeclareIndexNameFormat{name:title}{%
+     \iffieldundef{title}
+       {\usebibmacro{index:name}{\index}	
+          {\namepartfamily}
+          {\namepartgiven}
+          {\namepartprefix}
+          {\namepartsuffix}}
+       {\usebibmacro{index:name:title}{\index}
+          {\namepartfamily}
+          {\namepartgiven}
+          {\namepartprefix}
+          {\namepartsuffix}}}   
+
+\DeclareNameFormat{labelname}{%
+	\ifcase\value{uniquename}%
+    \usebibmacro{name:family}
+    	{\namepartfamily}
+        {\namepartgiven}
+        {\namepartprefix}
+        {\namepartsuffix}%
+  	\or
+    \iftoggle{citeprefix}
+    {\usebibmacro{name:given-family}
+      	{\namepartfamily}
+      	{\namepartgiveni}
+      	{\namepartprefix}
+      	{\namepartsuffix}}
+      {\usebibmacro{name:given-family}
+      	{\namepartfamily}
+      	{\namepartgiveni}
+      	{\namepartprefixi}
+      	{\namepartsuffixi}}%
+  \or
+    \usebibmacro{name:given-family}
+    	{\namepartfamily}
+        {\namepartgiven}
+        {\namepartprefix}
+        {\namepartsuffix}%
+  \fi
+  \usebibmacro{name:andothers}}
+
+\newbibmacro*{cite:postnote}{%
+  \ifbool{cbx:loccit}
+    {}
+    {\usebibmacro{postnote}}}
+
+\renewbibmacro*{name:family}[4]{%
+  \iftoggle{citeprefix}
+    {\usebibmacro{name:delim}{#3#1}%
+     \usebibmacro{name:hook}{#3#1}%
+     \ifdefvoid{#3}
+       {}
+       {\ifcapital
+          {\mkbibnameprefix{\MakeCapital{#3\isdot}}}
+          {\mkbibnameprefix{#3\isdot}}%
+        \ifpunctmark{'}{}{\bibnamedelimc}}}
+    {\ifuseprefix
+    {\usebibmacro{name:delim}{#3#1}%
+     \usebibmacro{name:hook}{#3#1}%
+     \ifdefvoid{#3}
+       {}
+       {\ifcapital
+          {\mkbibnameprefix{\MakeCapital{#3\isdot}}}
+          {\mkbibnameprefix{#3\isdot}}%
+        \ifpunctmark{'}{}{\bibnamedelimc}}}
+    {\usebibmacro{name:delim}{#1}%
+     \usebibmacro{name:hook}{#1}}}%
+  \mkbibnamefamily{#1}}%  
+
+% Index resp. xindy
+\newcommand*{\xindy}{\toggletrue{xindy}}% Indizierung für xindy ohne actual-Teil
+
+% {<family name>}{<given name>}{<given initials>}{<family name prefix>}
+\renewcommand*{\mkbibindexname}[4]{% Variante für xindy ohne actual
+  \ifuseprefix
+    {\ifdefvoid{#3}{}{#3 }%
+     \@firstofone #1% remove spurious braces
+     \ifdefvoid{#4}{}{ #4}%
+     \ifdefvoid{#2}{}{, #2}%
+     \iftoggle{xindy}
+     {}
+     {\actualoperator
+     \ifdefvoid{#3}{}{\MakeCapital{#3}\addspace}%
+     #1%
+     \ifdefvoid{#4}{}{ #4}%
+     \ifdefvoid{#2}{}{, #2}}%
+     }
+    {\@firstofone #1% remove spurious braces
+     \ifdefvoid{#4}{}{ #4}%
+     \ifboolexpe{%
+       test {\ifdefvoid{#2}}
+       and
+       test {\ifdefvoid{#3}}}
+       {}
+       {,}%
+     \ifdefvoid{#2}{}{ #2}%
+     \ifdefvoid{#3}{}{ #3}}}
+     
+% {<control sequence>}{<control sequence>}
+\renewcommand*{\mkbibindexsubentry}[2]{% Variante für xindy ohne actual
+  \ifblank{#1}{}{\subentryoperator%
+  	\iftoggle{xindy}{#2}{#1\actualoperator#2}}}  
+
+\newbibmacro*{index:movietitle}[2]{%
+  \iftoggle{cbx:filmindex}
+  	{\iftoggle{cbx:filmindex-complete}
+  	{\iftoggle{xindy}
+  		{\usebibmacro{xindy:field}}
+  		{\usebibmacro{index:field}}
+  	{#1}{\iftoggle{xindy}
+  	{\thefield{indexsorttitle}}
+  	{\thefield{indexsorttitle}\ifuniquetitle{}{\thefield{year}}}
+  	}
+  	{#2}}
+  	{\iftoggle{xindy}
+  		{\usebibmacro{xindy:field}}
+  		{\usebibmacro{index:field}}
+  	{#1}{\thefield{indexsorttitle}\ifuniquetitle{}{ (\thefield{year})}}
+  	{\ifuniquetitle{#2}
+  		{#2 (\thefield{year})}}}}
+  	{}}  
+  
+\renewbibmacro*{index:title}[2]{% Variante für xindy ohne actual
+  \iftoggle{xindy}
+  {\usebibmacro{xindy:field}}
+  {\usebibmacro{index:field}}{#1}{\thefield{indexsorttitle}}
+  {\emph{#2}}}
+
+\renewcommand{\postnotedelim}{\addcolon\addspace}
+\renewcommand{\sqspace}{\addnbthinspace}
+
+\newcommand{\citets}{\textcites}
+\newrobustcmd*{\Citets}{\Textcites}
+\newcommand{\citealts}{\cites}
+\newcommand{\Citealts}{\Cites}
+
+\newbibmacro*{cite:ibid}{%
+  \printtext[bibhyperref]{\bibstring[\mkibid]{ibidem}}%
+  \ifloccit
+    {\global\booltrue{cbx:loccit}}
+    {}}
+
+\renewbibmacro*{citeindex}{%
+  \ifciteindex{%
+  \indexnames[default]{labelname}}
+  {}}%
+
+\newbibmacro*{cbx:index-name-title}{%
+  \ifciteindex%
+    {\iftoggle{index:title:both}%
+    	{\indexnames[name:title]{labelname}%
+    	\index{\emph{\thefield{indexsorttitle}}@\emph{\thefield{indextitle}}%
+    	|see{\AtNextCite{\defcounter{maxnames}{1}\defcounter{minnames}{1}%
+    	\renewbibmacro*{name:andothers}{}}%
+    	\toggletrue{index:inindex}\citename{\thefield{entrykey}}[]{author}%
+    	\togglefalse{index:inindex}}}}
+    	{\indexnames[name:title]{labelname}}}
+    {}}
+
+\DeclareIndexNameFormat{default}{%
+  \ifpseudo%
+  {\usebibmacro{index:name:true}
+  	{\index}
+    {\namepartfamily}
+    {\namepartgiven}
+    {\namepartprefix}
+    {\namepartsuffix}
+    {\nameparttruefamily}
+    {\nameparttruegiven}
+    {\nameparttrueprefix}
+    {\nameparttruesuffix}}%
+  {\usebibmacro{index:name}%
+    {\index}
+    {\namepartfamily}
+    {\namepartgiven}
+    {\namepartprefix}
+    {\namepartsuffix}}%
+    }
+    
+\newbibmacro*{index:name:true}[9]{%
+  \usebibmacro{index:entry}{#1}%
+  {\mkbibindexname{#6}{#7}{#8}{#9}|see{\mkbibindextruename{#2}{#3}{#4}{#5}}}%
+  \usebibmacro{index:entry}{#1}%
+  {\mkbibindexname{#2}{#3}{#4}{#5}}%
+  }
+
+\newcommand*{\mkbibindextruename}[4]{%
+  \ifuseprefix
+    {\ifdefvoid{#3}{}{#3 }%
+     \@firstofone #1% remove spurious braces
+     \ifdefvoid{#4}{}{ #4}%
+     \ifdefvoid{#2}{}{, #2}}%
+    {\@firstofone #1% remove spurious braces
+     \ifdefvoid{#4}{}{ #4}%
+     \ifboolexpe{%
+       test {\ifdefvoid{#2}}
+       and
+       test {\ifdefvoid{#3}}}
+       {}
+       {,}%
+     \ifdefvoid{#2}{}{ #2}%
+     \ifdefvoid{#3}{}{ #3}}} 
+    
+% Kompaktes Zitieren
+
+\renewcommand*{\compcitedelim}{\addthinspace\bibstring{and}\addthinspace}%
+
+\newbibmacro*{cite:init}{%
+  \global\boolfalse{cbx:loccit}%
+  \ifnumless{\value{multicitecount}}{2}
+    {\global\boolfalse{cbx:parens}%
+     \global\undef\cbx@lasthash}%
+    {\iffieldundef{prenote}%
+       {}
+       {\global\undef\cbx@lasthash}}}
+
+\newbibmacro*{cite:reinit}{%
+  \global\undef\cbx@lasthash}
+
+% Zitierbefehle für Filme und Serien
+
+\newbibmacro*{cite:tv}{%
+\ifciteseen{\ifboolexpr{ test {\ifnameundef{director}}
+and test {\iffieldundef{maintitle}}}
+{\iffieldundef{extratitle}
+{\usebibmacro{cbx:cite-filmtitle}}
+{\usebibmacro{cbx:cite-filmtitle}\addspace\mkbibparens{\printdate}}}
+{\usebibmacro{cbx:cite-filmtitle}}}
+{\usebibmacro{cbx:cite-filmtitle}
+\addspace\mkbibparens{%
+\iflistundef{organization}
+{\printlist{location}}
+{\printlist{organization}\addcomma}
+\printdate}}%
+}
+
+
+\newbibmacro*{cite:serial}{%
+\ifciteseen
+{\iffieldundef{shorttitle}
+  {\printtext[bibhyperref]{\printfield[film]{title}}}  
+  {\printtext[bibhyperref]{\printfield[film]{shorttitle}}}}
+{\printtext[bibhyperref]{\printfield[film]{title}
+\addspace\mkbibparens{%
+\iflistundef{organization}
+{\printlist{location}}
+{\printlist{organization}}
+\printdate}}}%
+}
+
+\newbibmacro*{cbx:cite-filmtitle}
+{\iffieldundef{maintitle}
+{\printtext[bibhyperref]{\printfield[film]{title}%
+\ifthenelse{\NOT\iffieldundef{alternatetitle}\AND\NOT\ifciteseen}
+{\usebibmacro{bbx:cite-alternatetitle}}%
+{}%
+}}%
+{\printtext[bibhyperref]{\printfield[tvmaintitle]{maintitle}%
+\printfield[film]{title}}}%
+}
+
+\newbibmacro*{cite:serialfull}{%
+\printtext[bibhyperref]{\printfield[film]{title}
+\addspace\mkbibparens{%
+\printlist{location}\iflistundef{organization}{}{\addcomma\addspace\printlist{organization}}\addspace\printfield[]{year}\addcomma\addspace%
+\printnames[director]{director}\unspace}}}%
+
+
+\newbibmacro*{cite:film}{%
+\iftoggle{citefullfilm}%
+   {\usebibmacro{cite:film:directorcountry}}%
+  {\iftoggle{citecompletefilm}%
+   {\usebibmacro{cbx:cite-film-directorcountrytranstitle}}%
+   {\usebibmacro{cbx:cite-filmtitle}%
+   \addspace%
+   \usebibmacro{cbx:country-filmdate}}}}
+
+\newbibmacro*{cbx:country-filmdate}
+{\printtext[citeyear]{%
+\iftoggle{cbx:citefilmcountry}{\printlist{location}\addspace}%
+{}%
+\usebibmacro{cbx:filmdate}}}
+
+\newbibmacro*{cbx:filmdate}
+{\datecircaprint%
+         \printfield[]{year}%
+      \iffieldundef{labelendyear}
+         {}
+         {%\bibdatedash%
+          \enddatecircaprint%
+          \printfield{endyear}}%
+          \dateuncertainprint}
+   
+\newbibmacro*{cbx:citeepisode}
+{\ifboolexpr{not test {\iffieldequalstr{entrysubtype}{tv}}
+and not test {\ifciteseen}
+and test {\iftoggle{citefullfilm}}}
+{\usebibmacro{cite:film:directorcountry}}
+{\ifboolexpr{not test {\iffieldequalstr{entrysubtype}{tv}}
+and not test {\ifciteseen}
+and test {\iftoggle{citecompletefilm}}}
+{\usebibmacro{cbx:cite-film-directorcountrytranstitle}}
+{\printtext[bibhyperref]{\printfield[film]{title}}%
+\ifciteseen{}{%
+\iffieldequalstr{entrysubtype}{tv}
+{\addspace\mkbibparens{%
+\iflistundef{organization}
+{\printlist{location}}%
+{\printlist{organization}\addcomma}
+\printdate}}{%
+\addspace\mkbibparens{%
+\iflistundef{organization}
+{\printlist{location}}
+{\printlist{organization}}
+\printdate}}}}%
+}%
+}   
+         
+\newbibmacro*{cbx:cite-film-seen}{%
+  	\ifuniquetitle
+  	{\iffieldundef{shorttitle}
+  	{\usebibmacro{cbx:cite-filmtitle}}  
+  	{\printtext[bibhyperref]{\printfield[film]{shorttitle}}}}
+  	{\printtext[bibhyperref]{\printfield[film]{title}%
+  	\addspace\mkbibparens{\usebibmacro{cbx:filmdate}}}}}
+
+\newbibmacro*{cite:film:countryear}{%
+  \printtext[bibhyperref]{\printfield[film]{title}
+   \addspace\mkbibparens{\printlist{location}%
+   \addspace\usebibmacro{cbx:filmdate}}}}
+
+\newbibmacro*{cbx:cite-film-directorcountrytranstitle}{% Film mit Regisseur, Land und dt. Titel
+  \printtext[bibhyperref]{\printfield[film]{title}}%
+   \iffieldundef{alternatetitle}
+   {}{\usebibmacro{bbx:cite-alternatetitle}}
+   \addspace\usebibmacro{cbx:filmdate}%
+   {\addspace\bibopenparen\printfield[plain]{subtitle}%
+   \setunit*{\addcomma\addspace}%
+   \usebibmacro{movie:directors}%
+   \addcomma\addthinspace\printlist{location}%
+   \addspace\usebibmacro{cbx:filmdate}\bibcloseparen}
+   }
+
+\newbibmacro*{cite:film:directorcountry}{% Film mit Regisseur
+  \printtext[bibhyperref]{\printfield[film]{title}}%
+   \iffieldundef{alternatetitle}
+   {}{\usebibmacro{bbx:cite-alternatetitle}}
+   \addspace\mkbibparens{%
+   \usebibmacro{movie:directors}%
+   \addcomma\addthinspace\printlist{location}%
+   \addspace\usebibmacro{cbx:filmdate}}}
+   
+\newbibmacro*{cite}{%
+\iftoggle{cbx:compactcite}%
+{\iffieldundef{shorthand}%
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}%
+       {\usebibmacro{cite:ibid}}%
+       {\iffieldequals{namehash}{\cbx@lasthash}
+	  {\setunit{\compcitedelim}}%
+	  {\ifnameundef{labelname}%
+             {}%
+             {\printnames{labelname}%
+              \setunit{\nameyeardelim}}%
+           \savefield{namehash}{\cbx@lasthash}}%
+           \usebibmacro{cite:labelyear+extrayear}}}%
+    {\usebibmacro{cite:shorthand}%
+     \usebibmacro{cite:reinit}}%
+  \setunit{\multicitedelim}}  
+  {\global\boolfalse{cbx:loccit}%
+  \iffieldundef{shorthand}
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+       {\usebibmacro{cite:ibid}}
+       {\ifthenelse{\ifnameundef{labelname}\OR\iffieldundef{labelyear}}
+          {\usebibmacro{cite:label}%
+           \setunit{\addspace}}
+          {\printtext[bibhyperref]{\printnames{labelname}}%
+           \setunit{\nameyeardelim}}%
+        \usebibmacro{cite:labelyear+extrayear}}}
+    {\usebibmacro{cite:shorthand}}%
+    \setunit{\multicitedelim}}}    
+
+\newbibmacro*{textcite:footcite}{%
+  \global\boolfalse{cbx:loccit}%
+  \ifnameundef{labelname}
+    {\iffieldundef{shorthand}
+       {\usebibmacro{cite:label}%
+        \setunit{%
+          \global\boolfalse{cbx:parens}%
+          \addspace}%
+        \ifnumequal{\value{citecount}}{1}
+          {\usebibmacro{prenote}}
+          {}%
+        \usebibmacro{cite:labelyear+extrayear}}
+       {\usebibmacro{cite:shorthand}}}
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+    {}
+    {\printnames{labelname}}%
+     \setunit{%
+       \global\boolfalse{cbx:parens}%
+       \addspace}%
+     \ifnumequal{\value{citecount}}{1}
+       {\usebibmacro{prenote}}
+       {}%
+     \iffieldundef{shorthand}
+       {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+          {\usebibmacro{cite:ibid}}
+          {\iffieldundef{labelyear}
+             {\usebibmacro{cite:label}}
+             {\usebibmacro{cite:labelyear+extrayear}}}}
+       {\usebibmacro{cite:shorthand}}}}
+    
+\newbibmacro*{textcite}{%
+  \global\boolfalse{cbx:loccit}%
+  \ifnameundef{labelname}
+    {\iffieldundef{shorthand}
+       {\usebibmacro{cite:label}%
+        \setunit{%
+          \global\booltrue{cbx:parens}%
+          \addspace\bibopenparen}%
+        \ifnumequal{\value{citecount}}{1}
+          {\usebibmacro{prenote}}
+          {}%
+        \usebibmacro{cite:labelyear+extrayear}}
+       {\usebibmacro{cite:shorthand}}}
+    {\printtext[bibhyperref]{\printnames{labelname}}%
+     \setunit{%
+       \global\booltrue{cbx:parens}%
+       \addspace\bibopenparen}%
+     \ifnumequal{\value{citecount}}{1}
+       {\usebibmacro{prenote}}
+       {}%
+     \iffieldundef{shorthand}
+       {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+          {\usebibmacro{cite:ibid}}
+          {\iffieldundef{labelyear}
+             {\usebibmacro{cite:label}}
+             {\usebibmacro{cite:labelyear+extrayear}}}}
+       {\usebibmacro{cite:shorthand}}}}
+    
+\newbibmacro*{citeyear}{%
+  \global\boolfalse{cbx:loccit}%
+  \iffieldundef{shorthand}
+    {\ifthenelse{\ifciteibid\AND\NOT\iffirstonpage}
+       {\usebibmacro{cite:ibid}}
+       {\iffieldundef{labelyear}
+          {\usebibmacro{cite:label}}
+          {\usebibmacro{cite:labelyear+extrayear}}}}
+    {\usebibmacro{cite:shorthand}}}    
+
+\newbibmacro*{cite:shorthand}{%
+  \printtext[bibhyperref]{\printfield{shorthand}}}
+
+%\newbibmacro*{cite:label}{%
+%  \ifnameundef{labelname}
+%    {\BibliographyWarning{Missing author/editor+year or label}}
+%    {\printtext[bibhyperref]{\printnames{labelname}}}}
+
+\newbibmacro*{cite:label}{%
+  \iffieldundef{label}
+    {\printtext[bibhyperref]{\printfield[citetitle]{labeltitle}}}
+    {\printtext[bibhyperref]{\printfield{label}}}}          
+          
+\newbibmacro*{cite:labelyear+extrayear}{%
+  \iffieldundef{labelyear}
+    {}
+    {\printtext[bibhyperref]{%
+     \ifdefstring\blx@dateformat@labeldate{edtf}
+       {}
+       {\datecircaprint}%
+     \dateeraprintpre{labelyear}%
+     \mkyearzeros{\thefield{labelyear}}%
+     \printfield{extrayear}%
+     \iffieldsequal{labeldateera}{labelenddateera}{}
+       {\dateeraprint{labelyear}}%
+     \dateuncertainprint%
+     \ifdefstring\blx@dateformat@labeldate{edtf}
+       {\datecircaprintedtf}
+       {}%
+      \iffieldundef{labelendyear}
+        {}
+        {\iffieldsequal{labelyear}{labelendyear}{}
+         {\ifdefstring\blx@dateformat@labeldate{edtf}
+           {\slash}
+           {\bibdatedash
+            \setunit{\,}%
+            \enddatecircaprint}%
+          \dateeraprintpre{labelendyear}%
+          \mkyearzeros{\thefield{labelendyear}}%
+          \enddateuncertainprint%
+          \ifdefstring\blx@dateformat@labeldate{edtf}
+            {\enddatecircaprintedtf}
+            {}%
+          \dateeraprint{labelendyear}}}%
+          \iftoggle{cbx:orgigyearcite}%
+          {\usebibmacro{cite:origyerar}}{}}}}          
+          
+\newbibmacro*{cite:origyerar}{%
+\iffieldundef{origyear}
+{}
+{\addthinspace\mkbibbrackets{%
+\iftoggle{cbx:superscriptcite}
+{\textsuperscript{1}}{}%
+\iffieldequalstr{origdateunspecified}{yearincentury}
+	{\number\numexpr\thefield{origyear}/100+1\relax \adddot\addnbthinspace{Jhdt\adddot}}
+	{\printorigdate}}%
+}}          
+    
+\newbibmacro*{xindy:name}[5]{%
+  \begingroup
+  \ifuseprefix
+    {\edef\theindexentry{%
+       \unexpanded{#1}{%
+         \ifdefvoid{#4}{}{\unexpanded{#4} }%
+         \unexpanded{#2}%
+         \ifdefvoid{#5}{}{ \unexpanded{#5}}%
+         \ifdefvoid{#3}{}{, \unexpanded{#3}}}}}
+    {\edef\theindexentry{%
+       \unexpanded{#1}{%
+         \unexpanded{#2}%
+         \ifdefvoid{#5}{}{ \unexpanded{#5}}%
+         \ifdefvoid{#3#4}{}{,}%
+         \ifdefvoid{#3}{}{ \unexpanded{#3}}%
+         \ifdefvoid{#4}{}{ \unexpanded{#4}}}}}%
+  \theindexentry
+  \endgroup}
+   
+   
+\newbibmacro*{xindy:field}[3]{%
+  \begingroup
+  \protected@edef\theindexentry{%
+    \unexpanded{#1}{#3}}%
+  \theindexentry
+  \endgroup}
+
+\newbibmacro*{textcite:postnote}{%
+  \ifthenelse{\iffieldundef{postnote}\OR\boolean{cbx:loccit}}
+    {\ifbool{cbx:parens}
+       {\bibcloseparen}
+       {}}
+    {\ifbool{cbx:parens}
+       {\postnotedelim}
+       {\addspace\bibopenparen}%
+     \printfield{postnote}\bibcloseparen}}  
+  
+\DeclareCiteCommand{\fullcite}
+	{{}%
+	\usebibmacro{prenote}}%
+	{\usedriver%
+     {}
+     {\thefield{entrytype}}}
+  {\multicitedelim\unspace}% aus unklaren Gruenden hat es hier ein Space zu viel
+  {\usebibmacro{cite:postnote}} 
+ 
+
+\DeclareCiteCommand{\cite}%
+  {\usebibmacro{cite:init}%
+  \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand*{\cite}
+  {\usebibmacro{cite:init}%
+  \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{citeyear}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\parencite}[\mkbibparens]
+  {\usebibmacro{cite:init}%
+  \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand*{\parencite}[\mkbibparens]
+  {\usebibmacro{cite:init}
+  \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{citeyear}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\inparencite}[]
+ {}
+ {\usebibmacro{citeindex}%
+  \printtext[bibhyperref]{\printnames{labelname}}
+  \bibopenparen%
+  \usebibmacro{prenote}%
+  \mancite\usebibmacro{citeyear}}%
+ {}%
+ {\usebibmacro{cite:postnote}
+ \unspace\bibcloseparen}
+
+\DeclareCiteCommand{\citetitle}
+	{\citetrackerfalse%
+	\pagetrackerfalse%
+	\usebibmacro{prenote}}
+	{\iftoggle{index:title}
+  		{\indexfield{indextitle}}%
+  		{}%
+  	\iftoggle{index:title:author}%
+  		{\usebibmacro{cbx:index-name-title}}%
+  		{}%
+  	\printtext[bibhyperref]{\printfield[citetitle]{labeltitle}}}%
+  {}%
+  {\usebibmacro{cite:postnote}}
+  
+\DeclareCiteCommand{\citeyear}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeyear}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citeurl}
+  {\usebibmacro{prenote}}
+  {\printfield[citeurl]{url}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citealtnoibidem}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{cite}}
+  {}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citetnoibidem}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{textcite}}
+  {}
+  {\iffieldundef{postnote}
+     {\ifbool{cbx@bool}
+        {\bibcloseparen}
+	{}}
+     {\ifbool{cbx@bool}
+        {\postnotedelim}
+	{\addspace\bibopenparen}%
+      \printfield{postnote}\bibcloseparen}}
+
+\DeclareCiteCommand{\footcite}[\mkbibfootnote]
+  {\bibsentence
+   \usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \usebibmacro{textcite:footcite}}
+  {}
+  {\iffieldundef{postnote}
+     {\ifbool{cbx@bool}
+        {\bibcloseparen}
+	{}}
+     {\ifbool{cbx@bool}
+        {\postnotedelim}
+	{\addspace}%
+      \printfield{postnote}}}
+
+\DeclareCiteCommand{\textcite}
+  {\boolfalse{cbx:parens}}
+  {\usebibmacro{citeindex}%
+  \iffirstcitekey
+  	{\setcounter{textcitetotal}{1}}
+  	{\stepcounter{textcitetotal}%
+  \textcitedelim}%
+  \usebibmacro{textcite}}
+  {\ifbool{cbx:parens}
+  	{\bibcloseparen\global\boolfalse{cbx:parens}}
+  	{}}
+  {\usebibmacro{textcite:postnote}}
+
+
+      
+\DeclareCiteCommand{\citeepisode}
+  {\usebibmacro{prenote}}
+  {\indexfield{indextitle}%
+  \usebibmacro{cbx:citeepisode}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\newbibmacro*{index:alternatetitle}[1]
+{\iffieldundef{alternatetitlescript}
+  	{\iftoggle{cbx:filmindex}
+  		{\iftoggle{cbx:filmindex-separated}
+			{\index[film]}{\index}%
+				{\textsc{\thefield{alternatetitle}}%
+				|see{\textsc{\thefield{indextitle}}}}}
+			{}}
+  	{\iftoggle{cbx:filmindex}
+  		{\iftoggle{cbx:filmindex-separated}
+			{\index[film]}{\index}{%
+			\ifbibmacroundef{altscript:\strfield{alternatetitlescript}-font}
+				{\textsc{\thefield{alternatetitle}}}%
+				{\usebibmacro*{altscript:\strfield{alternatetitlescript}-font}%
+  				{{\thefield{alternatetitle}}}\rmfamily}%
+  	|see{\textsc{\thefield{indextitle}}}}}
+  	{}}}
+      
+\DeclareCiteCommand{\citefilm}
+  {\usebibmacro{prenote}}
+  {\indexfield{indextitle}%
+  \iffieldundef{alternatetitle}
+  {}
+  {\usebibmacro*{index:alternatetitle}{\thefield{alternatetitlescript}}}%
+  \iffieldequalstr{entrysubtype}{serial}%
+  {\usebibmacro{cite:serial}}%
+  {\iffieldequalstr{entrysubtype}{tv}%
+  {\usebibmacro{cite:tv}}{\ifciteseen{\usebibmacro{cbx:cite-film-seen}}%
+  {\usebibmacro{cite:film}}}}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citecfilm}
+  {\usebibmacro{prenote}}
+  {\indexfield{indextitle}%
+   \usebibmacro{cite:film:countryear}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citefullfilm}
+  {\usebibmacro{prenote}}
+  {\indexfield{indextitle}%
+  \iffieldequalstr{entrysubtype}{serial}
+  {\usebibmacro{cite:serialfull}}
+  {\usebibmacro{cite:film}}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\DeclareCiteCommand{\citefilmnoindex}
+  {\usebibmacro{prenote}}
+  {\usebibmacro{cite:film}}
+  {\multicitedelim}
+  {\usebibmacro{cite:postnote}}
+
+\endinput

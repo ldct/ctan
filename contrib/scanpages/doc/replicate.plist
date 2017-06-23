@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>ROOT</string>
+	<key>submenu</key>
+	<array>
+		<dict>
+			<key>content</key>
+			<string>--applescript direct
+--Michael Sharpe, 20140424
+--This is free software, but Copyright (c) Michael Sharpe, 2014
+--and subject to the LATEX Project Public License.
+--This allows replication of a commented block of text as many times as specified, substituting
+--values for 'variables' in the process
+
+property trimitems : {" ", tab, linefeed, return}
+
+set lf to linefeed
+set cr to return
+set crlf to cr &amp; lf
+
+set oldtid to text item delimiters
+tell application "TeXShop" to set s to content of selection of document 1
+set tmp to (paragraphs of s)
+set text item delimiters to {lf}
+set s to (tmp as text)
+set text item delimiters to "%Repetitions="
+set tmp to (text items of s)
+set text item delimiters to oldtid
+if not ((count of tmp) = 2) then
+	display dialog "Bailing! The selection does not contain exactly one '%Repetitions='"
+	return
+end if
+set ss to (item 2 of tmp)
+set tmp2 to (paragraphs of ss)
+set numrep to (item 1 of tmp2) as integer
+--next get variable names
+set text item delimiters to {"%Variables="}
+set tmp to (text items of s)
+set text item delimiters to oldtid
+if not ((count of tmp) = 2) then
+	display dialog "Bailing! The selection does not contain exactly one '%Variables='"
+	return
+end if
+set ss to (item 2 of tmp)
+set tmp2 to (paragraphs of ss)
+set vbllst to (item 1 of tmp2) --like {nnn,0:1+1,1:3+-2}
+set vbllst2 to trim(vbllst)
+set vbllst3 to (text 2 thru -2 of vbllst2)
+set text item delimiters to {" , ", " ,", " ,", ","}
+set vbles to (text items of vbllst3) -- line {nnn,0:1+1,1:3+-2}
+--display dialog "vbles=" &amp; (vbles as text)
+set n to (count of vbles)
+set root to (item 1 of vbles)
+set vlst to {}
+set vinit to {}
+set vinc to {}
+set valt to {}
+set text item delimiters to {":", "+"}
+repeat with j from 2 to n
+	set x to (text items of (item j of vbles))
+	if not ((count of x) = 3) then
+		display dialog "Bad variable descriptor-- " &amp; item j of vbles
+		set text item delimiters to oldtid
+		return
+	end if
+	set end of vlst to (item 1 of x)
+	set nnn to 0
+	set hasp to 0
+	if (last character of (item 3 of x) = ")") then
+		set hasp to 1
+		set nnn to ((text -2 of (item 3 of x)) as integer)
+		set (item 3 of x) to (text 1 thru -4 of (item 3 of x))
+	else
+		if (first character of (item 2 of x) = "[") then set nnn to -100
+	end if
+	if (item 3 of x) ends with "/2" then
+		set (item 3 of x) to (text 1 thru -3 of (item 3 of x))
+		if hasp = 1 then
+			set nnn to -nnn
+		else
+			set nnn to -10
+		end if
+	end if
+	set end of valt to nnn
+	if (nnn = -100) then
+		set end of vinit to (text 2 thru -1 of (item 2 of x))
+		set end of vinc to (text 1 thru -2 of (item 3 of x))
+	else
+		set end of vinit to (item 2 of x)
+		set end of vinc to (item 3 of x)
+	end if
+	
+end repeat
+set text item delimiters to oldtid
+set viniti to {}
+set vinci to {}
+set kk to (count of vinit)
+repeat with j from 1 to kk
+	try
+		set end of viniti to ((item j of vinit) as integer)
+	on error
+		set end of viniti to 0
+	end try
+	try
+		set end of vinci to ((item j of vinc) as integer)
+	on error
+		set end of vinci to 0
+	end try
+end repeat
+set tmp to (paragraphs of s)
+set m to (count of tmp)
+set tmp2 to {}
+repeat with j from 3 to m
+	set t to (item j of tmp)
+	if ((count of t) &gt; 1) then
+		set t to (text 2 thru -1 of t)
+	else
+		set t to ""
+	end if
+	set end of tmp2 to t
+end repeat
+set text item delimiters to {lf}
+set body to (tmp2 as text)
+set text item delimiters to oldtid
+set repl to {s}
+set newbody to body
+repeat with p from 1 to numrep
+	set newbody to body
+	repeat with k from 1 to kk
+		set v to ""
+		set alt to (item k of valt)
+		if (alt = -100) then
+			if (p mod 2) = 0 then
+				set v to (item k of vinc)
+			else
+				set v to (item k of vinit)
+			end if
+		else
+			set v to (item k of viniti)
+			if (alt &lt; 0) then
+				set v to (v div 2)
+				set alt to -alt
+			end if
+			if (alt is not 10) and (alt is not 0) then
+				set v to zero_pad(v, alt)
+			else
+				set v to (v as string)
+			end if
+		end if
+		set newbody to switchText of newbody from (root &amp; (item k of vlst)) to v
+		set item k of viniti to (((item k of viniti) as integer) + (item k of vinci))
+	end repeat
+	set end of repl to newbody
+end repeat
+set text item delimiters to lf
+tell application "TeXShop" to set selection of document 1 to (repl as text)
+set AppleScript's text item delimiters to oldtid
+
+on zero_pad(value, string_length)
+	set tmp_string to "000000000" &amp; (value as string)
+	set padded_value to text ((count of tmp_string) - string_length + 1) thru -1 of tmp_string
+	return padded_value
+end zero_pad
+
+to switchText of t from s to r
+	set d to text item delimiters
+	set text item delimiters to s
+	set t to t's text items
+	set text item delimiters to r
+	tell t to set t to beginning &amp; ({""} &amp; rest)
+	set text item delimiters to d
+	t
+end switchText
+
+on trim(someText)
+	try
+		repeat until first character of someText is not in trimitems
+			set someText to text 2 thru -1 of someText
+		end repeat
+	on error
+		set someText to ""
+	end try
+
+	try
+		repeat until last character of someText is not in trimitems
+			set someText to text 1 thru -2 of someText
+		end repeat
+	on error
+		set someText to ""
+	end try
+	return someText
+end trim
+
+</string>
+			<key>key</key>
+			<string></string>
+			<key>name</key>
+			<string>Replicate</string>
+		</dict>
+	</array>
+</dict>
+</plist>

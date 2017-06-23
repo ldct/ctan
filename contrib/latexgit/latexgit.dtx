@@ -1,0 +1,534 @@
+% \iffalse vim: expandtab:
+% \fi
+% \iffalse meta-comment
+%<*internal>
+\def\nameofplainTeX{plain}
+\ifx\fmtname\nameofplainTex\else
+  \expandafter\begingroup
+\fi
+%</internal>
+%<*install>
+\input docstrip.tex
+\keepsilent
+\askforoverwritefalse
+\preamble
+latexgit
+Author: Camil Staps <info@camilstaps.nl>
+\endpreamble
+\postamble
+Copyright (c) 2016 Camil Staps <info@camilstaps.nl>
+Licensed under GPL v3.
+\endpostamble
+\usedir{tex/latex/latexgit}
+\generate{
+  \file{\jobname.sty}{\from{\jobname.dtx}{package}}
+}
+%</install>
+%<install>\endbatchfile
+%<*internal>
+\usedir{source/latex/latexgit}
+\generate{
+    \file{\jobname.ins}{\from{\jobname.dtx}{install}}
+}
+\nopreamble\nopostamble
+\ifx\fmtname\nameofplainTeX
+  \expandafter\endbatchfile
+\else
+  \expandafter\endgroup
+\fi
+%</internal>
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{\jobname}
+\usepackage[numbered]{hypdoc}
+\usepackage{showexpl}
+\usepackage{xcolor}
+\lstset{%
+    basicstyle=\ttfamily\small,
+    commentstyle=\itshape\ttfamily\small,
+    showspaces=false,
+    keepspaces=true,
+    showstringspaces=false,
+    breaklines=true,
+    backgroundcolor=\color{lightgray},
+    breakautoindent=true,
+}
+\usepackage{enumitem}
+\usepackage{verbatim}
+\usepackage{amssymb}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\setcounter{IndexColumns}2
+\newlist{options}{description}{1}
+\setlist[options]{font=\small\texttt,itemsep=0pt,style=nextline}
+\newcommand{\git}[0]{\gitcmd{git}}
+\newcommand{\gitcmd}[1]{\texttt{\small#1}}
+\newcommand{\gitopt}[1]{%
+  \texttt{\small\hyperref[options]{\textcolor{black}{#1}}}%
+}
+\newcommand{\bashcmd}[1]{\texttt{\small#1}}
+\newcommand{\texcmd}[1]{\texttt{\small#1}}
+\def\GitOptions#1,#2\relax{%
+  \gitopt{#1}%
+  \begingroup%
+  \ifx\relax#2\relax %
+    \def\next{\endgroup}%
+  \else%
+    \def\next{, \endgroup\GitOptions#2\relax}%
+  \fi%
+  \next%
+}
+\def\gitoptions#1{%
+  Recognised options:
+  \begingroup%
+  \edef\@tempa{#1,}%
+  \expandafter\endgroup%
+  \expandafter\GitOptions\@tempa\relax%
+  \unskip.
+}
+\begin{document}
+  \DocInput{\jobname.dtx}
+  \newpage
+  \PrintChanges
+  \newpage
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+%
+%\GetFileInfo{\jobname.sty}
+%
+%\title{The \latexgit{} package}
+%\author{Camil Staps\thanks{Email: info@camilstaps.nl}}
+%\date{^^A
+%  Version \gitcommithash[shortHash]\\
+%  \small{\gitcommitdate[formatDate,formatTime,formatInterDateTime={,~},showTimeZone]}}
+%
+%\maketitle
+%
+%\gitchanges
+%
+%\DoNotIndex{\def,\edef,\expandafter,\global,\let,\newcommand,\relax,\catcode}
+%\DoNotIndex{\begingroup,\endgroup}
+%\expandafter\DoNotIndex\expandafter{\string\^}
+%\DoNotIndex{\hbox,\ifdim,\setbox,\wd}
+%\DoNotIndex{\ifeof,\else,\fi,\newif}
+%\DoNotIndex{\NeedsTeXFormat,\PackageError,\ProvidesPackage,\RequirePackage}
+%\DoNotIndex{\endlinechar,\newread,\openin,\read,\readline}
+%\DoNotIndex{\space,\unskip}
+%\DoNotIndex{\LaTeX,\pgfkeys,\changes}
+%\DoNotIndex{\formatdate,\formattime}
+%\DoNotIndex{\git@@revision,\git@@thisdate,\git@@thishash,\git@@thismsg,\git@@parent}
+%
+%\begin{abstract}
+%  This is the documentation of the \latexgit{} package.
+%  Several macros are defined to fetch \git{} information and typeset it.
+%  The macros defined by \latexgit{} can be helpful to documentation authors
+%  and others to whom clear document versioning is important.
+%\end{abstract}
+%
+%\tableofcontents
+%
+%\section{Overview}
+%\label{sec:overview}
+%\subsection{Related packages}
+%\label{sec:overview:related-packages}
+%Brent Longborough's \textsf{gitinfo} and \textsf{gitinfo2} packages have
+%similar features, with a different interface. Instead of running \git{}
+%commands, it relies on special \git{} files. This has the advantage that it
+%works on Windows, however, \git{} hooks have to be put into place.
+%
+%Andr\'e Hilbig's \textsf{gitfile-info} does something similar as
+%\textsf{gitinfo} and \latexgit, but the package manual is in German so who
+%knows. It seems that Python and \git{} hooks are required.
+%
+%\subsection{Dependencies}
+%\label{sec:overview:dependencies}
+%\latexgit{} gets its information by running \git{} commands. It uses
+%\cs{write18} for this, so documents using \latexgit{} will have to be compiled
+%with the \bashcmd{-shell-escape} flag.
+%
+%Most of the information is retrieved using \git{} but then parsed using
+%\bashcmd{grep}, \bashcmd{cut} and similar tools. Unfortunately, this is
+%necessary: \gitcmd{git log} accepts arbitrary formats, but uses the percent
+%sign in these formats, and running commands with percent signs does not seem
+%possible using \cs{write18}.
+%
+%An unfortunate side effect of this is that this package will not work on
+%Windows.
+%
+%\subsection{Getting information}
+%\label{sec:overview:getting-information}
+%\latexgit{} runs a shell command using \cs{git@command}. This macro reads the
+%result into \cs{git@rawresult.} This result contains a newline character at
+%the end that needs to be removed to avoid unwanted spacing. Therefore,
+%\cs{git@result} is defined as a wrapper for \cs{git@rawresult} that removes
+%this spacing with \cs{unskip}.
+%
+%\subsection{Interface}
+%For each information-fetching command, two versions are defined: one, which
+%only executes the command (leaving the result available in \cs{git@result});
+%and one, which executes the command and writes the result. An example is
+%\cs{git@commithash} with its counterpart \cs{gitcommithash}. Usually, the
+%latter is most useful.
+%
+%\section{Options}
+%\label{sec:options}
+%A number of options is available to all macros that fetch information through
+%a \textsf{pgfkeys} interface. All keys are recognised by all macros, but not
+%all are considered by each macro. Check the documentation for specific macros
+%to see which options are relevant.
+%
+%\begin{options}
+%  \label{options}
+%  \item[directory=DIR]
+%    Use the git repository in directory \verb$DIR$ (or its first parent
+%    directory that is a git repository). \latexgit{} will \bashcmd{cd} to this
+%    directory before executing the actual \git{} command.
+%  \item[formatDate]
+%    Format dates using \textsf{datetime}'s \cs{formatdate}.
+%  \item[formatTime]
+%    Format times using \textsf{datetime}'s \cs{formattime}.
+%  \item[formatInterDateTime]
+%    If both \gitopt{formatDate} and \gitopt{formatTime} are set, this is put
+%    in between (e.g.  `\verb$\space{}at\space{}$' in English --- this is also
+%    the default).
+%  \item[revision=REV]
+%    Get the hash of revision \verb$REV$ (e.g.  \gitcmd{master},
+%    \gitcmd{HEAD\textasciicircum}, etc.). Note that if multiple circumflexes
+%    are desired, the catcode of \verb$^$ has to be changed. For example:
+%    \LTXinputExample[numbers=none,pos=r]{exmp/catcode-circumflex.tex}
+%  \item[showTimeZone]
+%    When \gitopt{formatTime} is set: show the time zone between parentheses
+%    after the time.
+%  \item[shortHash]
+%    Get only the first seven characters of the hash, as in \gitcmd{git log
+%    -{}-oneline}.
+%\end{options}
+%
+%\section{Examples}
+%\label{sec:examples}
+%\DescribeMacro{\gitcommithash}
+%\DescribeMacro{\gitcommitmsg}
+%\DescribeMacro{\gitcommitauthor}
+%\DescribeMacro{\gitcommitauthorname}
+%\DescribeMacro{\gitcommitauthoremail}
+%    These macros are used to get and print basic commit information.
+%    \LTXinputExample[pos=b,numbers=none]{exmp/gitcommit.tex}
+%
+%\DescribeMacro{\gitcommitdate}
+%    This macro displays the \git{} commit date.
+%    The following example shows a usage example and shows the results of the
+%    options
+%    \gitopt{formatDate}, \gitopt{formatTime} and \gitopt{showTimeZone}.
+%    \LTXinputExample[pos=b,numbers=none]{exmp/gitcommitdate.tex}
+%
+%\section{Implementation}
+%\label{sec:implementation}
+%Define the package and load required packages.
+%
+%    \begin{comment}
+%<*package>
+%    \end{comment}
+%    \begin{macrocode}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{latexgit}[2016/08/24]
+
+\RequirePackage{pgfkeys}
+\RequirePackage{datetime}
+%    \end{macrocode}
+%
+%\begin{macro}{\latexgit}
+%    Prints the name of the package.
+%    \begin{macrocode}
+\newcommand{\latexgit}[0]{\LaTeX{}git}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@result}
+%    When a \git{} command is run, the result is stored in \cs{git@rawresult}.
+%    However, using \cs{read} results in spacing at the end of the macro.
+%    Hence, we need to use \cs{unskip} to remove this spacing.
+%    This is a wrapper for \cs{git@rawresult} that adds this \cs{unskip}.
+%    \begin{macrocode}
+\newcommand{\git@result}[0]{\git@rawresult\unskip}
+%    \end{macrocode}
+%\end{macro}
+%
+%    We now define the keys accepted by git macros. The following options are
+%    recognised. Check the documentation of the macro to see which options are
+%    considered.
+%
+%    \begin{macrocode}
+\newif\ifgit@opt@FormatDate
+\newif\ifgit@opt@FormatTime
+\newif\ifgit@opt@ShortHash
+\newif\ifgit@opt@ShowTimeZone
+\pgfkeys{
+  /git/.is family, /git,
+  default/.style={
+    directory=.,
+    formatDate=false,
+    formatInterDateTime=\space{}at\space{},
+    formatTime=false,
+    revision=HEAD,
+    showTimeZone=false,
+    shortHash=true,
+  },
+  directory/.estore in=\git@opt@Directory,
+  formatDate/.is if=git@opt@FormatDate,
+  formatInterDateTime/.estore in=\git@opt@FormatInterDateTime,
+  formatTime/.is if=git@opt@FormatTime,
+  revision/.estore in=\git@opt@Revision,
+  showTimeZone/.is if=git@opt@ShowTimeZone,
+  shortHash/.is if=git@opt@ShortHash,
+}
+%    \end{macrocode}
+%
+%\begin{macro}{\git@command}
+%    Run a \git{} command and read the output into \cs{git@rawresult}. Before
+%    running the command, the directory will change to \cs{git@opt@Directory}.
+%    \begin{macrocode}
+\newread\git@stream%
+\newcommand{\git@command}[1]{%
+  \def\git@rawresult{}%
+  \openin\git@stream|"cd \git@opt@Directory; #1"
+  \ifeof\git@stream%
+    \PackageError{latexgit}%
+      {invoke LaTeX with the -shell-escape flag}%
+      {invoke LaTeX with the -shell-escape flag}%
+  \else%
+    \begingroup%
+    \catcode`\^^M9%
+    \endlinechar=-1%
+    \readline\git@stream to \git@streamoutput%
+    \global\let\git@rawresult\git@streamoutput%
+    \endgroup%
+  \fi%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommithash}
+%    Get a commit hash.
+%    \gitoptions{directory,revision,shortHash}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommithash}[1][]{%
+  \git@commithash[#1]\git@result}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commithash}
+%    Like \cs{gitcommithash}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commithash}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \ifgit@opt@ShortHash%
+    \git@command{git log -n 1 --oneline \git@opt@Revision
+      | cut -d' ' -f1}%
+  \else%
+    \git@command{git log -n 1 \git@opt@Revision
+      | head -1 | cut -d' ' -f2}%
+  \fi%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommitmsg}
+%    Get a commit message.
+%    \gitoptions{directory,revision}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommitmsg}[1][]{%
+  \git@commitmsg[#1]\git@result}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitmsg}
+%    Like \cs{gitcommitmsg}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commitmsg}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 --oneline \git@opt@Revision
+    | cut -d' ' -f2-}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@formatCommitDate}
+%    Format a commit date in ISO format using \textsf{datetime}'s
+%    \cs{formatdate}.
+%    \begin{macrocode}
+\def\git@formatCommitDate#1-#2-#3 #4:#5:#6 +#7\relax{%
+  \formatdate{#3}{#2}{#1}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@formatCommitTime}
+%    Format a commit time using \textsf{datetime}'s \cs{formattime}.
+%    \gitoptions{showTimeZone}
+%    \begin{macrocode}
+\def\git@formatCommitTime#1-#2-#3 #4:#5:#6 +#7\relax{%
+  \formattime{#4}{#5}{#6}%
+  \ifgit@opt@ShowTimeZone%
+    \space(+#7\unskip)%
+  \fi%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommitdate}
+%    Get a commit date. If \gitopt{formatDate} is set,
+%    \cs{git@formatCommitDate} will be used. If \gitopt{formatTime} is set, and
+%    \gitopt{formatDate} is unset, \cs{git@formatCommitTime} will be used.
+%    \gitoptions{directory,formatDate,formatTime,revision,showTimeZone}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommitdate}[1][]{%
+  \git@commitdate[#1]%
+  \ifgit@opt@FormatDate%
+    \expandafter\git@formatCommitDate\git@rawresult\relax%
+    \ifgit@opt@FormatTime%
+      \git@opt@FormatInterDateTime%
+      \expandafter\git@formatCommitTime\git@rawresult\relax%
+    \fi
+  \else\ifgit@opt@FormatTime%
+    \expandafter\git@formatCommitTime\git@rawresult\relax%
+  \else
+    \git@result%
+  \fi\fi%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitdate}
+%    Like \cs{gitcommitdate}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commitdate}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 --date=iso \git@opt@Revision
+    | grep Date | head -1 | cut -d' ' -f2-}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommitauthor}
+%    Get a commit author.
+%    \gitoptions{directory,revision}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommitauthor}[1][]{%
+  \git@commitauthor[#1]\git@result}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitauthor}
+%    Like \cs{gitcommitauthor}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commitauthor}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 \git@opt@Revision
+    | grep Author | head -1 | cut -d' ' -f2-}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommitauthorname}
+%    Get a commit author's name.
+%    \gitoptions{directory,revision}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommitauthorname}[1][]{%
+  \git@commitauthorname[#1]\git@result}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitauthorname}
+%    Like \cs{gitcommitauthorname}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commitauthorname}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 \git@opt@Revision
+    | grep Author | head -1 | cut -d' ' -f2- | cut -d'<' -f1}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitcommitauthoremail}
+%    Get a commit author's email address.
+%    \gitoptions{directory,revision}
+%
+%    \begin{macrocode}
+\newcommand{\gitcommitauthoremail}[1][]{%
+  \git@commitauthoremail[#1]\git@result}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitauthoremail}
+%    Like \cs{gitcommitauthoremail}, but does not return the output.
+%    \begin{macrocode}
+\newcommand{\git@commitauthoremail}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 \git@opt@Revision
+    | grep Author | head -1 | cut -d' ' -f2-
+    | cut -d'<' -f2 | cut -d'>' -f1}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@commitparent}
+%    Get the hash of the first parent.
+%    \begin{macrocode}
+\newcommand{\git@commitparent}[1][]{%
+  \pgfkeys{/git,default,#1}%
+  \git@command{git log -n 1 --pretty=raw \git@opt@Revision
+    | grep parent | head -1 | cut -d' ' -f2}%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\gitchanges}
+%    Record the full \git{} commit history (following first parents using
+%    \cs{git@commitparent}) using \cs{changes}.
+%    \begin{macrocode}
+\newcommand{\gitchanges}[1][]{%
+  \git@changes[#1]{HEAD}
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%\begin{macro}{\git@changes}
+%    Like \cs{gitchanges}, but accepts an extra argument for the revision.
+%    \begin{macrocode}
+\newcommand{\git@changes}[2][]{%
+  \edef\git@@revision{#2}%
+  \git@commithash[revision=\git@@revision]%
+  \edef\git@@thishash{\git@rawresult}%
+  \git@command{git log -n 1 --date=iso \git@@revision
+    | grep Date | head -1 | cut -d' ' -f4}%
+  \edef\git@@thisdate{\git@rawresult}%
+  \git@commitmsg[revision=\git@@revision]%
+  \edef\git@@thismsg{\git@rawresult}%
+  \changes{\git@@thisdate\unskip: \git@@thishash}\git@@thisdate\git@@thismsg%
+  \git@commitparent[revision=\git@@revision]%
+  \let\git@@parent\git@rawresult%
+  \setbox0=\hbox{\git@@parent\unskip}\ifdim\wd0=0pt
+  \else%
+    \git@changes{\git@@parent}%
+  \fi%
+}
+%    \end{macrocode}
+%\end{macro}
+%
+%
+%    \begin{comment}
+%</package>
+%    \end{comment}
+%
+%\Finale
+\endinput

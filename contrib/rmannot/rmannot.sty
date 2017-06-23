@@ -1,0 +1,1013 @@
+%%
+%% This is file `rmannot.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% rmannot.dtx  (with options: `copyright,package')
+%% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% rmannot.sty package,                                 %%
+%% Copyright (C) 2008--2016  D. P. Story                %%
+%%   dpstory@acrotex.net                                %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\NeedsTeXFormat{LaTeX2e}[1997/12/01]
+\ProvidesPackage{rmannot}
+ [2016/10/09 v2.0e Rich Media Annotations (dps)]
+\RequirePackage{xkeyval}
+\DeclareOptionX{use3D}{%
+    \def\rma@input@iiidCode{\InputIfFileExists{annot3d.def}{}{}}%
+    \def\rma@requirefp{\RequirePackage[nomessages]{fp}}%
+}
+\let\rma@input@iiidCode\relax
+\let\rma@requirefp\relax
+\ProcessOptionsX
+\RequirePackage{graphicxsp}
+\rma@requirefp
+\RequirePackage{ifthen}
+\newcounter{rm@Cnt}
+\newif\ifrma@EmbedFile\rma@EmbedFiletrue
+\newif\ifrma@EmbedVideoPlayer\rma@EmbedVideoPlayerfalse
+\let\rma@isVPEmbedded=0
+\newif\ifrma@EmbedAudioPlayer\rma@EmbedAudioPlayerfalse
+\let\rma@isAPEmbedded=0
+\def\rm@csarg#1#2{\expandafter#1\csname#2\endcsname}
+\newcommand{\pathToSkins}[1]{%
+    \pdfstringdef\rma@pathToSkins{#1}%
+    \def\PathToSkins{\rma@pathToSkins}%
+    \def\rma@pathToPlayers{\rma@pathToSkins/Players}%
+}
+\newif\ifuseWinAcrobat\useWinAcrobattrue
+\define@key{rmAcroVer}{win}[win]{\useWinAcrobattrue}
+\define@key{rmAcroVer}{mac}[mac]{\useWinAcrobatfalse}
+\newcommand{\AcroVer}[2][]{%
+    \def\rmDC{DC}\def\rmBeta{Beta}\def\rmArgi{#1}%
+    \def\AcrobatVer{#2}\ifx\rmArgi\@empty\else
+        \setkeys{rmAcroVer}{#1}\fi\def\@x{\string\ }%
+    \ifx\AcrobatVer\rmDC
+        \ifuseWinAcrobat
+            \edef\rmSkinPath{C:/Program Files (x86)/Adobe/Acrobat DC/%
+                Acrobat/Multimedia Skins}\else
+            \edef\rmSkinPath{/Applications/Adobe{\@x}Acrobat{\@x}DC/%
+                Adobe{\@x}Acrobat.app/Contents/Resources/%
+                Multimedia{\@x}Skins}\fi
+    \else\ifx\AcrobatVer\rmBeta
+        \ifuseWinAcrobat
+            \edef\rmSkinPath{C:/Program Files (x86)/Adobe/Acrobat Beta/%
+                Acrobat/Multimedia Skins}\else
+            \edef\rmSkinPath{/Applications/Adobe{\@x}Acrobat{\@x}Beta/%
+                Adobe{\@x}Acrobat.app/Contents/Resources/%
+                Multimedia{\@x}Skins}\fi
+    \else\ifnum\AcrobatVer<9\relax
+            \PackageError{rmannot}{Acrobat version 9 or later
+            supports\MessageBreak rich multimedia annotations}
+            {Upgrade your Acrobat to a more recent version.}%
+    \else
+        \ifuseWinAcrobat
+            \ifnum\AcrobatVer<12\relax
+                \edef\rmSkinPath{C:/Program Files (x86)/Adobe/%
+                    Acrobat \AcrobatVer.0/Acrobat/Multimedia Skins}%
+            \else
+                \edef\rmSkinPath{C:/Program Files (x86)/Adobe/%
+                    Acrobat \AcrobatVer/Acrobat/Multimedia Skins}%
+            \fi
+        \else
+            \ifnum\AcrobatVer<12\relax
+                \ifnum\AcrobatVer=9\relax
+                    \edef\rmSkinPath{/Applications/%
+                        Adobe{\@x}Acrobat{\@x}\AcrobatVer{\@x}Pro/%
+                        Adobe{\@x}Acrobat{\@x}Pro.app/Contents/%
+                        MacOS/Multimedia{\@x}Skins}%
+                \else % ver 10 or 11
+                    \ifnum\AcrobatVer=10\relax\def\romanVer{X}\else
+                    \ifnum\AcrobatVer=11\relax\def\romanVer{XI}\fi\fi
+                    \edef\rmSkinPath{/Applications/%
+                        Adobe{\@x}Acrobat{\@x}\romanVer{\@x}Pro/%
+                        Adobe{\@x}Acrobat{\@x}Pro.app/Contents/%
+                        Resources/Multimedia{\@x}Skins}\fi
+            \else
+                \edef\rmSkinPath{/Applications/%
+                    Adobe{\@x}Acrobat{\@x}\AcrobatVer/%
+                    Adobe{\@x}Acrobat.app/Contents/Resources/%
+                    Multimedia{\@x}Skins}%
+            \fi
+    \fi\fi\fi\fi
+    \expandafter\pathToSkins\expandafter{\rmSkinPath}%
+}
+\@onlypreamble\AcroVer
+\AcroVer{11}
+\newcommand{\pathToPlayers}[1]{\pdfstringdef\rma@pathToPlayers{#1}}
+\newcommand{\defineRMPath}[1]{\def\rm@ctrlName{#1}%
+    \hyper@normalise\rm@defineURLPath}
+\def\rm@defineURLPath#1{\expandafter\xdef\rm@ctrlName{#1}}
+\newif\ifVideoPlayerEx\VideoPlayerExfalse
+\def\rma@VideoPlayer{VideoPlayer.swf}
+\newcommand{\useVideoPlayerPlus}{%
+    \PackageWarning{rmannot}{The \string\useVideoPlayerPlus\space
+        is no longer supported,\MessageBreak
+        will use \string\useVideoPlayX\space instead.
+        In the future\MessageBreak
+        specify \string\useVideoPlayX}%
+    \useVideoPlayerX
+}
+\newcommand{\useVideoPlayerX}{\VideoPlayerExtrue
+    \def\rma@VideoPlayer{VideoPlayerX.swf}%
+    \let\useVideoPlayerPlus\relax
+}
+\@onlypreamble\useVideoPlayerPlus
+\@onlypreamble\useVideoPlayerX
+\def\mmPlay{"multimedia_play"}
+\def\mmPause{"multimedia_pause"}
+\def\mmRewind{"multimedia_rewind"}
+\def\mmNextCuePoint{"multimedia_nextCuePoint"}
+\def\mmPrevCuePoint{"multimedia_prevCuePoint"}
+\def\mmSeek{"multimedia_seek"}
+\def\mmMute{"multimedia_mute"}
+\def\mmVolume{"multimedia_volume"}
+    \def\mmSource{"multimedia_setSource"}
+    \def\mmSkin{"multimedia_setSkin"}
+    \def\mmSkinColor{"multimedia_setSkinColor"}
+    \def\mmSeekCuePoint{"multimedia_seekCuePoint"}
+    \def\mmSkinAlpha{"multimedia_setSkinAlpha"}
+    \def\mmGetSource{"multimedia_getSource"}
+    \def\mmUseLocal{"multimedia_useLocal"}
+    \def\mmGetMetaData{"multimedia_getMetdata"}
+    \def\mmGetVideoState{"multimedia_getVideoState"}
+    \def\mmSetScaleMode{"multimedia_setScaleMode"}
+    \def\mmGetVersion{"multimedia_getVersion"}
+    \def\mmSetStageColor{"multimedia_setStageColor"}
+    \def\mmIsLooping{"multimedia_isLooping"}
+    \def\mmSkinAutoHide{"multimedia_skinAutoHide"}
+    \def\mmShowLoopButton{"multimedia_showLoopButton"}
+\def\ps@mark{[\space}
+\def\rma@edefexecute#1{\edef\rm@@temp@@exp{#1}\rm@@temp@@exp}
+\def\@MXV@newlabel#1#2{{%
+  \rm@csarg\xdef{#1}{#2}}}%
+\def\@MXV@getlabelvalue#1{%
+  \rm@csarg\ifx{#1}\relax%
+    undefined%
+  \else%
+    \csname#1\endcsname%
+  \fi%
+}%
+\def\@MXV@labeltoaux#1#2{%
+  \@bsphack\protected@write\@auxout{}{%
+    \string\@MXV@newlabel{#1}{#2}%
+    \string\@MXV@newlabel{@#1@}{\@MXV@getlabelvalue{#1}}%
+  }\@esphack%
+  \ifthenelse{%
+    \equal{\@MXV@getlabelvalue{#1}}{undefined}\OR%
+    %double check that the value hasn't changed
+    \NOT\equal{\@MXV@getlabelvalue{#1}}{\@MXV@getlabelvalue{@#1@}}%
+  }{%
+    \ifthenelse{\isundefined{\@MXV@warning}}{%
+      \gdef\@MXV@warning{}%
+      \AtEndDocument{%
+        \PackageWarningNoLine{rmannot}{%
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\MessageBreak
+        @@ Rerun to get object references right! @@\MessageBreak
+        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@}%
+      }%
+    }{}%
+  }{}%
+}%
+\def\RefObjRm#1{{\@MXV@getlabelvalue{rmAnnot_#1}}}
+\InputIfFileExists{rmannot.cfg}{}{}
+\def\rma@embed@mpiii@Poster{%
+    \embedEPS[hiresbb]{ramp3poster}{ramp3poster}%
+    \global\let\rma@embed@mpiii@Poster\relax
+}
+\def\rma@set@mpiiiposter{%
+    \begin{sp@createImage}{\bboxOf{ramp3poster}}{nramp3poster}%
+        \rma@invisible
+        \ps@mark{ramp3poster} /SP pdfmark
+    \end{sp@createImage}%
+    \global\let\rma@set@mpiiiposter\relax
+}
+\newcommand{\saveNamedPath}[2][]{%
+    \edef\rm@argii{#2}\@ifundefined{rma@@#2}%
+    {\gdef\rm@thisPath{rma@@#2}}{\rma@PkEr@ii}%
+    \gdef\rm@thisMimeType{#1}%
+    \hyper@normalise\rm@saveNamedPath
+}
+\def\rm@saveNamedPath#1{%
+    \rm@csarg\gdef{\rm@thisPath}{#1}%
+    \rm@csarg\xdef{rma@mt@\rm@argii}{\rm@thisMimeType}%
+    \rma@edefexecute{\noexpand\filename@parse{#1}}%
+    \@ifundefined{filename@ext}{\rma@PkEr@iii{#1}}{}%
+    \rma@edefexecute{\noexpand
+        \uppercase{\noexpand\def\noexpand\rma@tempi
+        {\filename@ext}}}
+    \rm@csarg\xdef{\rm@argii FileName}{%
+        \filename@base.\filename@ext}%
+    \rm@csarg\xdef{\rm@argii URL}{%
+       \filename@area\filename@base.\filename@ext}%
+    \ifx\rma@tempi\rma@rmAnnot@type@mpiii\rma@embed@mpiii@Poster\fi
+}
+\def\rma@useNamedPath#1{\@nameuse{rma@@#1}}
+\def\rma@resource#1{\csname#1FileName\endcsname}
+\def\rma@urlresource#1{\csname#1URL\endcsname}
+\expandafter\def\expandafter\makeJSspecials\expandafter{\makeJSspecials
+    \let\Name\rma@resource\let\urlName\rma@urlresource
+}
+\let\rmaName\rma@resource
+\def\rmaNameP(#1){\rma@resource{#1}}
+\let\rmaUrlName\rma@urlresource
+\def\rmaUrlNameP(#1){\rma@urlresource{#1}}
+\def\getargsiii#1#2#3{\def\aeb@argi{#1}\def\aeb@argii{#2}%
+    \def\aeb@argiii{#3}}
+\@tfor\rma@data:={{uiiid}{U3D}{model/u3d}}{{prc}{PRC}{model/prc}}%
+    {{swf}{SWF}{application/x-shockwave-flash}}%
+    {{flv}{FLV}{video/x-flv}}{{fiv}{F4V}{video/mp4}}%
+    {{mpiv}{MP4}{video/mp4}}{{mivV}{M4V}{video/x-m4v}}%
+    {{mov}{MOV}{video/quicktime}}{{iiiGP}{3GP}{video/3gpp}}%
+    {{iiiGii}{3G2}{video/3gpp2}}{{mpiii}{MP3}{audio/x-mp3}}\do{%
+    \expandafter\getargsiii\rma@data
+    \rm@csarg\edef{rma@rmAnnot@type@\aeb@argi}{\aeb@argii}
+    \rm@csarg\edef{rma@mimetype@\aeb@argi}{\aeb@argiii}
+}
+\def\rm@SkinsAndPlayerPaths{%
+    \saveNamedPath{VideoPlayer}{\PathToSkins/Players/\rma@VideoPlayer}%
+    \saveNamedPath{AudioPlayer}{\PathToSkins/Players/AudioPlayer.swf}%
+    \saveNamedPath{skin1}{\PathToSkins/SkinOverAllNoFullNoCaption.swf}%
+    \saveNamedPath{skin2}%
+        {\PathToSkins/SkinOverAllNoVolNoCaptionNoFull.swf}%
+    \saveNamedPath{skin3}{\PathToSkins/SkinOverPlay.swf}%
+    \saveNamedPath{skin4}{\PathToSkins/SkinOverPlayMute.swf}%
+    \saveNamedPath{skin5}{\PathToSkins/SkinOverPlaySeekMute.swf}%
+    \saveNamedPath{skin6}{\PathToSkins/SkinOverPlaySeekStop.swf}%
+    \saveNamedPath{skin7}{\PathToSkins/SkinOverPlayStopSeekMuteVol.swf}%
+}
+\AtBeginDocument{\rm@SkinsAndPlayerPaths}
+\@namedef{noneFileName}{}
+\@namedef{noneURL}{}
+\@namedef{noChangeFileName}{noChange}
+\@namedef{noChange}{noChange}
+\def\rma@ANT{rmAssetsNameTree-\therm@Cnt}
+\define@key{rmAnnot}{name}[aebRM\therm@Cnt]{\def\rma@Annot@name{#1}}
+\define@choicekey+{rmAnnot}{enabled}[\val\nr]%
+    {onclick,pageopen,pagevisible}[onclick]{%
+    \ifcase\nr\relax
+        \def\rma@rmAnnot@enabled{/XA}\or
+        \def\rma@rmAnnot@enabled{/PO}\or
+        \def\rma@rmAnnot@enabled{/PV}\fi
+}{\PackageWarning{rmannot}{Bad choice for enabled, permissible values
+   are onclick, pageopen and pagevisible. Try again}}
+\define@choicekey+{rmAnnot}{deactivated}[\val\nr]%
+    {onclick,pageclose,pageinvisible}[onclick]{%
+    \ifcase\nr\relax
+        \def\rma@rmAnnot@deactivated{/XD}\or
+        \def\rma@rmAnnot@deactivated{/PC}\or
+        \def\rma@rmAnnot@deactivated{/PI}\fi
+}{\PackageWarning{rmannot}{Bad choice for deactivated, permissible
+    values are onclick, pageclose and pageinvisible. Try again}}
+\define@boolkey{rmAnnot}{windowed}[true]{}
+\define@key{winDimPos}{width}{\def\rma@winDimPos@width{#1}}
+    \define@key{winDimPosWidth}{default}[288]%
+        {\def\rma@winDimPosWidth@def{#1}}
+    \define@key{winDimPosWidth}{max}[576]%
+        {\def\rma@winDimPosWidth@max{#1}}
+    \define@key{winDimPosWidth}{min}[72]%
+        {\def\rma@winDimPosWidth@min{#1}}
+\define@key{winDimPos}{height}{\def\rma@winDimPos@height{#1}}
+    \define@key{winDimPosHeight}{default}[216]%
+        {\def\rma@winDimPosHeight@def{#1}}
+    \define@key{winDimPosHeight}{max}[432]%
+        {\def\rma@winDimPosHeight@max{#1}}
+    \define@key{winDimPosHeight}{min}[72]%
+        {\def\rma@winDimPosHeight@min{#1}}
+\define@key{winDimPos}{position}{\def\rma@winDimPos@position{#1}}
+    \define@choicekey+{winDimPosPos}{halign}[\val\nr]%
+        {near,center,far}[far]{%
+        \ifcase\nr\relax
+            \def\rma@winDimPosPos@halign{/Near}\or
+            \def\rma@winDimPosPos@halign{/Center}\or
+            \def\rma@winDimPosPos@halign{/Far}\fi
+    }{}
+    \define@choicekey+{winDimPosPos}{valign}[\val\nr]%
+        {near,center,far}[near]{%
+        \ifcase\nr\relax
+            \def\rma@winDimPosPos@valign{/Near}\or
+            \def\rma@winDimPosPos@valign{/Center}\or
+            \def\rma@winDimPosPos@valign{/Far}\fi
+    }{}
+    \define@key{winDimPosPos}{hoffset}[18]%
+        {\def\rma@winDimPosPos@hoffset{#1}}
+    \define@key{winDimPosPos}{voffset}[18]%
+        {\def\rma@winDimPosPos@voffset{#1}}
+\providecommand{\setWindowDimPos}[1]{%
+    \setkeys{winDimPos}{#1}%
+    \edef\temp@expand@sets{%
+        \noexpand\setkeys{winDimPosWidth}{\rma@winDimPos@width}%
+        \noexpand\setkeys{winDimPosHeight}{\rma@winDimPos@height}%
+        \noexpand\setkeys{winDimPosPos}{\rma@winDimPos@position}%
+    }\temp@expand@sets
+}
+\providecommand{\resetWindowDimPos}{%
+    \setWindowDimPos{width={default,max,min},height={default,max,min},
+        position={halign,valign,hoffset,voffset}}%
+}
+\resetWindowDimPos
+\define@boolkey{rmAnnot}{url}[true]{}
+\def\setRmOptions3D#1#2{\rm@csarg\xdef{#1_3DOPTS}{#2}}
+\define@choicekey+{rmAnnot}{borderwidth}[\val\nr]%
+    {none,thin,medium,thick}[none]{%
+    \ifcase\nr\relax
+        \def\rma@rmAnnot@borderwidth{0}\or
+        \def\rma@rmAnnot@borderwidth{1}\or
+        \def\rma@rmAnnot@borderwidth{3}\or
+        \def\rma@rmAnnot@borderwidth{5}\fi
+}{\PackageWarning{rmannot}{Bad choice for borderwidth, permissible
+    values are none,thin,medium,and thick. Try again}}
+\define@key{rmAnnot}{poster}[]{\def\rma@rmAnnot@poster{#1}}
+\define@key{rmAnnot}{posternote}[AcroTeX \rma@poster@descrip]%
+    {\def\rma@posternote{#1}}
+\define@key{rmAnnot}{invisible}[]%
+    {\def\rma@invisible{\ps@mark/ca 0/SetTransparency pdfmark }}
+\let\rma@invisible\@empty
+\define@boolkey{rmAnnot}{transparentBG}[true]{%
+    \ifKV@rmAnnot@transparentBG
+        \def\rma@rmAnnot@transparent{true}\else
+        \def\rma@rmAnnot@transparent{false}\fi
+}
+\define@boolkey{rmAnnot}{toolbar}[true]{%
+    \ifKV@rmAnnot@toolbar
+        \def\rma@rmAnnot@toolbar{true}\else
+        \def\rma@rmAnnot@toolbar{false}\fi
+}
+\define@boolkey{rmAnnot}{modeltree}[true]{%
+    \ifKV@rmAnnot@modeltree
+        \def\rma@rmAnnot@modeltree{true}\else
+        \def\rma@rmAnnot@modeltree{false}\fi
+}
+\define@boolkey{rmAnnot}{passcontext}[true]{%
+    \ifKV@rmAnnot@passcontext
+    \def\rma@rmAnnot@PassContextClick{true}\else
+    \def\rma@rmAnnot@PassContextClick{false}\fi
+}
+\define@choicekey+{rmAnnot}{skin}[\val\nr]%
+    {none,skin1,skin2,skin3,skin4,skin5,skin6,skin7}[skin1]{%
+    \edef\rma@skinName{#1}% 2011/10/18 changed from number to name
+    \ifcase\nr\relax
+        \let\rma@rmAnnot@Skin\@empty\or
+        \def\rma@rmAnnot@Skin{SkinOverAllNoFullNoCaption.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverAllNoVolNoCaptionNoFull.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverPlay.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverPlayMute.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverPlaySeekMute.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverPlaySeekStop.swf}\or
+        \def\rma@rmAnnot@Skin{SkinOverPlayStopSeekMuteVol.swf}\fi
+}{%
+    \@ifundefined{rma@@#1}{%
+    \PackageWarning{rmannot}{Bad choice for 'skin,' permissible
+    values are skin1--skin7, or a custom skin already defined.
+    Try again}}{%
+        \PackageWarning{rmannot}{Recording new skin, '#1'}%
+        \edef\rma@skinName{#1}%
+        \edef\rma@rmAnnot@Skin{\csname#1FileName\endcsname}%
+        \rm@csarg\let{embedSkin#1}=1
+    }%
+}
+\@tfor\rma@arg:={skin0}{skin1}{skin2}{skin3}{skin4}%
+    {skin5}{skin6}{skin7}\do{%
+    \rm@csarg\let{embedSkin\rma@arg}=1
+}
+\define@boolkey{rmAnnot}{skinAutoHide}[true]{%
+    \ifKV@rmAnnot@skinAutoHide
+    \def\rma@skinAutoHide{true}\else
+    \def\rma@skinAutoHide{false}\fi
+}
+\define@key{rmAnnot}{skinBGColor}[0x5F5F5F]%
+    {\def\rma@skinBGColor{#1}}
+\define@key{rmAnnot}{skinBGAlpha}[0.75]%
+    {\def\rma@skinBGAlpha{#1}}
+\define@key{rmAnnot}{volume}[1.00]%
+    {\def\rma@rmAnnot@volume{#1}}
+\define@key{rmAnnot}{speed}[1]{%
+    \def\rma@rmAnnot@speed{#1}%
+}
+\define@key{rmAnnot}{playcount}[-1]{%
+    \def\rma@rmAnnot@playcount{#1}%
+}
+\newtoks\rma@toks\rma@toks={}
+\newcount\rma@nResources
+\newif\ifrma@isiiid\rma@isiiidfalse
+\define@key{rmAnnot}{resources}[]{\rma@toks={}\rma@nResources=0%
+    \ifrma@isiiid\let\rma@next\relax
+        \else\def\rma@next{\rma@proc@resources{#1}}\fi\rma@next
+}
+\newcommand{\rma@proc@resources}[1]{%
+    \def\rma@rmAnnot@resources{#1}%
+    \ifx\rma@rmAnnot@resources\@empty\let\rma@addResources\@empty
+    \let\rma@addFileSpecs\@empty\else
+        \@for\rma@arg:=\rma@rmAnnot@resources\do{%
+            \advance\rma@nResources1\relax
+            \rma@edefexecute{\noexpand
+                \filename@parse{\rma@useNamedPath{\rma@arg}}}%
+            \@ifundefined{filename@ext}{%
+              \rma@PkEr@iii{\rma@useNamedPath{\rma@arg}}}{}%
+            \edef\rma@fs@expand{rmFileStrm\rma@arg}%
+            \@ifundefined{\rma@fs@expand}{%
+            \rm@csarg\xdef{\rma@fs@expand}%
+              {rmfstream\therm@Cnt-\the\rma@nResources}%
+              \def\rma@embed{1}}{\def\rma@embed{0}}%
+            \edef\rma@tmp@exp{\the\rma@toks%
+              \noexpand\\{\the\rma@nResources}%
+              {\filename@area}{\filename@base.\filename@ext}%
+              {\rma@embed}{\csname\rma@fs@expand\endcsname}%
+              {\rm@csarg\noexpand{rma@mt@\rma@arg}}}%
+            \rma@toks=\expandafter{\rma@tmp@exp}%
+        }%
+        \let\\\rm@appendNameTree
+        \expandafter\xdef\expandafter\rma@addResources%
+            \expandafter{\the\rma@toks}%
+        \let\\\rm@appendFileSpecs
+        \expandafter\xdef\expandafter\rma@addFileSpecs%
+            \expandafter{\the\rma@toks}%
+    \fi
+}
+\def\rm@appendNameTree#1#2#3#4#5#6{%
+     \ps@mark{\rma@ANT} (#3) /APPEND pdfmark^^J%
+     \ps@mark{\rma@ANT} {rmfilespec\therm@Cnt-#1}/APPEND pdfmark^^J%
+}
+\def\rm@appendFileSpecs#1#2#3#4#5#6{%
+    \ps@mark/_objdef {rmfilespec\therm@Cnt-#1}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmfilespec\noexpand\therm@Cnt-#1} <<%
+        /F(#3)%
+        /UF (#3)%
+        /EF <</F {#5}>>%
+        /Type/Filespec%
+    >>/PUT pdfmark^^J%
+    \if#41
+        \ps@mark/_objdef {#5} /type/stream/OBJ pdfmark^^J%
+        \ps@mark{#5} (#2#3) (r) file /PUT pdfmark^^J%
+        \ps@mark{#5}<<%
+            /Type/EmbeddedFile%
+\ifx#6\@empty\else
+            /Subtype(#6)%
+\fi
+          >>/PUT pdfmark^^J%
+        \ps@mark{#5} /CLOSE pdfmark^^J%
+    \fi
+}
+\define@key{rmAnnot}{flashvars}[]{%
+    \def\rma@rmAnnot@flashvars{#1}%
+}
+\define@key{rmAnnot}{cuepoints}[]{%
+    \edef\rma@rmAnnot@cuepoints{#1}%
+    \ifx\rma@rmAnnot@cuepoints\@empty\else
+        \rma@nResources=0%
+        \def\rma@array@hold{}\def\rma@dict@hold{}%
+        \@for\arg:=\rma@rmAnnot@cuepoints\do{%
+            \advance\rma@nResources1\relax
+            \rma@edefexecute{\noexpand\setkeys{rmCuePt}{\arg}}%
+            % need to build the array of indirect references,
+            \edef\rma@array@hold{\rma@array@hold\space
+                {rmCuePoints\therm@Cnt-\the\rma@nResources}}%
+            % and the code for the cue point dictionary
+            \edef\rma@dict@hold{\rma@dict@hold
+                \ps@mark/_objdef %
+                    {rmCuePoints\therm@Cnt-\the\rma@nResources}%
+                    /type/dict/OBJ pdfmark^^J%
+                \ps@mark{rmCuePoints\therm@Cnt-\the\rma@nResources} <<
+                    /Type/CuePoint
+\ifx\rma@rmCuePt@name\@empty
+                    /Name (RMACP \the\rma@nResources)
+\else
+                    /Name (\rma@rmCuePt@name)
+\fi
+                    /Subtype \rma@rmCuePt@type
+                    /Time \rma@rmCuePt@time
+\ifx\rma@rmCuePt@action\@empty\else
+                    /A << /Type/Action\JS{\rma@rmCuePt@action} >>
+\fi
+                   >> /PUT pdfmark^^J%
+            }%
+        }% end of \@for
+    \fi
+}
+\define@choicekey+{rmCuePt}{type}[\val\nr]%
+    {event,nav}[nav]{%
+    \ifcase\nr\relax
+        \def\rma@rmCuePt@type{/Event}\or
+        \def\rma@rmCuePt@type{/Navigation}\fi
+}{\PackageWarning{rmannot}{Bad choice for type, permissible values
+   are event and nav. Try again}}
+\define@key{rmCuePt}{name}[]{%
+    \def\rma@rmCuePt@name{#1}%
+}
+\define@key{rmCuePt}{time}[0]{%
+    \def\rma@rmCuePt@time{#1}%
+}
+\define@key{rmCuePt}{action}[]{%
+    \def\rma@rmCuePt@action{#1}%
+}
+\setkeys{rmAnnot}{name,url=false,enabled,deactivated,borderwidth,%
+    windowed=false,poster,posternote,skin,skinAutoHide,skinBGColor,%
+    skinBGAlpha,volume,speed,playcount,resources,flashvars,%
+    transparentBG=false,passcontext=false,cuepoints,toolbar,%
+    modeltree=false}
+\def\rma@recordVideoPlayer{%
+    \ifrma@EmbedVideoPlayer
+        \global\let\rma@isVPEmbedded=1\global\rma@EmbedVideoPlayerfalse
+    \else
+        \if\rma@isVPEmbedded0\global\rma@EmbedVideoPlayertrue\fi
+    \fi
+}
+\def\rma@recordAudioPlayer{%
+    \ifrma@EmbedAudioPlayer
+        \global\let\rma@isAPEmbedded=1\global\rma@EmbedAudioPlayerfalse
+    \else
+        \if\rma@isAPEmbedded0\global\rma@EmbedAudioPlayertrue\fi
+        \rma@set@mpiiiposter
+    \fi
+}
+\newif\if@FndSuppExt \@FndSuppExtfalse
+\newcommand{\rmAnnot}[4][]{\begingroup
+    \let\Name\rma@resource
+    \let\urlName\rma@urlresource
+    \makeJSspecials
+    \let\rma@addResources\@empty\let\rma@addFileSpecs\@empty
+    {\setlength{\dimen@}{#2}\xdef\rm@Annot@width{\the\dimen@}%
+     \setlength{\dimen@}{#3}\xdef\rm@Annot@height{\the\dimen@}}%
+    \stepcounter{rm@Cnt}%
+    \rma@edefexecute{\noexpand\filename@parse{\rma@useNamedPath{#4}}}%
+    \edef\rma@fs@expand{rmFileStrm#4}\@ifundefined{\rma@fs@expand}{%
+    \rm@csarg\xdef{\rma@fs@expand}%
+        {rmfstream\therm@Cnt}\global\rma@EmbedFiletrue}%
+        {\global\rma@EmbedFilefalse}%
+    \edef\rma@thisfilepath{\filename@area}%
+    \edef\rma@basefilename{\filename@base}%
+    \edef\rma@extension{\filename@ext}%
+    \rma@edefexecute{\noexpand\uppercase{\noexpand
+        \def\noexpand\rma@tempi{\rma@extension}}}%
+    \ifx\rma@tempi\rma@rmAnnot@type@uiiid\rma@isiiidtrue
+        \else\ifx\rma@tempi\rma@rmAnnot@type@prc\rma@isiiidtrue
+        \else\rma@isiiidfalse
+    \fi\fi
+    \rma@edefexecute{\noexpand\setkeys{rmAnnot}{#1}}%
+\ifx\rma@input@iiidCode\relax\else
+\ifrma@isiiid
+    \@ifundefined{\rma@Annot@name_3DOPTS}{%
+    }{%
+        \def\rma@Instances{}\def\rma@appendToNameTree{}%
+        \rma@edefexecute{\noexpand\setkeys{rm3DOptsTopLevel}%
+            {\@nameuse{\rma@Annot@name_3DOPTS}}}%
+        \edef\additional@Instances{\rma@Instances}%
+        \edef\rma@addResources{\rma@appendToNameTree}%
+        \ifx\rma@rmAnnot@iiiDjs\@empty\else
+            \def\@MXV@jscriptiiid{}%
+            \literalps@out{%
+                \ps@mark/_objdef {jscriptiiid\therm@Cnt}%
+                    /type/array/OBJ pdfmark^^J%
+                \rmiiid@addToScriptsArray
+                \rma@addFileSpecs
+            }%
+            \edef\@MXV@jscriptiiid{%
+                /Scripts {jscriptiiid\therm@Cnt}%
+            }%
+        \fi
+        \@MXV@buildva%
+    }%
+\fi\fi
+    \rma@edefexecute{\noexpand\uppercase{\noexpand
+        \def\noexpand\rma@tempi{\rma@extension}}}%
+\ifrma@isiiid
+    \def\rma@poster@descrip{3D}%
+    \def\rma@RMCSubtype{/3D}%
+    \ifx\rma@tempi\rma@rmAnnot@type@uiiid
+        \def\rma@rmAnnot@type{U3D}%
+        \edef\rma@mimeType{\rma@mimetype@uiiid}%
+    \else
+    \ifx\rma@tempi\rma@rmAnnot@type@prc
+        \def\rma@rmAnnot@type{PRC}%
+        \edef\rma@mimeType{\rma@mimetype@prc}%
+    \fi\fi
+\else
+    \def\rma@poster@descrip{Flash}%
+    \ifx\rma@tempi\rma@rmAnnot@type@swf
+        \def\rma@rmAnnot@type{SWF}\edef\rma@mimeType{\rma@mimetype@swf}%
+        \def\rma@RMCSubtype{/Flash}%
+    \else % if not flash
+    \def\rma@poster@descrip{Video}\def\rma@rmAnnot@type{FLV}%
+    \@FndSuppExtfalse
+    \@tfor\rma@type:={flv}{fiv}{mpiv}{mivV}{mov}{iiiGP}{iiiGii}\do{%
+        \expandafter\ifx\expandafter\rma@tempi\csname%
+         rma@rmAnnot@type@\rma@type\endcsname
+         \@FndSuppExttrue
+            \edef\rma@mimeType{\csname%
+                rma@mimetype@\rma@type\endcsname}%
+            \rma@recordVideoPlayer\@break@tfor
+        \fi
+    }%
+    \if@FndSuppExt
+        \def\rma@RMCSubtype{/Video}%
+        \xdef\FileStrmVideoPlayer{rmVideoPlayer\therm@Cnt}%
+    \else % if not video
+    \ifx\rma@tempi\rma@rmAnnot@type@mpiii
+    \def\rma@rmAnnot@type{MP3}\edef\rma@mimeType{\rma@mimetype@mpiii}%
+    \def\rma@poster@descrip{MP3}\def\rma@RMCSubtype{/Sound}%
+    \xdef\FileStrmAudioPlayer{rmAudioPlayer\therm@Cnt}%
+    \let\rma@rmAnnot@resources\@empty
+    \rma@recordAudioPlayer
+    \else % not mp3
+        \rma@PkEr@i
+\fi\fi\fi\fi
+    \def\rma@thisfileName{\rma@basefilename.\rma@extension}%
+    \def\rma@fullpath{\rma@thisfilepath\rma@thisfileName}%
+    \ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+        \let\rma@rmAnnot@flashvars\@empty\fi
+    \ifx\rma@rmAnnot@type\rma@rmAnnot@type@mpiii
+        \let\rma@rmAnnot@flashvars\@empty\fi
+\ifx\rma@rmAnnot@poster\@empty
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@mpiii
+    \def\rma@rmAnnot@poster{nramp3poster}%
+\else
+    \Gin@defaultbp\this@width\rm@Annot@width
+    \Gin@defaultbp\this@height\rm@Annot@height
+    \ifdim\rm@Annot@width < \rm@Annot@height
+        \edef\calc@prop{\this@width}\else
+        \edef\calc@prop{\this@height}\fi
+    \def\this@bbox{0 0 \this@width\space\this@height}%
+    \begin{sp@createImage}{\this@bbox}{rmAP@#4@\therm@Cnt}%
+    \rma@invisible
+    \rma@psgraphics@poster
+    \end{sp@createImage}%
+    \def\rma@rmAnnot@poster{rmAP@#4@\therm@Cnt}%
+\fi\fi
+    \pdf@rect{\Bbox{\rm@Annot@width}{\rm@Annot@height}}%
+    \@MXV@newlabel{rmAnnot_\rma@Annot@name}{rmAnnot\therm@Cnt}%
+    \@MXV@labeltoaux{rmAnnot_\rma@Annot@name}{rmAnnot\therm@Cnt}%
+    \literalps@out{%
+  \ps@mark/_objdef {rmAnnot\therm@Cnt}%
+    /Type/Annot%
+    /Subtype/RichMedia%
+    /NM (\rma@Annot@name)%                  % Annotation name
+\ifx\rma@rmAnnot@poster\@empty\else
+    /AP <</N {\rma@rmAnnot@poster}>>%       % poster appearance
+\fi
+    /F 68%                                  % Annotation flags
+    /P {ThisPage}%                          % Parent
+    /Border [ 0 0 \rma@rmAnnot@borderwidth ]% Border
+    /BS <</Type/Border%                     % Border Style dictionary
+        /W \rma@rmAnnot@borderwidth%        % Width
+        /S/S%                               % Border style (Solid)
+    >>%
+    /RichMediaContent {rmContent\therm@Cnt}%
+    /RichMediaSettings {rmSettings\therm@Cnt}
+    H.B /ANN pdfmark^^J%
+    \ps@mark/_objdef {rmContent\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmContent\therm@Cnt} <<%
+        /Type/RichMediaContent%
+\ifrma@isiiid
+        /Subtype/3D%
+\ifx\@MXV@varray\@empty\else
+        /Views [\@MXV@varray]%
+\fi\fi
+        /Configurations [{rmConfig\therm@Cnt}]%
+        /Assets {rmAssets\therm@Cnt}%
+    >>/PUT pdfmark^^J%
+    \ps@mark/_objdef {rmConfig\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmConfig\therm@Cnt} <<%
+        /Type/RichMediaConfiguration%
+        /Name (RMConfig\therm@Cnt)%
+        /Subtype\rma@RMCSubtype%
+        /Instances {rmInstances\therm@Cnt}%
+    >> /PUT pdfmark^^J%
+    \ps@mark/_objdef {rmInstances\therm@Cnt}/type/array/OBJ pdfmark^^J%
+\ifrma@isiiid
+    \ps@mark{rmInstances\therm@Cnt} {rmInstance\therm@Cnt}%
+        /APPEND pdfmark^^J%
+    \additional@Instances
+\else
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+    \ps@mark{rmInstances\therm@Cnt} {rmVideoPlayer\therm@Cnt}%
+        /APPEND pdfmark^^J%
+\else\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+    \ps@mark{rmInstances\therm@Cnt} {rmInstance\therm@Cnt}%
+        /APPEND pdfmark^^J%
+\else
+    \ps@mark{rmInstances\therm@Cnt} {rmAudioPlayer\therm@Cnt}%
+        /APPEND pdfmark^^J%
+\fi\fi\fi
+    \ps@mark/_objdef {rmAssets\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmAssets\therm@Cnt} <<%
+        /Names {\rma@ANT}>>/PUT pdfmark^^J%
+    \ps@mark/_objdef {\rma@ANT}/type/array/OBJ pdfmark^^J%
+\ifrma@isiiid
+    \ps@mark{\rma@ANT} (\rma@thisfileName) /APPEND pdfmark^^J%
+    \ps@mark{\rma@ANT} {rmfilespec\therm@Cnt} /APPEND pdfmark^^J%
+    \rma@addResources
+\else
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+    \ifKV@rmAnnot@url\else
+        \ps@mark{\rma@ANT} (\rma@thisfileName)/APPEND pdfmark^^J%
+        \ps@mark{\rma@ANT} {rmfilespec\therm@Cnt}/APPEND pdfmark^^J%
+        \rma@addResources
+    \fi
+\else\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+    \ifKV@rmAnnot@url\else
+        \ps@mark{\rma@ANT} (\rma@thisfileName)/APPEND pdfmark^^J%
+        \ps@mark{\rma@ANT} {rmfilespec\therm@Cnt}/APPEND pdfmark^^J%
+        \ifVideoPlayerEx\rma@addResources\fi
+    \fi
+    \ifx\rma@rmAnnot@Skin\@empty\else
+        \ps@mark{\rma@ANT} (\rma@rmAnnot@Skin)/APPEND pdfmark^^J%
+        \ps@mark{\rma@ANT} {rmfilespecSkin\rma@skinName}%
+            /APPEND pdfmark^^J%
+    \fi
+    \ps@mark{\rma@ANT} (\rma@VideoPlayer)/APPEND pdfmark^^J%
+    \ps@mark{\rma@ANT} {rmfilespecVP}/APPEND pdfmark^^J%
+\else
+    \ps@mark{\rma@ANT} (AudioPlayer.swf)/APPEND pdfmark^^J%
+    \ps@mark{\rma@ANT} {rmfilespecAP}/APPEND pdfmark^^J%
+    \ps@mark{\rma@ANT} (\rma@thisfileName)/APPEND pdfmark^^J%
+    \ps@mark{\rma@ANT} {rmfilespec\therm@Cnt}/APPEND pdfmark^^J%
+\fi\fi\fi
+\ifrma@isiiid
+    \ps@mark/_objdef {rmInstance\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmInstance\therm@Cnt}%
+\else
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+    \ps@mark/_objdef {rmVideoPlayer\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmVideoPlayer\therm@Cnt}%
+\else\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+    \ps@mark/_objdef {rmInstance\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmInstance\therm@Cnt}%
+\else
+    \ps@mark/_objdef {rmAudioPlayer\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmAudioPlayer\therm@Cnt}%
+\fi\fi\fi
+    <<%
+        /Type/RichMediaInstance%
+\ifrma@isiiid
+        /Subtype/3D%
+        /Asset {rmfilespec\therm@Cnt}%
+\else
+        /Subtype/Flash%
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+        /Asset {rmfilespecVP}%
+\else\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+        /Asset {rmfilespec\therm@Cnt}%
+\else
+        /Asset {rmfilespecAP}%
+\fi\fi\fi
+\ifrma@isiiid\else
+        /Params {rmParams\therm@Cnt}%
+\fi
+    >> /PUT pdfmark^^J%
+    \ps@mark/_objdef {rmParams\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmParams\therm@Cnt} <<%
+        /Type/RichMediaParams%
+\ifrma@isiiid\else
+\ifx\rma@rmAnnot@resources\@empty
+        /Binding/Background%
+\else
+        /Binding/Foreground%
+\fi\fi
+\ifrma@isiiid\else
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+    \ifKV@rmAnnot@url
+        /FlashVars (source=\rma@fullpath&%
+    \else
+        /FlashVars (source=\rma@thisfileName&%
+    \fi
+    \ifx\rma@rmAnnot@Skin\@empty\else
+        skin=\rma@rmAnnot@Skin&%
+    \fi
+        skinAutoHide=\rma@skinAutoHide&%
+        skinBackgroundColor=\rma@skinBGColor&%
+        skinBackgroundAlpha=\rma@skinBGAlpha&%
+        volume=\rma@rmAnnot@volume)
+\ifx\rma@rmAnnot@cuepoints\@empty\else
+        /CuePoints [\rma@array@hold]%
+\fi
+\else\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+    \ifx\rma@rmAnnot@flashvars\@empty\else
+        /FlashVars (\rma@rmAnnot@flashvars)%
+    \fi
+\else
+        /FlashVars (source=\ifKV@rmAnnot@url\rma@fullpath\else
+            \rma@thisfileName\fi&autoPlay=true&%
+            volume=\rma@rmAnnot@volume)%
+\fi\fi\fi
+    >> /PUT pdfmark^^J%
+    \ps@mark/_objdef {rmSettings\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmSettings\therm@Cnt} <<%
+        /Type/RichMediaSettings%
+        /Activation <<%
+            /Type/RichMediaActivation%
+            /Condition\rma@rmAnnot@enabled
+            /Configuration {rmConfig\therm@Cnt}%
+\ifrma@isiiid
+           /Animation%
+            <<%
+                /Type/RichMediaAnimation%
+                /Subtype/Linear%
+                /Speed \rma@rmAnnot@speed
+                /PlayCount \rma@rmAnnot@playcount
+            >>%
+\ifx\@MXV@defaultview\@empty\else
+             /View \@MXV@defaultview
+\fi
+\ifx\@MXV@jscriptiiid\@empty\else
+            \@MXV@jscriptiiid
+\fi\fi
+            /Presentation {rmPresentation\therm@Cnt}%
+        >>
+        /Deactivation<<%
+            /Type/RichMediaDeactivation%
+            /Condition\rma@rmAnnot@deactivated
+        >>%
+>>/PUT pdfmark^^J%
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+\ifx\rma@rmAnnot@cuepoints\@empty\else\rma@dict@hold\fi\fi
+    \ps@mark/_objdef {rmPresentation\therm@Cnt}%
+        /type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmPresentation\therm@Cnt}<<%
+        /Type/RichMediaPresentation%
+\ifrma@isiiid
+        /NavigationPane \rma@rmAnnot@modeltree % need key
+        /Toolbar \rma@rmAnnot@toolbar % need key
+        /Transparent \rma@rmAnnot@transparent
+\else
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf
+        /Transparent \rma@rmAnnot@transparent
+        /PassContextClick \rma@rmAnnot@PassContextClick
+        /NavigationPan false%
+\else
+        /Transparent false%
+        /NavigationPan false%
+\fi\fi
+\ifKV@rmAnnot@windowed
+        /Style/Windowed%
+        /Window {rmWindow\therm@Cnt}%
+\else
+        /Style/Embedded%
+\fi
+    >>/PUT pdfmark^^J%
+\ifKV@rmAnnot@windowed
+    \ps@mark/_objdef {rmWindow\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmWindow\therm@Cnt}<<%
+        /Type/RichMediaWindow%
+        /Height<<%
+            /Default \rma@winDimPosHeight@def
+            /Max \rma@winDimPosHeight@max
+            /Min \rma@winDimPosHeight@min
+        >>%
+        /Width<<%
+            /Default \rma@winDimPosWidth@def
+            /Max \rma@winDimPosWidth@max
+            /Min \rma@winDimPosWidth@min
+        >>%
+        /Position<<%
+            /Type/RichMediaPosition % RichMediaPosition dictionary
+            /HAlign\rma@winDimPosPos@halign
+            /VAlign\rma@winDimPosPos@valign
+            /HOffset \rma@winDimPosPos@hoffset
+            /VOffset \rma@winDimPosPos@voffset
+        >>%
+    >>/PUT pdfmark^^J%
+\fi
+    \ps@mark/_objdef {rmfilespec\therm@Cnt}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmfilespec\therm@Cnt} <<%
+\ifKV@rmAnnot@url
+        /F(\rma@fullpath)%
+        /FS/URL%
+\else
+        /F(\rma@thisfileName)%
+        /UF (\rma@thisfileName)%
+        /EF <</F {\csname rmFileStrm#4\endcsname}>>
+\fi
+        /Type/Filespec
+    >>/PUT pdfmark^^J%
+\ifKV@rmAnnot@url\else
+\ifrma@EmbedFile
+    \ps@mark/_objdef {\csname rmFileStrm#4\endcsname}%
+        /type/stream/OBJ pdfmark^^J%
+    \ps@mark{\csname rmFileStrm#4\endcsname} (\rma@fullpath)
+        (r) file /PUT pdfmark^^J%
+    \ps@mark{\csname rmFileStrm#4\endcsname} <<%
+        /Type/EmbeddedFile%
+        /Subtype(\rma@mimeType)%
+    >>/PUT pdfmark^^J%
+    \ps@mark{\csname rmFileStrm#4\endcsname} /CLOSE pdfmark^^J%
+\fi\fi
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@swf\rma@addFileSpecs\fi
+\ifrma@isiiid\rma@addFileSpecs\fi
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+\ifVideoPlayerEx\rma@addFileSpecs\fi
+\ifx\rma@rmAnnot@Skin\@empty\else
+    \ps@mark/_objdef {rmfilespecSkin\rma@skinName}%
+        /type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmfilespecSkin\rma@skinName} <<%
+        /F (\rma@rmAnnot@Skin)%
+        /Type/Filespec%
+        /UF (\rma@rmAnnot@Skin)%
+        /EF <</F {rmfstreamSkin\rma@skinName}>>
+    >>/PUT pdfmark^^J%
+\rm@csarg\if{embedSkin\rma@skinName}1
+    \ps@mark/_objdef {rmfstreamSkin\rma@skinName}%
+        /type/stream/OBJ pdfmark^^J%
+    \ps@mark{rmfstreamSkin\rma@skinName}%
+        (\rma@pathToSkins/\rma@rmAnnot@Skin) (r) file%
+        /PUT pdfmark^^J%
+    \ps@mark{rmfstreamSkin\rma@skinName} <<%
+        /Type/EmbeddedFile
+        /Subtype (\rma@mimetype@swf)
+    >>/PUT pdfmark^^J%
+    \ps@mark{rmfstreamSkin\rma@skinName}/CLOSE pdfmark^^J%
+\fi\fi\fi
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@flv
+    \ps@mark/_objdef {rmfilespecVP}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmfilespecVP} <<%
+        /Type/Filespec%
+        /F (\rma@VideoPlayer)%
+        /UF (\rma@VideoPlayer)%
+        /EF <</F {rmfstreamVP}>>
+    >>/PUT pdfmark^^J%
+\ifrma@EmbedVideoPlayer
+    \ps@mark/_objdef {rmfstreamVP}/type/stream/OBJ pdfmark^^J%
+    \ps@mark{rmfstreamVP} (\rma@pathToPlayers/\rma@VideoPlayer)
+        (r) file /PUT pdfmark^^J%
+    \ps@mark{rmfstreamVP} <<%
+        /Type/EmbeddedFile%
+        /Subtype (\rma@mimetype@swf)%
+    >>/PUT pdfmark^^J%
+    \ps@mark{rmfstreamVP} /CLOSE pdfmark^^J%
+\fi\fi
+\ifx\rma@rmAnnot@type\rma@rmAnnot@type@mpiii
+    \ps@mark/_objdef {rmfilespecAP}/type/dict/OBJ pdfmark^^J%
+    \ps@mark{rmfilespecAP} <<%
+        /F (AudioPlayer.swf)%
+        /Type/Filespec%
+        /UF (AudioPlayer.swf)%
+        /EF <</F {rmfstreamAP}>>%
+    >>/PUT pdfmark^^J%
+\ifrma@EmbedAudioPlayer
+    \ps@mark/_objdef {rmfstreamAP}/type/stream/OBJ pdfmark^^J%
+    \ps@mark{rmfstreamAP}(\rma@pathToPlayers/AudioPlayer.swf)
+        (r) file /PUT pdfmark^^J%
+    \ps@mark{rmfstreamAP} <<%
+        /Type/EmbeddedFile%
+        /Subtype (\rma@mimetype@mpiii)%
+    >>/PUT pdfmark^^J%
+    \ps@mark{rmfstreamAP} /CLOSE pdfmark^^J%
+\fi\fi}%
+\ifx\rma@rmAnnot@type@flv\rma@rmAnnot@type
+\ifx\rma@rmAnnot@Skin\@empty\else
+\expandafter\global\rm@csarg\let{embedSkin\rma@skinName}=0\relax
+\fi\fi
+\endgroup}
+\newcommand{\defaultPoster}[1]{\def\rma@psgraphics@poster{#1}}
+\defaultPoster
+{%
+    \rma@ps@bg@setcolor
+    0 0 \this@width\space\this@height\space rectfill
+    \rma@ps@txt@x\adj@measure\rma@ps@txt@y\adj@measure moveto
+    \rma@ps@txt@setcolor/\rma@ps@font\this@height\space
+    \rma@ps@relfontsize div selectfont
+    \rma@ps@msg
+}
+\def\adj@measure{\calc@prop\space mul 100 div }%
+\def\rma@ps@bg@setcolor{.7529 setgray }
+\def\rma@ps@txt@x{10 }\def\rma@ps@txt@y{10 }
+\def\rma@ps@txt@setcolor{.4 setgray }
+\def\rma@ps@font{Helvetica }\def\rma@ps@relfontsize{10 }%
+\def\rma@ps@msg{(\rma@posternote) show}
+\providecommand{\makePoster}[3][]{%
+    \embedEPS[#1]{rma@#2}{#3}%
+    \begin{createImage}{\bboxOf{rma@#2}}{#2}%
+        \ps@mark{rma@#2} /SP pdfmark
+    \end{createImage}%
+}
+\@onlypreamble{\makePoster}
+\def\rma@PkEr@i{%
+\PackageError{rmannot}{%
+    You must specify a file with an extension\MessageBreak
+    of .swf, .flv, .f4v, .mp4, .m4v, .mov, .3gp,\MessageBreak
+    .3g2, .mp3}{Specify one of the supported file extensions to
+    embed in this annotation.\MessageBreak
+    See the rmannot manual for details on supported extensions.}}
+\def\rma@PkEr@ii{%
+\PackageError{rmannot}{%
+    The name `\rm@argii' has already been used. Either\MessageBreak
+    you are defining the same path, or a different path\MessageBreak
+    with the same name}{%
+    Names must be unique to the document, choose another}}
+\def\rma@PkEr@iii#1{%
+\PackageError{rmannot}{%
+    No extension supplied with this file name,\MessageBreak#1.%
+    \MessageBreak Please include a file extension of\MessageBreak
+     .swf, .flv, or .mp3, as appropriate}{%
+    Include an extension of .swf, .flv, or .mp3}}
+\rma@input@iiidCode
+\endinput
+%%
+%% End of file `rmannot.sty'.

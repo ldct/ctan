@@ -1,0 +1,452 @@
+% $StyleId: cwebparts.doc,v 1.1 1995/09/16 17:01:59 schrod Exp $
+%----------------------------------------------------------------------
+% Written by Joachim Schrod <schrod@iti.informatik.th-darmstadt.de>.
+% Copyright conditions see below.
+
+%
+% LaTeX package cwebparts
+% include parts of CWEB programs in LaTeX documents
+%
+% [LaTeX in MAKEPROG]
+% (history at end)
+
+%% FIXME: The user manual is not in cwebparts-user.tex. Most probably
+%% I'll make one user manual for the whole bundle; due to the usage of
+%% cwebbase class and package have lots in common.
+%%
+%% % If you have received this style file without the user manual (in the
+%% % file cwebparts-user.tex or the respective DVI file), it's incomplete and
+%% % near to useless. If it was given to you as something that you shall
+%% % use as an author -- complain bitterly to your provider. You need the
+%% % documentation and you have a right on it! (Below you can find info
+%% % where to get the reference version.)
+
+
+
+
+\documentclass{progltx}
+
+\usepackage{cweb-doc}			% document-specific markup
+\usepackage{fullpage}
+
+
+\RCS $StyleRevision: 1.1 $
+\RCS $StyleDate: 1995/09/16 17:01:59 $
+
+
+\begin{document}
+
+
+\title{The \texttt{cwebparts} Package\\
+    {\large (Implementation)}%
+    }
+\author{%			% LaTeX does not discard unnecessary glue...
+    Joachim Schrod%
+    \thanks{%
+	\protect\raggedright
+	TU~Darmstadt, Computer Science Department, WG Systems Programming,
+	Alexanderstr.~10, D-64283~Darmstadt, Germany.
+	Email: \texttt{schrod@iti.informatik.th-darmstadt.de}.%
+	}%
+    }
+\date{%
+    Revision \RCSStyleRevision\\
+    (as of \RCSStyleDate)%
+    }
+
+\maketitle
+
+
+% doesn't work with progltx yet
+%\tableofcontents
+
+
+
+\chap What's this style for?.
+
+This style supports inclusion of \cweb{} program parts in \LaTeX{}
+documents. For that it provides the environment |cweb| where \cweave{}
+output may be stuffed in.
+
+A more versatile explanation is available in the user manual of the
+\cweb{} bundle; this package is part of that bundle.
+%
+\begin{fixme}
+  Read: ``should be available'' -- there is no bundle user manual
+  (yet). |cweb-user.tex| will be enhanced after first testing of this
+  code.
+\end{fixme}
+
+
+\sect The internal interface is also not described in this source,
+refer to the configuration documentation for this bundle.
+%
+\begin{fixme}
+  Even worse: I don't even have written the internal specs for the
+  \cls{cweb} class, not to speak of this package.
+\end{fixme}
+
+
+
+
+\chap Implementation.
+
+Most of the implementation is made available by the module
+\pkg{cwebbase}. We have to supply macros it demands from a user, and
+have to deliver the |cweb| environment.
+
+
+\sect This module reserves the namespace |cweb|. (This implies that it
+cannot be used with the \cls{cweb} class. But you don't want to do
+that anyhow. :--)
+
+\beginprog
+\ifx \cweb@loaded\undefined
+    \def\cweb@loaded{$StyleRevision: 1.1 $}
+\else
+    \PackageWarningNoLine{cwebparts}%
+        {Some other package already uses namespace `cweb'}
+\fi
+\endprog
+
+
+\sect Let's identify this package.
+
+\noindent The code below is explained in the implementation
+documentation of the |rcs| package.
+
+\beginprog
+\begingroup
+    \def\RCSPackage#1#2 $#3: #4 #5\endRCS $#6: #7 #8\endRCS{%
+	\def\date{#4}\def\id{v#7}%
+	\ProvidesPackage{#1}[\date\space\id\space #2]%
+	}
+
+  \RCSPackage{cwebparts}{include CWEB program parts in LaTeX documents}
+  $StyleDate: 1995/09/16 17:01:59 $: 9999/00/00 \endRCS
+  $StyleRevision: 1.1 $: 0.0 \endRCS
+\endgroup
+\endprog
+
+
+\sect This module is supported. Send bug reports, comments and
+repairs.
+
+The reference version may be retrieved via anonymous ftp from
+|ftp.th-darmstadt.de| [130.83.47.112], directory |pub/tex/latex|. It's
+placed there as a gzipped tar file. (The information on the IP~number
+is dated September~13,~1995.
+It might have changed, although this is very unlikely. Use your
+friendly nameserver.)
+
+
+\sect This is freely distributable software; you can redistribute it
+and/or modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version~2 of the
+License, or (at your option) any later version.
+
+This software is distributed in the hope that it will be useful, but
+\textbf{without any warranty}; without even the implied warranty of
+\textbf{merchantability} or \textbf{fitness for a particular purpose}.
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License in
+the file |License| along with this package; if not, write to the Free
+Software Foundation, Inc., 675~Mass Ave, Cambridge, MA~02139,~USA.
+
+
+\sect Before we start we declare some shorthands for category codes.
+By declaring the underscore~`(|_|)' as letter we can use it in our
+macros. (I agree with \textsc{D.~Knuth} that
+|\identifier_several_words_long| is more readable than
+|\IdentifierSeveralWordsLong| and in every case better than |\p@@@s|.)
+
+As this is a \LaTeX{} style file the at sign is a letter anyhow; so
+we can use the ``private'' \LaTeX{} macros; and with the underscore we
+can make our own macros more readable.  But as we have to restore this
+category code at the end of this macro file we store its former value
+in the control sequence |\CatUsCode|. This method is better than to
+use a group because not all macros have to be defined global this way.
+
+Since somebody might use more styles from me, this cseqs might be
+defined already.
+
+\beginprog
+\ifx \CatEscape\undefined
+    \chardef\CatEscape=0
+    \chardef\CatOpen=1
+    \chardef\CatClose=2
+    \chardef\CatIgnore=9
+    \chardef\CatLetter=11
+    \chardef\CatOther=12
+    \chardef\CatActive=13		% is defined in Plain already
+
+    \chardef\CatUsCode=\catcode`\_
+\fi
+
+\catcode`\_=\CatLetter			% top level macro file
+\endprog
+
+
+
+
+\chap Typesetting \cweave{} output.
+
+The module \pkg{cwebbase} handles that. It demands some cseqs to be
+defined before it may be imported.
+%
+\begin{fixme}
+  These cseqs should actually be implemented as package options. Have
+  to extract the \pkg{keyvalx} code from the \cls{cweb} class first.
+  Now I fix the usage I need for our Literate Programming book.
+\end{fixme}
+
+\begin{fixme}
+  The options should not only be available as package options, but
+  also on a per environment base. We might to typeset one part with
+  flat and another one with hierarchic structure. Or we might to
+  suppress format directives only in some parts, while other parts
+  feature them. But this needs a change in \pkg{cwebbase}, there code
+  is \emph{defined} depending on the cseqs below. It must be evaluated
+  differently to support the stuff below. OTOH, this will cost
+  performance -- is it worth it?
+\end{fixme}
+
+\beginprog
+\def\cweb@structure{0 }			% hierarchic structure
+\let\if@cweb@suppress@changehints@=\iffalse % no suppression whatsoever
+\let\if@cweb@suppress@unchanged@=\iffalse
+\let\if@cweb@suppress@format@=\iffalse
+
+\input{cwebbase}
+\endprog
+
+
+\sect Now we can typeset pieces of \cweave{} output -- in principle.
+If these pieces have sections in them, they'll write entries to the
+|TOC| file. These entries will either mess up the structure of the
+document's table of contents or lead to \TeX{} error messages. That's
+because either toc entries for section types |part|, |chapter|, or
+|section| are written (causing the conflict); or toc entries for
+section types |chunk| and `|section|$i$' are written (being
+undefined).
+
+The best way seems to stop the included source to add anything to the
+table of contents or to do any mark processing. For that, we provide a
+macro |\CwebNoLists| that will locally redefine the \LaTeX{} cseqs
+that cause such actions to happen. That macro will be used at the
+start of the environment.
+
+\beginprog
+\def\CwebNoLists{%
+    \let\addtocontents\@gobbletwo
+    \let\mark\@gobble
+%%    \let\markboth\@gobbletwo
+%%    \let\markright\@gobble
+    }
+\endprog
+
+
+\sect Furthermore, section divisions should not start a new page.
+%
+\begin{fixme}
+  Currently, sections in the included parts are typeset exactly the
+  same way as they're typeset in the main document. That should be
+  different -- but how do I change it in a general way?
+\end{fixme}
+
+\beginprog
+\let\CwebEjectSection\@gobble
+\endprog
+
+
+\sect OK, what needs to be done for the environment? We need to save
+and restore counters that are changed globally by section commands.
+
+\beginprog
+\ifx \chapter\undefined
+    \let\cweb@save_c@chapter\@gobble
+    \let\c@chapter\@gobble
+\else
+    \newcount\cweb@save_c@chapter
+\fi
+\newcount\cweb@save_c@part
+\newcount\cweb@save_c@section
+
+\def\cweb@save_for_env{%
+    %% save values changed globally by cwebbase macros
+    \cweb@save_c@chapter\c@chapter
+    \cweb@save_c@part\c@part
+    \cweb@save_c@section\c@section
+    \let\cweb@save_thechapter\thechapter
+    \let\cweb@save_thesection\thesection
+    %% set up typesetting of CWEB source
+    \@nobreaktrue			% don't add space from first chunk
+    }
+\def\cweb@restore_env{%
+    \global\c@chapter\cweb@save_c@chapter
+    \global\c@part\cweb@save_c@part
+    \global\c@section\cweb@save_c@section
+    \global\let\thechapter\cweb@save_thechapter
+    \global\let\thesection\cweb@save_thesection
+    }
+\endprog
+
+
+\sect For the moment, we use list spacing around a |cweb| environment.
+\LaTeX{} supplies the |trivlist| environment for such purposes.
+
+But the environment content itself must not be typeset in a list
+context. Two problems exist: There must be at least one |\item|, it
+will actually add the vertical space and must therefore not be
+discarded. And list environments redefine |\par|, but the
+\pkg{cwebbase} macros need a more `normal' definition.
+
+An item label is stored by |\item| in the |\everypar| register. The
+label is only typeset if |@inlabel| is true. The flag |@newlist| tells
+most other \LaTeX{} macros, that there was no item yet; typically
+they'll add an empty paragraph if necessary.  As the content will
+start with a \LaTeX{} section division, or even with document markup,
+we don't want that empty paragraph and should skip the empty item
+label. (Often enough, due to the initialisation of |\everypar| in
+|\@startsection|, it will be thrown away anyhow). So we establish its
+postconditions, the next macro won't notice that the item hasn't been
+set actually.
+
+\begin{fixme}
+  Experimentally, we reduce the skip in front of a chunk to 1\,pc,
+  otherwise the distance between two chunks is far too wide compared
+  to other vertical distances in the text around the included stuff.
+\end{fixme}
+
+\beginprog
+\def\CwebBeginEnvLayout{%
+    %% use spacing of list, but switch off list handling afterwards
+    \trivlist
+    \@inlabelfalse			% don't go in horizontal mode
+    \item\relax
+    \global\@newlistfalse
+    \global\@inlabelfalse\the\everypar
+    \@setpar{\@@par}%
+    \CwebChunkPreSkip 1pc plus 6pt minus 3pt
+    }
+\let\CwebEndEnvLayout=\endtrivlist
+\endprog
+
+
+\sect The environment gets trivial now. We supply a hook for a whole
+document and also environment-specific ones (as an optional
+environment argument).
+
+\beginprog
+\newenvironment{cweb}[1][]%
+    {%
+	\CwebBeginEnvLayout
+        \cweb@save_for_env
+	\CwebNoLists
+	\csname CwebEnvHook\endcsname
+	#1
+    }{%
+	\CwebEndEnvLayout
+    }
+\endprog
+
+
+\sect An a convenience tag to include a complete \cweave{} file. Since
+we want to test the typesetting of our included \cweb{} program alone,
+we allow but ignore most kinds of document markup. Many of them have
+two arguments, one is optional.
+
+In the preambel, only |\documentclass| and |\usepackage| may appear.
+Titlepage material is handled, table of contents is discarded. The
+document environment does nothing, i.e., unlike the \cls{cweb} class,
+material behind |\end{document}| is not ignored.
+
+An |\end| tag is inserted by \cweave{} and must be redefined, we don't
+end an environment there. We'll open a group and will use that tag to
+close it again, as we know that we'll have reached the end of our
+\cweb{} file. Of course, |\end| must not be redefined during
+processing the actual program source -- environments are valid there.
+The redefinition is best be triggered by material inserted from
+\cweave{} at the very end, e.g., from |\inx|. But |\inx| may not be
+there (when \cweave{} is called with the `|-x|' option), we'll use
+|\enddocument| to add a |\inx| tag for safety reason. If the user
+didn't add an |\end{document}| to his file and used `|-x|', we're
+going to loose.
+
+\TeX{}nical note: |\document| must not have the same binding as
+|\relax|, as this would be interpreted as a non-existing environment
+by \LaTeX{}. (That's due to the |\csname| lossage.)
+
+\TeX{}nical note: Evaluating |\inx| in |\enddocument| will not have
+any effect, we're inside a group. That evaluation must be postponed
+after the group has been closed.
+
+\beginprog
+\newcommand\cweb@doc_markup_gobble[2][]{}
+\newcommand*\cwebInput[1]{%
+    \begin{cweb}
+        [%
+	    \begingroup
+		\let\documentclass\cweb@doc_markup_gobble
+		\let\usepackage\cweb@doc_markup_gobble
+		\let\title\@gobble
+		\let\author\@gobble
+		\let\date\@gobble
+		\let\maketitle\relax
+		\let\tableofcontents\relax
+		\let\document\empty
+		\def\inx{\let\end\endgroup}%
+		\let\fin\relax
+		\let\con\relax
+		\def\enddocument{\aftergroup\inx}%
+	]%
+      \input{#1}%
+    \end{cweb}%
+    }
+\endprog
+
+
+
+
+\chap The end.
+
+Well, after all we're finished with this style. We must not forget to
+restore the underscore catcode.
+
+\beginprog
+\catcode`\_=\CatUsCode
+
+\endinput
+\endprog
+
+
+%\sect I would like to thank those who helped me to improve this style.
+% In particular, XXX provided XXXsubstantial parts of the code.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{rcslog}
+$StyleLog: cwebparts.doc,v $
+\Revision 1.1 1995/09/16 17:01:59 schrod
+Add support for inclusion of \cweb{} files in \LaTeX{} documents.
+
+\end{rcslog}
+
+
+
+\end{document}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Local Variables:
+mode: LaTeX
+TeX-brace-indent-level: 4
+indent-tabs-mode: t
+TeX-auto-untabify: nil
+TeX-auto-regexp-list: LaTeX-auto-regexp-list
+compile-command: "make cwebparts.sty"
+End:

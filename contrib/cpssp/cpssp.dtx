@@ -1,0 +1,1773 @@
+% \iffalse meta-comment
+%
+% Copyright (C) 2009 by Wolfgang Skala
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% \fi
+%
+% \iffalse
+%<package>\ProvidesPackage{cpssp}[2009/06/06 v1.0 compare protein secondary structure predictions]
+%<package>\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+%
+%<*driver>
+\documentclass[a4paper,draft]{ltxdoc}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{cpssp}
+\usepackage{xcolor}
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\begin{document}
+	\DocInput{cpssp.dtx}
+\end{document}
+%</driver>
+% \fi
+%
+% \CheckSum{403}
+%
+% \CharacterTable
+%  {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
+%   Lower-case    \a\b\c\d\e\f\g\h\i\j\k\l\m\n\o\p\q\r\s\t\u\v\w\x\y\z
+%   Digits        \0\1\2\3\4\5\6\7\8\9
+%   Exclamation   \!     Double quote  \"     Hash (number) \#
+%   Dollar        \$     Percent       \%     Ampersand     \&
+%   Acute accent  \'     Left paren    \(     Right paren   \)
+%   Asterisk      \*     Plus          \+     Comma         \,
+%   Minus         \-     Point         \.     Solidus       \/
+%   Colon         \:     Semicolon     \;     Less than     \<
+%   Equals        \=     Greater than  \>     Question mark \?
+%   Commercial at \@     Left bracket  \[     Backslash     \\
+%   Right bracket \]     Circumflex    \^     Underscore    \_
+%   Grave accent  \`     Left brace    \{     Vertical bar  \|
+%   Right brace   \}     Tilde         \~}
+%
+%
+% \changes{v1.0}{2009/06/06}{Initial version}
+%
+% \GetFileInfo{cpssp.sty}
+%
+% \DoNotIndex{\@ifundefined,\begin,\boolean,\clip,\colorlet,\csname,\DeclareBoolOption,\DeclareStringOption,\define@key,\draw,\endcsname,\end,\equal,\fill,\filldraw,\ifthenelse,\input,\MessageBreak,\newcommand,\newenvironment,\node,\PackageWarning,\pi,\ProcessKeyvalOptions,\providecolor,\real,\renewcommand,\RequirePackage,\scriptsize,\setboolean,\setkeys,\SetupKeyvalOptions,\sffamily,\shade,\tiny,\usetikzlibrary,}
+%
+% \title{The \textsf{cpssp} package\thanks{This document corresponds to \textsf{cpssp}~\fileversion, dated~\filedate.}}
+% \author{Wolfgang Skala \\ \texttt{Wolfgang.Skala@sbg.ac.at}}
+% \date{\filedate}
+% \maketitle
+% 
+% 
+% \section{Introduction}
+% 
+% The \textsf{cpssp} package allows you to draw a two-dimensional representation of a protein's secondary structure in \LaTeX. Besides, it is possible to graphically \textbf{c}ompare \textbf{p}rotein \textbf{s}econdary \textbf{s}tructure \textbf{p}redictions (hence the name of the package). One can both compare predictions from a single program for several protein sequences (which have been aligned using any appropriate algorithm) and predictions from several programs for a single protein sequence.
+% 
+% The following steps are necessary to obtain such a representation: First, input files for the |cpssp| program have to be prepared (§~\ref{sec:inputfiles}). Second, these input files are run through the |cpssp| program, which generates files that can be read by \LaTeX\ (§~\ref{sec:program}). Third, these files are included in a \LaTeX\ document which uses the |cpssp| package, thus providing the necessary commands (§~\ref{sec:latex}).
+% 
+% A detailed description of these steps follows, and examples use sequences and predicted secondary structures for collagenases G (ColG) and H (ColH) from \textit{Clostridium histolyticum} and for collagenase T (ColT) from \textit{C. tetani}.
+% 
+% 
+% \section{Preparation of the Input Files}
+% \label{sec:inputfiles}
+% 
+% |cpssp| is a Python 2.6 script and should run on any platform where Python is available. Start the program by either typing |python cpssp| \meta{options} or by making sure that the script is executable (e.g., |chmod u+x cpssp|) and then directly starting the file (|cpssp| \meta{options}).
+% 
+% |cpssp| needs one or two input files, one containing the sequences and the other containing the secondary structure predictions. If you want to compare the secondary structure predictions from several programs of the same sequence, you only need the latter, whereas both are needed if you plan to compare the secondary structures predicted by a single program, but for two or more different sequences.
+% 
+% The input files must be in FASTA format. Thus, each sequence or structure starts with a header line whose first character is |>| followed by a description of the sequence. Note that this description is used as a label in the graphical output (the description lines from the sequence file if several sequences are compared, and the description lines from the structure file if several prediction programs are compared), so it is advisable to keep it short (in our example below, the sequences have been named after the organism they are from, and the structures have been named after the program which predicted them).
+% 
+% The FASTA file containing the sequences may be exported from any multiple sequence alignment program you like. Gaps in the sequences may be indicated by dashes (-) or periods (.); besides, the standard one letter abbreviations for amino acids (ARNDCQEGHILKMFPSTWYV) are allowed. In the structure FASTA file, the following letters are allowed: B ($\beta$-bridge), C (coil), E ($\beta$-strand), G ($3_{10}$-helix), H ($\alpha$-helix), I ($\pi$-helix), S (bend), and T ($\beta$-turn); in addition, a coil is indicated by a space ( ) or a dash (-) in the output of some prediction programs. All these secondary structure elements are supported; although most algorithms predict only coil, $\alpha$-helices and $\beta$-strands, the remaining elements occur in the output of secondary structure assignment programs such as STRIDE. |cpssp| has been tested with the output from STRIDE \cite{Frishman1995} and the following prediction algorithms: PSIPRED \cite{McGuffin2000}, Jpred \cite{Cole2008}, CDM \cite{Cheng2007}, SSpro \cite{Pollastri2002}, and SABLE \cite{Adamczak2005}.
+% 
+% The order of the sequences or structures in the FASTA files determines their order in the graphical output. Note that if using both sequence and structure file,  the order must be the same in these files. Furthermore, each sequence must be as long as the corresponding structure and all sequences or structures must have the same length (gaps included), or the input files can't be processed properly.
+% 
+% In our first example, ClustalX \cite{Larkin2007} was used to align the catalytic domains of three clostridial collagenases (ColG, ColH and ColT) \cite{Ducka2009}. The aligned sequences were exported from the resulting multiple sequence alignment by using JalView \cite{Waterhouse2009}. The corresponding FASTA file is |colsequences.fasta|. The FASTA file containing the structures is |colstructures.fasta|; it was made by obtaining the predictions of the three sequences from PSIPRED followed by copying and pasting the prediction lines and adding headers.
+% 
+% Our second example will compare the secondary structure of ColG predicted by five different programs (the ones mentioned above). Therefore, the same approach as for the structure file from the first example was made, yielding the file |colpredictions.fasta|.
+% 
+% The third example makes use of another possibility provided by |cpssp|, namely to print a single secondary structure prediction for a single protein. The PSIPRED prediction for ColT was therefore copied into the file |coltprediction.fasta| as described above.
+% 
+% 
+% \section{Running the \texttt{cpssp} Program}
+% \label{sec:program}
+% 
+% The |cpssp| program is a Python script and should run on every system where a Python implementation is available. Basically, it reads the input file(s) and decides whether to compare structures predicted by the same algorithm for different proteins or structures predicted by different algorithms for the same protein. Then, gaps appearing in each sequence at the same position are removed from the sequences. The structures read from the file get a common syntax (i.e., all spaces and dashes indicating a coil are converted to a C) and are gapped so that they possess the same gaps as their respective sequences. In a final step, structures are broke into lines and are translated to \LaTeX\ commands which are written to one or several output files.
+% 
+% The |cpssp| command supports the following options:
+% \begin{itemize}
+% 	\item |-h| or |--help|: Prints a short description of the available parameters.
+% 	\item |-v| or |--version|: Prints the program version.
+% 	\item |-s| or |--sequence-file|: The name of the input file containing the sequence data. This option must be omitted
+% 		if structures predicted by different programs for a single sequence are to be compared.
+% 	\item |-u| or |--structure-file|: This is the only mandatory option, as the name of the input file containing the structure data
+% 		must be given in each case.
+% 	\item |-o| or |--output-file|: Depending on the size of the graphical output (see below), |cpssp| splits the output into several separate files.
+% 		This is a useful feature if you want to include your comparison in a paper and have to deal with a limited page size
+% 		(but can be turned off nevertheless as described below). The default output filename is |cpsspresultX.tex|, where |X| is the part that is
+% 		consecutively numbered. However, by specifying the |-o| option and its argument, you may change the filename before the number. For example,
+% 		|-o tpp2results| would give |tpp2results0.tex|, |tpp2results1.tex| and so on.
+% 	\item |-w| or |--image-width|: A number that sets the approximate width $w$ of the image in cm (the default value is 15). Note that the total width
+% 		is somewhat larger if you decide to include the number of the residues at the end of each line in the final image.
+% 	\item |-t| or |--image-height|: A number that sets the maximal height of each image in cm (the default value is 20). |cpssp| uses an algorithm
+% 		where a new output file is started if the total height exceeds the value given by this option, thereby breaking a comparison into several
+% 		images. While this feature is useful within the constraints of printing paper, is can be turned off by specifying a maximal height of zero
+% 		(|-t 0|). Note that the height specified is not reached in any case; this is due to the distances of lines and blocks (see below).
+% 	\item |-i| or |--line-indent|: A number that specifies the space that is left blank at the beginning of each line in cm (default is 2.5).
+% 		This space is reserved for the labels that tell the reader which protein is represented by the secondary structure shown and for the numbers
+% 		that indicate the residue at the start of each line.
+% 	\item |-r| or |--residues-per-line|: The number of amino acid residues that should fit on a single line (default is 50). The width $r$ of a single
+% 		residue is calculated from this number ($n$), from the indention $i$ at the beginning of each line and from the line width $w$ by $r = \frac{w - i}{n}$.
+% 		Therefore, $r$ is 0.25~cm for the default values.
+% 	\item |-l| or |--line-distance|: A number that gives the distance between lines (default is .5). In an image comparing secondary structure predictions,
+% 		each prediction resides on its own line; if the length of the comparison exceeds line width minus the indention, is it broken  into several blocks
+% 		which have a distance given by
+% 	\item |-b| or |--block-distance| (default is 1).
+% \end{itemize}
+% 
+% \newpage
+% In our first example, the program was invoked by
+% \begin{verbatim}
+% 	  cpssp -s ColSequences.fasta -u ColStructures.fasta
+% 	    -w 14 -i 1.5 -t 20 -o Collagenases
+% \end{verbatim}
+% to produce a total of 2 images comparing the collagenases. For the second example, the command was
+% \begin{verbatim}
+% 	  cpssp -u ColGPredictions.fasta -w 14 -i 1.5 -t 10
+% 	    -l .25 -b .5 -o ColGPredictions
+% \end{verbatim}
+% to produce a total of 3 images comparing the predicted structures for ColG from \textit{C. histolyticum}, and for the third example,
+% \begin{verbatim}
+% 	  cpssp -u ColTPrediction.fasta -w 14 -i 0 -r 56 -t 20
+% 	    -b .25 -o ColTPrediction
+% \end{verbatim}
+% produced a single output file.
+% 
+% 
+% 
+% \section{Usage of the \textsf{cpssp} Package}
+% \label{sec:latex}
+% 
+% 
+% \subsection{Package Options}
+% 
+% The image itself is plotted in \LaTeX\ using the Ti\textit{k}Z and \textsc{pgf} packages \cite{Tantau2008}. In order to use the output from |cpssp| in your \LaTeX\ document, you have to load the corresponding package by |\usepackage{cpssp}| in the preamble. The following options are known to the package; their values are set by using the \meta{key}=\meta{value} syntax.
+% 
+% |style| governs the general appearance of the representation. Currently four styles are defined:
+% \begin{itemize}
+% 	\item |small| is the default value and gives an image as in fig.~\ref{fig:3StyleSmall}. Note that the default lengths in the |cpssp| program
+% 		have been optimized for this style, so you may need to specify different values when using one of the styles below (as was done in the examples).\\
+% 		\hspace*{-21pt}\begin{cpsspimage}[style=small, labels=false, numbers=false]{cpsspelements}
+% 			\node at (.25, 0) [anchor=north] {\sffamily C};
+% 			\node at (.875, 0) [anchor=north] {\sffamily G};
+% 			\node at (1.875, 0) [anchor=north] {\sffamily B};
+% 			\node at (3.25, 0) [anchor=north] {\sffamily E};
+% 			\node at (5, 0) [anchor=north] {\sffamily G};
+% 			\node at (6.75, 0) [anchor=north] {\sffamily H};
+% 			\node at (8.5, 0) [anchor=north] {\sffamily I};
+% 			\node at (9.875, 0) [anchor=north] {\sffamily S};
+% 			\node at (11.25, 0) [anchor=north] {\sffamily T};
+% 		\end{cpsspimage}
+% 	\item |large| is similar to the |small| style, but the secondary structure elements are about twice as large (see fig.~\ref{fig:3StyleLarge}).
+% 		This style is useful for short sequences.\\
+% 		\hspace*{-21pt}\begin{cpsspimage}[style=large, labels=false, numbers=false]{cpsspelements}
+% 			\node at (.25, 0) [anchor=north] {\sffamily C};
+% 			\node at (.875, 0) [anchor=north] {\sffamily G};
+% 			\node at (1.875, 0) [anchor=north] {\sffamily B};
+% 			\node at (3.25, 0) [anchor=north] {\sffamily E};
+% 			\node at (5, 0) [anchor=north] {\sffamily G};
+% 			\node at (6.75, 0) [anchor=north] {\sffamily H};
+% 			\node at (8.5, 0) [anchor=north] {\sffamily I};
+% 			\node at (9.875, 0) [anchor=north] {\sffamily S};
+% 			\node at (11.25, 0) [anchor=north] {\sffamily T};
+% 		\end{cpsspimage}
+% 	\item |graylines| is the style to use for black and white images when space runs out (see fig.~\ref{fig:3StyleGraylines}).\\
+% 		\hspace*{-22pt}\begin{cpsspimage}[style=graylines, labels=false, numbers=false]{cpsspelements}
+% 			\node at (.25, 0) [anchor=north] {\sffamily C};
+% 			\node at (.875, 0) [anchor=north] {\sffamily G};
+% 			\node at (1.875, 0) [anchor=north] {\sffamily B};
+% 			\node at (3.25, 0) [anchor=north] {\sffamily E};
+% 			\node at (5, 0) [anchor=north] {\sffamily G};
+% 			\node at (6.75, 0) [anchor=north] {\sffamily H};
+% 			\node at (8.5, 0) [anchor=north] {\sffamily I};
+% 			\node at (9.875, 0) [anchor=north] {\sffamily S};
+% 			\node at (11.25, 0) [anchor=north] {\sffamily T};
+% 		\end{cpsspimage}
+% 	\item |pdb| is similar to the output of the RCSB Protein Data Bank (under ``Sequence / Structure Details''; see fig.~\ref{fig:3StylePdb}).\\[.5cm]
+% 		\hspace*{-22pt}\begin{cpsspimage}[style=pdb, labels=false, numbers=false]{cpsspelements}
+% 			\node at (.25, 0) [anchor=north] {\sffamily C};
+% 			\node at (.875, 0) [anchor=north] {\sffamily G};
+% 			\node at (1.875, 0) [anchor=north] {\sffamily B};
+% 			\node at (3.25, 0) [anchor=north] {\sffamily E};
+% 			\node at (5, 0) [anchor=north] {\sffamily G};
+% 			\node at (6.75, 0) [anchor=north] {\sffamily H};
+% 			\node at (8.5, 0) [anchor=north] {\sffamily I};
+% 			\node at (9.875, 0) [anchor=north] {\sffamily S};
+% 			\node at (11.25, 0) [anchor=north] {\sffamily T};
+% 		\end{cpsspimage}
+% \end{itemize}
+% 
+% |labels| can either be |true| or |false| and determines if the secondary structure names should be shown at the beginning of each line. It may be appropriate to turn off the labels if a single secondary structure of a single protein is shown.
+% 
+% |numbers| is also a bool option and displays or hides the numbers at to left and right of each line which indicate the first an last residue in this line, respectively.
+% 
+% |labelformat| controls the formatting of the structure labels; its default definition is |\sffamily\scriptsize|. The last control sequence may take a single mandatory argument, so |labelformat=\textit| is valid.
+% 
+% |numberformat| formats the numbers that indicate the first and last residue on each line, default is |\sffamily\tiny|. The last control sequence may again take a single mandatory argument.
+% 
+% |threehelixname| and |pihelixname| hold macros that print the name of the $3_{10}$-helix and the $\pi$-helix, respectively, above the corresponding secondary structure segments when using the |graylines| style. These macros are |\tiny$3_{10}$| and |\tiny$\pi$| by default, respectively.
+% 
+% \bigskip
+% \DescribeMacro{\cpsspformat}
+% These options can be changed at any place within the document by changing their values within the argument of |\cpsspformat|\marg{options}.
+% 
+% 
+% \subsection{Including \texttt{cpssp} Files}
+% 
+% The output \LaTeX\ files from |cpssp| may be included either directly in the text or inside a float environment such as |figure| by using one of the following:
+% \begin{itemize}
+% 	\item \DescribeMacro{\cpsspinput}
+% 		|\cpsspinput|\oarg{options}\marg{filename}\\
+% 		This command takes a single mandatory argument, the name of the |cpssp| output file without the |.tex| extension.
+% 		The optional argument takes the same options as the package and allows to change the format of the representation locally.
+% 	\item \DescribeEnv{cpsspimage}
+% 		|\begin{cpsspimage}|\oarg{options}\marg{filename}\\
+% 		$\ldots$\\
+% 		|\end{cpsspimage}|\\
+% 		This is the environment version of |\cpsspinput| with the same optional and mandatory argument.
+% 		The environment allows you to use additional graphical elements (e.g., comments and arrows) in the secondary structure image
+% 		by using standard Ti\textit{k}Z syntax (this was done in the small images beneath the style descriptions where additional letters indicate
+% 		the secondary structure element which is represented by each segment).
+% \end{itemize}
+% 
+% \begin{figure}[p]
+% 	\centering
+% 	\hspace*{-32pt}\cpsspinput{Collagenases0}\hspace*{-32pt}
+% 	\caption{A secondary structure comparison from \texttt{Collagenases0.tex} using the \texttt{small} style and the default format for both residue
+% 		numbers and labels.}
+% 	\label{fig:3StyleSmall}
+% \end{figure}
+% 
+% \begin{figure}[p]
+% 	\centering
+% 	\hspace*{-22pt}\cpsspinput[style=graylines, numbers=false, labelformat=\sffamily\tiny\textit]{ColGPredictions1}\hspace*{-22pt}
+% 	\caption{A secondary structure comparison from \texttt{ColGPredictions1.tex} using the \texttt{graylines} style. Residue numbers are turned off by
+% 		the option \texttt{numbers=false}. The label format is changed to \texttt{\textbackslash sffamily\textbackslash tiny\textbackslash textit}.}
+% 	\label{fig:3StyleGraylines}
+% \end{figure}
+% 
+% \begin{figure}[p]
+% 	\centering
+% 	\hspace*{-43pt}\cpsspinput[style=large, labels=false, numbers=true, numberformat=\footnotesize\color{blue}]{ColTPrediction0}\hspace*{-43pt}
+% 	\caption{A secondary structure prediction from \texttt{ColTPrediction0.tex} using the \texttt{large} style. Labels are hidden by \texttt{labels=off}.
+% 		The number format is \texttt{\textbackslash footnotesize\textbackslash color\{blue\}}.}
+% 	\label{fig:3StyleLarge}
+% \end{figure}
+% 
+% \begin{figure}[p]
+% 	\centering
+% 	\hspace*{-43pt}\cpsspinput[style=pdb, labels=false]{ColTPrediction0}\hspace*{-43pt}
+% 	\caption{A secondary structure prediction from \texttt{ColTPrediction0.tex} using the \texttt{pdb} style. Labels are hidden by \texttt{labels=off}.}
+% 	\label{fig:3StylePdb}
+% \end{figure}
+%
+% \clearpage
+% \begin{thebibliography}{10}
+% \providecommand{\url}[1]{\texttt{#1}}
+% 
+% \bibitem{Frishman1995}
+% \textsc{Frishman, D.} \textit{\&} \textsc{Argos, P.}
+% \newblock Knowledge-based protein secondary structure assignment.
+% \newblock \emph{Proteins} \textbf{23}, 566--579 (1995).
+% 
+% \bibitem{McGuffin2000}
+% \textsc{McGuffin, L.~J.}, \textsc{Bryson, K.} \textit{\&} \textsc{Jones, D.~T.}
+% \newblock The PSIPRED protein structure prediction server.
+% \newblock \emph{Bioinformatics} \textbf{16}, 404--405 (2000).
+% 
+% \bibitem{Cole2008}
+% \textsc{Cole, C.}, \textsc{Barber, J.~D.} \textit{\&} \textsc{Barton, G.~J.}
+% \newblock The Jpred 3 secondary structure prediction server.
+% \newblock \emph{Nucleic Acids Res.} \textbf{36}, W197--W201 (2008).
+% 
+% \bibitem{Cheng2007}
+% \textsc{Cheng, H.}, \textsc{Sen, T.~Z.} \emph{et~al.}
+% \newblock Consensus Data Mining (CDM) Protein Secondary Structure Prediction
+%   Server: combining GOR V and Fragment Database Mining (FDM).
+% \newblock \emph{Bioinformatics} \textbf{23}, 2628--2630 (2007).
+% 
+% \bibitem{Pollastri2002}
+% \textsc{Pollastri, G.}, \textsc{Przybylski, D.} \emph{et~al.}
+% \newblock Improving the prediction of protein secondary structure in three and
+%   eight classes using recurrent neural networks and profiles.
+% \newblock \emph{Proteins} \textbf{47}, 228--235 (2002).
+% 
+% \bibitem{Adamczak2005}
+% \textsc{Adamczak, R.}, \textsc{Porollo, A.} \textit{\&} \textsc{Meller, J.}
+% \newblock Combining prediction of secondary structure and solvent accessibility
+%   in proteins.
+% \newblock \emph{Proteins} \textbf{59}, 467--475 (2005).
+% 
+% \bibitem{Larkin2007}
+% \textsc{Larkin, M.~A.}, \textsc{Blackshields, G.} \emph{et~al.}
+% \newblock Clustal W and Clustal X version 2.0.
+% \newblock \emph{Bioinformatics} \textbf{23}, 2947--2948 (2007).
+% 
+% \bibitem{Ducka2009}
+% \textsc{Ducka, P.}, \textsc{Eckhard, U.} \emph{et~al.}
+% \newblock A universal strategy for high-yield production of soluble and
+%   functional clostridial collagenases in \textit{E. coli}.
+% \newblock \emph{Appl. Microbiol. Biotechnol.} in print (2009).
+% 
+% \bibitem{Waterhouse2009}
+% \textsc{Waterhouse, A.~M.}, \textsc{Procter, J.~B.} \emph{et~al.}
+% \newblock Jalview Version 2--a multiple sequence alignment editor and analysis
+%   workbench.
+% \newblock \emph{Bioinformatics} \textbf{25}, 1189--1191 (2009).
+% 
+% \bibitem{Tantau2008}
+% \textsc{Tantau, T.}
+% \newblock The Ti\textit{k}Z and \textsc{pgf} Packages (2008).
+% \newline{\footnotesize\url{http://tug.ctan.org/tex-archive/graphics/pgf/base/}}
+% 
+% \end{thebibliography}
+% \StopEventually{\PrintChanges\PrintIndex}
+%
+% \clearpage
+% \section{Implementation}
+%
+% \iffalse
+%<*package>
+% \fi
+%
+% \subsection{Package Options}
+%
+% The packages \textsf{ifthen} and \textsf{calc} are used for conditionals and calculation of some coordinates, respectively, while \textsf{kvoptions} handles the options specified when the package is loaded. These options and their default values are described in §~\ref{sec:latex}.
+%    \begin{macrocode}
+\RequirePackage{ifthen,calc}
+\RequirePackage{kvoptions}
+  \SetupKeyvalOptions{family=Cps, prefix=Cps@}
+  \DeclareStringOption[small]{style}
+  \DeclareBoolOption[true]{labels}
+  \DeclareBoolOption[true]{numbers}
+  \DeclareStringOption[\sffamily\scriptsize]{labelformat}
+  \DeclareStringOption[\sffamily\tiny]{numberformat}
+  \DeclareStringOption[\tiny$3_{10}$]{threehelixname}
+  \DeclareStringOption[\tiny$\pi$]{pihelixname}
+\ProcessKeyvalOptions*
+%    \end{macrocode}
+%
+% \subsection{Command Options}
+%
+% The options which can be set in the optional arguments of |\cpsspinput| and the |cpsspimage| environment and in the mandatory argument of |\cpsspformat| are the same as when loading the package and are set up with commands provided by the \textsf{keyval} package (which is not loaded explicitly because \textsf{kvoptions} takes care of that).
+%    \begin{macrocode}
+\define@key{cpssp}{style}{\cpssp@style{#1}}
+\define@key{cpssp}{numbers}{%
+  \ifthenelse{\equal{#1}{true}}%
+    {\setboolean{Cps@numbers}{true}}%
+    {\setboolean{Cps@numbers}{false}}%
+}
+\define@key{cpssp}{labels}{%
+  \ifthenelse{\equal{#1}{true}}%
+    {\setboolean{Cps@labels}{true}}%
+    {\setboolean{Cps@labels}{false}}%
+}
+\define@key{cpssp}{labelformat}%
+  {\renewcommand\cpssp@labelformat{#1}}
+\define@key{cpssp}{numberformat}%
+  {\renewcommand\cpssp@numberformat{#1}}
+\define@key{cpssp}{threehelixname}%
+  {\renewcommand\cpssp@threehelix{#1}}
+\define@key{cpssp}{pihelixname}%
+  {\renewcommand\cpssp@pihelix{#1}}
+%    \end{macrocode}
+%
+% \subsection{Ti\textit{k}Z Configuration}
+%
+% The Ti\textit{k}Z libraries |positioning| and |decorations.pathmorphing| are needed for additional positioning options for the |\node| command and for drawing of the helices in |pdb| style, respectively.
+%    \begin{macrocode}
+\RequirePackage{tikz}
+  \usetikzlibrary{positioning}
+  \usetikzlibrary{decorations.pathmorphing}
+%    \end{macrocode}
+% The package defines some additional colors which govern the appearance of the secondary structure elements in the |small|/|large| (the first nine) and |pdb| style (the last nine). In each color, the last letter indicates the structure element in which the color is used. You may change these colors by the commands provided by the \textsf{xcolor} package anywhere within the document. Note that the shades of gray used in the |graylines| style can not be changed.
+%    \begin{macrocode}
+  \colorlet    {CpsspColorX}        {black}
+  \providecolor{CpsspColorB}   {rgb}{0,.125,1}
+  \colorlet    {CpsspColorC}        {black!80}
+  \providecolor{CpsspColorE}   {rgb}{0,.5,1}
+  \providecolor{CpsspColorG}   {rgb}{1,0,1}
+  \providecolor{CpsspColorH}   {rgb}{1,0,0}
+  \providecolor{CpsspColorI}   {rgb}{1,.75,0}
+  \providecolor{CpsspColorS}   {rgb}{0,.75,0}
+  \providecolor{CpsspColorT}   {rgb}{0,.5,0}
+  \colorlet    {CpsspColorPdbX}     {black!33}
+  \providecolor{CpsspColorPdbB}{rgb}{.49,.39,0}
+  \colorlet    {CpsspColorPdbC}     {black}
+  \providecolor{CpsspColorPdbE}{rgb}{1,.8,0}
+  \providecolor{CpsspColorPdbG}{rgb}{1,.45,.45}
+  \providecolor{CpsspColorPdbH}{rgb}{.71,.22,.22}
+  \providecolor{CpsspColorPdbI}{rgb}{.5,0,0}
+  \providecolor{CpsspColorPdbS}{rgb}{.4,0,.39}
+  \providecolor{CpsspColorPdbT}{rgb}{.6,0,.59}
+%    \end{macrocode}
+%
+% \subsection{User Interface, Part 1}
+%
+% The following commands are found in the output of the |cpssp| program, but may also be used anywhere within a |tikzpicture| environment.
+% \begin{macro}{\cpsspGap}
+% \begin{macro}{\cpsspBridge}
+% \begin{macro}{\cpsspCoil}
+% \begin{macro}{\cpsspSheet}
+% \begin{macro}{\cpsspSheetT}
+% \begin{macro}{\cpsspThreeTenHelix}
+% \begin{macro}{\cpsspAlphaHelix}
+% \begin{macro}{\cpsspPiHelix}
+% \begin{macro}{\cpsspBend}
+% \begin{macro}{\cpsspTurn}
+% These nine macros each take three mandatory arguments, the first specifying the $y$ coordinate and the second and third specifying the start and end $x$ coordinates, respectively (all coordinates should be given in centimeters). Each macro basically expands to another control sequence which contains the Ti\textit{k}Z drawing commands (see below). The names clearly indicate which secondary structure element is produced. |\cpsspSheetT| draws the \textit{N}-terminus of a $\beta$-sheet whithout the \textit{C}-terminal arrowhead; this is useful for $\beta$-sheets that continue past the end of a line.
+%    \begin{macrocode}
+\newcommand\cpsspGap{\cpssp@makeX}
+\newcommand\cpsspBridge{\cpssp@makeB}
+\newcommand\cpsspCoil{\cpssp@makeC}
+\newcommand\cpsspSheet{\cpssp@makeE}
+\newcommand\cpsspSheetT{\cpssp@makeET}
+\newcommand\cpsspThreeTenHelix{\cpssp@makeG}
+\newcommand\cpsspAlphaHelix{\cpssp@makeH}
+\newcommand\cpsspPiHelix{\cpssp@makeI}
+\newcommand\cpsspBend{\cpssp@makeS}
+\newcommand\cpsspTurn{\cpssp@makeT}
+%    \end{macrocode}
+% \end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}
+% \begin{macro}{\cpsspLabel}
+% The |\cpsspLabel| macro first checks if the names of the structures should be printed at the beginning of each line and then either calls the appropriate internal macro or does nothing. The first mandatory argument takes the $y$ coordinate, the second the label text.
+%    \begin{macrocode}
+\newcommand\cpsspLabel[2]{%
+  \ifthenelse{\boolean{Cps@labels}}{\cpssp@makeLabel{#1}{#2}}{}%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\cpsspStartRes}
+% \begin{macro}{\cpsspStartRes}
+% These macros, which print the number of the first and the last residue in the line, first check if the numbers should appear at all and then either call the internal command or do nothing. The three arguments specify $y$ coordinate, $x$ coordinate and label text, respectively.
+%    \begin{macrocode}
+\newcommand\cpsspStartRes[3]{%
+  \ifthenelse{\boolean{Cps@numbers}}{\cpssp@makeStartRes{#1}{#2}{#3}}{}%
+}
+\newcommand\cpsspEndRes[3]{%
+  \ifthenelse{\boolean{Cps@numbers}}{\cpssp@makeEndRes{#1}{#2}{#3}}{}%
+}
+%    \end{macrocode}
+% \end{macro}\end{macro}
+%
+% \subsection{Styles}
+%
+% \begin{macro}{\cpssp@makeX}
+% \begin{macro}{\cpssp@makeB}
+% \begin{macro}{\cpssp@makeC}
+% \begin{macro}{\cpssp@makeE}
+% \begin{macro}{\cpssp@makeET}
+% \begin{macro}{\cpssp@makeG}
+% \begin{macro}{\cpssp@makeH}
+% \begin{macro}{\cpssp@makeI}
+% \begin{macro}{\cpssp@makeS}
+% \begin{macro}{\cpssp@makeT}
+% \begin{macro}{\cpssp@makeLabel}
+% \begin{macro}{\cpssp@makeStartRes}
+% \begin{macro}{\cpssp@makeEndRes}
+% First we define some empty internal macros which will be redefined when a particular style is chosen. These are the macros that are called by the user-level control sequences described above.
+%    \begin{macrocode}
+\newcommand\cpssp@makeX{}
+\newcommand\cpssp@makeB{}
+\newcommand\cpssp@makeC{}
+\newcommand\cpssp@makeE{}
+\newcommand\cpssp@makeET{}
+\newcommand\cpssp@makeG{}
+\newcommand\cpssp@makeH{}
+\newcommand\cpssp@makeI{}
+\newcommand\cpssp@makeS{}
+\newcommand\cpssp@makeT{}
+\newcommand\cpssp@makeLabel{}
+\newcommand\cpssp@makeStartRes{}
+\newcommand\cpssp@makeEndRes{}
+%    \end{macrocode}
+% \end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}\end{macro}
+% \begin{macro}{\cpssp@labelformat}
+% \begin{macro}{\cpssp@numberformat}
+% The two macros below are used for formatting the structure labels and first/last residue numbers. As can be seen from the code, whenever they are used, the argument that follows is surrounded by braces. This allows one to use control sequences with a single mandatory argument at the end of the definition of both |\cpssp@labelformat| and |\cpssp@numberformat|.
+%    \begin{macrocode}
+\newcommand\cpssp@labelformat{}
+\newcommand\cpssp@numberformat{}
+%    \end{macrocode}
+% \end{macro}\end{macro}
+% \begin{macro}{\cpssp@threehelix}
+% \begin{macro}{\cpssp@pihelix}
+% These two commands contain the labels that are printed above $3_{10}$- and $\pi$-helices in the |graylines| style. They are set by the corresponding options.
+%    \begin{macrocode}
+\newcommand\cpssp@threehelix{}
+\newcommand\cpssp@pihelix{}
+%    \end{macrocode}
+% \end{macro}\end{macro}
+% \begin{macro}{\cpsstyle@small}
+% The |small| style is shown in fig.~\ref{fig:3StyleSmall}. The internal drawing commands described above are redefined so that they expand to Ti\textit{k}Z drawing commands. Note that coordinates are calculated by using the syntax from the \textsf{calc} package.
+%    \begin{macrocode}
+\newcommand\cpsstyle@small{%
+  \renewcommand\cpssp@makeX[3]{%
+    \draw[dashed, thick, color=CpsspColorX]%
+      (##2, ##1+.2) -- (##3, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeB[3]{%
+    \cpssp@makeC{##1}{##2}{##3}%
+    \fill[color=CpsspColorB]%
+      (##2, ##1+.1) -- (##3-.23, ##1+.1) -- (##3-.23, ##1) --%
+      (##3, ##1+.2) -- (##2, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeC[3]{%
+    \shade[top color=CpsspColorC, bottom color=white]%
+      (##2, ##1+.2375) rectangle (##3, ##1+.21875);%
+    \shade[top color=white, bottom color=CpsspColorC]%
+      (##2, ##1+.21875) rectangle (##3, ##1+.1625);%
+  }%
+  \renewcommand\cpssp@makeE[3]{%
+    \cpssp@makeC{##1}{##3-.1}{##3}%
+    \fill[color=CpsspColorE]%
+      (##2, ##1+.1) -- (##3-.23, ##1+.1) -- (##3-.23, ##1) --%
+      (##3, ##1+.2) -- (##3-.23, ##1+.4) -- (##3-.23, ##1+.3)--%
+      (##2, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeET[3]{%
+    \fill[color=CpsspColorE]%
+      (##2, ##1+.1) rectangle (##3, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeG[3]{%
+    \shade[top color=CpsspColorG, bottom color=white]%
+      (##2, ##1+.3) rectangle (##3, ##1+.25);%
+    \shade[top color=white, bottom color=CpsspColorG]%
+      (##2, ##1+.25) rectangle (##3, ##1+.15);%
+    \shade[top color=CpsspColorG, bottom color=black]%
+      (##2, ##1+.15) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeH[3]{%
+    \shade[top color=CpsspColorH, bottom color=white]%
+      (##2, ##1+.3) rectangle (##3, ##1+.25);%
+    \shade[top color=white, bottom color=CpsspColorH]%
+      (##2, ##1+.25) rectangle (##3, ##1+.15);%
+    \shade[top color=CpsspColorH, bottom color=black]%
+      (##2, ##1+.15) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeI[3]{%
+    \shade[top color=CpsspColorI, bottom color=white]%
+      (##2, ##1+.3) rectangle (##3, ##1+.25);%
+    \shade[top color=white, bottom color=CpsspColorI]%
+      (##2, ##1+.25) rectangle (##3, ##1+.15);%
+    \shade[top color=CpsspColorI, bottom color=black]%
+      (##2, ##1+.15) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeS[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[ultra thick, color=CpsspColorS, line cap=round]%
+        (##2, ##1+.19) -- ({(##2+##3)*\real{.5}}, ##1+.39) --%
+        (##3, ##1+.19);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeT[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[line width=.05cm, color=CpsspColorT]%
+        (##2, ##1+.1625) arc (180:0:{(##3-##2)*\real{.5}} and .25);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeLabel[2]{%
+    \node at (0, ##1) [inner sep=0pt, above right=.075 and 0]%
+      {\cpssp@labelformat{##2}};%
+  }%
+  \renewcommand\cpssp@makeStartRes[3]{%
+    \node at (##2, ##1+.2) [left]%
+      {\cpssp@numberformat{##3}};%
+  }%
+  \renewcommand\cpssp@makeEndRes[3]{%
+    \node at (##2, ##1+.2) [right]%
+      {\cpssp@numberformat{##3}};%
+  }%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\cpsstyle@large}
+% The |large| style is shown in fig.~\ref{fig:3StyleLarge}.
+%    \begin{macrocode}
+\newcommand\cpsstyle@large{%
+  \renewcommand\cpssp@makeX[3]{%
+    \draw[dashed, thick, color=CpsspColorX]%
+      (##2, ##1+.3) -- (##3, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeB[3]{%
+    \cpssp@makeC{##1}{##2}{##3}%
+    \fill[color=CpsspColorB]%
+      (##2, ##1+.15) -- (##3-.23, ##1+.15) -- (##3-.23, ##1) --%
+      (##3, ##1+.3) -- (##2, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeC[3]{%
+    \shade[top color=CpsspColorC, bottom color=white]%
+      (##2, ##1+.35) rectangle (##3, ##1+.325);%
+    \shade[top color=white, bottom color=CpsspColorC]%
+      (##2, ##1+.325) rectangle (##3, ##1+.25);%
+  }%
+  \renewcommand\cpssp@makeE[3]{%
+    \cpssp@makeC{##1}{##3-.1}{##3}%
+    \fill[color=CpsspColorE]%
+      (##2, ##1+.15) -- (##3-.23, ##1+.15) -- (##3-.23, ##1) --%
+      (##3, ##1+.3) -- (##3-.23, ##1+.6) -- (##3-.23, ##1+.45) --%
+      (##2, ##1+.45);%
+  }%
+  \renewcommand\cpssp@makeET[3]{%
+    \fill[color=CpsspColorE]%
+      (##2, ##1+.15) rectangle (##3, ##1+.45);%
+  }%
+  \renewcommand\cpssp@makeG[3]{%
+    \shade[top color=CpsspColorG, bottom color=white]%
+      (##2, ##1+.5) rectangle (##3, ##1+.4);%
+    \shade[top color=white, bottom color=CpsspColorG]%
+      (##2, ##1+.4) rectangle (##3, ##1+.2);%
+    \shade[top color=CpsspColorG, bottom color=black] %
+      (##2, ##1+.2) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeH[3]{%
+    \shade[top color=CpsspColorH, bottom color=white]%
+      (##2, ##1+.5) rectangle (##3, ##1+.4);%
+    \shade[top color=white, bottom color=CpsspColorH]%
+      (##2, ##1+.4) rectangle (##3, ##1+.2);%
+    \shade[top color=CpsspColorH, bottom color=black] %
+      (##2, ##1+.2) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeI[3]{%
+    \shade[top color=CpsspColorI, bottom color=white]%
+      (##2, ##1+.5) rectangle (##3, ##1+.4);%
+    \shade[top color=white, bottom color=CpsspColorI]%
+      (##2, ##1+.4) rectangle (##3, ##1+.2);%
+    \shade[top color=CpsspColorI, bottom color=black] %
+      (##2, ##1+.2) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeS[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[line width=.075cm, color=CpsspColorS, line cap=round]%
+        (##2, ##1+.275) -- ({(##2+##3)*\real{.5}}, ##1+.6) --%
+        (##3, ##1+.275);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeT[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[line width=.075cm, color=CpsspColorT]%
+        (##2, ##1+.25) arc (180:0:{(##3-##2)*\real{.5}} and .25);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeLabel[2]{%
+    \node at (0, ##1+.3) [inner sep=0pt, right]%
+      {\cpssp@labelformat{##2}};%
+  }%
+  \renewcommand\cpssp@makeStartRes[3]{%
+    \node at (##2, ##1+.3) [left]%
+      {\cpssp@numberformat{##3}};%
+  }%
+  \renewcommand\cpssp@makeEndRes[3]{%
+    \node at (##2, ##1+.3) [right]%
+      {\cpssp@numberformat{##3}};%
+  }%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\cpsstyle@graylines}
+% The |graylines| style is shown in fig.~\ref{fig:3StyleGraylines}.
+%    \begin{macrocode}
+\newcommand\cpsstyle@graylines{
+  \renewcommand\cpssp@makeX[3]{%
+    \draw[dashed, thick, color=black!33]%
+      (##2, ##1+.05) -- (##3, ##1+.05);%
+  }%
+  \renewcommand\cpssp@makeB[3]{%
+    \filldraw[very thin, color=black!25, draw=black]%
+      (##2, ##1+.0125) -- (##3-.075, ##1+.0125) --%
+      (##3-.075, ##1-.0375) -- (##3, ##1+.05) --%
+      (##2, ##1+.05) -- (##2, ##1+.0125);%
+  }%
+  \renewcommand\cpssp@makeC[3]{%
+    \draw[thick, color=black]%
+      (##2, ##1+.05) -- (##3, ##1+.05);%
+  }%
+  \renewcommand\cpssp@makeE[3]{%
+    \filldraw[very thin, color=black!25, draw=black]%
+      (##2, ##1+.0125) -- (##3-.075, ##1+.0125) --%
+      (##3-.075, ##1-.0375) -- (##3, ##1+.05) --%
+      (##3-.075, ##1+.1375) -- (##3-.075, ##1+.0875) --%
+      (##2, ##1+.0875) -- (##2, ##1+.0125);%
+  }%
+  \renewcommand\cpssp@makeET[3]{%
+    \filldraw[very thin, color=black!25, draw=black]%
+      (##2, ##1+.0125) rectangle (##3, ##1+.0875);%
+  }%
+  \renewcommand\cpssp@makeG[3]{%
+    \filldraw[thin, color=black!75, draw=black] %
+      (##2, ##1) rectangle (##3, ##1+.1);%
+    \node at ({(##2+##3)*\real{.5}}, ##1) [anchor=south]%
+      {\cpssp@threehelix};%
+  }%
+  \renewcommand\cpssp@makeH[3]{%
+    \filldraw[thin, color=black!75, draw=black] %
+      (##2, ##1) rectangle (##3, ##1+.1);%
+  }%
+  \renewcommand\cpssp@makeI[3]{%
+    \filldraw[thin, color=black!75, draw=black] %
+      (##2, ##1) rectangle (##3, ##1+.1);%
+    \node at ({(##2+##3)*\real{.5}}, ##1) [anchor=south]%
+      {\cpssp@pihelix};%
+  }%
+  \renewcommand\cpssp@makeS[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[thick, color=black!75, line cap=round]%
+        (##2, ##1+.05) -- ({(##2+##3)*\real{.5}}, ##1+.2) --%
+        (##3, ##1+.05);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeT[3]{%
+    \begin{scope}%
+      \clip (##2, ##1) rectangle (##3, ##1+1);%
+      \draw[thick, color=black!75]%
+        (##2, ##1+.035) arc (180:0:{(##3-##2)*\real{.5}} and .2);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeLabel[2]{%
+    \node at (0, ##1+.05) [inner sep=0pt,right]%
+      {\cpssp@labelformat{##2}};%
+  }%
+  \renewcommand\cpssp@makeStartRes[3]{%
+    \node at (##2, ##1+.05) [left]%
+      {\cpssp@numberformat{##3}};%
+  }%
+  \renewcommand\cpssp@makeEndRes[3]{%
+    \node at (##2, ##1+.05) [right]%
+      {\cpssp@numberformat{##3}};%
+  }%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\cpsstyle@pdb}
+% The |pdb| style is shown in fig.~\ref{fig:3StylePdb}.
+%    \begin{macrocode}
+\newcommand\cpsstyle@pdb{
+  \renewcommand\cpssp@makeX[3]{%
+    \draw[dashed, thick, color=CpsspColorPdbX]%
+      (##2, ##1+.2) -- (##3, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeB[3]{%
+    \cpssp@makeC{##1}{##3-.1}{##3}%
+    \fill[color=CpsspColorPdbB]%
+      (##2, ##1) -- (##3, ##1+.2) -- (##2, ##1+.4);
+  }%
+  \renewcommand\cpssp@makeC[3]{%
+    \draw[thick, color=CpsspColorPdbC]%
+      (##2, ##1+.2) -- (##3,##1+.2);%
+  }%
+  \renewcommand\cpssp@makeE[3]{%
+    \cpssp@makeC{##1}{##3-.1}{##3}%
+    \fill[color=CpsspColorPdbE]%
+      (##2, ##1+.1) -- (##3-.23, ##1+.1) -- (##3-.23, ##1) --%
+      (##3, ##1+.2) -- (##3-.23, ##1+.4) -- (##3-.23, ##1+.3)--%
+      (##2, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeET[3]{%
+    \fill[color=CpsspColorPdbE]%
+      (##2, ##1+.1) rectangle (##3, ##1+.3);%
+  }%
+  \renewcommand\cpssp@makeG[3]{%
+    \draw[ultra thick, color=CpsspColorPdbG, decorate,%
+      decoration={snake, amplitude=.2cm}]%
+      (##2, ##1+.2) -- (##3, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeH[3]{%
+    \draw[ultra thick, color=CpsspColorPdbH, decorate,%
+      decoration={snake, amplitude=.2cm}]%
+      (##2, ##1+.2) -- (##3, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeI[3]{%
+    \draw[ultra thick, color=CpsspColorPdbI, decorate,%
+      decoration={snake, amplitude=.2cm}]%
+      (##2, ##1+.2) -- (##3, ##1+.2);%
+  }%
+  \renewcommand\cpssp@makeS[3]{%
+    \begin{scope}%
+      \draw[thick, color=CpsspColorPdbS]
+        (##2, ##1+.2) -- (##2+.05, ##1+.2) --%
+        ({(##2+##3)*\real{.5}}, ##1+.4) -- (##3-.05, ##1+.2) --%
+        (##3, ##1+.2);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeT[3]{%
+    \begin{scope}[color=CpsspColorPdbT]%
+      \draw[thick]%
+        (##2, ##1+.2) -- (##2+.1, ##1+.2);%
+      \draw[line width=.05cm]%
+        (##2+.1,##1+.185) arc (180:0:{(##3-##2-.2)*\real{.5}} and .25);%
+      \draw[thick]%
+        (##3-.1, ##1+.2) -- (##3, ##1+.2);%
+    \end{scope}%
+  }%
+  \renewcommand\cpssp@makeLabel[2]{%
+    \node at (0, ##1) [inner sep=0pt, above right=.075 and 0]%
+      {\cpssp@labelformat{##2}};%
+  }%
+  \renewcommand\cpssp@makeStartRes[3]{%
+    \node at (##2, ##1+.2) [left]%
+      {\cpssp@numberformat{##3}};%
+  }%
+  \renewcommand\cpssp@makeEndRes[3]{%
+    \node at (##2, ##1+.2) [right]%
+      {\cpssp@numberformat{##3}};%
+  }%
+}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\cpssp@style}
+% The |cpssp@style| macro is used to change the style internally. It is called with the style name as the single mandatory argument and first checks if this style is known (i.e., the macro |\cpsstyle@|\meta{style name} is defined) and executes this macro if possible; otherwise, a package warning is issued and the |small| style is used.
+%    \begin{macrocode}
+\newcommand\cpssp@style[1]{
+  \@ifundefined{cpsstyle@#1}{%
+    \PackageWarning{myclassicthesis}{Style ``\Cps@style'' undefined%
+      \MessageBreak using ``small'' instead}%
+    \cpsstyle@small%
+  }{%
+    \csname cpsstyle@#1\endcsname%
+  }%
+}
+%    \end{macrocode}
+% \end{macro}
+%
+% \subsection{User Interface, Part 2}
+%
+% \begin{macro}{\cpsspformat}
+% Now the three main user commands are defined. |\cpsspformat| takes one mandatory argument which is a list of comma-separated options in \textsf{keyval} format; these options change the appearance of the \textsf{cpssp} output.
+%    \begin{macrocode}
+\newcommand\cpsspformat[1]{\setkeys{cpssp}{#1}}
+%    \end{macrocode}
+% \end{macro}
+% When the package is loaded by |\usepackage|\oarg{options}|{cpssp}|, |\cpsspformat| is called and the options are set to the values specified in the optional argument of |\usepackage|.
+%    \begin{macrocode}
+\cpsspformat{%
+  style=\Cps@style,%
+  numberformat=\Cps@numberformat,%
+  labelformat=\Cps@labelformat,%
+  threehelixname=\Cps@threehelixname,%
+  pihelixname=\Cps@pihelixname%
+}
+%    \end{macrocode}
+% \begin{macro}{\cpsspinput}
+% |\cpsspinput| is basically a shorthand for the more powerful |cpsspimage| environment (see below). The optional argument takes the same option list as |\cpsspformat|, the mandatory argument takes the name of the input file without the |.tex| extension.
+%    \begin{macrocode}
+\newcommand\cpsspinput[2][]{\begin{cpsspimage}[#1]{#2}\end{cpsspimage}}
+%    \end{macrocode}
+% \end{macro}
+% \begin{environment}{cpsspimage}
+% The |cpsspimage| environment takes the same arguments as the |\cpsspinput| commands. |\begin{cpsspimage}| first begins a |tikzpicture| environment and then locally changes the appearance of the secondary structure image which is finally loaded by |\input|. As |tikzpicture| remains open until |\end{cpsspimage}|, it is possible to add further graphical elements to the image by using standard Ti\textit{k}Z commands.
+%    \begin{macrocode}
+\newenvironment{cpsspimage}[2][]%
+  {\begin{tikzpicture}\cpsspformat{#1}\input{#2.tex}}%
+  {\end{tikzpicture}}
+%    \end{macrocode}
+% \end{environment}
+% \iffalse
+%</package>
+%<*ColSequences>
+>ColG
+-------YDFEYLNGLSYTELTNLIKNIKWNQINGLFNYSTGSQKFFGDKNRVQAIINALQESGRTYTANDM
+KGIETFTEVLRAGFYLGYYNDGLSYLNDRNFQDKCIPAMIAIQKNPNFKLGTAVQDEVITSLGKLIGNASAN
+AEVVNNCVPVLKQFRENLNQYAPDYVKGTAVNELIKGIEFDFSGAAYEK---DVKTMPWYGKIDPFINELKA
+LGLYGNITSATEWASDVGIYYLSKFGLYSTNRNDIVQSLEKAVDMY-KYGKIAFVAMERITWDYDGIGSNGK
+KVDHDKFLDDAEKHYLPKTYTFDNGTFIIRAGDKVSEEKIKRLYWASREVKSQFHRVVGNDKALEVGNADDV
+LTMKIFNSPEEYKFNTNINGVSTDNGGLYIEPRGTFYTYERTPQQSIFSLEELFRHEYTHYLQARYLVDGLW
+GQGPFYEKN--RLTWFDEGTAEFFAGSTRTSGVLPRKSILGYLAKDKVDHRYSLKKTLNSGYDDSDWMFYNY
+GFAVAHYLYEKDMPTFIKMNKAILNTDVKSYDEIIKKLSDDANKNTEYQNHIQELADKYQGAGIPLVSDDYL
+KDHGYKKASEVYSEISKAASLTNTSVTAEKSQYFNTFTLRGTYTGETSKGEFKDWDEMSKKLDGTLESLAKN
+SWSGYKTLTAYFTNYRVTSDNKVQYDVVFHGVLTDNA
+>ColH
+VQNESKRYTVSYLKTLNYYDLVDLLVKTEIENLPDLFQYSSDAKEFYGNKTRMSFIMDEIGRRAPQYTEIDH
+KGIPTLVEVVRAGFYLGFHNKELNEINKRSFKERVIPSILAIQKNPNFKLGTEVQDKIVSATGLLAGNETAP
+PEVVNNFTPILQDCIKNIDRYALDDLKSKALFNVLAAPTYDITEYLRATK-EKPENTPWYGKIDGFINELKK
+LALYGKINDNNSWIIDNGIYHIAPLGKLHSNNKIGIETLTEVMKVYPYLSMQHLQSADQIKRHYDSKDAEGN
+KIPLDKFKKEGKEKYCPKTYTFDDGKVIIKAGARVEEEKVKRLYWASKEVNSQFFRVYGIDKPLEEGNPDDI
+LTMVIYNSPEEYKLNSVLYGYDTNNGGMYIEPEGTFFTYEREAQESTYTLEELFRHEYTHYLQGRYAVPGQW
+GRTKLYDND--RLTWYEEGGAELFAGSTRTSGILPRKSIVSNIHNTTRNNRYKLSDTVHSKYGAS-FEFYNY
+ACMFMDYMYNKDMGILNKLNDLAKNNDVDGYDNYIRDLSSNYALNDKYQDHMQERIDNYENLTVPFVADDYL
+VRHAYKNPNEIYSEISEVAKLKDAKSEVKKSQYFSTFTLRGSYTGGASKGKLEDQKAMNKFIDDSLKKLDTY
+SWSGYKTLTAYFTNYKVDSSNRVTYDVVFHGYL----
+>ColT
+---YKTKYSFNDLNKLSNKEILDLTSKIKWSDISDLFQYNKDSYTFYSNKERVQALIDGLYEKGCNYTSTDD
+KGIDTLVEILRSGFYLGYYNDSLKYLNDKSFKDKCIPAMIAIENNKNFKLGENGQDTVVHALGKLIGNTSCN
+DEVVNKTIPILEQYYNEIDKYSKDRLKSNAVYNFMKEINYDISQYEYAHNIRDYKNTPWSGKIDSFIDTISK
+FASISNVTKDNGWIINNSIYYTAKLSKYHSNPSIPHSVIDNCIEIFPDYSEQYFTAIEAIKEDFNSRDSKGN
+VIDINKLIEEGKKHYLPKTYTFDNGKIIIKAGDKVEESKIQKLYWASKEVKSQFHRIIGNDKPLEVGNADDI
+LTIVIYNNPEEYKLNKTLYGYSVDNGGIYIEGIGTFFTYERTPQESIYSLEELFRHEFTHYLQGRYLIPGLF
+NKGDFYKGNNGRITWFEEGSAEFFAGSTRTS-VLPRKSMVGGLSKNPKE-RFNADKLLHSKYSDG-WDFYKY
+GYAFSDYMYNNNKKLFSDLVSTMKNNDVKGYEALIEESSKDSKINKDYEYHMENLVNNYDNYTIPLVSDDYM
+KQYDNKSLHEIKSDIEKAMDVKNSQITKESSQYFDTYNLKATYTLSSNKGEISNWNYMNNKINEALNKLDNL
+SWGGYKTVTAYFSNPRLNSNNEVVYDIVFHGLL----
+%</ColSequences>
+%<*ColStructures>
+>ColG
+CCHHHHHCCCHHHHHHHHHHCCHHHHHHHHCCCHHHHHHHHCHHHHHHHHHHHHHHHHCC
+CCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCCCCHH
+HHHHHHHHHHHHHHHCCHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHCCC
+HHHCCCHHHHHHHHHHHHHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHHHHCCCCCCCH
+HHHHHHHHHHHCCCCHHHHHHHHHHHHCCCCCCCCCCCCCCHHHHHHHHHHHCCCCEEEC
+CCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCEEEEEEECCHHH
+HHHHCCCCCCCCCCCCEEECCCCEEEEEECCCCCCHHHHHHHHHCHHHHHHCCCCCCCCC
+CCCCCCCCCCCCCEEEHHHHHHHCCCCCCCCCCCHHHHHHHHHHCCCCCCCCHHHHHHCC
+CCCCCCEEHHHHHHHHHHHHHCCHHHHHHHHHHHHCCCHHHHHHHHHHHCCCHHHHHHHH
+HHHHHHHCCCCCCCCCCCCCCCCCCCCCCCHHHHHHHHHHHCCCCCEEECCCCCCCCCEE
+EEEEEEECCCCCCCHHHHHHHHHHHHHHHHHHHHCCCCCCEEEEEEEECCEECCCCCEEE
+EEEEEEECCCCC
+
+>ColH
+CCCCCCCCCHHHHHCCCHHHHHHHHHHCCHHHCCHHHCCCHHHHHHHHHHHHHHHHHHHH
+HHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCC
+CCCCCHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+CCCCHHHHHHHHHHCCHHHHHHHHCCHHHHHHHHHHHHHCCCCCCHHHHHHHHHHHHHHH
+HCCCCCHHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHCCHHHCCCCCCCHHHHHHHHHH
+HCCCEEEEECCCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCCEE
+EEEEECCHHHHHHCCCCCCCCCCCCEEEECCCCCEEEEEEECCCCHHHHHHHHCCHHEEE
+CCCCCCCCCCCCCCCCCCCCCEEEEEHHHHHHHHCCCCCCCCCHHHHHHHHHHCCCCCCC
+CCHHHHHHCCCCCCCHHHHHHHHHHHHHHHCCHHHHHHHHHHHHCCCHHHHHHHHHHHHH
+HHHHHHHHHHHHHHHHCCCCCCCCCCCCHHHHHHCCCCCHHHHHHHHHHHCCCCCCCEEE
+CCCCCCCEEEEEEEEECCCCCCCHHHHHHHHHHHHHHHHHHHCCCCCCCEEEEEEEECCE
+ECCCCCEEEEEEEEECC
+
+>ColT
+CCCCCCHHHHHCCCHHHHHHHHHHCCHHHHHHHCCCCHHHHHHHHCHHHHHHHHHHHHHH
+HHCCCCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCC
+CHHHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHHHHHHHHCHHHHHHHHHHHHHHHHHC
+CCCHHHHHHCCCHHHHHCHHHCCCHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHHHHCC
+CCCCCHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHCCCCCCCCCEECCCCHHHHHHHHH
+CCEEEEECCCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCCEEEE
+EEECCHHHHHHCCCCCCCCCCCCCEEECCCCEEEEEECCCCCHHHCHHHHHCCHHHHHHC
+CCCCCCCCCCCCCCCCCCCCCCCEEEHHHHHHHHCCCCCCCCCCCCHHHHHHCCCCCCCC
+HHHHHHHCCCCCCCHHHHHHHHHHHHHHCCHHHHHHHHHHHHCCCHHHHHHHHHHHHHHH
+HHHHHHHHHHHHHCCCCCCCCCCCCCHHHHHHCCCCCHHHCCHHHEECCCCCCCCEEECC
+CCCCCEEEEEEEEECCCCCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCEEEEEEECCEEC
+CCCCEEEEEEEEECC
+%</ColStructures>
+%<*ColGPredictions>
+>PSIPRED
+CCHHHHHCCCHHHHHHHHHHCCHHHHHHHHCCCHHHHHHHHCHHHHHHHHHHHHHHHHCC
+CCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCCCCHH
+HHHHHHHHHHHHHHHCCHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHCCC
+HHHCCCHHHHHHHHHHHHHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHHHHCCCCCCCH
+HHHHHHHHHHHCCCCHHHHHHHHHHHHCCCCCCCCCCCCCCHHHHHHHHHHHCCCCEEEC
+CCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCEEEEEEECCHHH
+HHHHCCCCCCCCCCCCEEECCCCEEEEEECCCCCCHHHHHHHHHCHHHHHHCCCCCCCCC
+CCCCCCCCCCCCCEEEHHHHHHHCCCCCCCCCCCHHHHHHHHHHCCCCCCCCHHHHHHCC
+CCCCCCEEHHHHHHHHHHHHHCCHHHHHHHHHHHHCCCHHHHHHHHHHHCCCHHHHHHHH
+HHHHHHHCCCCCCCCCCCCCCCCCCCCCCCHHHHHHHHHHHCCCCCEEECCCCCCCCCEE
+EEEEEEECCCCCCCHHHHHHHHHHHHHHHHHHHHCCCCCCEEEEEEEECCEECCCCCEEE
+EEEEEEECCCCC
+
+>SSpro
+CCHHHHHCCCHHHHHHHHHCCCCCCCCHHECCCCCHHHHHCCHHHHHHHHHHHHHCCCCC
+CCCCCCCHHHHHHHHHHHHHHCCCCCCCCCCCCHHHHHHHHHHHHHHHCCCCCCCCCCCH
+CHHHHHHHHHECCCCCCHHHHHHHHHHHHHHHHCHHHHHHHHHHHHHHHHHHHCCCCCCC
+CHHHCHCHCCCCCCCCCHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHCCHCCCCCCCCH
+HHHHHHHHHHHCCCCHHHHHHHHHHHHHCCCCCCCCCCCCHHHHHHHHHHHCCCCCEECC
+CCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHEECCCCCCCCCCCCCEEEEEEECCCCC
+EEECCCECCCCCCCCCEEEECCCEEEEEECCCHHHHHHHHHHHHHHHHHHHCCCEECCCC
+CCCCCCCCCCEEEEEECCCEEEEECCCCCCCCCCCHHHHCCCCCCCCCCEEEEEEEEECC
+CCCCCCHHHHHHHHHHHHHHCCCCCHHHHHHHHHHCCCHHHHHHHHHHHHHHHCCCHHHH
+HHHHHHHHHHCCCCCCCCCHHHHHHCCCCCHHHHHHHHHHHCCCCCCEEEHHHCCCCCEE
+EEEEEEECCCCCCCCCCHHHHHHHHCCHHHHHHHCCCCCCEEEEEEEECCEECCCCCEEE
+EEEEEEECCCCC
+
+>CDM
+CCCCCCCCCCCHHHHHHHHCCCCCCCCCCEEEECCCCEEECCEEHHHHHHHHHHHHCCCC
+CCCCCCCHHHHHHHHHHHHEEEECCCCCCCCCHHHHHHHEEEEEECCCCCCCCCCCCCCH
+HHHHHHHEEEECCCCCCHHHHHHHHHHHHHCCCCCCCCCCCCCCHHHHHHHHHCCCCCHH
+HHHHCCCCCCCHHHHHHCCHHHHHHHHHHHCCCCCCCHHHHHCCHHHHHHHHHCCCCCCH
+HHHHHHHHHCCCCCCEEEEEEEEEEEEECCCCCCCCCCHHHHHHHHHHHHHHCCCCCCCC
+CCCEEEECCCCHHHHHHHHHHHHHHHHHHHHEEEECCCCCCCCCCCCCEEEEECCCCCCH
+HHHHEEEECCCCCCCCEECCCCCEECCHHCCCCCHHHHHHHHHHHHHHHHHCCCCCCCCC
+CCCCCCCCCCCEEEEEECHHHHHCCCCCCCCCCCCCEEEECCCCCCCCCCCHHHHHHHCC
+CCCCCCCCCCCCHHHHHHHHCCCCHHHHHHHHHHHCCCCCCHHHHHHHHCCCCHHHHHHH
+HHHHHHCCCCCCEEEEEEEHHHHHHCCCCCCEEEHHHHHHHHHCCCCCCCCCCCCCEEEE
+CCCEEEECCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCCCEEEEEEEEEEECCCCCCEE
+EEEEEECCCCCC
+
+>Jpred
+--HHHHH---HHHHHHHHHH----------------HHHH--HHHHHHHHHHHHHHH---
+-------HHHHHHHHHHHHHE------------HHHHHHHHHHHHHHHH----------H
+HHHHHHHHHHH--------HHHHHHHHHHHHHHHHHH----HHHHHHHHHHHHHHHH---
+---------HHHHHH---HHHHHHHHHHH--------HHHHHHHHHHHHH---------H
+HHHHHHHHHHH-----HHHHHHHHHH--------------HHHHHHHHHHHH--EEEEE-
+--EEEEEE-----HHHHHHHHHHHHHHHHHHHHHH-------------EEEEEEE-----
+---------------EEEE----EEEEEE-------EEEEH-----EEEE----E-----
+-------------EEEEHHHHHHH----------HHHHHHHHH---------HHHHHH--
+------EEHHHHHHHHHHHHH--HHHHHHHHHHHH---HHHHHHHHHHHHH-H-HHHHHH
+HHHHHHH-------------HHH----------HHHHHHHH----EEEE---------EE
+EEEEEE--------HHHHHHHHHHHHHHHHHH---------EEEEEEEEEEE-----EEE
+EEEEEEE-----
+
+>SABLE
+CCHHHHHCCCHHHHHHHHHHCCCCHHHHHHHCCCCHHHHHCCHHHHHHHHHHHHHHHCCC
+CCCCHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCHHHHHHHHHHHHHHCCCCCCCCCCCH
+HHHHHHHHHHHHCCCCCHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHC
+CCCCHHHHHHHHHHHHHHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHHHHCCCCCCCHH
+HHHHHHHHHHHCCCCHHHHHHHHHHHHHCCCCCCCCCCCCHHHHHHHHHHHCCCCEEEEC
+CCCEEEEECCCCCHHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCEEEEEEECCCCC
+CCCCCCCCCCCCCCCCEEECCCCEEEEEECCCCCCCCCHHHHHCCCEEEEECCCCCCCCC
+CCCCCCCCCCCCEEEHHHHHHHHHCCCCCCCCCCCCHHHHHHHHCCCCCCCCHHHHHHCC
+CCCCCCHHHHHHHHHHHHHHHCCCHHHHHHHHHHHCCCCHHHHHHHHHHCCCCCCHHHHH
+HHHHHHHHHCCCCCCCCCCCCCCCCCCCCCCHHHHHHHHHHCCCCCCCCCCCCCCCCCEE
+EEEEEEECCCCCCCCCHHHHHHHHHHHHHHHHHCCCCCCCCEEEEEEECEEECCCCCEEE
+EEEEEEECCCCC
+%</ColGPredictions>
+%<*ColTPrediction>
+>ColT
+CCCCCCHHHHHCCCHHHHHHHHHHCCHHHHHHHCCCCHHHHHHHHCHHHHHHHHHHHHHH
+HHCCCCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCCCHHHHHHHHHHHHHHHHCCCCCCC
+CHHHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHHHHHHHHCHHHHHHHHHHHHHHHHHC
+CCCHHHHHHCCCHHHHHCHHHCCCHHHHHHHHHHHHCCCCCCCHHHHHHHHHHHHHHHCC
+CCCCCHHHHHHHHHHHHHCCCCCHHHHHHHHHHHHHCCCCCCCCCEECCCCHHHHHHHHH
+CCEEEEECCCCEEEECCCCCCHHHHHHHHHHHHHHHHHHHHHHCCCCCCCCCCCCCEEEE
+EEECCHHHHHHCCCCCCCCCCCCCEEECCCCEEEEEECCCCCHHHCHHHHHCCHHHHHHC
+CCCCCCCCCCCCCCCCCCCCCCCEEEHHHHHHHHCCCCCCCCCCCCHHHHHHCCCCCCCC
+HHHHHHHCCCCCCCHHHHHHHHHHHHHHCCHHHHHHHHHHHHCCCHHHHHHHHHHHHHHH
+HHHHHHHHHHHHHCCCCCCCCCCCCCHHHHHHCCCCCHHHCCHHHEECCCCCCCCEEECC
+CCCCCEEEEEEEEECCCCCCCHHHHHHHHHHHHHHHHHHHCCCCCCCCEEEEEEECCEEC
+CCCCEEEEEEEEECC
+%</ColTPrediction>
+%<*Collagenases0>
+  \cpsspLabel{-0.0}{ColG}
+    \cpsspStartRes{-0.0}{1.5}{0}
+    \cpsspGap{-0.0}{1.5}{3.25}
+    \cpsspCoil{-0.0}{3.25}{3.75}
+    \cpsspAlphaHelix{-0.0}{3.75}{5.0}
+    \cpsspCoil{-0.0}{5.0}{5.75}
+    \cpsspAlphaHelix{-0.0}{5.75}{8.25}
+    \cpsspCoil{-0.0}{8.25}{8.75}
+    \cpsspAlphaHelix{-0.0}{8.75}{10.75}
+    \cpsspCoil{-0.0}{10.75}{11.5}
+    \cpsspAlphaHelix{-0.0}{11.5}{13.5}
+    \cpsspCoil{-0.0}{13.5}{13.75}
+    \cpsspAlphaHelix{-0.0}{13.75}{14.0}
+    \cpsspEndRes{-0.0}{14.0}{43}
+  \cpsspLabel{-2.5}{ColG}
+    \cpsspStartRes{-2.5}{1.5}{44}
+    \cpsspAlphaHelix{-2.5}{1.5}{5.25}
+    \cpsspCoil{-2.5}{5.25}{6.75}
+    \cpsspAlphaHelix{-2.5}{6.75}{11.5}
+    \cpsspCoil{-2.5}{11.5}{14.0}
+    \cpsspEndRes{-2.5}{14.0}{93}
+  \cpsspLabel{-5.0}{ColG}
+    \cpsspStartRes{-5.0}{1.5}{94}
+    \cpsspAlphaHelix{-5.0}{1.5}{5.5}
+    \cpsspCoil{-5.0}{5.5}{7.75}
+    \cpsspAlphaHelix{-5.0}{7.75}{12.0}
+    \cpsspCoil{-5.0}{12.0}{12.5}
+    \cpsspAlphaHelix{-5.0}{12.5}{14.0}
+    \cpsspEndRes{-5.0}{14.0}{143}
+  \cpsspLabel{-7.5}{ColG}
+    \cpsspStartRes{-7.5}{1.5}{144}
+    \cpsspAlphaHelix{-7.5}{1.5}{10.0}
+    \cpsspCoil{-7.5}{10.0}{10.75}
+    \cpsspAlphaHelix{-7.5}{10.75}{11.5}
+    \cpsspCoil{-7.5}{11.5}{12.25}
+    \cpsspGap{-7.5}{12.25}{13.0}
+    \cpsspAlphaHelix{-7.5}{13.0}{14.0}
+    \cpsspEndRes{-7.5}{14.0}{190}
+  \cpsspLabel{-10.0}{ColG}
+    \cpsspStartRes{-10.0}{1.5}{191}
+    \cpsspAlphaHelix{-10.0}{1.5}{6.5}
+    \cpsspCoil{-10.0}{6.5}{8.25}
+    \cpsspAlphaHelix{-10.0}{8.25}{12.0}
+    \cpsspCoil{-10.0}{12.0}{13.75}
+    \cpsspAlphaHelix{-10.0}{13.75}{14.0}
+    \cpsspEndRes{-10.0}{14.0}{240}
+  \cpsspLabel{-12.5}{ColG}
+    \cpsspStartRes{-12.5}{1.5}{241}
+    \cpsspAlphaHelix{-12.5}{1.5}{4.25}
+    \cpsspCoil{-12.5}{4.25}{4.5}
+    \cpsspGap{-12.5}{4.5}{4.75}
+    \cpsspCoil{-12.5}{4.75}{5.5}
+    \cpsspAlphaHelix{-12.5}{5.5}{8.5}
+    \cpsspCoil{-12.5}{8.5}{12.0}
+    \cpsspAlphaHelix{-12.5}{12.0}{14.0}
+    \cpsspEndRes{-12.5}{14.0}{289}
+  \cpsspLabel{-15.0}{ColG}
+    \cpsspStartRes{-15.0}{1.5}{290}
+    \cpsspAlphaHelix{-15.0}{1.5}{2.25}
+    \cpsspCoil{-15.0}{2.25}{3.25}
+    \cpsspSheet{-15.0}{3.25}{4.0}
+    \cpsspCoil{-15.0}{4.0}{5.0}
+    \cpsspSheet{-15.0}{5.0}{6.0}
+    \cpsspCoil{-15.0}{6.0}{7.5}
+    \cpsspAlphaHelix{-15.0}{7.5}{13.25}
+    \cpsspCoil{-15.0}{13.25}{14.0}
+    \cpsspEndRes{-15.0}{14.0}{339}
+  \cpsspLabel{-17.5}{ColG}
+    \cpsspStartRes{-17.5}{1.5}{340}
+    \cpsspCoil{-17.5}{1.5}{3.75}
+    \cpsspSheet{-17.5}{3.75}{5.5}
+    \cpsspCoil{-17.5}{5.5}{6.0}
+    \cpsspAlphaHelix{-17.5}{6.0}{7.75}
+    \cpsspCoil{-17.5}{7.75}{10.75}
+    \cpsspSheet{-17.5}{10.75}{11.5}
+    \cpsspCoil{-17.5}{11.5}{12.5}
+    \cpsspSheet{-17.5}{12.5}{14.0}
+    \cpsspEndRes{-17.5}{14.0}{389}
+  \cpsspLabel{-0.5}{ColH}
+    \cpsspStartRes{-0.5}{1.5}{1}
+    \cpsspCoil{-0.5}{1.5}{3.75}
+    \cpsspAlphaHelix{-0.5}{3.75}{5.0}
+    \cpsspCoil{-0.5}{5.0}{5.75}
+    \cpsspAlphaHelix{-0.5}{5.75}{8.25}
+    \cpsspCoil{-0.5}{8.25}{8.75}
+    \cpsspAlphaHelix{-0.5}{8.75}{9.5}
+    \cpsspCoil{-0.5}{9.5}{10.0}
+    \cpsspAlphaHelix{-0.5}{10.0}{10.75}
+    \cpsspCoil{-0.5}{10.75}{11.5}
+    \cpsspAlphaHelix{-0.5}{11.5}{14.0}
+    \cpsspEndRes{-0.5}{14.0}{50}
+  \cpsspLabel{-3.0}{ColH}
+    \cpsspStartRes{-3.0}{1.5}{51}
+    \cpsspAlphaHelix{-3.0}{1.5}{5.0}
+    \cpsspCoil{-3.0}{5.0}{7.5}
+    \cpsspAlphaHelix{-3.0}{7.5}{11.5}
+    \cpsspCoil{-3.0}{11.5}{14.0}
+    \cpsspEndRes{-3.0}{14.0}{100}
+  \cpsspLabel{-5.5}{ColH}
+    \cpsspStartRes{-5.5}{1.5}{101}
+    \cpsspAlphaHelix{-5.5}{1.5}{5.5}
+    \cpsspCoil{-5.5}{5.5}{7.75}
+    \cpsspAlphaHelix{-5.5}{7.75}{10.75}
+    \cpsspCoil{-5.5}{10.75}{12.5}
+    \cpsspAlphaHelix{-5.5}{12.5}{14.0}
+    \cpsspEndRes{-5.5}{14.0}{150}
+  \cpsspLabel{-8.0}{ColH}
+    \cpsspStartRes{-8.0}{1.5}{151}
+    \cpsspAlphaHelix{-8.0}{1.5}{9.0}
+    \cpsspCoil{-8.0}{9.0}{10.0}
+    \cpsspAlphaHelix{-8.0}{10.0}{12.5}
+    \cpsspGap{-8.0}{12.5}{12.75}
+    \cpsspCoil{-8.0}{12.75}{13.25}
+    \cpsspAlphaHelix{-8.0}{13.25}{14.0}
+    \cpsspEndRes{-8.0}{14.0}{199}
+  \cpsspLabel{-10.5}{ColH}
+    \cpsspStartRes{-10.5}{1.5}{200}
+    \cpsspAlphaHelix{-10.5}{1.5}{2.75}
+    \cpsspCoil{-10.5}{2.75}{3.25}
+    \cpsspAlphaHelix{-10.5}{3.25}{6.5}
+    \cpsspCoil{-10.5}{6.5}{8.0}
+    \cpsspAlphaHelix{-10.5}{8.0}{12.0}
+    \cpsspCoil{-10.5}{12.0}{13.25}
+    \cpsspAlphaHelix{-10.5}{13.25}{14.0}
+    \cpsspEndRes{-10.5}{14.0}{249}
+  \cpsspLabel{-13.0}{ColH}
+    \cpsspStartRes{-13.0}{1.5}{250}
+    \cpsspAlphaHelix{-13.0}{1.5}{4.25}
+    \cpsspCoil{-13.0}{4.25}{5.5}
+    \cpsspAlphaHelix{-13.0}{5.5}{8.75}
+    \cpsspCoil{-13.0}{8.75}{9.25}
+    \cpsspAlphaHelix{-13.0}{9.25}{10.0}
+    \cpsspCoil{-13.0}{10.0}{11.75}
+    \cpsspAlphaHelix{-13.0}{11.75}{14.0}
+    \cpsspEndRes{-13.0}{14.0}{299}
+  \cpsspLabel{-15.5}{ColH}
+    \cpsspStartRes{-15.5}{1.5}{300}
+    \cpsspAlphaHelix{-15.5}{1.5}{2.0}
+    \cpsspCoil{-15.5}{2.0}{2.75}
+    \cpsspSheet{-15.5}{2.75}{4.0}
+    \cpsspCoil{-15.5}{4.0}{5.0}
+    \cpsspSheet{-15.5}{5.0}{6.0}
+    \cpsspCoil{-15.5}{6.0}{7.5}
+    \cpsspAlphaHelix{-15.5}{7.5}{13.0}
+    \cpsspCoil{-15.5}{13.0}{14.0}
+    \cpsspEndRes{-15.5}{14.0}{349}
+  \cpsspLabel{-18.0}{ColH}
+    \cpsspStartRes{-18.0}{1.5}{350}
+    \cpsspCoil{-18.0}{1.5}{3.75}
+    \cpsspSheet{-18.0}{3.75}{5.5}
+    \cpsspCoil{-18.0}{5.5}{6.0}
+    \cpsspAlphaHelix{-18.0}{6.0}{7.5}
+    \cpsspCoil{-18.0}{7.5}{10.5}
+    \cpsspSheet{-18.0}{10.5}{11.5}
+    \cpsspCoil{-18.0}{11.5}{12.75}
+    \cpsspSheetT{-18.0}{12.75}{14.0}
+    \cpsspEndRes{-18.0}{14.0}{399}
+  \cpsspLabel{-1.0}{ColT}
+    \cpsspStartRes{-1.0}{1.5}{0}
+    \cpsspGap{-1.0}{1.5}{2.25}
+    \cpsspCoil{-1.0}{2.25}{3.75}
+    \cpsspAlphaHelix{-1.0}{3.75}{5.0}
+    \cpsspCoil{-1.0}{5.0}{5.75}
+    \cpsspAlphaHelix{-1.0}{5.75}{8.25}
+    \cpsspCoil{-1.0}{8.25}{8.75}
+    \cpsspAlphaHelix{-1.0}{8.75}{10.5}
+    \cpsspCoil{-1.0}{10.5}{11.5}
+    \cpsspAlphaHelix{-1.0}{11.5}{13.5}
+    \cpsspCoil{-1.0}{13.5}{13.75}
+    \cpsspAlphaHelix{-1.0}{13.75}{14.0}
+    \cpsspEndRes{-1.0}{14.0}{47}
+  \cpsspLabel{-3.5}{ColT}
+    \cpsspStartRes{-3.5}{1.5}{48}
+    \cpsspAlphaHelix{-3.5}{1.5}{5.25}
+    \cpsspCoil{-3.5}{5.25}{6.75}
+    \cpsspAlphaHelix{-3.5}{6.75}{11.5}
+    \cpsspCoil{-3.5}{11.5}{14.0}
+    \cpsspEndRes{-3.5}{14.0}{97}
+  \cpsspLabel{-6.0}{ColT}
+    \cpsspStartRes{-6.0}{1.5}{98}
+    \cpsspAlphaHelix{-6.0}{1.5}{5.5}
+    \cpsspCoil{-6.0}{5.5}{7.5}
+    \cpsspAlphaHelix{-6.0}{7.5}{11.25}
+    \cpsspCoil{-6.0}{11.25}{12.5}
+    \cpsspAlphaHelix{-6.0}{12.5}{14.0}
+    \cpsspEndRes{-6.0}{14.0}{147}
+  \cpsspLabel{-8.5}{ColT}
+    \cpsspStartRes{-8.5}{1.5}{148}
+    \cpsspAlphaHelix{-8.5}{1.5}{5.0}
+    \cpsspCoil{-8.5}{5.0}{5.25}
+    \cpsspAlphaHelix{-8.5}{5.25}{9.5}
+    \cpsspCoil{-8.5}{9.5}{10.5}
+    \cpsspAlphaHelix{-8.5}{10.5}{12.0}
+    \cpsspCoil{-8.5}{12.0}{12.75}
+    \cpsspAlphaHelix{-8.5}{12.75}{14.0}
+    \cpsspEndRes{-8.5}{14.0}{197}
+  \cpsspLabel{-11.0}{ColT}
+    \cpsspStartRes{-11.0}{1.5}{198}
+    \cpsspCoil{-11.0}{1.5}{1.75}
+    \cpsspAlphaHelix{-11.0}{1.75}{2.5}
+    \cpsspCoil{-11.0}{2.5}{3.25}
+    \cpsspAlphaHelix{-11.0}{3.25}{6.25}
+    \cpsspCoil{-11.0}{6.25}{8.0}
+    \cpsspAlphaHelix{-11.0}{8.0}{11.75}
+    \cpsspCoil{-11.0}{11.75}{13.5}
+    \cpsspAlphaHelix{-11.0}{13.5}{14.0}
+    \cpsspEndRes{-11.0}{14.0}{247}
+  \cpsspLabel{-13.5}{ColT}
+    \cpsspStartRes{-13.5}{1.5}{248}
+    \cpsspAlphaHelix{-13.5}{1.5}{4.25}
+    \cpsspCoil{-13.5}{4.25}{5.5}
+    \cpsspAlphaHelix{-13.5}{5.5}{8.75}
+    \cpsspCoil{-13.5}{8.75}{11.0}
+    \cpsspSheet{-13.5}{11.0}{11.5}
+    \cpsspCoil{-13.5}{11.5}{12.5}
+    \cpsspAlphaHelix{-13.5}{12.5}{14.0}
+    \cpsspEndRes{-13.5}{14.0}{297}
+  \cpsspLabel{-16.0}{ColT}
+    \cpsspStartRes{-16.0}{1.5}{298}
+    \cpsspAlphaHelix{-16.0}{1.5}{2.25}
+    \cpsspCoil{-16.0}{2.25}{2.75}
+    \cpsspSheet{-16.0}{2.75}{4.0}
+    \cpsspCoil{-16.0}{4.0}{5.0}
+    \cpsspSheet{-16.0}{5.0}{6.0}
+    \cpsspCoil{-16.0}{6.0}{7.5}
+    \cpsspAlphaHelix{-16.0}{7.5}{13.0}
+    \cpsspCoil{-16.0}{13.0}{14.0}
+    \cpsspEndRes{-16.0}{14.0}{347}
+  \cpsspLabel{-18.5}{ColT}
+    \cpsspStartRes{-18.5}{1.5}{348}
+    \cpsspCoil{-18.5}{1.5}{3.75}
+    \cpsspSheet{-18.5}{3.75}{5.5}
+    \cpsspCoil{-18.5}{5.5}{6.0}
+    \cpsspAlphaHelix{-18.5}{6.0}{7.5}
+    \cpsspCoil{-18.5}{7.5}{10.75}
+    \cpsspSheet{-18.5}{10.75}{11.5}
+    \cpsspCoil{-18.5}{11.5}{12.5}
+    \cpsspSheet{-18.5}{12.5}{14.0}
+    \cpsspEndRes{-18.5}{14.0}{397}
+%</Collagenases0>
+%<*ColGPredictions1>
+  \cpsspLabel{-0.0}{PSIPRED}
+    \cpsspStartRes{-0.0}{1.5}{301}
+    \cpsspCoil{-0.0}{1.5}{2.25}
+    \cpsspSheet{-0.0}{2.25}{3.25}
+    \cpsspCoil{-0.0}{3.25}{4.75}
+    \cpsspAlphaHelix{-0.0}{4.75}{10.5}
+    \cpsspCoil{-0.0}{10.5}{13.5}
+    \cpsspSheetT{-0.0}{13.5}{14.0}
+    \cpsspEndRes{-0.0}{14.0}{350}
+  \cpsspLabel{-1.75}{PSIPRED}
+    \cpsspStartRes{-1.75}{1.5}{351}
+    \cpsspSheet{-1.75}{1.5}{2.75}
+    \cpsspCoil{-1.75}{2.75}{3.25}
+    \cpsspAlphaHelix{-1.75}{3.25}{5.0}
+    \cpsspCoil{-1.75}{5.0}{8.0}
+    \cpsspSheet{-1.75}{8.0}{8.75}
+    \cpsspCoil{-1.75}{8.75}{9.75}
+    \cpsspSheet{-1.75}{9.75}{11.25}
+    \cpsspCoil{-1.75}{11.25}{12.75}
+    \cpsspAlphaHelix{-1.75}{12.75}{14.0}
+    \cpsspEndRes{-1.75}{14.0}{400}
+  \cpsspLabel{-3.5}{PSIPRED}
+    \cpsspStartRes{-3.5}{1.5}{401}
+    \cpsspAlphaHelix{-3.5}{1.5}{2.5}
+    \cpsspCoil{-3.5}{2.5}{2.75}
+    \cpsspAlphaHelix{-3.5}{2.75}{4.25}
+    \cpsspCoil{-3.5}{4.25}{9.75}
+    \cpsspSheet{-3.5}{9.75}{10.5}
+    \cpsspAlphaHelix{-3.5}{10.5}{12.25}
+    \cpsspCoil{-3.5}{12.25}{14.0}
+    \cpsspEndRes{-3.5}{14.0}{450}
+  \cpsspLabel{-5.25}{PSIPRED}
+    \cpsspStartRes{-5.25}{1.5}{451}
+    \cpsspCoil{-5.25}{1.5}{2.5}
+    \cpsspAlphaHelix{-5.25}{2.5}{5.0}
+    \cpsspCoil{-5.25}{5.0}{7.0}
+    \cpsspAlphaHelix{-5.25}{7.0}{8.5}
+    \cpsspCoil{-5.25}{8.5}{10.5}
+    \cpsspSheet{-5.25}{10.5}{11.0}
+    \cpsspAlphaHelix{-5.25}{11.0}{14.0}
+    \cpsspEndRes{-5.25}{14.0}{500}
+  \cpsspLabel{-7.0}{PSIPRED}
+    \cpsspStartRes{-7.0}{1.5}{501}
+    \cpsspAlphaHelix{-7.0}{1.5}{1.75}
+    \cpsspCoil{-7.0}{1.75}{2.25}
+    \cpsspAlphaHelix{-7.0}{2.25}{5.25}
+    \cpsspCoil{-7.0}{5.25}{6.0}
+    \cpsspAlphaHelix{-7.0}{6.0}{8.75}
+    \cpsspCoil{-7.0}{8.75}{9.5}
+    \cpsspAlphaHelix{-7.0}{9.5}{13.25}
+    \cpsspCoil{-7.0}{13.25}{14.0}
+    \cpsspEndRes{-7.0}{14.0}{550}
+  \cpsspLabel{-8.75}{PSIPRED}
+    \cpsspStartRes{-8.75}{1.5}{551}
+    \cpsspCoil{-8.75}{1.5}{6.5}
+    \cpsspAlphaHelix{-8.75}{6.5}{9.25}
+    \cpsspCoil{-8.75}{9.25}{10.5}
+    \cpsspSheet{-8.75}{10.5}{11.25}
+    \cpsspCoil{-8.75}{11.25}{13.5}
+    \cpsspSheetT{-8.75}{13.5}{14.0}
+    \cpsspEndRes{-8.75}{14.0}{600}
+  \cpsspLabel{-0.25}{SSpro}
+    \cpsspStartRes{-0.25}{1.5}{301}
+    \cpsspCoil{-0.25}{1.5}{2.25}
+    \cpsspSheet{-0.25}{2.25}{3.25}
+    \cpsspCoil{-0.25}{3.25}{4.75}
+    \cpsspAlphaHelix{-0.25}{4.75}{9.75}
+    \cpsspSheet{-0.25}{9.75}{10.25}
+    \cpsspCoil{-0.25}{10.25}{13.5}
+    \cpsspSheetT{-0.25}{13.5}{14.0}
+    \cpsspEndRes{-0.25}{14.0}{350}
+  \cpsspLabel{-2.0}{SSpro}
+    \cpsspStartRes{-2.0}{1.5}{351}
+    \cpsspSheet{-2.0}{1.5}{2.75}
+    \cpsspCoil{-2.0}{2.75}{4.0}
+    \cpsspSheet{-2.0}{4.0}{4.75}
+    \cpsspCoil{-2.0}{4.75}{5.5}
+    \cpsspSheet{-2.0}{5.5}{5.75}
+    \cpsspCoil{-2.0}{5.75}{8.0}
+    \cpsspSheet{-2.0}{8.0}{9.0}
+    \cpsspCoil{-2.0}{9.0}{9.75}
+    \cpsspSheet{-2.0}{9.75}{11.25}
+    \cpsspCoil{-2.0}{11.25}{12.0}
+    \cpsspAlphaHelix{-2.0}{12.0}{14.0}
+    \cpsspEndRes{-2.0}{14.0}{400}
+  \cpsspLabel{-3.75}{SSpro}
+    \cpsspStartRes{-3.75}{1.5}{401}
+    \cpsspAlphaHelix{-3.75}{1.5}{4.25}
+    \cpsspCoil{-3.75}{4.25}{5.0}
+    \cpsspSheet{-3.75}{5.0}{5.5}
+    \cpsspCoil{-3.75}{5.5}{9.0}
+    \cpsspSheet{-3.75}{9.0}{10.5}
+    \cpsspCoil{-3.75}{10.5}{11.25}
+    \cpsspSheet{-3.75}{11.25}{12.5}
+    \cpsspCoil{-3.75}{12.5}{14.0}
+    \cpsspEndRes{-3.75}{14.0}{450}
+  \cpsspLabel{-5.5}{SSpro}
+    \cpsspStartRes{-5.5}{1.5}{451}
+    \cpsspCoil{-5.5}{1.5}{2.75}
+    \cpsspAlphaHelix{-5.5}{2.75}{3.75}
+    \cpsspCoil{-5.5}{3.75}{6.25}
+    \cpsspSheet{-5.5}{6.25}{8.5}
+    \cpsspCoil{-5.5}{8.5}{10.5}
+    \cpsspAlphaHelix{-5.5}{10.5}{14.0}
+    \cpsspEndRes{-5.5}{14.0}{500}
+  \cpsspLabel{-7.25}{SSpro}
+    \cpsspStartRes{-7.25}{1.5}{501}
+    \cpsspCoil{-7.25}{1.5}{2.75}
+    \cpsspAlphaHelix{-7.25}{2.75}{5.25}
+    \cpsspCoil{-7.25}{5.25}{6.0}
+    \cpsspAlphaHelix{-7.25}{6.0}{9.75}
+    \cpsspCoil{-7.25}{9.75}{10.5}
+    \cpsspAlphaHelix{-7.25}{10.5}{14.0}
+    \cpsspEndRes{-7.25}{14.0}{550}
+  \cpsspLabel{-9.0}{SSpro}
+    \cpsspStartRes{-9.0}{1.5}{551}
+    \cpsspCoil{-9.0}{1.5}{3.75}
+    \cpsspAlphaHelix{-9.0}{3.75}{5.25}
+    \cpsspCoil{-9.0}{5.25}{6.5}
+    \cpsspAlphaHelix{-9.0}{6.5}{9.25}
+    \cpsspCoil{-9.0}{9.25}{10.75}
+    \cpsspSheet{-9.0}{10.75}{11.5}
+    \cpsspAlphaHelix{-9.0}{11.5}{12.25}
+    \cpsspCoil{-9.0}{12.25}{13.5}
+    \cpsspSheetT{-9.0}{13.5}{14.0}
+    \cpsspEndRes{-9.0}{14.0}{600}
+  \cpsspLabel{-0.5}{CDM}
+    \cpsspStartRes{-0.5}{1.5}{301}
+    \cpsspCoil{-0.5}{1.5}{2.25}
+    \cpsspSheet{-0.5}{2.25}{3.25}
+    \cpsspCoil{-0.5}{3.25}{4.25}
+    \cpsspAlphaHelix{-0.5}{4.25}{9.25}
+    \cpsspSheet{-0.5}{9.25}{10.25}
+    \cpsspCoil{-0.5}{10.25}{13.5}
+    \cpsspSheetT{-0.5}{13.5}{14.0}
+    \cpsspEndRes{-0.5}{14.0}{350}
+  \cpsspLabel{-2.25}{CDM}
+    \cpsspStartRes{-2.25}{1.5}{351}
+    \cpsspSheet{-2.25}{1.5}{2.25}
+    \cpsspCoil{-2.25}{2.25}{3.75}
+    \cpsspAlphaHelix{-2.25}{3.75}{5.0}
+    \cpsspSheet{-2.25}{5.0}{6.0}
+    \cpsspCoil{-2.25}{6.0}{8.0}
+    \cpsspSheet{-2.25}{8.0}{8.5}
+    \cpsspCoil{-2.25}{8.5}{9.75}
+    \cpsspSheet{-2.25}{9.75}{10.25}
+    \cpsspCoil{-2.25}{10.25}{10.75}
+    \cpsspAlphaHelix{-2.25}{10.75}{11.25}
+    \cpsspCoil{-2.25}{11.25}{12.5}
+    \cpsspAlphaHelix{-2.25}{12.5}{14.0}
+    \cpsspEndRes{-2.25}{14.0}{400}
+  \cpsspLabel{-4.0}{CDM}
+    \cpsspStartRes{-4.0}{1.5}{401}
+    \cpsspAlphaHelix{-4.0}{1.5}{4.25}
+    \cpsspCoil{-4.0}{4.25}{9.25}
+    \cpsspSheet{-4.0}{9.25}{10.75}
+    \cpsspCoil{-4.0}{10.75}{11.0}
+    \cpsspAlphaHelix{-4.0}{11.0}{12.25}
+    \cpsspCoil{-4.0}{12.25}{14.0}
+    \cpsspEndRes{-4.0}{14.0}{450}
+  \cpsspLabel{-5.75}{CDM}
+    \cpsspStartRes{-5.75}{1.5}{451}
+    \cpsspCoil{-5.75}{1.5}{3.0}
+    \cpsspSheet{-5.75}{3.0}{4.0}
+    \cpsspCoil{-5.75}{4.0}{6.75}
+    \cpsspAlphaHelix{-5.75}{6.75}{8.5}
+    \cpsspCoil{-5.75}{8.5}{12.0}
+    \cpsspAlphaHelix{-5.75}{12.0}{14.0}
+    \cpsspEndRes{-5.75}{14.0}{500}
+  \cpsspLabel{-7.5}{CDM}
+    \cpsspStartRes{-7.5}{1.5}{501}
+    \cpsspCoil{-7.5}{1.5}{2.5}
+    \cpsspAlphaHelix{-7.5}{2.5}{5.25}
+    \cpsspCoil{-7.5}{5.25}{6.75}
+    \cpsspAlphaHelix{-7.5}{6.75}{8.75}
+    \cpsspCoil{-7.5}{8.75}{9.75}
+    \cpsspAlphaHelix{-7.5}{9.75}{13.0}
+    \cpsspCoil{-7.5}{13.0}{14.0}
+    \cpsspEndRes{-7.5}{14.0}{550}
+  \cpsspLabel{-9.25}{CDM}
+    \cpsspStartRes{-9.25}{1.5}{551}
+    \cpsspCoil{-9.25}{1.5}{2.0}
+    \cpsspSheet{-9.25}{2.0}{3.75}
+    \cpsspAlphaHelix{-9.25}{3.75}{5.25}
+    \cpsspCoil{-9.25}{5.25}{6.75}
+    \cpsspSheet{-9.25}{6.75}{7.5}
+    \cpsspAlphaHelix{-9.25}{7.5}{9.75}
+    \cpsspCoil{-9.25}{9.75}{13.0}
+    \cpsspSheet{-9.25}{13.0}{14.0}
+    \cpsspEndRes{-9.25}{14.0}{600}
+  \cpsspLabel{-0.75}{Jpred}
+    \cpsspStartRes{-0.75}{1.5}{301}
+    \cpsspCoil{-0.75}{1.5}{2.0}
+    \cpsspSheet{-0.75}{2.0}{3.5}
+    \cpsspCoil{-0.75}{3.5}{4.75}
+    \cpsspAlphaHelix{-0.75}{4.75}{10.25}
+    \cpsspCoil{-0.75}{10.25}{13.5}
+    \cpsspSheetT{-0.75}{13.5}{14.0}
+    \cpsspEndRes{-0.75}{14.0}{350}
+  \cpsspLabel{-2.5}{Jpred}
+    \cpsspStartRes{-2.5}{1.5}{351}
+    \cpsspSheet{-2.5}{1.5}{2.75}
+    \cpsspCoil{-2.5}{2.75}{7.75}
+    \cpsspSheet{-2.5}{7.75}{8.75}
+    \cpsspCoil{-2.5}{8.75}{9.75}
+    \cpsspSheet{-2.5}{9.75}{11.25}
+    \cpsspCoil{-2.5}{11.25}{13.0}
+    \cpsspSheet{-2.5}{13.0}{14.0}
+    \cpsspEndRes{-2.5}{14.0}{400}
+  \cpsspLabel{-4.25}{Jpred}
+    \cpsspStartRes{-4.25}{1.5}{401}
+    \cpsspAlphaHelix{-4.25}{1.5}{1.75}
+    \cpsspCoil{-4.25}{1.75}{3.0}
+    \cpsspSheet{-4.25}{3.0}{4.0}
+    \cpsspCoil{-4.25}{4.0}{5.0}
+    \cpsspSheet{-4.25}{5.0}{5.25}
+    \cpsspCoil{-4.25}{5.25}{9.75}
+    \cpsspSheet{-4.25}{9.75}{10.75}
+    \cpsspAlphaHelix{-4.25}{10.75}{12.5}
+    \cpsspCoil{-4.25}{12.5}{14.0}
+    \cpsspEndRes{-4.25}{14.0}{450}
+  \cpsspLabel{-6.0}{Jpred}
+    \cpsspStartRes{-6.0}{1.5}{451}
+    \cpsspCoil{-6.0}{1.5}{2.5}
+    \cpsspAlphaHelix{-6.0}{2.5}{4.75}
+    \cpsspCoil{-6.0}{4.75}{7.0}
+    \cpsspAlphaHelix{-6.0}{7.0}{8.5}
+    \cpsspCoil{-6.0}{8.5}{10.5}
+    \cpsspSheet{-6.0}{10.5}{11.0}
+    \cpsspAlphaHelix{-6.0}{11.0}{14.0}
+    \cpsspEndRes{-6.0}{14.0}{500}
+  \cpsspLabel{-7.75}{Jpred}
+    \cpsspStartRes{-7.75}{1.5}{501}
+    \cpsspAlphaHelix{-7.75}{1.5}{1.75}
+    \cpsspCoil{-7.75}{1.75}{2.25}
+    \cpsspAlphaHelix{-7.75}{2.25}{5.25}
+    \cpsspCoil{-7.75}{5.25}{6.0}
+    \cpsspAlphaHelix{-7.75}{6.0}{9.25}
+    \cpsspCoil{-7.75}{9.25}{9.5}
+    \cpsspAlphaHelix{-7.75}{9.5}{9.75}
+    \cpsspCoil{-7.75}{9.75}{10.0}
+    \cpsspAlphaHelix{-7.75}{10.0}{13.25}
+    \cpsspCoil{-7.75}{13.25}{14.0}
+    \cpsspEndRes{-7.75}{14.0}{550}
+  \cpsspLabel{-9.5}{Jpred}
+    \cpsspStartRes{-9.5}{1.5}{551}
+    \cpsspCoil{-9.5}{1.5}{4.0}
+    \cpsspAlphaHelix{-9.5}{4.0}{4.75}
+    \cpsspCoil{-9.5}{4.75}{7.25}
+    \cpsspAlphaHelix{-9.5}{7.25}{9.25}
+    \cpsspCoil{-9.5}{9.25}{10.25}
+    \cpsspSheet{-9.5}{10.25}{11.25}
+    \cpsspCoil{-9.5}{11.25}{13.5}
+    \cpsspSheetT{-9.5}{13.5}{14.0}
+    \cpsspEndRes{-9.5}{14.0}{600}
+  \cpsspLabel{-1.0}{SABLE}
+    \cpsspStartRes{-1.0}{1.5}{301}
+    \cpsspCoil{-1.0}{1.5}{2.25}
+    \cpsspSheet{-1.0}{2.25}{3.5}
+    \cpsspCoil{-1.0}{3.5}{4.75}
+    \cpsspAlphaHelix{-1.0}{4.75}{10.5}
+    \cpsspCoil{-1.0}{10.5}{13.5}
+    \cpsspSheetT{-1.0}{13.5}{14.0}
+    \cpsspEndRes{-1.0}{14.0}{350}
+  \cpsspLabel{-2.75}{SABLE}
+    \cpsspStartRes{-2.75}{1.5}{351}
+    \cpsspSheet{-2.75}{1.5}{2.75}
+    \cpsspCoil{-2.75}{2.75}{8.0}
+    \cpsspSheet{-2.75}{8.0}{8.75}
+    \cpsspCoil{-2.75}{8.75}{9.75}
+    \cpsspSheet{-2.75}{9.75}{11.25}
+    \cpsspCoil{-2.75}{11.25}{13.5}
+    \cpsspAlphaHelix{-2.75}{13.5}{14.0}
+    \cpsspEndRes{-2.75}{14.0}{400}
+  \cpsspLabel{-4.5}{SABLE}
+    \cpsspStartRes{-4.5}{1.5}{401}
+    \cpsspAlphaHelix{-4.5}{1.5}{2.25}
+    \cpsspCoil{-4.5}{2.25}{3.0}
+    \cpsspSheet{-4.5}{3.0}{4.25}
+    \cpsspCoil{-4.5}{4.25}{9.5}
+    \cpsspSheet{-4.5}{9.5}{10.25}
+    \cpsspAlphaHelix{-4.5}{10.25}{12.5}
+    \cpsspCoil{-4.5}{12.5}{14.0}
+    \cpsspEndRes{-4.5}{14.0}{450}
+  \cpsspLabel{-6.25}{SABLE}
+    \cpsspStartRes{-6.25}{1.5}{451}
+    \cpsspCoil{-6.25}{1.5}{3.0}
+    \cpsspAlphaHelix{-6.25}{3.0}{5.0}
+    \cpsspCoil{-6.25}{5.0}{7.0}
+    \cpsspAlphaHelix{-6.25}{7.0}{8.5}
+    \cpsspCoil{-6.25}{8.5}{10.5}
+    \cpsspAlphaHelix{-6.25}{10.5}{14.0}
+    \cpsspEndRes{-6.25}{14.0}{500}
+  \cpsspLabel{-8.0}{SABLE}
+    \cpsspStartRes{-8.0}{1.5}{501}
+    \cpsspAlphaHelix{-8.0}{1.5}{1.75}
+    \cpsspCoil{-8.0}{1.75}{2.5}
+    \cpsspAlphaHelix{-8.0}{2.5}{5.25}
+    \cpsspCoil{-8.0}{5.25}{6.25}
+    \cpsspAlphaHelix{-8.0}{6.25}{8.75}
+    \cpsspCoil{-8.0}{8.75}{10.25}
+    \cpsspAlphaHelix{-8.0}{10.25}{13.75}
+    \cpsspCoil{-8.0}{13.75}{14.0}
+    \cpsspEndRes{-8.0}{14.0}{550}
+  \cpsspLabel{-9.75}{SABLE}
+    \cpsspStartRes{-9.75}{1.5}{551}
+    \cpsspCoil{-9.75}{1.5}{6.75}
+    \cpsspAlphaHelix{-9.75}{6.75}{9.25}
+    \cpsspCoil{-9.75}{9.25}{13.5}
+    \cpsspSheetT{-9.75}{13.5}{14.0}
+    \cpsspEndRes{-9.75}{14.0}{600}
+%</ColGPredictions1>
+%<*ColTPrediction0>
+  \cpsspLabel{-0.0}{ColT}
+    \cpsspStartRes{-0.0}{0.0}{1}
+    \cpsspCoil{-0.0}{0.0}{1.68}
+    \cpsspAlphaHelix{-0.0}{1.68}{3.08}
+    \cpsspCoil{-0.0}{3.08}{3.92}
+    \cpsspAlphaHelix{-0.0}{3.92}{6.72}
+    \cpsspCoil{-0.0}{6.72}{7.28}
+    \cpsspAlphaHelix{-0.0}{7.28}{9.24}
+    \cpsspCoil{-0.0}{9.24}{10.36}
+    \cpsspAlphaHelix{-0.0}{10.36}{12.6}
+    \cpsspCoil{-0.0}{12.6}{12.88}
+    \cpsspAlphaHelix{-0.0}{12.88}{14.0}
+    \cpsspEndRes{-0.0}{14.0}{50}
+  \cpsspLabel{-0.75}{ColT}
+    \cpsspStartRes{-0.75}{0.0}{51}
+    \cpsspAlphaHelix{-0.75}{0.0}{3.36}
+    \cpsspCoil{-0.75}{3.36}{5.04}
+    \cpsspAlphaHelix{-0.75}{5.04}{10.36}
+    \cpsspCoil{-0.75}{10.36}{13.16}
+    \cpsspAlphaHelix{-0.75}{13.16}{14.0}
+    \cpsspEndRes{-0.75}{14.0}{100}
+  \cpsspLabel{-1.5}{ColT}
+    \cpsspStartRes{-1.5}{0.0}{101}
+    \cpsspAlphaHelix{-1.5}{0.0}{3.64}
+    \cpsspCoil{-1.5}{3.64}{5.88}
+    \cpsspAlphaHelix{-1.5}{5.88}{10.08}
+    \cpsspCoil{-1.5}{10.08}{11.48}
+    \cpsspAlphaHelix{-1.5}{11.48}{14.0}
+    \cpsspEndRes{-1.5}{14.0}{150}
+  \cpsspLabel{-2.25}{ColT}
+    \cpsspStartRes{-2.25}{0.0}{151}
+    \cpsspAlphaHelix{-2.25}{0.0}{3.08}
+    \cpsspCoil{-2.25}{3.08}{3.36}
+    \cpsspAlphaHelix{-2.25}{3.36}{8.12}
+    \cpsspCoil{-2.25}{8.12}{9.24}
+    \cpsspAlphaHelix{-2.25}{9.24}{10.92}
+    \cpsspCoil{-2.25}{10.92}{11.76}
+    \cpsspAlphaHelix{-2.25}{11.76}{13.16}
+    \cpsspCoil{-2.25}{13.16}{13.44}
+    \cpsspAlphaHelix{-2.25}{13.44}{14.0}
+    \cpsspEndRes{-2.25}{14.0}{200}
+  \cpsspLabel{-3.0}{ColT}
+    \cpsspStartRes{-3.0}{0.0}{201}
+    \cpsspAlphaHelix{-3.0}{0.0}{0.28}
+    \cpsspCoil{-3.0}{0.28}{1.12}
+    \cpsspAlphaHelix{-3.0}{1.12}{4.48}
+    \cpsspCoil{-3.0}{4.48}{6.44}
+    \cpsspAlphaHelix{-3.0}{6.44}{10.64}
+    \cpsspCoil{-3.0}{10.64}{12.6}
+    \cpsspAlphaHelix{-3.0}{12.6}{14.0}
+    \cpsspEndRes{-3.0}{14.0}{250}
+  \cpsspLabel{-3.75}{ColT}
+    \cpsspStartRes{-3.75}{0.0}{251}
+    \cpsspAlphaHelix{-3.75}{0.0}{2.24}
+    \cpsspCoil{-3.75}{2.24}{3.64}
+    \cpsspAlphaHelix{-3.75}{3.64}{7.28}
+    \cpsspCoil{-3.75}{7.28}{9.8}
+    \cpsspSheet{-3.75}{9.8}{10.36}
+    \cpsspCoil{-3.75}{10.36}{11.48}
+    \cpsspAlphaHelix{-3.75}{11.48}{14.0}
+    \cpsspEndRes{-3.75}{14.0}{300}
+  \cpsspLabel{-4.5}{ColT}
+    \cpsspStartRes{-4.5}{0.0}{301}
+    \cpsspCoil{-4.5}{0.0}{0.56}
+    \cpsspSheet{-4.5}{0.56}{1.96}
+    \cpsspCoil{-4.5}{1.96}{3.08}
+    \cpsspSheet{-4.5}{3.08}{4.2}
+    \cpsspCoil{-4.5}{4.2}{5.88}
+    \cpsspAlphaHelix{-4.5}{5.88}{12.04}
+    \cpsspCoil{-4.5}{12.04}{14.0}
+    \cpsspEndRes{-4.5}{14.0}{350}
+  \cpsspLabel{-5.25}{ColT}
+    \cpsspStartRes{-5.25}{0.0}{351}
+    \cpsspCoil{-5.25}{0.0}{1.68}
+    \cpsspSheet{-5.25}{1.68}{3.64}
+    \cpsspCoil{-5.25}{3.64}{4.2}
+    \cpsspAlphaHelix{-5.25}{4.2}{5.88}
+    \cpsspCoil{-5.25}{5.88}{9.52}
+    \cpsspSheet{-5.25}{9.52}{10.36}
+    \cpsspCoil{-5.25}{10.36}{11.48}
+    \cpsspSheet{-5.25}{11.48}{13.16}
+    \cpsspCoil{-5.25}{13.16}{14.0}
+    \cpsspEndRes{-5.25}{14.0}{400}
+  \cpsspLabel{-6.0}{ColT}
+    \cpsspStartRes{-6.0}{0.0}{401}
+    \cpsspCoil{-6.0}{0.0}{0.56}
+    \cpsspAlphaHelix{-6.0}{0.56}{1.4}
+    \cpsspCoil{-6.0}{1.4}{1.68}
+    \cpsspAlphaHelix{-6.0}{1.68}{3.08}
+    \cpsspCoil{-6.0}{3.08}{3.64}
+    \cpsspAlphaHelix{-6.0}{3.64}{5.32}
+    \cpsspCoil{-6.0}{5.32}{12.04}
+    \cpsspSheet{-6.0}{12.04}{12.88}
+    \cpsspAlphaHelix{-6.0}{12.88}{14.0}
+    \cpsspEndRes{-6.0}{14.0}{450}
+  \cpsspLabel{-6.75}{ColT}
+    \cpsspStartRes{-6.75}{0.0}{451}
+    \cpsspAlphaHelix{-6.75}{0.0}{1.12}
+    \cpsspCoil{-6.75}{1.12}{4.48}
+    \cpsspAlphaHelix{-6.75}{4.48}{6.16}
+    \cpsspCoil{-6.75}{6.16}{8.4}
+    \cpsspAlphaHelix{-6.75}{8.4}{10.36}
+    \cpsspCoil{-6.75}{10.36}{12.32}
+    \cpsspAlphaHelix{-6.75}{12.32}{14.0}
+    \cpsspEndRes{-6.75}{14.0}{500}
+  \cpsspLabel{-7.5}{ColT}
+    \cpsspStartRes{-7.5}{0.0}{501}
+    \cpsspAlphaHelix{-7.5}{0.0}{2.24}
+    \cpsspCoil{-7.5}{2.24}{2.8}
+    \cpsspAlphaHelix{-7.5}{2.8}{6.16}
+    \cpsspCoil{-7.5}{6.16}{7.0}
+    \cpsspAlphaHelix{-7.5}{7.0}{14.0}
+    \cpsspEndRes{-7.5}{14.0}{550}
+  \cpsspLabel{-8.25}{ColT}
+    \cpsspStartRes{-8.25}{0.0}{551}
+    \cpsspAlphaHelix{-8.25}{0.0}{0.84}
+    \cpsspCoil{-8.25}{0.84}{4.48}
+    \cpsspAlphaHelix{-8.25}{4.48}{6.16}
+    \cpsspCoil{-8.25}{6.16}{7.56}
+    \cpsspAlphaHelix{-8.25}{7.56}{8.4}
+    \cpsspCoil{-8.25}{8.4}{8.96}
+    \cpsspAlphaHelix{-8.25}{8.96}{9.8}
+    \cpsspSheet{-8.25}{9.8}{10.36}
+    \cpsspCoil{-8.25}{10.36}{12.6}
+    \cpsspSheet{-8.25}{12.6}{13.44}
+    \cpsspCoil{-8.25}{13.44}{14.0}
+    \cpsspEndRes{-8.25}{14.0}{600}
+  \cpsspLabel{-9.0}{ColT}
+    \cpsspStartRes{-9.0}{0.0}{601}
+    \cpsspCoil{-9.0}{0.0}{1.4}
+    \cpsspSheet{-9.0}{1.4}{3.92}
+    \cpsspCoil{-9.0}{3.92}{5.88}
+    \cpsspAlphaHelix{-9.0}{5.88}{11.2}
+    \cpsspCoil{-9.0}{11.2}{13.44}
+    \cpsspSheetT{-9.0}{13.44}{14.0}
+    \cpsspEndRes{-9.0}{14.0}{650}
+  \cpsspLabel{-9.75}{ColT}
+    \cpsspStartRes{-9.75}{0.0}{651}
+    \cpsspSheet{-9.75}{0.0}{1.4}
+    \cpsspCoil{-9.75}{1.4}{1.96}
+    \cpsspSheet{-9.75}{1.96}{2.52}
+    \cpsspCoil{-9.75}{2.52}{3.92}
+    \cpsspSheet{-9.75}{3.92}{6.44}
+    \cpsspCoil{-9.75}{6.44}{7.0}
+    \cpsspEndRes{-9.75}{7.0}{675}
+%</ColTPrediction0>
+%<*cpsspelements>
+  \cpsspLabel{-0.0}{CPSSP}
+    \cpsspStartRes{-0.0}{0.0}{1}
+    \cpsspCoil{-0.0}{0.0}{0.5}
+    \cpsspGap{-0.0}{0.5}{1.25}
+    \cpsspCoil{-0.0}{1.25}{1.75}
+    \cpsspBridge{-0.0}{1.75}{2.0}
+    \cpsspCoil{-0.0}{2.0}{2.75}
+    \cpsspSheet{-0.0}{2.75}{3.75}
+    \cpsspCoil{-0.0}{3.75}{4.5}
+    \cpsspThreeTenHelix{-0.0}{4.5}{5.5}
+    \cpsspCoil{-0.0}{5.5}{6.25}
+    \cpsspAlphaHelix{-0.0}{6.25}{7.25}
+    \cpsspCoil{-0.0}{7.25}{8.0}
+    \cpsspPiHelix{-0.0}{8.0}{9.0}
+    \cpsspCoil{-0.0}{9.0}{9.75}
+    \cpsspBend{-0.0}{9.75}{10.0}
+    \cpsspCoil{-0.0}{10.0}{10.75}
+    \cpsspTurn{-0.0}{10.75}{11.75}
+    \cpsspCoil{-0.0}{11.75}{12.25}
+    \cpsspEndRes{-0.0}{12.25}{49}
+%</cpsspelements>
+% \fi
+% \Finale
+\endinput

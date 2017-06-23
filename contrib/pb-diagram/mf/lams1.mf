@@ -1,0 +1,675 @@
+% LAMS1.MF      VERSION 1.0
+% COPYRIGHT (C) 1989 BY THE TEXPLORATORS CORPORATION
+% ALL RIGHTS RESERVED
+
+if unknown cmbase: input cmbase fi
+% replace the macro adjust_fit by version used in earlier cmbase files to
+% avoid division by zero error caused by newer versions of cmbase
+% Patch by Ingo Hadan (Jan 97)
+
+def normal_adjust_fit(expr left_adjustment,right_adjustment) =
+ l:=-hround(left_adjustment*hppp)-letter_fit;
+ interim xoffset:=-l;
+ charwd:=charwd+2letter_fit#+left_adjustment+right_adjustment;
+ r:=l+hround(charwd*hppp)-shrink_fit;
+ w:=r-hround(right_adjustment*hppp)-letter_fit;
+ enddef;
+
+def mono_adjust_fit(expr left_adjustment,right_adjustment) =
+ numeric expansion_factor;
+ mono_charwd#=2letter_fit#
+   +expansion_factor*(charwd+left_adjustment+right_adjustment);
+ forsuffixes $=u,jut,cap_jut,beak_jut,apex_corr:
+   $:=$.#*expansion_factor*hppp; endfor
+ l:=-hround(left_adjustment*expansion_factor*hppp)-letter_fit;
+ interim xoffset:=-l;
+ r:=l+mono_charwd-shrink_fit;
+ w:=r-hround(right_adjustment*expansion_factor*hppp)-letter_fit;
+ charwd:=mono_charwd#; charic:=mono_charic#;
+ enddef;
+
+
+font_identifier:="LAMS"; font_size 10pt#;
+
+u#:=20/36pt#;      % unit width
+width_adj#:=0pt#;    % width adjustment for certain characters
+serif_fit#:=0pt#;    % extra sidebar near lowercase serifs
+cap_serif_fit#:=5/36pt#;  % extra sidebar near uppercase serifs
+letter_fit#:=0pt#;    % extra space added to all sidebars
+
+body_height#:=270/36pt#;  % height of tallest characters
+asc_height#:=360/36pt#;    % height of lowercase ascenders
+cap_height#:=246/36pt#;    % height of caps
+fig_height#:=232/36pt#;    % height of numerals
+x_height#:=155/36pt#;    % height of lowercase without ascenders
+math_axis#:=90/36pt#;    % axis of symmetry for math symbols
+bar_height#:=87/36pt#;    % height of crossbar in lowercase e
+comma_depth#:=70/36pt#;    % depth of comma below baseline
+desc_depth#:=0/36pt#;    % depth of lowercase descenders
+
+crisp#:=8/36pt#;    % diameter of serif corners
+tiny#:=8/36pt#;      % diameter of rounded corners
+fine#:=7/36pt#;      % diameter of sharply rounded corners
+thin_join#:=7/36pt#;    % width of extrafine details
+hair#:=9/36pt#;      % lowercase hairline breadth
+stem#:=24/36pt#;    % lowercase stem breadth
+curve#:=29/36pt#;    % lowercase curve breadth
+ess#:=27/36pt#;      % breadth in middle of lowercase s
+flare#:=32/36pt#;    % diameter of bulbs or breadth of terminals
+dot_size#:=38/36pt#;    % diameter of dots
+cap_hair#:=11/36pt#;    % uppercase hairline breadth
+cap_stem#:=30/36pt#;    % uppercase stem breadth
+cap_curve#:=35/36pt#;    % uppercase curve breadth
+cap_ess#:=33/36pt#;    % breadth in middle of uppercase s
+rule_thickness#:=.4pt#;    % thickness of lines in math symbols
+
+dish#:=1/36pt#;      % amount erased at top or bottom of serifs
+bracket#:=20/36pt#;    % vertical distance from serif base to tangent
+jut#:=30/36pt#;      % protrusion of lowercase serifs
+cap_jut#:=37/36pt#;    % protrusion of uppercase serifs
+beak_jut#:=10/36pt#;    % horizontal protrusion of beak serifs
+beak#:=70/36pt#;    % vertical protrusion of beak serifs
+vair#:=8/36pt#;      % vertical diameter of hairlines
+notch_cut#:=10pt#;    % maximum breadth above or below notches
+bar#:=11/36pt#;      % lowercase bar thickness
+slab#:=11/36pt#;    % serif and arm thickness
+cap_bar#:=11/36pt#;    % uppercase bar thickness
+cap_band#:=11/36pt#;    % uppercase thickness above/below lobes
+cap_notch_cut#:=10pt#;    % max breadth above/below uppercase notches
+serif_drop#:=4/36pt#;    % vertical drop of sloped serifs
+stem_corr#:=1/36pt#;    % for small refinements of stem breadth
+vair_corr#:=1/36pt#;    % for small refinements of hairline height
+apex_corr#:=0pt#;    % extra width at diagonal junctions
+
+o#:=8/36pt#;      % amount of overshoot for curves
+apex_o#:=8/36pt#;    % amount of overshoot for diagonal junctions
+
+slant:=0;      % tilt ratio $(\Delta x/\Delta y)$
+fudge:=1;      % factor applied to weights of heavy characters
+math_spread:=0;      % extra openness of math symbols
+superness:=1/sqrt2;    % parameter for superellipses
+superpull:=1/6;      % extra openness inside bowls
+beak_darkness:=11/30;    % fraction of triangle inside beak serifs
+ligs:=2;      % level of ligatures to be included
+
+square_dots:=false;    % should dots be square?
+hefty:=false;      % should we try hard not to be overweight?
+serifs:=true;      % should serifs and bulbs be attached?
+monospace:=false;    % should all characters have the same width?
+variant_g:=true;    % should an italic-style g be used?
+low_asterisk:=false;    % should the asterisk be centered at the axis?
+math_fitting:=true;    % should math-mode spacing be used?
+
+mode_setup; font_setup;
+autorounding:=0;
+
+font_slant slant; font_x_height 0#; %x_height#;
+font_quad 18u# if not monospace:+4letter_fit# fi;
+
+% **********************************************
+% Macros and character definitions.
+% **********************************************
+
+def Shaft (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=hround 0; x0=hround w;
+y1=-d; y0=h;
+numeric theta,delta; theta=angle(z0-z1); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,90+theta); pos2(1.5rule_thickness,90+theta);
+pickup pencircle scaled rule_thickness;
+draw z1--z0;
+endchar;
+enddef;
+
+Shaft(0,1/6);
+Shaft(13,1/5);
+Shaft(26,1/4);
+Shaft(39,1/3);
+Shaft(52,2/5);
+Shaft(65,1/2);
+Shaft(78,3/5);
+Shaft(91,2/3);
+Shaft(104,3/4);
+
+def DashedShaft (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1= 0; x0=w;
+y1=-d; y0=h;
+numeric theta,delta; theta=angle(z0-z1); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,90+theta); pos2(1.5rule_thickness,90+theta);
+x2=hround w;
+y2=h;
+%filldraw z2l---z1l{z1-z2}..{z2-z1}z1r---z2r{z2-z1}..{z1-z2}cycle;
+pickup pencircle scaled rule_thickness;
+draw z1--1/6z2;
+draw 2/6z2--4/6z2;
+draw 5/6z2--z2;
+endchar;
+enddef;
+
+DashedShaft(1,1/6);
+DashedShaft(14,1/5);
+DashedShaft(27,1/4);
+DashedShaft(40,1/3);
+DashedShaft(53,2/5);
+DashedShaft(66,1/2);
+DashedShaft(79,3/5);
+DashedShaft(92,2/3);
+DashedShaft(105,3/4);
+
+
+def UpperHead (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup rule.nib;
+x1=0; x0=w;
+y1=-d; y0= h;
+numeric theta; theta=angle(z0-z1);
+pos1(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir -(90+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(180+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z2l=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+endchar;
+enddef;
+
+
+UpperHead(2,1/6);
+UpperHead(15,1/5);
+UpperHead(28,1/4);
+UpperHead(41,1/3);
+UpperHead(54,2/5);
+UpperHead(67,1/2);
+UpperHead(80,3/5);
+UpperHead(93,2/3);
+UpperHead(106,3/4);
+
+def LowerHead (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup rule.nib;
+x1=w ; x0=0;
+y1=h;  y0=-d;
+numeric theta; theta=angle(z1-z0);
+pos1(rule_thickness,-90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir (90-(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(45-theta) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+pos5(bar,90-(45-theta)); z5l=z0; pos6(bar,-(45-theta)); z6l=z0;
+z2r=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2l..{z4-z9}z4l---{z9-z4}z4r..z2r--cycle;
+
+endchar;
+enddef;
+
+LowerHead(3,1/6);
+LowerHead(16,1/5);
+LowerHead(29,1/4);
+LowerHead(42,1/3);
+LowerHead(55,2/5);
+LowerHead(68,1/2);
+LowerHead(81,3/5);
+LowerHead(94,2/3);
+LowerHead(107,3/4);
+
+
+
+def UpperTopBarb (expr ChCode, ChHeightFrac)=
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=0; x0=w;
+y1=-d; y0=h;
+numeric theta; theta=angle(z0-z1);
+pos1(rule_thickness,90+theta);
+pos0(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir -(90+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(180+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z2l=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2r{dir -(90-theta)}..{z1-z0}z0l--z2l--cycle;
+endchar;
+enddef;
+
+UpperTopBarb(4,1/6);
+UpperTopBarb(17,1/5);
+UpperTopBarb(30,1/4);
+UpperTopBarb(43,1/3);
+UpperTopBarb(56,2/5);
+UpperTopBarb(69,1/2);
+UpperTopBarb(82,3/5);
+UpperTopBarb(95,2/3);
+UpperTopBarb(108,3/4);
+
+def UpperBotBarb (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=0; x0=w;
+y1=-d; y0=h;
+numeric theta; theta=angle(z0-z1);
+pos1(rule_thickness,90+theta);
+pos0(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir -(90+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(180+(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z2l=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+filldraw z2r{dir (90+theta)}..{z1-z0}z0r--z2l--cycle;
+endchar;
+enddef;
+
+
+
+UpperBotBarb(5,1/6);
+UpperBotBarb(18,1/5);
+UpperBotBarb(31,1/4);
+UpperBotBarb(44,1/3);
+UpperBotBarb(57,2/5);
+UpperBotBarb(70,1/2);
+UpperBotBarb(83,3/5);
+UpperBotBarb(96,2/3);
+UpperBotBarb(109,3/4);
+
+
+def LowerTopBarb (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=w ; x0=0;
+y1=h;  y0=-d;
+numeric theta; theta=angle(z1-z0);
+pos1(rule_thickness,90+theta);
+pos0(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir (90-(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(45-theta) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+pos5(bar,90-(45-theta)); z5l=z0; pos6(bar,-(45-theta)); z6l=z0;
+z2r=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+filldraw z2l{dir -(90-theta)}..{z1-z0}z0l--z2r--cycle;
+endchar;
+enddef;
+
+LowerTopBarb(6,1/6);
+LowerTopBarb(19,1/5);
+LowerTopBarb(32,1/4);
+LowerTopBarb(45,1/3);
+LowerTopBarb(58,2/5);
+LowerTopBarb(71,1/2);
+LowerTopBarb(84,3/5);
+LowerTopBarb(97,2/3);
+LowerTopBarb(110,3/4);
+
+def LowerBotBarb (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=w ; x0=0;
+y1=h;  y0=-d;
+numeric theta,delta;theta=angle(z1-z0);
+pos1(rule_thickness,90+theta);
+pos0(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir (90-(45-theta)) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+z3=z0+ dir -(45-theta) scaled ((3u++.24asc_height)+eps-rule_thickness-.5crisp.breadth);
+pos5(bar,90-(45-theta)); z5l=z0; pos6(bar,-(45-theta)); z6l=z0;
+z2r=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2l{dir (90+theta)}..{z1-z0}z0r--z2r--cycle;
+endchar;
+enddef;
+
+LowerBotBarb(7,1/6);
+LowerBotBarb(20,1/5);
+LowerBotBarb(33,1/4);
+LowerBotBarb(46,1/3);
+LowerBotBarb(59,2/5);
+LowerBotBarb(72,1/2);
+LowerBotBarb(85,3/5);
+LowerBotBarb(98,2/3);
+LowerBotBarb(111,3/4);
+
+def LowerTopHook (expr ChCode, ChHeightFrac)=
+compute_spread(.45x_height#,.55x_height);
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=w ; x0=0;
+y1=h;  y0=-d;
+numeric theta,delta; theta=angle(z1-z0); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,-90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir (90+theta) xscaled spread yscaled spread;
+%dir (90-theta) xscaled (delta+eps) yscaled (delta+eps);
+%z3=z0+ dir -(45-theta) xscaled (delta+eps) yscaled (delta+eps);
+pos5(bar,90-(45-theta)); z5l=z0; pos6(bar,-(45-theta)); z6l=z0;
+z2l=z0;
+z9=.381966[.5[z3,z4],z0];
+pickup rule.nib;
+z40= 1/2[z0,z4] + dir (180+theta) xscaled 2.5u yscaled 2.5u;
+draw z0{z0-z1}..{z4-z0}z40..{z1-z0}z4;
+%penstroke z2e..{z4-z9}z4e;
+endchar;
+enddef;
+
+LowerTopHook(8,1/6);
+LowerTopHook(21,1/5);
+LowerTopHook(34,1/4);
+LowerTopHook(47,1/3);
+LowerTopHook(60,2/5);
+LowerTopHook(73,1/2);
+LowerTopHook(86,3/5);
+LowerTopHook(99,2/3);
+LowerTopHook(112,3/4);
+
+def LowerBotHook (expr ChCode, ChHeightFrac)=
+compute_spread(.45x_height#,.55x_height);
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1=w ; x0= 0;
+y1=h;  y0=-d;
+numeric theta,delta; theta=angle(z1-z0); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,-90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir -(90-theta) xscaled spread yscaled spread;
+%dir (90-theta) xscaled (delta+eps) yscaled (delta+eps);
+%z3=z0+ dir -(45-theta) xscaled (delta+eps) yscaled (delta+eps);
+pos5(bar,90-(45-theta)); z5l=z0; pos6(bar,-(45-theta)); z6l=z0;
+z2l=z0;
+z9=.381966[.5[z3,z4],z0];
+z40= 1/2[z0,z4] + dir (180+theta) xscaled 2.5u yscaled 2.5u;
+pickup rule.nib;
+draw z0{z0-z1}..{z4-z0}z40..{z1-z0}z4;
+%penstroke z2e..{z4-z9}z4e;
+
+endchar;
+enddef;
+
+LowerBotHook(9,1/6);
+LowerBotHook(22,1/5);
+LowerBotHook(35,1/4);
+LowerBotHook(48,1/3);
+LowerBotHook(61,2/5);
+LowerBotHook(74,1/2);
+LowerBotHook(87,3/5);
+LowerBotHook(100,2/3);
+LowerBotHook(113,3/4);
+
+
+
+def UpperTopHook (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1= 0;  x0=(w);
+y1=-d; y0=h;
+numeric theta,delta; theta=angle(z0-z1); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir (90+theta) xscaled (spread) yscaled (spread);
+%z3=z0+ dir -(180+(45-theta)) xscaled (delta+eps) yscaled (delta+eps);
+z2r=z0;
+z9=.381966[.5[z3,z4],z0];
+%penstroke z2e..{z3-z9}z3e;
+z40= 1/2[z0,z4] + dir theta xscaled 2.5u yscaled 2.5u;
+pickup rule.nib;
+draw z0{z0-z1}..{z4-z0}z40..{z1-z0}z4;
+endchar;
+enddef;
+
+UpperTopHook(10,1/6);
+UpperTopHook(23,1/5);
+UpperTopHook(36,1/4);
+UpperTopHook(49,1/3);
+UpperTopHook(62,2/5);
+UpperTopHook(75,1/2);
+UpperTopHook(88,3/5);
+UpperTopHook(101,2/3);
+UpperTopHook(114,3/4);
+
+
+def UpperBotHook (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0); pickup crisp.nib;
+x1= 0; x0=w;
+y1=-d; y0=h;
+numeric theta,delta; theta=angle(z0-z1); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,90+theta);
+pos2(1.5rule_thickness,theta);
+pos3(bar,theta); pos4(bar,theta);
+z4=z0+ dir -(90-theta) xscaled (spread) yscaled (spread);
+%z3=z0+ dir -(180+(45-theta)) xscaled (delta+eps) yscaled (delta+eps);
+z2r=z0;
+z9=.381966[.5[z3,z4],z0];
+z40= 1/2[z0,z4] + dir theta xscaled 2.5u yscaled 2.5u;
+%penstroke z2e..{z3-z9}z3e;
+
+pickup rule.nib;
+draw z0{z0-z1}..{z4-z0}z40..{z1-z0}z4;
+endchar;
+enddef;
+UpperBotHook(11,1/6);
+UpperBotHook(24,1/5);
+UpperBotHook(37,1/4);
+UpperBotHook(50,1/3);
+UpperBotHook(63,2/5);
+UpperBotHook(76,1/2);
+UpperBotHook(89,3/5);
+UpperBotHook(102,2/3);
+UpperBotHook(115,3/4);
+
+
+
+def Squiggle (expr ChCode, ChHeightFrac)=
+
+beginchar(ChCode,18u#,ChHeightFrac*18u#,0#);
+adjust_fit(0,0);
+x0= 0; x1=w;
+y0=-d; y1=h;
+numeric theta,delta; theta=angle(z1-z0);
+delta=3u;
+z2=.5/6[z0,z1];
+z8=5.5/6[z0,z1];
+z3=1/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z5=3/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z7=5/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z4=2/6[z0,z1] + dir -(90-theta) xscaled (delta+eps) yscaled (delta+eps);
+z6=4/6[z0,z1] + dir -(90-theta) xscaled (delta+eps) yscaled (delta+eps);
+
+pickup pencircle scaled rule_thickness;
+draw z0--z2--z3--z4--z5--z6--z7--z8--z1;
+endchar;
+enddef;
+
+Squiggle(12,1/6);
+Squiggle(25,1/5);
+Squiggle(38,1/4);
+Squiggle(51,1/3);
+Squiggle(64,2/5);
+Squiggle(77,1/2);
+Squiggle(90,3/5);
+Squiggle(103,2/3);
+Squiggle(116,3/4);
+
+def RevShaft (expr ChCode,ChWidthFrac,ChDepthFrac)=
+
+beginchar(ChCode,ChWidthFrac*18u#,0,ChDepthFrac*18u#);
+adjust_fit(0,0); pickup crisp.nib;
+x1= 0; x0=(w);
+y1=h; y0=-d;
+pickup pencircle scaled rule_thickness;
+draw z1--z0;
+endchar;
+enddef;
+
+RevShaft(117,1/6,1);
+
+def RevDashedShaft (expr ChCode, ChWidthFrac, ChDepthFrac)=
+
+beginchar(ChCode,ChWidthFrac*18u#,0,ChDepthFrac*18u#);
+adjust_fit(0,0); pickup crisp.nib;
+x1= 0; x0=(w);
+y1=h; y0=-d;
+numeric theta,delta; theta=angle(z0-z1); delta=3u++.24asc_height;
+if abs(theta-45)<2.5: theta:=45; y1:=y0+x1-x0; fi % near-45$^\circ$ angle
+pos1(rule_thickness,90+theta); pos2(1.5rule_thickness,90+theta);
+x2= w;
+y2=-d;
+
+%filldraw z2l---z1l{z1-z2}..{z2-z1}z1r---z2r{z2-z1}..{z1-z2}cycle;
+pickup pencircle scaled rule_thickness;
+draw z1--1/6[z1,z2];
+draw 2/6[z1,z2]--4/6[z1,z2];
+draw 5/6[z1,z2]--z2;
+endchar;
+enddef;
+
+
+RevDashedShaft(118,1/6,1);
+
+beginchar(119,0,math_axis#,0);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=y2=math_axis;
+x2r=0;   % was z2l
+pos2(1.5rule_thickness,180);
+pos3(bar,180); pos4(bar,180);
+z4=z0+ dir (180-45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z3=z0+ dir (180+45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z9=.381966[.5[z3,z4],z2];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+endchar;
+
+beginchar(120,0,math_axis#,0);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=math_axis;
+pos2(1.5rule_thickness,0);
+pos3(bar,0); pos4(bar,0);
+z4=z0+ dir -45 xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z3=z0+ dir 45 xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z2r=z0;  %was z2l
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+
+endchar;
+
+beginchar(121,0,math_axis#,0);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=math_axis;
+pos1(rule_thickness,90);
+pos2(1.5rule_thickness,180);
+pos0(rule_thickness,90);
+pos3(bar,180); pos4(bar,180);
+z4=z0+ dir (180-45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z3=z0+ dir (180+45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z2r=z0; %was z2l
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z4-z9}z4r---{z9-z4}z4l..z2l--cycle;
+filldraw z2l{down}..{left}z0l--z2r--cycle;
+endchar;
+
+
+beginchar(122,0,math_axis#,0);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=math_axis;
+pos2(1.5rule_thickness,180);
+pos0(rule_thickness,90);
+pos3(bar,180); pos4(bar,180);
+z4=z0+ dir (180-45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z3=z0+ dir (180+45) xscaled ((3u++.24asc_height)+eps-rule_thickness) yscaled ((3u++.24asc_height)+eps-rule_thickness);
+z2r=z0;   % was z2l
+z9=.381966[.5[z3,z4],z0];
+pickup crisp.nib;
+filldraw z2r..{z3-z9}z3r---{z9-z3}z3l..z2l--cycle;
+filldraw z2l{up}..{left}z0r--z2r--cycle;
+endchar;
+
+compute_spread(.45x_height#,.55x_height);
+beginchar(123,spread#,math_axis#,0#);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=math_axis;
+numeric delta; delta=3u++.24asc_height;
+z4=z0+ dir (90) xscaled spread yscaled spread;
+pickup rule.nib;
+rt x40=hround(w);
+y40=good.y 1/2[y0,y4];
+draw z0{right}..z40..{left}z4;
+endchar;
+
+beginchar(124,spread#,math_axis#,0#);
+adjust_fit(0,0); pickup rule.nib;
+x0=0;
+y0=math_axis;
+z4=z0+ dir (-90) xscaled spread yscaled spread;
+pickup rule.nib;
+rt x40=hround(w);
+y40=good.y 1/2[y0,y4];
+%draw z0..{z4-z0}z40..z4;
+draw z0{right}..z40..{left}z4;
+endchar;
+
+
+beginchar(125,18u#,math_axis#,0#);
+adjust_fit(0,0);
+x0=hround 0; x1=hround(w);
+y0=math_axis; y1=math_axis;
+numeric theta,delta; theta=angle(z1-z0);
+delta=3u;
+z2=.5/6[z0,z1];
+z8=5.5/6[z0,z1];
+z3=1/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z5=3/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z7=5/6[z0,z1] + dir (90+theta) xscaled (delta+eps) yscaled (delta+eps);
+z4=2/6[z0,z1] + dir -(90-theta) xscaled (delta+eps) yscaled (delta+eps);
+z6=4/6[z0,z1] + dir -(90-theta) xscaled (delta+eps) yscaled (delta+eps);
+
+pickup pencircle scaled rule_thickness;
+draw z0--z2--z3--z4--z5--z6--z7--z8--z1;
+endchar;
+
+bye.
+

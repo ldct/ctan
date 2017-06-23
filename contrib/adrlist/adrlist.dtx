@@ -1,0 +1,227 @@
+% \title{Addresslists with \LaTeX}
+% \author{Tobias Spribille}
+% \maketitle
+%\iffalse
+%<*driver>
+\documentclass{ltxdoc}
+\begin{document} \DocInput{adrlist.dtx} \end{document}
+%</driver>
+%\fi
+% \section{User's Guide} \DescribeMacro{\ForEachAdress}
+%  The package |adrlist| provides the macro |ForEachAddress| as follows:
+%
+%  |\ForEachAdress{|\meta{addressfile}|}{|\meta{commands}|}|
+%
+%  \noindent The parameters are:
+%  \begin{description}
+%   \item[addressfile] Name of a file containing the addresses in the
+%   following structure: \label{fileformat}
+% 
+%  \DeleteShortVerb{\|}\MakeShortVerb{\!}
+%  \begin{tabular}{|l|l|}
+%   \hline
+%   !<title>! & Title, degree, e.g. "Dipl.-Inf."\\ \hline
+%   !<opening>! & how to address the person \\ \hline
+%   !<sex>! & the sex, for grammatical correctness \\ \hline
+%   !<first name>! & First name \\ \hline
+%   !<name>! & Name \\ \hline
+%   !-- begin address --! & delimiter \\ \cline{2-2}
+%   n lines of address & address with variable length\\ \cline{2-2}
+%   !-- end address --! & delimiter, to be typed exactly this way \\ \hline
+%   Telephone: !<telephone number>! &  These entries may appear \\ \cline{1-1}
+%   Telefax: !<telefax number>! &  in any order. They are \\ \cline{1-1}
+%   EMail: !<eMail address>! &  distinguished through the \\ \cline{1-1}
+%   Private number: !<private number>! &  keywords before the colon ":".\\
+%  \hline
+%  \end{tabular}
+%  \DeleteShortVerb{\!}\MakeShortVerb{\|}
+%  \item[commands] \LaTeX-commands to typeset the read data. You can use these
+%  commands defined by the package in order to access the address data:
+%
+%  \DeleteShortVerb{\|}\MakeShortVerb{\!}
+%  \begin{tabular}{|l|l|}
+%  \hline
+%  !\Title! & Title \\ \hline
+%  !\Opening! & Opening \\ \hline
+%  !\Sex! & Sex \\ \hline
+%  !\Firstname! & First name \\ \hline
+%  !\Name! & Name\\ \hline
+%  !\Address! & Address. The lines are separated by !\\! \\ \hline
+%  !\Telephone! & Telephone number \\ \hline
+%  !\Telefax! & Telefax number \\ \hline
+%  !\EMail! & EMail address \\ \hline
+%  !\PrivateNumber! & Private telephone number \\
+%  \hline
+%  \end{tabular}
+%  \DeleteShortVerb{\!}\MakeShortVerb{\|}
+%  \end{description}
+% \section{The Macros}
+% \subsection{Declarations}
+%  This file provides the macro package |adrlist|. For various loops and conditions
+%  we require the |ifthen|-package.
+%    \begin{macrocode}
+\ProvidesPackage{adrlist}[1995/12/21]
+\RequirePackage{ifthen}
+%    \end{macrocode}
+%  Declare some variables: |Rest| controls the outer loop, which reads several
+%  entries out of the address database. If there are lines left in the file, it is true.
+%  |AddressLoop| is used for reading the adresses with variable
+%  length. |Communication| is a counter to repeat four times the recognition of the
+%  keywords for phone number, email etc.
+%    \begin{macrocode}
+\newboolean{AddressLoop}
+\newboolean{Rest}\setboolean{Rest}{true}
+\newcounter{Communication}
+%    \end{macrocode}
+% \subsection{Helper macros}
+% \begin{macro}{\ifstringcompare}
+%    Compare two entire strings, given in the two parameter variables, and not only
+%    tokens, like \TeX{} does.
+%    \begin{macrocode}
+\newcommand{\ifstringcompare}[4]{%
+  \begingroup
+    \let\protect=\noexpand
+    \edef\0{#1}\edef\1{#2}%
+  \expandafter\endgroup\ifx\0\1#3\else#4\fi}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\concat}
+% Concatenate two lines of the address, with |\\| as a delimiter, as it is required
+% by e.g. the |letter| style.
+%   \begin{macrocode}
+\newcommand{\concat}[2]{#1\\#2}
+%    \end{macrocode}
+% \end{macro} 
+% \begin{macro}{\keyword}
+% Extract the keyword out of a line of the form \meta{keyword}|:|\meta{contents},
+% i.e. the part before the colon. The pipe symbol may be replaced by any other
+% character that won't appear in the address data.
+%    \begin{macrocode}
+\def\keyword#1:#2|{#1}
+%    \end{macrocode}
+% \end{macro}
+% \begin{macro}{\contents}
+% Like |\keyword|. Extracts the contents of the line, e.g. the phone number.
+%    \begin{macrocode}
+\def\contents#1:#2|{#2}
+%    \end{macrocode}
+% \end{macro}
+% \newpage
+% \subsection{The user macro}
+% \begin{macro}{\ForEachAddress}
+% This macro is the one the user directly calls. It opens the file given in |#1| and
+% reads all the addresses in a loop. For each address the \LaTeX-commands in |#2|
+% are executed to typeset the address in the document. After the whole file is read,
+% it is closed again.
+%    \begin{macrocode}
+\newcommand{\ForEachAddress}[2]
+{
+ \newread\File \openin\File=#1
+ \whiledo{\boolean{Rest}}
+ { \ReadNextAddress{\File}
+   \ifthenelse{\boolean{Rest}}{#2}{}
+ }
+ \closein\File
+}
+%    \end{macrocode}
+% \end{macro}
+% \subsection{Main macrocode}
+% \begin{macro}{\ReadNextAddress}
+% Here we read the next address out of the file given as |#1| and save the read data
+% into the respective variables. For the structure of the address file and
+% the variable names, confer to section \ref{fileformat}.
+%    \begin{macrocode}
+\newcommand{\ReadNextAddress}[1]{
+ \ifthenelse{\boolean{Rest}}{
+   \read#1 to \Title
+   \ifeof#1\setboolean{Rest}{false}
+   \else % If last address already is read, EOF should appear here
+     \ifthenelse{\boolean{Rest}}
+                {\read#1 to \Opening
+                 \ifeof#1\setboolean{Rest}{false}\fi
+                }{}
+     \ifthenelse{\boolean{Rest}}
+                {\read#1 to \Sex
+                 \ifeof#1\setboolean{Rest}{false}\fi
+                }{}
+     \ifthenelse{\boolean{Rest}}
+                {\read#1 to \Firstname
+                 \ifeof#1\setboolean{Rest}{false}\fi
+                }{}
+     \ifthenelse{\boolean{Rest}}
+                {\read#1 to \Name
+                 \ifeof#1\setboolean{Rest}{false}\fi
+                }{}
+     \ifthenelse{\boolean{Rest}}
+                {\read#1 to \Dummy
+                 \ifeof#1\setboolean{Rest}{false}\fi
+                }{}
+     \setboolean{AddressLoop}{true}
+     \def\Emptystring{} \let\Address=\Emptystring
+     \def\Delimiter{-- end address -- }
+%    \end{macrocode}
+% Read Address, until |-- end address --| appears.
+%    \begin{macrocode}
+     \whiledo{\boolean{AddressLoop}}
+     {
+       \ifRest \read#1 to \Buffer \fi
+       \ifeof#1\setboolean{Rest}{false}\fi
+       \ifstringcompare{\Buffer}{\Delimiter}
+                       {\setboolean{AddressLoop}{false}}{}
+       \ifthenelse{\boolean{AddressLoop}}
+       {
+         \ifstringcompare{\Emptystring}{\Address}
+         {
+           \let\Address=\Buffer % Don't add delimiters the first time
+         }
+         {
+            \begingroup     % keep redefinition of \\ local
+            \let\protect=\noexpand
+            \def\\{\noexpand\\}% make \\ not expandable
+           \edef\x{\endgroup
+            \def\noexpand\Address{\concat\Address\Buffer}%
+           }\x
+         }
+       }{}
+    }
+%    \end{macrocode}
+% Four informations are left. The keyword is extracted from |\Buffer| and compared
+% with the defined keywords. If the comparison succeeds, the correct variable is set.
+%    \begin{macrocode}
+    \def\KeyWTelephone{Telephone}
+    \def\KeyWTelefax{Telefax}
+    \def\KeyWEMail{EMail}
+    \setcounter{Communication}{0}
+    \whiledo{\value{Communication}<4}%
+    {
+      \ifthenelse{\boolean{Rest}}{
+        \read#1 to \Buffer
+        \edef\KeyW{\expandafter\keyword\Buffer|}
+        \ifstringcompare{\KeyW}{\KeyWTelephone}
+        {
+          \edef\Telephone{\expandafter\contents\Buffer|}
+        }
+        {
+          \ifstringcompare{\KeyW}{\KeyWTelefax}
+          {
+            \edef\Telefax{\expandafter\contents\Buffer|}
+          }
+          {
+            \ifstringcompare{\KeyW}{\KeyWEMail}
+            {
+              \edef\EMail{\expandafter\contents\Buffer|}
+            }
+            {
+              \edef\PrivateNumber{\expandafter\contents\Buffer|}
+            }
+          }
+        } 
+        \ifeof#1\setboolean{Rest}{false}\fi
+      }{}
+      \stepcounter{Communication}
+   }
+   \fi
+ }{}
+}
+%    \end{macrocode}
+% \end{macro}

@@ -1,0 +1,580 @@
+% makeindex < aebpro_man.idx > aebpro_man.ind
+\documentclass{article}
+\usepackage[fleqn]{amsmath}
+\usepackage[
+    web={centertitlepage,designv,
+        forcolorpaper,tight*,latextoc,pro},
+    eforms,aebxmp
+]{aeb_pro}
+\usepackage{aeb_mlink}
+\usepackage{graphicx,array}
+%\usepackage{myriadpro}
+%\usepackage[usecmtt]{myriadpro}
+\usepackage[altbullet]{lucidbry}
+
+%\usepackage{makeidx}
+%\makeindex
+\usepackage{acroman}
+\usepackage[active]{srcltx}
+
+\def\anglemeta#1{$\langle\textit{\texttt{#1}}\rangle$}
+\def\meta#1{\textit{\texttt{#1}}}
+\def\darg#1{\texttt{\{#1\}}}
+\def\takeMeasure{\bgroup\obeyspaces\takeMeasurei}
+\def\takeMeasurei#1{\global\setbox\webtempboxi\hbox{\ttfamily#1}\egroup}
+\def\bxSize{\wd\webtempboxi+2\fboxsep+2\fboxrule}
+\let\pkg\textsf
+\let\env\texttt
+\let\opt\texttt
+\let\app\textsf
+\let\uif\textsf
+
+\edef\amtIndent{\the\parindent} %\leftmargini
+\def\SUB#1{${}_{\text{#1}}$}
+
+\newdimen\aebdimen \aebdimen\abovedisplayskip
+\newcommand\bVerb[1][]{\begingroup#1\vskip\aebdimen\parindent0pt}%
+\def\eVerb{\vskip\aebdimen\endgroup\noindent}
+
+\def\cmdtitle#1{\texorpdfstring{\protect\cs{#1}}{\textbackslash{#1}}}
+
+%\margins{.25in}{.25in}{24pt}{.25in} % left,right,top, bottom
+%\screensize{6.5in}{5in} % height, width
+
+\university{\AcroTeX.Net}
+\title{The aebXMP Package\texorpdfstring{\\[1em]}{: }Updating XMP using E4X and {\LaTeX}}
+\author{D. P. Story}
+\Authors{{D. P. Story}{J\u00FCrgen Gilg}}
+\subject{Documentation of the AeBXMP Package}
+\Keywords{XMP,E4X,Adobe Acrobat,JavaScript}
+\email{dpstory@acrotex.net}
+\version{2.5a, 2017/02/17}
+\talksite{\url{www.acrotex.net}}
+\copyrightStatus{True}
+\copyrightNotice{Copyright (C) 2006-\the\year, D. P. Story}
+\copyrightInfoURL{http://www.acrotex.net}
+\authortitle{Programming and Development, AcroTeX.Net}
+\descriptionwriter{Testing and Promotions Department, AcroTeX.Net}
+\customProperties
+{%
+    {name=Developer,value={D. P. Story, Esq.}}
+    {name=Motivator,value=J\u00FCrgen Gilg}
+}
+
+\DeclareInitView{windowoptions=showtitle}
+
+\def\dps{$\hbox{$\mathfrak D$\kern-.3em\hbox{$\mathfrak P$}%
+   \kern-.6em \hbox{$\mathcal S$}}$}
+
+\def\AcroTeX{Acro\negthinspace\TeX}
+
+\makeatletter
+\@mparswitchfalse\reversemarginpar
+\makeatother
+
+\makeatletter
+\renewcommand{\paragraph}
+    {\@startsection{paragraph}{4}{0pt}{6pt}{-3pt}{\bfseries}}
+\renewcommand*\l@subsection{\@dottedtocline{2}{1.5em}{2.5em}}
+\renewcommand*\descriptionlabel[1]{\hspace\labelsep
+    \normalfont #1}
+\newcommand{\aebDescriptionlabel}[1]{%
+    \setlength\dimen@{\amtIndent+\labelsep}%
+    {\hspace*{\dimen@}#1}}
+\makeatother
+\newenvironment{aebDescript}
+    {\begin{list}{}{\setlength{\labelwidth}{0pt}%
+        \setlength{\leftmargin}{\leftmargin}%
+        \setlength{\leftmargin}{\leftmargin+\amtIndent}%
+        \setlength\itemindent{-\leftmargin}%
+        \let\makelabel\aebDescriptionlabel
+    }}{\end{list}}
+
+%\pagestyle{empty}
+%\parindent0pt\parskip\medskipamount
+
+
+\definePath\bgPath{"C:/Users/Public/Documents/ManualBGs/Manual_BG_Print_AeB.pdf"}
+\begin{docassembly}
+\addWatermarkFromFile({
+    bOnTop:false,
+    cDIPath:\bgPath
+});
+\executeSave();
+\end{docassembly}
+
+
+\begin{document}
+
+\maketitle
+
+\changelinkcolorto{black}
+
+\tableofcontents
+
+\changelinkcolorto{webgreen}
+
+
+\section{Introduction}
+
+The motivation for the development of this package came from
+Herr~J\"{u}rgen Gilg, who had a need to fill in the metadata fields
+beyond those normally populated by using \pkg{hyperref}:
+\textsf{Title}, \textsf{Author}, \textsf{Subject} and
+\textsf{Keywords}. Of particular interest to him were the metadata
+fields \textsf{Copyright Status}, \textsf{Copyright Notice} and
+\textsf{Copyright Info URL}.
+
+After doing some research on the CTAN archives, I came across the
+\textsf{hyperxmp} package by Scott Pakin.\begin{NoHyper}\footnote{The reader is
+invited to read the documentation of the \textsf{hyperxmp}, as
+contained therein is a good discussion of XMP (eXtensible Metadata
+Platform).}\end{NoHyper} The package works well with \textsf{pdftex} and
+\textsf{dvipdfm}, but has a bit of a problem when using the
+distiller. For this reason, I sought my own solution to the problem.
+
+As a beta tester of \app{Acrobat~8 Professional}, I had the opportunity to
+use some of the new capabilities of the JavaScript interpreter as an
+alternate approach to the one used by Mr.~Patkin. The JavaScript
+version~1.6 interpreter, the one used in version 8, comes with E4X,
+an XML parser, built in.  I could see that E4X could be exploited to
+manipulate the XMP data, and this was my approach.
+
+\section{Requirements}
+
+The techniques used by the \textsf{aebxmp} package to update the XMP data
+require the \textcolor{blue}{{\AcroTeX} eDucation Bundle} (AeB), freely
+available from \url{www.acrotex.net}.  Because E4X is used, we also require
+\app{Acrobat~8 Pro} or later, and, since you have \textsf{Acrobat~8} or
+later, my \LaTeX ing friend, this package will work for you with all
+workflows: \app{dvips/Distiller}, \app{pdflatex} (including \app{lualatex}),
+and \app{xelatex}. To emphasize, for non-\app{Distiller} workflow, the full
+\app{Acrobat} application is still required to be your default {\PDF} viewer
+on your own computer.
+
+\section{The Test File}
+
+The package \textsf{aebxmp} has a simple test file,
+\textsf{aebxmp\_test.tex}, which is found in the \texttt{examples} folder.
+After you build the {\PDF} and open the document in \app{Acrobat} for the first time,
+the new metadata is imported; \marginpar{\raggedleft save the document}\emph{it is important to save the document} after
+the data is imported.
+
+To use this package, you must have, in addition to Acrobat~8 Pro (or later),
+installed on your computer a standard {\TeX} system, including the
+latest version of AeB.\footnote{AeB can be downloaded from any CTAN
+server, from \url{www.math.uakron.edu/~dpstory/webeq.html}, or from
+\url{www.acrotex.net}.}
+
+\section{Metadata}
+
+The \pkg{hyperref} package provides basic metadata support, providing
+a mechanism for providing the title, author, subject, and keywords. Beyond
+these, we can include additional metadata.
+
+\subsection{Author, Author}
+
+The \pkg{hyperref} package allows you to specify an author or authors;
+the \textsf{Web} package uses this through the \cs{title} command, which
+passes its argument on to \pkg{hyperref} of inclusion in the PDF Info
+dictionary. The authors names are not individually assessable through
+JavaScript. In Acrobat~9, I believe, the JavaScript API includes the
+\texttt{Doc.info.Authors} property, its value is an array of authors,
+We can access each author using array notation: First author is
+\texttt{this.info.Authors[0]}, second author is
+\texttt{this.info.Authors[1]}, and so on. The number of authors is
+obtained using the length property of arrays, \texttt{this.info.Authors.length}.
+
+The \pkg{aebxmp} interface to this is through the \cs{Authors} command. It takes
+a list of authors, each enclosed in braces, no commas (,) between the
+authors. Like so:
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\Authors{{D. P. Story}{J\u00FCrgen Gilg}}
+\end{Verbatim}
+Using \cs{Authors} will overwrite the author(s) named in the \cs{author}
+command (of \pkg{web}), or more generally, passed to
+\cs{hypersetup\darg{pdfauthor=\darg{\anglemeta{author}}}} of
+\pkg{hyperref}.\begin{NoHyper}\footnote{This may be to your advantage when
+using \textsf{Web}; the value of \cs{author} is used to display the author(s)
+of the document, you may want to present the names one way on the title page,
+for example, and another way in the \textsf{Description} tab of the
+\textsf{Document Properties} dialog box.}\end{NoHyper}
+
+If you do use \cs{Authors} and overwrite the author(s) as passed through
+\pkg{hyperref}, the first author listed will be the one returned by
+\texttt{this.info.Author} (a JavaScript property) in the \uif{Document
+Properties} dialog box (\texttt{Ctrl+D}), all authors are listed in a
+semi-colon delimited list.
+
+
+\subsection{The \texorpdfstring{\cs{Keywords}}{\textbackslash{Keywords}} Command}
+
+The \cs{Authors} command utilizes \texttt{Doc.info.Authors}, which takes
+an array of authors names. There is no such property available for
+\texttt{Doc.info.Keywords}, the value of this property takes only a string
+of keywords.  The keywords are stored by Acrobat in three ways,
+(1) \texttt{pdf:Keywords}; (2) in the \textbf{Info} dictionary; and (3) in
+\texttt{dc:subject}. In the latter case, \texttt{dc:subject} takes a \texttt{Bag}
+of subjects (keywords). A \texttt{Bag}, in XMP parlance, is an unordered array.
+
+The command \cs{Keywords} takes a comma delimited list of keywords. Notice
+the word is capitalized to distinguish it from \cs{keywords}, which is
+defined in the \textsf{Web} package as the interface to inserting the
+keywords, via \pkg{hyperref}, into the \textbf{Info} dictionary.
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\Keywords{AcroTeX.Net,XMP,E4X,Adobe Acrobat,JavaScript}
+\end{Verbatim}
+The command takes each comma-delimited list of keywords and
+inserts each into the \texttt{dc:subject} part of the metadata.
+For this document, the keywords appear in the XML metadata as
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+<dc:subject>
+   <rdf:Bag>
+      <rdf:li>AcroTeX.Net</rdf:li>
+      <rdf:li>XMP</rdf:li>
+      <rdf:li>E4X</rdf:li>
+      <rdf:li>Adobe Acrobat</rdf:li>
+      <rdf:li>JavaScript</rdf:li>
+   </rdf:Bag>
+</dc:subject>
+\end{Verbatim}
+When the document is first opened, the following command is executed
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+this.info.Keywords="AcroTeX.Net; XMP; E4X; Adobe Acrobat; JavaScript"
+\end{Verbatim}
+Here, I have broken the string across lines for readability. This inserts
+the same list of keywords into the \textbf{Info} dictionary.
+
+When you executed \texttt{this.info.Keywords} in the console, you'll get
+%
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+AcroTeX.Net; XMP; E4X; Adobe Acrobat; JavaScript
+\end{Verbatim}
+as expected.
+
+To access the individual keywords, I've defined an array of keywords,
+\texttt{aKeywords}. It takes as its argument the index of the
+keyword you want to get; For example, executing \texttt{aKeywords[0]} in
+the console returns a value of \texttt{"AcroTeX.Net"}, while
+\texttt{aKeywords[4]} returns a value of \texttt{"JavaScript"}. If you
+execute \texttt{aKeywords[5]}, a value of \texttt{undefined} is returned.
+The number of keywords is \texttt{aKeywords.length}.
+
+Listing the keywords may be of interest to someone, it is an exercise to
+me.\begin{NoHyper}\footnote{Actually, this is the way \textbf{Acrobat} handles a
+comma-delimited list of keywords when the words are entered through
+the user interface; it puts them in a \texttt{Bag}.}\end{NoHyper}
+
+The command \cs{xmpDoNotInsKWScript}, when expanded in the preamble, will
+turn off the creation of the array \texttt{aKeywords}.
+
+\subsection{Additional Metadata}
+
+As mentioned previously, the \pkg{aebxmp} package addresses three areas of
+interest: Setting the \uif{Copyright Status}, \uif{Copyright Notice}, and the
+\textsf{Copyright Info URL}. Obviously, other elements of the XMP can be
+addressed. To that end, the \pkg{aebxmp} package defines five new {\LaTeX}
+commands to populate the values of the five metadata fields \textsf{Copyright
+Status}, \uif{Copyright Notice}, \uif{Copyright Info URL}, \uif{Author
+Title}, and \uif{Writer Description}. Values for the arguments of these
+commands are documented below.
+\begin{description}
+\item[\cs{copyrightStatus\darg{True|False}}:] If \texttt{True},
+    \uif{Copyright Status} is set to \texttt{Copyrighted}; if
+    \texttt{False}, \textsf{Copyright Status} is set to \uif{Public
+    Domain}. If left empty, the status is set to \uif{Unknown}.
+
+    Unless you've executed \cs{xmpDoNotInsKWScript} in the preamble, the
+    \pkg{aebxmp} defined JavaScript function \texttt{getCopyrightStatus()}
+    is available. The function returns the copyright status:
+    \texttt{Copyrighted}, \texttt{Public Domain}, and \texttt{Unknown}.
+
+\item[\cs{copyrightNotice\darg{\anglemeta{text}}}:] The \anglemeta{text} of
+    the \textsf{Copyright Notice} is defined
+
+\item[\cs{copyrightInfoURL\darg{\anglemeta{URL}}}:] The \anglemeta{URL} to
+    the copyright information
+
+    Unless you've executed \cs{xmpDoNotInsKWScript} in the preamble, the
+    \pkg{aebxmp} defined JavaScript function \texttt{getCopyrightInfoURL()}
+    is available. The function returns the copyrightinfo URL (\anglemeta{URL}).
+
+\item[\cs{authortitle\darg{\anglemeta{text}}}:] The \anglemeta{text} appears
+    in the \textsf{Author Title} line on the \textsf{Additional Metadata}
+    dialog box. This is a \uif{Photoshop} property. (See the \uif{Advanced}
+    category in the left panel.)
+
+    Unless you've executed \cs{xmpDoNotInsKWScript} in the preamble, the
+    \pkg{aebxmp} defined JavaScript function \texttt{getAuthorTitle()}
+    is available. The function returns the authortitle (\anglemeta{text}).
+
+\item[\cs{descriptionwriter\darg{\anglemeta{text}}}:] The \anglemeta{text}
+    appears in the \textsf{Description Writer} line on the \uif{Additional
+    Metadata} dialog box. This is a \uif{Photoshop} property. (See the
+    \uif{Advanced} category in the left panel.)
+
+    Unless you've executed \cs{xmpDoNotInsKWScript} in the preamble, the
+    \pkg{aebxmp} defined JavaScript function \texttt{getDescriptionWriter()}
+    is available. The function returns the descriptionwriter (\anglemeta{text}).
+
+\end{description}
+
+\newtopic\noindent
+For example, for this document, we have in the preamble,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\copyrightStatus{True}
+\copyrightNotice{Copyright (C) 2006-\the\year, D. P. Story}
+\copyrightInfoURL{http://www.acrotex.net}
+\authortitle{Programming and Development, AcroTeX.Net}
+\descriptionwriter{Testing and Promotions Department, AcroTeX.Net}
+\end{Verbatim}
+Enter unicode (\cs{uXXXX}) directly into the \cs{copyrightNotice} and \cs{copyrightInfoURL} fields; for example,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\copyrightNotice{Copyright (C) 2006-\the\year, J\u00FCrgen Gilg}
+\end{Verbatim}
+Unicode can be used all the metadata commands discussed in the manual.
+
+The \cs{copyrightNotice} can take multiple arguments, one for each
+language. The syntax is
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont,commandchars=!()]
+\copyrightNotice{%
+    {[!anglemeta(lang!SUB(1))] copyright in this language}
+    {[!anglemeta(lang!SUB(2))] copyright in this language}
+    ...
+}
+\end{Verbatim}
+The first copyright item listed is also counted as the default language
+and will be marked as \texttt{x-default} as the value of the
+\texttt{xml:lang} attribute. Contrary to {\LaTeX} custom, the brackets do
+not indicate optional arguments, they are required except for the first
+item in the list. Each group, which are enclosed in braces
+(\texttt{\{\}}), represents a copyright notice; the part enclosed on
+brackets (\texttt{[]}) contains the language designator. This is a
+two-letter code to indicate the language; it can also have a sub-tag to
+indicate a country (see \texttt{en-US} in example below). See the ISO
+639-1 standard, and the RFC 3066 standard, referenced at the end of the
+manual, for more information on language codes.
+
+For example,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\copyrightNotice{%
+    {[en-US]Copyright (C) \the\year, D. P. Story}
+    {[fr]Copyright (C) \the\year, D. P. Story}
+    {[de]Copyright (C) \the\year, D. P. Story}
+}
+\end{Verbatim}
+
+There is also a \cs{sourceFile} command that takes one argument. If
+\cs{sourceFile} does not appear in the preamble, the \cs{jobname.tex} is
+written to the metadata (as part of the Dublin Core Properties). If
+\verb!\sourceFile{}! is expanded in the preamble, no source file data will
+be inserted into the metadata. Finally, executing the command
+\verb!\sourceFile{hw01_1100.tex}! causes the string
+\texttt{hw01\_1100.tex} to be written as the value of the
+\texttt{dc:source} key.
+
+
+\subsection{\texorpdfstring{\cs{Title}, \cs{Subject}, and \cs{metaLang}}
+    {\textbackslash{Title}, \textbackslash{Subject}, \textbackslash{metaLang}}}
+
+The Title and Subject keys can also be recorded with alternate languages;
+for this reason, \textsf{aebxmp} defines \cs{Title} and \cs{Subject}.
+The syntax of these two are similar to \cs{copyrightNotice}, described
+above
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!(),fontsize=\fontsize{9}{11}\selectfont]
+\Title{%
+    {[!anglemeta(lang!SUB(1))] title in this language}
+    {[!anglemeta(lang!SUB(2))] title in this language}
+    ...
+}
+\Subject{%
+    {[!anglemeta(lang!SUB(1))] subject in this language}
+    {[!anglemeta(lang!SUB(2))] subject in this language}
+    ...
+}
+\end{Verbatim}
+The first one listed is also designated as the default language, marked
+with \texttt{x-default}.
+
+For example,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\Title{%
+    {[en-US]Testing the aebxmp Package}
+    {[fr]Test du paquet aebxmp}
+    {[de]Testen des aebxmp Pakets}
+}
+\Subject{%
+    {[en-US]Test file for using E4X to update the XMP Data Model}
+    {[fr]Fichier de test utilisant E4X pour mettre à jour
+            le modèle de données XMP}
+    {[de]Testdatei für die Verwendung von E4X, um das XMP Daten
+            Modell zu aktualisieren}
+}
+\end{Verbatim}
+Note that literal characters such as \texttt{\"{u}} are also
+recognized so that unicode is not needed here.
+
+The arrays \texttt{aTitle} and \texttt{aSubject} are defined in the
+document, unless the command \cs{xmpDoNotInsKWScript} is executed in the
+preamble. For example, if you executed \texttt{aTitle[0]} in the console
+(or part of a JavaScript action of a button), the array element is seen to
+be \texttt{"[x-default]:\,Testing the aebxmp Package"}, while
+\texttt{aTitle[1]} is \texttt{"[en-US]:\,Testing the aebxmp Package"}. The
+array \texttt{aSubject} behaves similarly.
+
+The data passed by \cs{Title} and \cs{Subject} overrides the data passed
+by the \textsf{web} commands \cs{title} and \cs{subject}, and overrides
+the data passed by the \pkg{hyperref} keys \texttt{pdftitle} and
+\texttt{pdfsubject}.
+
+Special characters need to be entered using unicode (\cs{uXXXX}), not the
+octal or unicode generated by \pkg{hyperref}. Do not use {\LaTeX}
+markup that expands to special characters inside the arguments of any of
+the commands defined in this package.
+
+The \cs{metaLang} command allows you to document the languages used in
+the metadata. Multiple languages may be specified.
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!(),fontsize=\fontsize{9}{11}\selectfont]
+\metaLang{!anglemeta(lang!SUB(1)),!anglemeta(lang!SUB(2)),..,!anglemeta(lang!SUB(n))}
+\end{Verbatim}
+For example
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\metaLang{en,en-US,fr,de}
+\end{Verbatim}
+
+
+\subsection{Custom Document Properties}
+You can define custom properties using the \cs{customProperties} command.
+\bVerb
+\begin{minipage}{.5\linewidth}
+\def\1{\textbf{Standard Syntax}}%
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!(),fontsize=\fontsize{9}{11}\selectfont]
+!1
+\customProperties
+{%
+    {name=!anglemeta(name!SUB(1)),value=!anglemeta(value!SUB(1))}
+    {name=!anglemeta(name!SUB(2)),value=!anglemeta(value!SUB(2))}
+}
+\end{Verbatim}
+\end{minipage}\hfil
+\begin{minipage}{.5\linewidth}
+\def\1{\textbf{Colon Syntax}}%
+\begin{Verbatim}[xleftmargin=\amtIndent,commandchars=!(),fontsize=\fontsize{9}{11}\selectfont]
+!1
+\customProperties
+{%
+    {name:!anglemeta(name!SUB(1)),value:!anglemeta(value!SUB(1))}
+    {name:!anglemeta(name!SUB(2)),value:!anglemeta(value!SUB(2))}
+}
+\end{Verbatim}  
+\end{minipage}
+\eVerb
+The `colon' syntax is also recognized, but do not mix the two syntaxes together, use either all equal signs or all colons.
+
+The value of the \texttt{name} key requires a unique name, which must not
+be one of the standard property names \texttt{Title}, \texttt{Author}, \texttt{Subject}, \texttt{Keywords},
+\texttt{Creator}, \texttt{Producer}, \texttt{CreationDate}, \texttt{ModDate}, and
+\texttt{Trapped}. The value of \texttt{name} shall consist of the
+characters \texttt{A--Z}, \texttt{a--z}, and \texttt{0--9}, and beginning with a
+letter. The value may contain unicode, for example, in the preamble of
+this document we have,
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\customProperties
+{%
+    {name=Developer,value={D. P. Story, Esq.}}
+    {name=Motivator,value=J\u00FCrgen Gilg}
+}
+\end{Verbatim}
+Instead of unicode, this same set of custom properties can be defined as
+follows:
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{11}\selectfont]
+\customProperties
+{%
+    {name=Developer,value={D. P. Story, Esq.}}
+    {name=Motivator,value=Jürgen Gilg}
+}
+\end{Verbatim}
+That is, using literal characters, if your editor supports it.
+
+The properties may be accessed through the \texttt{info} property of the
+\texttt{Doc} object. The button (on the left) \marginpar{\hfill\pushButton[\TU{Press to see the document
+properties}\CA{Info}
+\A{\JS{%
+    console.show();\r
+    console.clear();\r
+    for (var o in this.info)\r\t
+        console.println("info."+o+"="+this.info[o]);\r
+    if (aKeywords!=undefined) {\r\t
+    	console.println("List Keywords:");\r\t
+    	for (var i=0; i< aKeywords.length; i++){\r\t\t
+        	console.println(" "+aKeywords[i]);\r\t
+    	}\r
+    }
+}}]{info}{}{11bp}}
+opens the console debugger window and displays all the document
+properties.
+
+
+The custom properties may be viewed using the user interface; press
+\texttt{Ctrl+D} and choose the \textsf{Custom} tab.
+
+For more information on this topic, see
+\href{http://www.adobe.com/devnet/xmp.html}{%
+Part 3, Storage in Files}, section 3.2 on \textbf{Native metadata in PDF files}, in particular,
+see section~3.2.1 concerning user-defined document properties.
+
+
+\section{Checking for validity}
+
+While looking at this file in Acrobat (or Adobe Reader), press
+\texttt{Ctrl+D} to get the \textsf{Document Properties} dialog box.
+Select the \textsf{Description} tab and click \textsf{Additional
+Metadata}. Since this document was built using the \textsf{aebxmp}
+package, with the declarations
+
+\begin{Verbatim}[xleftmargin=\amtIndent,fontsize=\fontsize{9}{12}\selectfont]
+\copyrightStatus{True}
+\copyrightNotice{Copyright (C) 2006-\the\year, D. P. Story}
+\copyrightInfoURL{http://www.acrotex.net}
+\authortitle{Programming and Development, AcroTeX.Net}
+\descriptionwriter{Testing and Promotions Department, AcroTeX.Net}
+\end{Verbatim}
+
+\newtopic In the Advanced Metadata dialog box, you should see,
+\begin{itemize}
+    \item[] \textsf{Copyright Status}: \texttt{Copyrighted}
+    \item[] \textsf{Copyright Notice}: \texttt{Copyright (C) 2006-\the\year, D. P. Story}
+    \item[] \textsf{Copyright Info URL}: \texttt{http://www.acrotex.net}
+    \item[] \textsf{Author Title}: \texttt{Programming and Development,
+    AcroTeX.Net}
+    \item[] \textsf{Description Writer}: \texttt{Testing and Promotions Department,
+    AcroTeX.Net}
+\end{itemize}
+in addition to the usual Document Title, Author, Description, and
+Keywords. I promise you that I did not enter these values through the user interface. \texttt{:-)}
+\section{Resources}
+
+\newtopic The resources for the development of this package are
+\begin{itemize}
+    \item \textsl{Standard ECMA-357: ECMAScript for XML (E4X) Specification},\\
+        {\small\url{http://www.ecma-international.org/publications/standards/Ecma-357.htm}}
+    \item \textsl{XMP Specification}, \url{http://www.adobe.com/devnet/xmp.html}
+    \item \textsl{Acrobat JavaScript Scripting Reference}, Version 8.0\\
+    \url{http://www.adobe.com/go/acrobat_developer}
+    \item \textsf{hyperxmp} package by Scott Pakin,
+    \url{http://ctan.org/pkg/hyperxmp}
+    \item The {\AcroTeX} System Tools, available for free download at \url{www.acrotex.net}. This is
+        a {\LaTeX}-based system.
+    \item ISO 639-1 two-letter abbreviation.\\
+    \url{http://www.loc.gov/standards/iso639-2/php/English_list.php}
+    \item IETF RFC 3066\\
+    \url{http://www.ietf.org/rfc/rfc3066.txt}
+
+% http://www.iana.org/assignments/language-subtag-registry
+
+\end{itemize}
+
+\newtopic\noindent
+Now, I simply must get back to my retirement. \dps
+
+\end{document}

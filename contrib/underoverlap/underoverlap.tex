@@ -1,0 +1,267 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                              %
+%  Copyright (c) 2013 - Michiel Helvensteijn - www.mhelvens.net                %
+%                                                                              %
+%  http://latex-concepts.googlecode.com                                        %
+%                                                                              %
+%  This work may be distributed and/or modified under the                      %
+%  conditions of the LaTeX Project Public License, either                      %
+%  version 1.3 of this license or (at your option) any later                   %
+%  version. The latest version of this license is in                           %
+%      http://www.latex-project.org/lppl.txt                                   %
+%  and version 1.3 or later is part of all distributions of                    %
+%  LaTeX version 2005/12/01 or later.                                          %
+%                                                                              %
+%  This work has the LPPL maintenance status `maintained'.                     %
+%                                                                              %
+%  The Current Maintainer of this work is Michiel Helvensteijn.                %
+%                                                                              %
+%  This work consists of the files underoverlap.tex and underoverlap.sty.      %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[a4paper]{packagedoc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Setup                                                                        %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\moretexcs{%
+	newUOLdecorator, UOLaugment,%
+	UOLoverbrace, UOLunderbrace,%
+	UOLoverline, UOLunderline,%
+	UOLfbox, bigstrut%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Global Changes                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\changes{0.0.1}{2013/02/02}
+  {initial version}
+
+\changes{0.0.1-r1}{2012/02/03}
+  {several improvements in the documentation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}                                                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\TeX\ and \LaTeX\ provide several commands for decorating parts of our
+equations---to direct attention or to indicate some special meaning. For
+\hbox{example}:
+
+\begin{latex-example-show}
+\[ n \times x = \overbrace{x + \cdots + x}^n \]
+\end{latex-example-show}
+
+\noindent I'm refering to the |\overbrace|, of course. You can even nest
+such commands:
+
+\begin{latex-example-show}
+\[ n \times x =
+   \overbrace{x + \underbrace{x + \cdots + x}_{n-2}{} + x}^n \]
+\end{latex-example-show}
+
+\noindent But they have an inherent limitation: they cannot overlap partially. For
+example, you cannot do the following out-of-the-box:
+\[
+	a + \UOLoverbrace{b +}[c + d]^x \UOLunderbrace{+ e}_y + f
+\]
+That's what this package is all about. It allows you to define new
+decorator commands that can partially overlap like this, as well as
+augment existing commands.
+
+\break
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Usage}                                                                %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemetamacro{UOL decorator}{
+  \marg{non-overlapping content} \oarg{overlapping content}
+}
+
+\noindent An \meta{UOL decorator} is a decorator command prepared by this
+package, such as |\UOLoverbrace| and |\UOLunderbrace| in the examples below.
+
+If you never use the optional argument at all, they should behave exactly like
+the simple \TeX\ commands |\overbrace| and |\underbrace|.
+
+As far as the `current \meta{UOL decorator}' is concerned, the optional
+content is placed directly to the right of the mandatory content and both are
+decorated as a whole. But a subsequent \meta{UOL decorator} will be
+expected directly following this one. Its decorator will cover also the
+optional content from the current command. That's how we can
+typeset the example from the introduction:
+
+\begin{latex-example-show}
+\[ a + \UOLoverbrace{b +}[c + d]^x \UOLunderbrace{+ e}_y + f \]
+\end{latex-example-show}
+
+\noindent
+\DescribeMacro{\UOLoverbrace}
+\DescribeMacro{\UOLunderbrace}
+\DescribeMacro{\UOLoverline}
+\DescribeMacro{\UOLunderline}
+The following \meta{UOL decorator} commands are predefined by the package,
+with obvious meaning:
+\begin{itemize}\parskip=0pt
+  \item |\UOLoverbrace|
+  \item |\UOLunderbrace|
+  \item |\UOLoverline|
+  \item |\UOLunderline|
+\end{itemize}
+
+\noindent Note that you are not limited to \emph{two} overlapping decorators:
+
+\begin{latex-example-show}
+\[ a + \UOLoverbrace{b +}[c]^x \UOLunderbrace{+}[d]_y
+   \UOLoverbrace{+ e}^z + f \]
+\end{latex-example-show}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\newUOLdecorator}{
+  \marg{command sequence} \marg{definition containing\/ {\upshape|\#1|}}
+}
+
+\noindent Using this command you can create a new \meta{UOL decorator}. The
+first argument is the desired command sequence and the second contains its
+definition.
+
+Define it as if a simple |\newcommand| were used for a traditional decorator.
+The package will automatically augment it to allow it to overlap. You can use
+|#1| to stand for the content provided by the user. The |\UOLoverline| decorator,
+for example, was defined as follows:
+
+\let\UOLoverline\relax
+\begin{latex-example}
+\newUOLdecorator\UOLoverline{\overline{#1}}
+\end{latex-example}
+
+\noindent But note that the result will not be satisfactory unless the decorator
+requires no \emph{horizontal space} to be allocated other than for its
+content. For the commands listed above, this is no problem. But this
+may not be true for all native decorations.
+
+For example, one may naively try to define a |\UOLfbox| command as follows:
+
+\begin{latex-example}
+\newUOLdecorator\UOLfbox{{%
+    \fboxsep=1.2pt \fboxrule=.8pt \fbox{$#1$}%
+}}
+\end{latex-example}
+
+\noindent To test it, we define the following command as well:
+
+\begin{latex-example}
+\newcommand\bigstrut{\vrule height 10pt depth 4pt width 0pt}
+\end{latex-example}
+
+\noindent The result will look like this:
+
+\begin{latex-example-show}
+\[ a + \UOLfbox{b +c +}[d]^x \UOLfbox{\bigstrut + e}^y + f \]
+\end{latex-example-show}
+
+\noindent The spacing is incorrect because |\fbox| allocates horizontal space for itself
+in addition to the space for its content and our package cannot take that into
+account. We'll have to correct for this manually:
+
+\let\UOLfbox\relax
+\begin{latex-example}
+\newUOLdecorator\UOLfbox{{%
+    \fboxsep=1.2pt \fboxrule=.8pt%
+    \kern-\fboxrule \kern-\fboxsep%
+    \fbox{$#1$}%
+    \kern-\fboxsep  \kern-\fboxrule%
+}}
+\end{latex-example}
+
+\begin{latex-example-show}
+\[ a + \UOLfbox{b +c +}[d]^x \UOLfbox{\bigstrut + e}^y + f \]
+\end{latex-example-show}
+
+\noindent Much better!
+
+Note that subscripts / superscripts will be placed directly
+below / above the content, even if the original decorator did not
+support that.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\UOLaugment}{
+  \marg{command sequence}
+}
+
+\noindent This command can augment an existing native decorator command to
+allow overlapping with its original name:
+
+\begin{latex-example-show}
+\UOLaugment\overline
+\UOLaugment\overbrace
+\[ a + \overline{b +}[c + d] \overbrace{\bigstrut + e}^y + f \]
+\end{latex-example-show}
+
+\noindent Note, however, the following assumptions on the original command:
+\begin{itemize}
+  \item It should not be a native \TeX\ command such as |\underline|.
+        Augmenting |\underline| like this actually seems to work fine, but the
+        \TeX\ specification can give us no guarantees about its behavior if
+        we do. 
+  \item It should originally only support one standard mandatory argument.
+        If it already supported optional arguments or other code structures
+        then that behavior will be lost after augmentation.
+\end{itemize}
+
+\noindent If these requirements are satisfied then the new command should be
+\emph{almost} backwards compatible. The exceptions being, of course,
+when you supply an optional argument or when it follows another
+\meta{UOL decorator} that does. The other exception is the behavior of
+subscripts and superscripts if the original decorator did not place them
+directly below / above the content.
+
+Of course, you can manually correct for these exceptions, but be aware
+that backwards compatibility is not completely guaranteed if you simply
+augment a decorator without any other measures.
+
+This package does not `pre-augment' any commands.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\describemacro{\UOLunaugment}{
+  \marg{command sequence}
+}
+
+\noindent Assuming that \meta{command sequence} has been augmented by the
+|\UOLaugment| command, using |\UOLunaugment| reverses the effects and
+\meta{command sequence} will once again have its original meaning.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Acknowledgements}                                                     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+I originaly read the following question on \url{http://tex.stackexchange.com}:
+\begin{itemize}
+  \item \url{http://tex.stackexchange.com/questions/12963}
+\end{itemize}
+The commands of this package are partially based on the technique described by
+Herbert and the command definitions proposed by Martin Scharrer.
+
+I got a lot of useful help from the answers to my own questions too:
+\begin{itemize}
+  \item \url{http://tex.stackexchange.com/questions/95786}
+  \item \url{http://tex.stackexchange.com/questions/95897}
+\end{itemize}
+Thanks in particular to David Carlisle and Hendrik Vogt.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}                                                                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

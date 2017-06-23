@@ -1,0 +1,219 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% aeb_tilebg.sty package,          2015-08-22          %%
+%% Copyright (C) 2006--2015  D. P. Story                %%
+%%   dpstory@acrotex.net                                %%
+%%   storyd@owc.edu                                     %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{aeb_tilebg}
+%<package> [2015/08/22 v1.1 Tile a Background (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\pdfstringdefDisableCommands{\let\\\textbackslash}%
+\EnableCrossrefs \CodelineIndex
+\OnlyDescription  % comment out for implementation details
+\begin{document}
+  \GetFileInfo{aeb_tilebg.sty}
+  \title{The \textsf{aeb\_tilebg} Package}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@acrotex.net}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{aeb_tilebg.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+% \section{Main Code}
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%    \begin{macrocode}
+\DeclareOption{uselltiling}{%
+    \AtEndOfPackage{%
+    \let\aeb@currentTileBkgrd\aeb@TileBkgrdLL}%
+%    \let\aeb@TileBkgrd\aeb@TileBkgrdLL}
+}
+\DeclareOption{draft}{\let\aeb@tilebg@draft=y\AtEndOfPackage{\aeb@DraftMode}}
+\let\aeb@tilebg@draft=n
+\DeclareOption{ignoreforpaper}{\let\aeb@tilebg@ignoreforpaper=y}
+\let\aeb@tilebg@ignoreforpaper=n
+\ProcessOptions
+\ifeqforpaper
+    \if\aeb@tilebg@draft n%
+        \if\aeb@tilebg@ignoreforpaper n%
+            \AtEndOfPackage{\aeb@DraftMode}%
+\fi\fi\fi
+%    \end{macrocode}
+% The package requires \textsf{web}, and compiling is stopped unless the author uses web. Web is
+% used for the template management. Also required are the \textsf{graphicx} and \textsf{multido} packages.
+%    \begin{macrocode}
+\@ifpackageloaded{web}{}{%
+    \PackageError{web}{%
+        The web package is required for this package%
+    }{%
+        Add the web package with the usetemplates option\MessageBreak
+        in the preamble above this package.
+    }%
+}
+\RequirePackage{graphicx}
+\RequirePackage{multido}
+\def\@gobblesix{\expandafter\@gobbletwo\@gobblefour}
+\def\aeb@DraftMode{\let\setTileBgGraphic\aeb@setTileBgGraphicDraft
+\let\autosetScreensizeWithMargins\@gobblesix
+\let\aeb@TileBkgrd\@empty\disableTiling}
+\let\turnOffTiling\aeb@DraftMode
+%    \end{macrocode}
+%    \begin{macrocode}
+\newbox\aeb@tilingbox
+\newdimen\aeb@tiledim
+%    \end{macrocode}
+%    \begin{macro}{\setTileBgGraphic}
+% This is the main user command. The second argument is the path to the graphics file
+% used for tiling, and the first are the optional parameters of \cs{includegraphics}.
+% We use, by default, the \texttt{hiresbb} option of \cs{includegraphics}.
+%    \begin{macrocode}
+\newcommand{\aeb@setTileBgGraphicFinal}[2][1]{%
+    \let\aeb@TileBkgrd\aeb@currentTileBkgrd
+    \edef\aeb@tile@hbox{%
+        \hbox{\noexpand\includegraphics[hiresbb,#1]{#2}}}%
+    \global\setbox\aeb@tilingbox\aeb@tile@hbox
+    \xdef\tileboxwidth{\strip@pt\wd\aeb@tilingbox}%
+    \xdef\tileboxheight{\strip@pt\ht\aeb@tilingbox}%
+    \xdef\tilewidth{\the\wd\aeb@tilingbox}%
+    \xdef\tileheight{\the\ht\aeb@tilingbox}
+}
+\newcommand{\aeb@setTileBgGraphicDraft}[2][1]{}
+\let\setTileBgGraphic\aeb@setTileBgGraphicFinal
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\maxiterations}
+% For multido, the number of iterations must be specified in advance. We use
+% \cs{multidostop} to break out of an multido loop early, but we need a number
+% here. By default it is set at 10. Increase as needed.
+%    \begin{macrocode}
+\newcommand{\maxiterations}[1]{\def\aebtile@maxiterations{#1}}
+\maxiterations{10}
+%    \end{macrocode}
+%    \end{macro}
+%\DescribeMacro\placeTilesinLayers places the tiles in a layer, provided the \texttt{uselayers}
+% option is used with \textsf{aeb\_pro} loaded. Added 2015/08/22.
+%\changes{v1.1}{2015/08/22}{Added \cs{placeTilesinLayers}}
+%    \begin{macrocode}
+\newcommand{\placeTilesinLayers}[2][tileBG]{%
+    \@ifpackageloaded{aeb_pro}
+        {\@ifundefined{xBld}{\PackageWarning{aeb_tilebg}
+            {The uselayers option
+                of aeb_pro is\MessageBreak required with
+                \string\placeTilesinLayers}}
+            {\def\b@tileLayer{\xBld[#2]{#1}}\def\def\e@tileLayer{\eBld}}}
+        {\PackageWarning{aeb_tilebg}{\string\placeTilesinLayers\space
+            requires the\MessageBreak aeb_pro package}}%
+}
+\let\b@tileLayer\@empty \let\e@tileLayer\@empty
+%    \end{macrocode}
+% The next two commands are internal. They display the tile graphic on the background
+% starting at the upper-left corner of the screen page, and lower-left of the screen page,
+% respectively. The default is to start in the upper-left corner. This routine, however,
+% uses real arithmetic and may be subject to rounding errors. If the effect is too bad, change
+% over to lower-left, by selecting the \texttt{uselltiling} option, or by using \cs{switchtoLLTiling}.
+%    \begin{macrocode}
+\newcommand{\aeb@TileBkgrdUL}{%
+    \aeb@tiledim=\paperheight
+    \advance\aeb@tiledim-\tileheight
+    \xdef\aeb@startingHeight{\strip@pt\aeb@tiledim}%
+    \b@tileLayer\multido{\rj=\aeb@startingHeight+-\tileboxheight}
+        {\aebtile@maxiterations}{%
+        \ifdim\rj pt < -\tileheight \multidostop\else
+        \multido{\ri=0+\tileboxwidth}{\aebtile@maxiterations}{%
+            \ifdim\ri pt > \textscreenwidth\multidostop\else
+                \put(\ri,\rj){\copy\aeb@tilingbox}\fi}\fi}\e@tileLayer
+}
+\newcommand{\aeb@TileBkgrdLL}{\b@tileLayer
+    \multido{\nj=0+\tileboxheight}{\aebtile@maxiterations}{%
+        \ifdim\nj pt > \paperheight\multidostop\else
+        \multido{\ni=0+\tileboxwidth}{\aebtile@maxiterations}{%
+            \ifdim\ni pt > \textscreenwidth\multidostop\else
+                \put(\ni,\nj){\copy\aeb@tilingbox}\fi}\fi}\e@tileLayer
+}
+%    \end{macrocode}
+% The default is to start in the upper-left corner
+%    \begin{macrocode}
+\let\aeb@TileBkgrd\@empty
+\let\aeb@currentTileBkgrd\aeb@TileBkgrdUL
+%\let\aeb@TileBkgrd\aeb@TileBkgrdUL
+%    \end{macrocode}
+% Now set the current definition \cs{aeb@TileBkgrd} as a template managed by web.
+%    \begin{macrocode}
+\AddToTemplate{aeb@TileBkgrd}
+%\disableTemplate{aeb@TileBkgrd}
+%    \end{macrocode}
+% That's pretty much it for this package; however, we include a few extras.
+%    \begin{macro}{\autosetScreensizeWithMargins}
+% If you want to get fancy, you can have this package automatically set the screen size
+% to fit exactly n rows and m columns of the tiling. This may take some experimentation
+% to get the width and height you want along with the effect.  Adjust the scale  (or width or height)
+% parameter as needed. The arguments are
+%\begin{enumerate}
+%\item \texttt{\#1}: number of rows
+%\item \texttt{\#2}: number of columns
+%\item \texttt{\#3}: length of left margin
+%\item \texttt{\#4}: length of right margin
+%\item \texttt{\#5}: length of top margin
+%\item \texttt{\#6}: length of bottom margin
+%\end{enumerate}
+% The latter four parameters are passed in that order to the \cs{margins} command of
+% the web package. Standard values are, respectively, \texttt{.25in}, \texttt{.25in}, \texttt{24pt}, \texttt{.25in}.
+%
+% The \cs{autosetScreensizeWithMargins} command can only be used once in the preamble, and a design
+% specification should not be made in the optional parameters of web.
+%    \begin{macrocode}
+\newcommand{\autosetScreensizeWithMargins}[6]
+{%
+    \paperwidth=\tilewidth
+    \paperwidth=#2\paperwidth
+    \edef\theReqWidth{\the\paperwidth}%
+    \paperheight=\tileheight
+    \paperheight=#1\paperheight
+    \edef\theReqHeight{\the\paperheight}%
+    \margins@web@save{#3}{#4}{#5}{#6}%
+    \screensize@web@save{\theReqHeight}{\theReqWidth} % height, width
+}
+\@onlypreamble\autosetScreensizeWithMargins
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\disableTiling}
+%    \begin{macro}{\enableTiling}
+% Disable/enable tiling, effective on the current page.
+%    \begin{macrocode}
+\newcommand{\disableTiling}{\disableTemplate{aeb@TileBkgrd}}
+\newcommand{\enableTiling}{\enableTemplate{aeb@TileBkgrd}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\switchtoLLTiling}
+%    \begin{macro}{\switchtoULTiling}
+% Switch how tile are placed on the page.
+%    \begin{macrocode}
+\newcommand{\switchtoLLTiling}{\let\aeb@TileBkgrd\aeb@TileBkgrdLL}
+\newcommand{\switchtoULTiling}{\let\aeb@TileBkgrd\aeb@TileBkgrdUL}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+%  \Finale
+\endinput

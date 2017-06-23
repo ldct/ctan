@@ -1,0 +1,125 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage[T1,T2A]{fontenc}
+\usepackage[utf8]{inputenx}
+\usepackage[british,american,spanish,greek,french,german,polish,english,russian]{babel}
+\usepackage{csquotes}
+\usepackage{multicol}
+\usepackage{fancyvrb}
+\usepackage{color}
+\usepackage{xpatch}
+\definecolor{spot}{rgb}{0,0.2,0.6}
+\usepackage[colorlinks,allcolors=spot,bookmarksopen=true,pdfstartview=FitH]{hyperref}
+\usepackage[parentracker=true,
+  backend=biber,
+  hyperref=auto,
+  language=auto,
+  autolang=other,
+  citestyle=gost-numeric,
+  defernumbers=true,
+  bibstyle=gost-footnote,
+]{biblatex}
+\addbibresource{biblatex-gost-examples.bib}
+
+% Russian sources first
+\DeclareSourcemap{
+  \maps[datatype=bibtex]{
+    \map{
+      \step[fieldset=langid, fieldvalue={tempruorder}]
+    }
+    \map[overwrite]{
+      \step[fieldsource=langid, match=russian, final]
+      \step[fieldsource=presort, match=\regexp{(.+)}, replace=\regexp{aa$1}]  %$
+    }
+    \map{
+      \step[fieldsource=langid, match=russian, final]
+      \step[fieldset=presort, fieldvalue={az}]
+    }
+    \map[overwrite]{
+      \step[fieldsource=langid, notmatch=russian, final]
+      \step[fieldsource=presort, match=\regexp{(.+)}, replace=\regexp{za$1}]  %$
+    }
+    \map{
+      \step[fieldsource=langid, notmatch=russian, final]
+    }
+    \map{
+      \step[fieldsource=langid, match={tempruorder}, final]
+      \step[fieldset=langid, null]
+    }
+  }
+}
+
+\tolerance=1500
+
+\xpatchbibmacro{related:default}
+  {\renewbibmacro*{pageref}{}}
+  {\renewbibmacro*{pageref}{}\renewbibmacro*{begentry}{}}{}{}
+\renewbibmacro*{begentry}
+  {\hspace{-4em}\makebox[4em]{\hyperlink{\thefield{entrykey}}{$\Downarrow$}}%
+       \raisebox{\baselineskip}{\hypertarget{back:\thefield{entrykey}}{}}}%
+\edef\mytempforAtCharacter{\char64}
+\def\getkey#1#2{%
+  \csappto{mytempforbibkey}{#1}%
+  \ifstrequal{#2}{,}
+  {\hspace{-4em}\makebox[4em]{\hyperlink{back:\mytempforbibkey}{$\Uparrow$}}%
+   \raisebox{\baselineskip}{\hypertarget{\mytempforbibkey}{}}%
+   \mytempforAtCharacter\mytempforbibtype\{\mytempforbibkey,}
+  {\getkey#2}%
+}
+\renewcommand*{\do}[1]{\csdef{#1}##1{\def\mytempforbibtype{#1}\def\mytempforbibkey{}\getkey}}
+\docsvlist{MVBOOK,BOOK,INBOOK,SUPPBOOK,BOOKINBOOK,MVCOLLECTION,COLLECTION,INCOLLECTION,SUPPCOLLECTION,MVREFERENCE,REFERENCE,INREFERENCE,MVPROCEEDINGS,PROCEEDINGS,INPROCEEDINGS,PERIODICAL,ARTICLE,PATENT,ONLINE,THESIS,mvbook,book,inbook,suppbook,bookinbook,mvcollection,collection,incollection,suppcollection,mvreference,reference,inreference,mvproceedings,proceedings,inproceedings,periodical,article,patent,online,thesis,Article,Book,MVBook,InBook,BookInBook,SuppBook,Booklet,Collection,MVCollection,InCollection,SuppCollection,Manual,Misc,Online,Patent,Periodical,SuppPeriodical,Proceedings,MVProceedings,InProceedings,Reference,MVReference,InReference,Report,Thesis,Unpublished}
+\renewcommand*{\do}[1]{\csdef{#1}##1{\mytempforAtCharacter #1\{}}
+\docsvlist{XDATA,COMMENT,xdata,comment,}
+
+\makeatletter
+\title{Biblatex-GOST examples\thanks{Version~\bbx@gost@version.}}
+\makeatother
+\author{Oleg Domanov\thanks{odomanov@yandex.ru}}
+
+\defbibcheck{related}{%
+  \iffieldundef{related}{\skipentry}{}}
+\defbibcheck{norelated}{%
+  \iffieldundef{related}{}{\skipentry}}
+
+\begin{document}
+\selectlanguage{english}
+\maketitle
+Examples are grouped according to their entrytypes. The types themselves are the following
+(click to go to the respective bibliography section):
+\renewcommand*{\do}[1]{\hyperref[#1]{@#1}\\}
+\begin{multicols}{5}
+\noindent%
+\docsvlist{mvbook,book,inbook,suppbook,bookinbook,mvcollection,collection,incollection,suppcollection,mvreference,reference,inreference,mvproceedings,proceedings,inproceedings,periodical,article,patent,online,thesis}
+\end{multicols}
+
+See also examples of the \hyperref[related]{\texttt{related}} field.
+
+In the end of the text you may find the listing of the
+\hyperref[bibfile]{bibliography database file} used.
+You may take advantage of
+the arrows on the left to switch between a database entry and its presentation.
+The database itself is preliminary. This is actually a file that I use in my everyday work,
+so it contains some redundant, provisional and even erroneous (sometimes) material.
+I hope this is not going to confuse the reader too much.
+
+\nocite{*}
+
+\selectlanguage{russian}
+\defbibheading{bibliography}{}
+\renewcommand*{\do}[1]{\section{@#1\label{#1}}\printbibliography[type=#1]}
+\docsvlist{mvbook,book,inbook,suppbook,bookinbook,mvcollection,collection,incollection,suppcollection,mvreference,reference,inreference,mvproceedings,proceedings,inproceedings,periodical,article,patent,online,thesis}
+
+\renewbibmacro*{begentry}
+  {\hspace{-4em}\makebox[4em]{\hyperlink{\thefield{entrykey}}{$\Downarrow$}}}%
+
+\section{\texttt{Related} field\label{related}}
+\printbibliography[check=related]
+
+\section{Bibliography database\label{bibfile}}
+\VerbatimInput[fontsize=\small,codes={\catcode`\-=11},commandchars=\@\[\]]{biblatex-gost-examples.bib}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

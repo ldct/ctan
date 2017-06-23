@@ -1,0 +1,696 @@
+\documentclass[a4paper]{ltxdockit}[2011/03/25]
+\usepackage{btxdockit}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[strict]{csquotes}
+\usepackage[parfill]{parskip}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{shortvrb}
+\usepackage{pifont}
+\usepackage{libertine}
+\usepackage[scaled=0.8]{beramono}
+\usepackage{microtype}
+\lstset{basicstyle=\ttfamily,keepspaces=true}
+\KOMAoptions{numbers=noenddot}
+\addtokomafont{paragraph}{\spotcolor}
+\addtokomafont{section}{\spotcolor}
+\addtokomafont{subsection}{\spotcolor}
+\addtokomafont{subsubsection}{\spotcolor}
+\addtokomafont{descriptionlabel}{\spotcolor}
+\pretocmd{\cmd}{\sloppy}{}{}
+\pretocmd{\bibfield}{\sloppy}{}{}
+\pretocmd{\bibtype}{\sloppy}{}{}
+\makeatletter
+\patchcmd{\paragraph}
+  {3.25ex \@plus1ex \@minus.2ex}{-3.25ex\@plus -1ex \@minus -.2ex}{}{}
+\patchcmd{\paragraph}{-1em}{1.5ex \@plus .2ex}{}{}
+\makeatother
+
+\usepackage{geometry}
+\geometry {left=5cm, right=2cm, top=1.5cm, bottom=1.3cm, includeheadfoot}
+
+
+\titlepage{%
+  title={lexref},
+  subtitle={},
+  url={},
+  author={Adrien Vion},
+  email={adrien[dot]vion3[at]gmail[dot]com},
+  revision={1.1a},
+  date={2015-01-11}}
+
+\hypersetup{%
+  pdftitle={lexref},
+  pdfsubject={},
+  pdfauthor={Adrien Vion},
+  pdfkeywords={tex, latex, legal, reference, citation, article, paragraph}}
+
+% tables
+
+\newcolumntype{T}{>{\sffamily\large\bfseries\spotcolor}c}
+\newcolumntype{H}{>{\sffamily\bfseries\spotcolor}l}
+\newcolumntype{L}{>{\raggedright\let\\=\tabularnewline}p}
+\newcolumntype{R}{>{\raggedleft\let\\=\tabularnewline}p}
+\newcolumntype{C}{>{\centering\let\\=\tabularnewline}p}
+\newcolumntype{V}{>{\raggedright\let\\=\tabularnewline\ttfamily}p}
+
+\newcommand*{\sorttablesetup}{%
+  \tablesetup
+  \ttfamily
+  \def\new{\makebox[1.25em][r]{\ensuremath\rightarrow}\,}%
+  \def\alt{\par\makebox[1.25em][r]{\ensuremath\hookrightarrow}\,}%
+  \def\note##1{\textrm{##1}}}
+
+\newcommand{\tickmarkyes}{\Pisymbol{psy}{183}}
+\newcommand{\tickmarkno}{\textendash}
+\providecommand*{\textln}[1]{#1}
+\providecommand*{\lnstyle}{}
+
+% markup and misc
+
+\setcounter{secnumdepth}{9}
+
+\makeatletter
+
+\newenvironment{nameparts}
+  {\trivlist\item
+   \tabular{@{}ll@{}}}
+  {\endtabular\endtrivlist}
+
+\newenvironment{namedelims}
+  {\trivlist\item
+   \tabularx{\textwidth}{@{}c@{=}l>{\raggedright\let\\=\tabularnewline}X@{}}}
+  {\endtabularx\endtrivlist}
+
+\newenvironment{namesample}
+  {\def\delim##1##2{\@delim{##1}{\normalfont\tiny\bfseries##2}}%
+   \def\@delim##1##2{{%
+     \setbox\@tempboxa\hbox{##1}%
+     \@tempdima=\wd\@tempboxa
+     \wd\@tempboxa=\z@
+     \box\@tempboxa
+     \begingroup\spotcolor
+     \setbox\@tempboxa\hb@xt@\@tempdima{\hss##2\hss}%
+     \vrule\lower1.25ex\box\@tempboxa
+     \endgroup}}%
+   \ttfamily\trivlist
+   \setlength\itemsep{0.5\baselineskip}}
+  {\endtrivlist}
+
+\makeatother
+
+\newcommand{\lexref}{\texttt{lexref}\xspace}
+
+\newcommand{\supra}{\emph{supra}\xspace}
+\newcommand{\infra}{\emph{infra}\xspace}
+\newcommand{\Cf}{\textnormal{Cf. }}
+\newcommand{\cf}{cf.\xspace}
+\newcommand{\GM}{\enquote}
+\newcommand{\pex}{\textnormal{par exemple}\xspace}
+\newcommand{\Pex}{\textnormal{Par exemple}\xspace}
+\newcommand{\marg}[1]{\{\texttt{#1}\}}
+\newcommand{\oarg}[1]{\texttt{[#1]}}
+
+\newcommand{\variable}[1]{$\langle$\textsl{#1}$\rangle$}
+
+
+\usepackage[CHde]{lexref}
+	
+
+
+\begin{document}
+
+\DeclareLex{ZGB}{ZGB}
+\DeclareLex{OR}{OR}
+\DeclareLex{FG}{FG}
+
+\printtitlepage
+
+\begin{quote}
+This document contains information about the \lexref package. This \LaTeX{} package is aimed at continental lawyers (especially swiss and german). It provides macros to make \textbf{references to legal provisions} conveniently and uniformly. It also allows the user to automatically add cited Acts to a \textbf{nomenclature list} and to build \textbf{specific indexes} for each cited Act.
+
+\textbf{Important notice} for users who were using version 1.0.1a: \textbf{the \cs{DeclareLex} macro has changed} and now requires four arguments instead of three. Please modify your \tex documents accordingly (see below).
+\end{quote} 
+
+\tableofcontents
+
+\section{Introduction}
+
+\subsection{Purposes}
+
+Lawyers have to make reference to Acts, Codes and various kind of regulations every day. \LaTeX{} contains very powerful solutions to handle bibliographies (e.g. the \texttt{biblatex} package by Philipp Lehman), but no really easy way to reference legal texts, which in fact differs a bit from citing regular documents (books, etc.). Usually, legal texts shouldn't be part of the bibliography but have instead to appear in a separate nomenclature list, which also often contains other shortcuts, etc.
+
+This package has \textbf{three purposes}:
+\begin{enumerate}
+\item First of all, this package will help you \textbf{reference conveniently and uniformly regulations} inside your text, whether in text body, brackets or footnotes. By using a simple \cs{DeclareLex} macro, you define precisely and once and for all how each Act will be referenced.
+\item Cited Acts must frequently be added to a nomenclature list. When done manually, this can be painful, especially in long documents citing many different Acts. This package can do this 'dirty job' for you, ensuring that every cited Act will be \textbf{included in the nomenclature}. The package I chose to build the nomenclature is \texttt{nomencl}\footnote{\url{http://www.ctan.org/tex-archive/macros/latex/contrib/nomencl}}. The nomenclature list can also be completed with any arbitrary other shortcuts.
+\item A very useful thing for readers of legal books is an \textbf{index of every legal disposition cited}. Again, doing this manually is a tedious task; \lexref will also do this for you. The package \texttt{splitidx}\footnote{\url{http://www.ctan.org/pkg/splitindex}} is used to this end and creates a \textbf{separate subindex} for every Act. 
+\end{enumerate}
+
+
+
+
+\subsection{Requirements}
+
+You need the following packages in order to use \lexref:
+\begin{marglist}
+\item[etoolbox] Used to define commands, test things, etc.
+\item[xargs] Used to define commands with optionnal arguments.
+\item[xstring] Used to test strings.
+\item[nomencl] Used to build the nomenclature list.
+\item[splitidx] Used to build the multiple indexes.
+\end{marglist}
+
+You don't need to load them; \lexref already does it.
+These packages are all part of standard \LaTeX{} distributions so there shouldn't be any problem about their loading.
+
+Splitidx uses python to process the index file, so be sure to have it installed if you want to use the indexing feature of \lexref. \texttt{splitidx} also offers alternate ways to proceed, see its documentation for further details.
+
+\subsection{Legal Status of this package}
+
+\copyright~Adrien Vion 2013.
+
+This work may be distributed and/or modified under the conditions of the LaTeX Project Public License, either version 1.3 of this license or any later version.
+The latest version of this license is in http://www.latex-project.org/lppl.txt and version 1.3 or later is part of all distributions of LaTeX version 2005/12/01 or later.
+
+This work has the LPPL maintenance status 'maintained'.
+
+The Current Maintainer of this work is Adrien Vion.
+
+This work consists of the file lexref.sty and the related information files.
+
+Please note that this work is experimental (still alpha version) and that retrocompatibility may not be ensured.
+
+
+\section{Basic usage}
+
+\subsection{Package loading}
+
+Use the standard macro in the preamble of your .tex document:
+
+\cs{usepackage}\oarg{\variable{option list}}\marg{lexref}
+
+\variable{option list} is a comma separated list of options.
+
+\subsection{Options}\label{options}
+
+\subsubsection{Language and region selection}
+
+The package contains some language and region dependant macros, which are mostly prefixes used to cite dispositions (e.g. 'art.'). Default is english (see the annex, p. \pageref{annex}). You can use the three following options to override default settings:
+
+\begin{marglist}
+\item[CHfr] For users from french part of Switzerland. See the annex for the list of macro redefinitions.
+\item[CHde] For users from german part of Switzerland. See the annex for the list of macro redefinitions.
+\item[DE] For users from Germany. See the annex for the list of macro redefinitions.
+\end{marglist}
+
+Please note that these options are totally independent from your \texttt{babel} settings.
+
+Using another language is possible and easy: you will just have to renew the LexShortcuts (see p. \pageref{customization}).
+
+Please note that citing french laws might not properly work, mostly because of the dashes and letters contained in their disposition numbers. As a matter of fact, you shouldn't have any serious problem regarding the citation \textit{print} (as 'art.' is the same in singular or plural), but indexing won't work properly with french laws. To get a better result, the string tests applied to disposition numbers in order to determine if they're plural or singular, and to sort them within the indexes should be finetuned. This could be implemented in next versions, as well as some other options to the \cs{DeclareLex} macro.
+
+\subsubsection{Other options}
+
+The four following options can also be loaded:
+
+\begin{marglist}
+\item[nomencl] When loaded, this option adds to the nomenclature every Act, if at least one of its dispositions is cited. See p. \pageref{nomenclature} for further details.
+\item[shortcutstolist] When loaded, this option adds to the nomenclature every LexShortcut used in the document. See p. \pageref{nomenclature} for further details.
+\item[indexing] When loaded, process every citation of a disposition to an \texttt{.idx} file which also allows to build a subindex for every Act. See p. \pageref{indexing} for further details.
+\item[noprint] When loaded, the Act citation macros don't print anything but will still affect the nomenclature and the index.
+\end{marglist}
+
+
+\subsection{Declaring Acts with \cs{DeclareLex}}
+
+The first step is using the following macro for each Act you want to cite in your document.
+
+\begin{ltxsyntax}
+\cmditem{DeclareLex}{Act's macro}{printed abbreviation}[Act's full name][alt option]
+\end{ltxsyntax} 
+
+
+An example with swiss ZGB would be (assuming the package option CHde is set):
+
+\begin{ltxcode}
+<<\DeclareLex>>{ZGB}{ZGB}[Schweizerisches Zivilgesetzbuch vom 10. Dezember 1907]
+\end{ltxcode}
+
+This macro will use its first argument (\prm{Act's macro}) to create a series of other macros. In this example, this command will  create a \cs{ZGB} command (among others), which you can use in the whole document to cite this Act. 
+Because it is used to create macros, you should avoid using any special character (no spaces, etc.) in the first argument of \cs{DeclareLex}, and make sure it is different from any other macro already defined (otherwise your compilation will crash).
+
+For example, using \cs{ZGB}\marg{2} will print 'Art. 2 ZGB'.
+The printed Act's name in this output (ZGB) is given by the second argument of \cs{DeclareLex} (\prm{printed abbreviation}).
+
+In this example there is no difference between first and second argument. In some cases, you may want the citation macro to be different than the printed name.  Suppose you want to cite the \textit{Dresdner Entwurf} of 1866. You can then type:
+
+\begin{ltxcode}
+<<\DeclareLex>>{DEw}{Dres. Entw.}[Dresdner Entwurf (1866)]
+\end{ltxcode}
+
+This will create a \cs{DEw} macro, which when used (for instance \cs{DEw}\marg{88}) will output 'Art. 88 Dres. Entw.'.
+
+The third argument (\prm{Act's full name}) is only used for the nomenclature list, if desired (see p. \pageref{nomenclature}).
+
+The fourth argument can be either undefined (\oarg{}) or containing 'alt' (\oarg{alt}). When it is set to 'alt', the article prefixes (by default \cs{DispPrefixMain} and \cs{DispsPrefixMain}) will be overrided by alternate article prefixes (\cs{DispPrefixAlt} and \cs{DispsPrefixAlt}), in every citation of the defined Act. This is useful to cite Acts which use a different prefix. For instance, with package option CHde, \cs{DispPrefixMain} is set to 'Art.' and \cs{DispPrefixAlt} to '\S'. If you want to cite the german BGB in the same document, you can use:
+
+\begin{ltxcode}
+<<\DeclareLex>>{BGB}{BGB}[B\"urgerliches Gesetzbuch][alt]
+\end{ltxcode}
+
+so that for example \cs{ZGB}\marg{2} will output 'Art. 2 ZGB', whereas \cs{BGB}\marg{154} will output '\S{} 154 BGB'.
+
+\subsection{Citing legal provisions}
+
+\subsubsection{Main macros}\label{citationmainmacros}
+
+The \cs{DeclareLex} creates for each Act the following macros:
+
+\begin{ltxsyntax}
+\cmditem{\prm{Act's macro}}{art./Art.}[al./Abs.][ch./Ziff.][let./lit.]
+\end{ltxsyntax} 
+
+
+
+\begin{ltxsyntax}
+\cmditem{np\prm{Act's macro}}{art./Art.}[al./Abs.][ch./Ziff.][let./lit.]
+\end{ltxsyntax} 
+
+\begin{ltxsyntax}
+\cmditem{\prm{Act's macro}ns}{art./Art.}[al./Abs.][ch./Ziff.][let./lit.]
+\end{ltxsyntax} 
+
+\begin{ltxsyntax}
+\cmditem{np\prm{Act's macro}ns}{art./Art.}[al./Abs.][ch./Ziff.][let./lit.]
+\end{ltxsyntax} 
+
+
+As you can see, the control sequences names of these macros depend on the \variable{Act's macro} set as first argument in \cs{DeclareLex}. In the csnames, 'np' stands for 'no prefix' and 'ns' for 'no suffix' (the suffix being the Act's name). That explains the output of the macros, as the following example will show.
+
+% which means the diffrerence between these two macros is that the first will omit the article prefix ('560 Abs. 1 ZGB', whereas the second macro will output 'Art. 560 Abs. 1 ZGB').
+ 
+
+
+An example with swiss ZGB would be (assuming the package option CHde is set) :
+
+\begin{ltxcode}
+<<\DeclareLex>>{ZGB}{ZGB}[Schweizerisches Zivilgesetzbuch vom 10. Dezember 1907]
+\end{ltxcode} 
+
+which allows you to you use the following in your document
+
+\begin{tabular}{llll}
+\begin{ltxcode}
+<<\ZGB>>{2}[1]
+\end{ltxcode} 
+&
+\begin{ltxcode}
+<<\npZGB>>{2}[1]
+\end{ltxcode} 
+&
+\begin{ltxcode}
+<<\ZGBns>>{2}[1]
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\npZGBns>>{2}[1]
+\end{ltxcode}  
+\\
+Art. 2 Abs. 1 ZGB
+&
+2 Abs. 1 ZGB
+&
+Art. 2 Abs. 1
+&
+2 Abs. 1
+\end{tabular}
+
+These variants are useful to write lists of dispositions in your text. For instance, if you type:
+
+\begin{ltxcode}
+'Siehe insbesondere <<\ZGBns>>{2}[2], <<\npZGBns>>{3}[1] und <<\npZGB>>{8}'
+\end{ltxcode} 
+
+you will get
+
+'Siehe insbesondere \ZGBns{2}[2], \npZGBns{3}[1] und \npZGB{8}'
+
+instead of getting
+
+'Siehe insbesondere \ZGB{2}[2], \ZGB{3}[1] und \ZGB{8}'
+
+(which would be by far less elegant).
+
+An example with letters:
+
+\begin{ltxcode}
+<<\DeclareLex>>{OR}{OR}
+<<\OR>>{40a}[1][][b]
+\end{ltxcode} 
+
+
+will output '\OR{40a}[1][][b]'.
+
+ Note that the prefix will detect if you're citing more than one provision and will then be in plural form (for instance, \S\S {} instead of \S).
+
+\subsubsection{Additionnal macros}
+
+You should also use the following macros in the arguments of \cs{\variable{abbreviation}} and the other main macros listed in the previous section:
+
+\begin{tabular}{lllll}
+\begin{ltxcode}
+<<\sq>>
+\end{ltxcode} 
+&
+\begin{ltxcode}
+<<\sqq>>
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\bis>>
+\end{ltxcode} 
+&
+\begin{ltxcode}
+<<\ter>>
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\quater>>
+\end{ltxcode}
+\\
+sq.
+&
+sqq.
+&
+$^{bis}$
+&
+$^{ter}$
+&
+$^{quater}$
+\\
+\begin{ltxcode}
+<<\quinquies>>
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\sexies>>
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\septies>>
+\end{ltxcode}
+&
+\begin{ltxcode}
+<<\octies>>
+\end{ltxcode}
+
+&
+\begin{ltxcode}
+<<\nonies>>
+\end{ltxcode}
+\\
+$^{quinquies}$
+&
+$^{sexies}$
+&
+$^{septies}$
+&
+$^{octies}$
+&
+$^{nonies}$
+\end{tabular}
+
+Example (with package option CHde):
+
+\begin{ltxcode}
+<<\DeclareLex>>{FG}{FG}[Fiktives Gesetz]
+<<\FG>>{40<<\quinquies>>}[1 <<\sqq>>]
+\end{ltxcode} 
+
+Output: \FG{40\quinquies}[1 \sqq]
+
+\subsection{Important note: don't use the citation macros in titles}
+
+You shouldn't use the citation commands in the titles (chapter, section, etc.).
+If you do so, output will be normally printed but the Act will probably disappear from the nomenclature list.
+If you still want the index features, please use the macro \cs{idx\variable{Act's macro}} (see p. \pageref{indexwhithoutprint}).
+
+For instance, instead of writing this:
+
+\begin{ltxcode}
+<<\section>>{Le fardeau de la preuve (\CC{8})}
+\end{ltxcode} 
+
+write this:
+
+\begin{ltxcode}
+<<\section>>{Le fardeau de la preuve (art. 8 CC)}<<\idxCC>>{8}
+\end{ltxcode} 
+
+
+\section{Customizing shortcuts and prefixes}\label{customization}
+
+Default shortcuts are listed in the annex (p. \pageref{annex}) and depend on the language/region options.
+
+You can fully customize them by using the following macro:
+
+\begin{ltxsyntax}
+\cmditem{RenewLexShortcut}{LexShortcut}{redefinition}[nomenclature]
+\end{ltxsyntax} 
+
+Suppose you want for instance that \cs{\variable{Act's macro}} commands output full 'article' or 'articles' instead of 'art.'. You can do it this way:
+
+\begin{ltxcode}
+<<\RenewLexShortcut>>{DispPrefixMain}{article }[]
+<<\RenewLexShortcut>>{DispsPrefixMain}{articles }[]
+\end{ltxcode} 
+
+By leaving the third argument blank, you ensure this redefined shortcut won't appear in the nomenclature list anymore.
+
+The complete list of LexShortcuts which can be renewed is in the annex.
+
+A precision about the nomenclature list title: it is controlled by the macro \cs{nomname}, which should be modified by a regular \cs{renewcommand} and not by \cs{RenewLexShortcut}.
+
+\section{Building a nomenclature list containing the cited Acts' titles}\label{nomenclature}
+
+\subsection{Basics}
+
+The following conditions must be concurrently fulfilled in order for an Act to appear in the nomenclature list:
+\begin{enumerate}
+\item the Act must have been declared with \cs{DeclareLex}
+\item the third argument of \cs{DeclareLex} (i. e. the full name of the Act) has to be defined (otherwise it makes no sense to have it in the list!)
+\item the Act must have been at least cited once in the document, using either \cs{\variable{Act's macro}} or any other main citation macro (see list above: \ref{citationmainmacros}).
+\end{enumerate}
+
+Follow these steps:
+\begin{enumerate}
+\item Activate the \texttt{nomencl} and/or \texttt{shortcutstolist} options of \lexref.
+\item Do a latex compilation. This will create a .nlo file in the directory where your .tex file is located.
+\item Open a terminal window and get to the directory where your .tex file is located (on UNIX-like systems, use the 'cd' command to do so).
+\item Type the following in the terminal (replace 'filename' by the name of the file you want to process):
+\begin{ltxcode}
+makeindex filename.nlo -s nomencl.ist -o filename.nls
+\end{ltxcode} 
+
+This will create .nls file in the directory where your .tex file is located. 
+\item Return to your \LaTeX{} editor and put \cs{printnomenclature} where you want the list to be printed.
+\item Run latex once again.
+\end{enumerate}
+
+For any additionnal information, you should check the \texttt{nomencl} package documentation.
+
+
+
+\subsection{Adding any other shortcut to the nomenclature list}
+
+Simply use in your .tex file
+
+\begin{ltxsyntax}
+\cmditem{nomenclature}{shortcut}{nomenclature}
+\end{ltxsyntax} 
+
+for every item of the nomenclature list, then rerun the steps 2-4 and 6 of the  procedure described above.
+
+\section{Indexing citations of provisions}\label{indexing}
+
+\subsection{Basics}
+
+The following conditions must concurrently be fulfilled in order for the references to be indexed:
+\begin{enumerate}
+\item the Act must have been declared with \cs{DeclareLex}
+\item the Act must have been at least cited once in the document, using either \cs{\variable{Act's macro}}, any other main citation macro (see list above: \ref{citationmainmacros}) or \cs{idx\variable{Act's macro}}
+\end{enumerate}
+
+Follow these steps:
+\begin{enumerate}
+\item Activate the \texttt{indexing} option of \lexref.
+\item Do a latex compilation. This will create a .idx file in the directory where your .tex file is located.
+\item Open a terminal window and run the following script (replace 'filename' by the name of the file you want to process):
+
+\begin{ltxcode}
+splitindex.pl filename.idx
+\end{ltxcode}
+
+It may be a bit more complicated, e. g. you'll have to locate the splitindex.pl in your texlive directory and then, in the terminal, run the script on the file specifying its absolute path, etc.
+
+This script will create a new .idx file for each different Act cited in the document, follwing this syntax \variable{filename}-\variable{Act's macro}.idx
+
+\item get to the directory where your .tex file is located (on UNIX-like systems, use the 'cd' command to do so).
+
+\item run the following command in the terminal, once for every different abbreviation (replace 'filename' and 'abbreviation' by the one you actually use)
+
+\begin{ltxcode}
+makeindex filename-abbreviation.idx
+\end{ltxcode}
+
+(Please note that on some configurations, this step wasn't necessary.)
+
+This will create .ilg and .ind files for every abbreviation.
+
+\item Return to your \LaTeX{} editor and insert the following macros where you want your index printed:
+
+\begin{ltxcode}
+<<\pagebreak>>
+\section*{Cited Acts' index}% Modify this title as you wish
+<<\twocolumn>>
+<<\printindex*>>
+\end{ltxcode}
+
+You can finetune the output by using a \cs{printindex}\oarg{\variable{Act's macro}} macro for every Act appearing in the index, rather than using \cs{printindex*}. This will also allow you to print other indexes than the Acts' index (general index, authors index, etc.). See the \texttt{splitidx} manual for further information.
+
+\item Run latex once again.
+\end{enumerate}
+
+
+
+\subsection{Indexing without printing}
+
+\label{indexwhithoutprint}
+
+If you want to do this globally, you should consider the \texttt{noprint} option (see p. \pageref{options}).
+
+If, for any reason, you want to create an index entry at a given location in your file without having any printed output there, you can use
+
+\begin{ltxsyntax}
+\cmditem{idx\prm{Act's macro}}{art./Art.}[par./al./Abs.][nr./ch./Ziff.][let./lit.]
+\end{ltxsyntax} 
+
+The \variable{abbreviation} is the first argument used in \cs{DeclareLex}. 
+
+
+\section{Version History}
+
+\subsection*{Version 1.1$\alpha$, 11 January 2015}
+
+\begin{itemize}
+\item Modification of the \cs{DeclareLex} macro, which has now four arguments instead of three. Aim is to separate the csname used for citations and the printed act's name.
+\item Fixed a bug regarding the nomenclature, now using toggles to ensure that the \cs{nomenclature} macro will be only issued once per abbreviation.
+\end{itemize}
+
+\subsection*{Version 1.0.1$\alpha$, 21 January 2014}
+
+Minor bug fix (unwanted space).
+
+\subsection*{Version 1.0$\alpha$, 3 December 2013}
+
+First public version.
+
+\section{Annex: Default shortcuts (depending on language)}\label{annex}
+
+\begin{table}[h!]\label{}
+\tablesetup
+\caption{Default settings (english)}
+\begin{tabularx}{\textwidth}{@{}p{4cm}@{}p{3cm}@{}X@{}}
+\toprule
+\multicolumn{1}{@{}H}{LexShortcut} &
+\multicolumn{1}{@{}H}{output} &
+\multicolumn{1}{@{}H}{nomenclature} \\
+\cmidrule(r){1-1}\cmidrule(r){2-2}\cmidrule{3-3}
+{DispPrefixMain} & art. & article(s) \\ %\hline
+{DispsPrefixMain} & art.  & \\ %\hline
+{DispPrefixAlt} &\S{}  & \\ %\hline
+{DispsPrefixAlt} & \S\S{}  & \\ %\hline
+{SubPrefix} & par.  & paragraph(s)\\ %\hline
+{SubSubPrefixNumber} & nr.  & number(s)\\ %\hline
+{SubSubPrefixLetter} & let.  & letter(s)\\ %\hline
+{sq} & sq. & sequiturque\\ %\hline
+{sqq} & sqq. & sequunturque\\ %\hline
+\cs{nomname} & Nomenclature & \\ %\hline
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[h!]\label{}
+\tablesetup
+\caption{CHfr settings}
+\begin{tabularx}{\textwidth}{@{}p{4cm}@{}p{3cm}@{}X@{}}
+\toprule
+\multicolumn{1}{@{}H}{LexShortcut} &
+\multicolumn{1}{@{}H}{output} &
+\multicolumn{1}{@{}H}{nomenclature} \\
+\cmidrule(r){1-1}\cmidrule(r){2-2}\cmidrule{3-3}
+{DispPrefixMain} & art. & article(s) \\ %\hline
+{DispsPrefixMain} & art.  & \\ %\hline
+{DispPrefixAlt} &\S{}  & \\ %\hline
+{DispsPrefixAlt} & \S\S{}  & \\ %\hline
+{SubPrefix} & al.  & alin\'ea(s)\\ %\hline
+{SubSubPrefixNumber} & ch.  & chiffre(s)\\ %\hline
+{SubSubPrefixLetter} & let.  & lettre(s)\\ %\hline
+{sq} & s. & et suivant(e)\\ %\hline
+{sqq} & ss & et suivant(e)s\\ %\hline
+\cs{nomname} & Abr\'eviations & \\ %\hline
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[h!]\label{}
+\tablesetup
+\caption{CHde settings}
+\begin{tabularx}{\textwidth}{@{}p{4cm}@{}p{3cm}@{}X@{}}
+\toprule
+\multicolumn{1}{@{}H}{LexShortcut} &
+\multicolumn{1}{@{}H}{output} &
+\multicolumn{1}{@{}H}{nomenclature} \\
+\cmidrule(r){1-1}\cmidrule(r){2-2}\cmidrule{3-3}
+{DispPrefixMain} & Art. & Artikel \\ %\hline
+{DispsPrefixMain} & Art.  & \\ %\hline
+{DispPrefixAlt} &\S{}  & \\ %\hline
+{DispsPrefixAlt} & \S\S{}  & \\ %\hline
+{SubPrefix} & Abs.  & Absatz, -\"{ }e\\ %\hline
+{SubSubPrefixNumber} & Ziff.  & Ziffer(n)\\ %\hline
+{SubSubPrefixLetter} & lit.  & litera\\ %\hline
+{sq} & f. & und die folgende\\ %\hline
+{sqq} & ff. & und die folgenden\\ %\hline
+\cs{nomname} & Abk\"urzungen & \\ %\hline
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[h!]\label{}
+\tablesetup
+\caption{DE settings}
+\begin{tabularx}{\textwidth}{@{}p{4cm}@{}p{3cm}@{}X@{}}
+\toprule
+\multicolumn{1}{@{}H}{LexShortcut} &
+\multicolumn{1}{@{}H}{output} &
+\multicolumn{1}{@{}H}{nomenclature} \\
+\cmidrule(r){1-1}\cmidrule(r){2-2}\cmidrule{3-3}
+{DispPrefixMain} &\S{}  & \\ %\hline
+{DispsPrefixMain} & \S\S{}  & \\ %\hline
+{DispPrefixAlt} & Art. & Artikel \\ %\hline
+{DispsPrefixAlt} & Art.  & \\ %\hline
+{SubPrefix} & Abs.  & Absatz, -\"{ }e\\ %\hline
+{SubSubPrefixNumber} & Ziff.  & Ziffer(n)\\ %\hline
+{SubSubPrefixLetter} & lit.  & litera\\ %\hline
+{sq} & f. & und die folgende\\ %\hline
+{sqq} & ff. & und die folgenden\\ %\hline
+\cs{nomname} & Abk\"urzungen & \\ %\hline
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\vfill {~}
+\end{document}

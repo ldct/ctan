@@ -1,0 +1,387 @@
+\documentclass{article}
+
+% Load hyperref early to avoid an error on compilation without existing aux-file. This is in contrast to what is recommended in hyperref's documentation. When deleting the aux-file, there was an error on first compilation if hyperref was defined after the \AtEndDocument command below. But as the second compilation run without error and as the error also happened without autonum, this is a problem outside unrelated to autonum.
+\usepackage[hypertexnames=false]{hyperref}
+
+% Make this document look like endless paper to avoid page breaks, which make some of the tests useless.
+% See http://tex.stackexchange.com/a/27057/7323
+\usepackage{geometry}
+\geometry{paperwidth=20cm,paperheight=\maxdimen,margin=4cm}
+\usepackage{etoolbox}
+\AtBeginDocument{
+	\setbox0=\vbox
+	\bgroup
+}
+\AtEndDocument{
+	\egroup
+	\dimen0=\dp0
+	\pdfpageheight=\dimexpr\ht0+10cm\relax
+	\unvbox0\kern-\dimen0
+}
+
+% \usepackage[english,ngerman]{babel}
+% \usepackage[utf8]{inputenx}
+% \usepackage[utf8x]{inputenx}
+
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage{autonum}
+
+% This package is not needed and can be uncommented at any time. Loading it ensures that conflicts between this package and autonum (being involved by loading etoolbox and etextools) are detected.
+\usepackage[backend=bibtex]{biblatex}
+% Deactivate a warning from biblatex, as the package is intentionally not used in this document.
+\makeatletter
+\def\blx@ifsigned#1#2#3#4{}%
+\makeatother
+
+\newcounter{Hequation}
+\renewcommand{\theHequation}{\thechapter.\arabic{Hequation}}
+\makeatletter
+\g@addto@macro\equation{\stepcounter{Hequation}}
+
+\listfiles
+
+\@ifpackageloaded{autonum}{%
+	\def\ifautonum#1{#1}%
+}{%
+	\def\ifautonum#1{}%
+}
+
+\@ifpackageloaded{cleveref}{%
+	\def\ifcleveref#1{#1}%
+	\crefname{inequation}{ineq.}{ineqs.}
+}{%
+	\def\ifcleveref#1{}%
+}
+
+\makeatother
+
+\begin{document}
+
+% \tracingall
+% \makeatletter
+% \show\equation
+% \show\autonum@equationOld
+% \show\mathdisplay
+% \show\mathdisplay@pop
+
+% \begin{equation}\label{dd}a\end{equation}%\ref{dd}
+% % \stop
+% \begin{equation}\label{ee}b\end{equation}
+	\section*{Tests}
+	\begin{itemize}
+		\item Additionally, test that deactivating the package does not result in compile errors during the next run if only basic features are used.
+		\item Additionally, test that everything works with and without the above inputenx package (after deactivating the very strange label below).
+		\item Additionally, test test-freeze.tex.
+		\item Having a referenced equation with reference before \ref{referenceBefore}
+			\begin{equation}\label{referenceBefore}
+				d - d = 0
+			\end{equation}
+			\begin{equation}\label{referenceNo}
+				d - d = 0
+			\end{equation}
+		\ref{b}\begin{equation}\label{a}a\end{equation}\begin{equation}\label{b}b\end{equation}
+		\item Having a referenced equation with reference after
+			\begin{equation}\label{referenceAfter}
+				c^2 = c c
+			\end{equation}
+			\ref{referenceAfter}
+		\item Having an unlabeled equation
+			\begin{equation}
+				a^2 + b^2 = c^2
+			\end{equation}
+		\item Having a labeled equation with the label at the end of the equation \ref{abc}
+			\begin{equation}
+				a^2 + b^2 = c^2\label{abc}
+			\end{equation}
+		\item Having a labeled, but unreferenced equation
+			\begin{equation}\label{unreferenced}
+				\sqrt{a}
+			\end{equation}
+		\item Having a labeled equation with a very strange label \ref{äöüÄÖÜß?:, 3075µ!/§} does only work without package inputenx
+			\begin{equation}\label{äöüÄÖÜß?:, 3075µ!/§}
+				\sqrt{b}
+			\end{equation}
+		\item Having a labeled equation with a colon in the label \ref{label:colon}
+			\begin{equation}\label{label:colon}
+				\sqrt{c}
+			\end{equation}
+		\item Having an equation with a following label with a colon in the label \ref{labelAfter:colon}
+			\begin{equation}
+				\sqrt{d}\label{labelAfter:colon}
+			\end{equation}
+		\item Having an equation with a following label with a colon in the label
+			\begin{equation}
+				\sqrt{e}\label{referenceAfter:colon}
+			\end{equation}
+			and referencing \ref{referenceAfter:colon} only afterwards
+		\item Having a labeled equation with umlauts in the label \ref{äöüÄÖÜßLabel}
+			\begin{equation}\label{äöüÄÖÜßLabel}
+				\sqrt{c}
+			\end{equation}
+		\item Check for spurious whitespace around reference (\ref{checkWhitespace})
+			\begin{equation}\label{checkWhitespace}
+				b_c
+			\end{equation}
+		\item Check if the starred version of ref does also work (\ref*{checkStarred})
+			\begin{equation}\label{checkStarred}
+				c_D
+			\end{equation}
+		\ifcleveref{
+			\item Check if the starred version of cref does also work (\cref*{checkStarredCref})
+				\begin{equation}\label{checkStarredCref}
+					d_E
+				\end{equation}
+		}
+		\item Placing the number in long equations \ref{long}
+			\begin{equation}\label{long}
+				\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum a
+			\end{equation}
+		\ifautonum{
+			\item Printing the number without referencing (needs autonum)
+				\begin{equation+}
+					E = mgh
+				\end{equation+}
+		}
+		\item Using a ref inside a caption
+			\begin{figure}
+				ref
+				\caption{\ref{long}}
+			\end{figure}
+		\ifcleveref{
+			\item Using a cref inside a caption
+				\begin{figure}
+					cref
+					\caption{\cref{long}}
+				\end{figure}
+			\item Using cref with one argument
+				\begin{equation}\label{crefOne}
+					g
+				\end{equation}
+				\cref{crefOne}
+			\item Using cref with two arguments
+				\begin{equation}\label{crefTwo}
+					cr = ef
+				\end{equation}
+				\cref{crefOne,crefTwo}
+			\ifautonum{
+				\item Using otherwise unused cref with two arguments (needs autonum)
+					\[\label{crefThree}
+						cr = ef
+					\]
+					\[\label{crefFour}
+						cr = ef
+					\]
+					\cref{crefThree,crefFour}
+			}
+			\item Using cref with a custom type \cref{myInequation} and thus an optional argument in the label command
+				\begin{equation}\label[inequation]{myInequation}
+					a < b
+				\end{equation}
+			\item Using an unused cref with a custom type and thus an optional argument in the label command
+				\begin{equation}\label[inequation]{myUnusedInequation}
+					d < c
+				\end{equation}
+		}
+		\item Using align \ref{alignOne}, \ref{alignThree}
+			\begin{align}
+				a\label{alignOne}\\
+				b\label{alignTwo}\\
+				c\label{alignThree}
+			\end{align}
+		\item Using gather \ref{gatherOne}, \ref{gatherThree}
+			\begin{gather}
+				a\label{gatherOne}\\
+				b\label{gatherTwo}\\
+				c\label{gatherThree}
+			\end{gather}
+		\item Using multline without referencing
+			\begin{multline}
+				a\\
+				c\label{multlineUnreferenced}
+			\end{multline}
+		\item Using multline with referencing \ref{multlineReferenced}
+			\begin{multline}
+				a\\
+				c\label{multlineReferenced}
+			\end{multline}
+		\item Using flalign with referencing \ref{flalignReferenced}
+			\begin{flalign}
+				a\\
+				c\label{flalignReferenced}
+			\end{flalign}
+		\item Using alignat with referencing \ref{alignatReferenced}
+			\begin{alignat}{4}
+				x &= yy & \implies & y &= x \label{alignatUnreferenced}\\
+				y &= z & \implies & z &= y \label{alignatReferenced}
+			\end{alignat}
+		\item short one-line shortcut \[n\]
+% 		\item shortcut environment with two lines, referencing \ref{firstShortcut} \[n_1\label{firstShortcut} \\ n_2\]
+		\ifautonum{
+			\item align, numbering always \begin{align+} a=l \end{align+} (needs autonum)
+			\item gather, numbering always \begin{gather+} g=a \end{gather+} (needs autonum)
+			\item multline, numbering always (and avoiding overfull hbox warning) \begin{multline+} m=u\line(1,0){220}=v \end{multline+} (needs autonum)
+			\item equation, numbering always \begin{equation+} e=q \end{equation+} (needs autonum)
+		}
+		\item align with line breaks with extra spacing
+			\begin{align}
+				a
+				\\[\baselineskip]
+				b
+			\end{align}
+		\ifautonum{
+			\item shortcut and split \ref{split} \[ \label{split}\begin{split} s \\ p \end{split} \] (needs autonum)
+		}
+		\item equation and split \ref{splitEquation} \begin{equation} \label{splitEquation}\begin{split} s \\ p \end{split} \end{equation}
+		\item align and split with the label defined before the split environment \ref{splitAlign}
+			\begin{align}
+				\label{splitAlign}
+				\begin{split}
+					s
+				\end{split}
+			\end{align}
+			\makeatletter
+			\ifdef{\autonum@currentLabel}{TEST FEHLGESCHLAGEN!}{}
+			\makeatother
+		\item align and split with the label defined in the split environment \ref{splitInAlign}
+			\begin{align}
+				\begin{split}
+					s\label{splitInAlign}
+				\end{split}
+			\end{align}
+		\item Align with split and non-split (should have two lines)
+			\begin{align}
+				\begin{split}
+					\text{line 1}
+				\end{split}
+				\\
+				\text{line 2}
+			\end{align}
+		\item Align with non-split and split (should have two lines)
+			\begin{align}
+				\text{line 1}
+				\\
+				\begin{split}
+					\text{line 2}
+				\end{split}
+			\end{align}
+		\item Align with two splits (should have four lines), none referenced)
+			\begin{align}
+				\begin{split}
+					\text{line 1}
+					\\
+					\text{line 2}
+				\end{split}
+				\\
+				\begin{split}
+					\text{line 3}
+					\\
+					\text{line 4}
+				\end{split}
+			\end{align}
+		\item Align with two splits (should have four lines), both referenced \ref{firstSplit} and \ref{secondSplit})
+			\begin{align}
+				\label{firstSplit}
+				\begin{split}
+					\text{line 1}
+					\\
+					\text{line 2}
+				\end{split}
+				\\
+				\label{secondSplit}
+				\begin{split}
+					\text{line 3}
+					\\
+					\text{line 4}
+				\end{split}
+			\end{align}
+		\item Align with split and label at the wrong place should result in the detection of an error
+			{
+				% Redefine \PackageError in a TeX group so the redifinition does not scatter.
+				\def\PackageError#1#2#3{\\\text{Package error successfully detected.}}%
+				\begin{align}
+					\begin{split}
+						1 = 1
+					\end{split}
+					\label{problematicLabel}
+				\end{align}
+			}
+% 		\item super-short \[\(a+b\\d+e\)\]
+% 		\item Using aligned \ref{alignedOne}, \ref{alignedThree}
+% 			\begin{equation}
+% 				\begin{aligned}
+% 					a\label{alignedOne}\\
+% 					b\label{alignedTwo}\\
+% 					c\label{alignedThree}
+% 				\end{aligned}
+% 			\end{equation}
+% 		\item Using gathered \ref{gatheredOne}, \ref{gatheredThree}
+% 			\begin{equation}
+% 				\begin{gathered}
+% 					a\label{gatheredOne}\\
+% 					b\label{gatheredTwo}\\
+% 					c\label{gatheredThree}
+% 				\end{gathered}
+% 			\end{equation}
+% 		\item Placing no number in long equations
+% 			\begin{equation}
+% 				\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum\sum a
+% 			\end{equation}
+		\item Split with a long line and a \textbackslash\texttt{notag} after ending split has too much spacing below the environment, if the split environment is not patched:
+			\begin{equation}
+				\begin{split}
+					\sum_1^2 a &= 2a\\
+							&= \sum_3^4 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+				\end{split}\notag
+			\end{equation}
+		\item Split with a long line and a \textbackslash\texttt{notag} before ending split has correct spacing below the environment:
+			\begin{equation}
+				\begin{split}
+					\sum_1^2 a &= 2a\\
+							&= \sum_3^4 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\notag
+				\end{split}
+			\end{equation}
+		\item Split with a long line and without an explicit \textbackslash\texttt{notag} should have the same spacing as directly above and not the spacing as directly below:
+			\begin{equation}
+				\begin{split}
+					\sum_1^2 a &= 2a\\
+							&= \sum_3^4 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+				\end{split}
+			\end{equation}
+		\item Split with a long line should have long spacing below the environment if it is referenced \ref{splitLong}:
+			\begin{equation}\label{splitLong}
+				\begin{split}
+					\sum_1^2 a &= 2a\\
+							&= \sum_3^4 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+				\end{split}
+			\end{equation}
+			Note, that the \textbackslash\texttt{label} must not be put inside the \texttt{split} environment, as according to the \AmS-math documentation \texttt{split} provides no numbering.
+		\item Split inside an equation, where the label is inside split (which is discouraged, see directly above) and reference \ref{insideSplit}
+			\begin{equation}
+				\begin{split}
+					\label{insideSplit}
+					\text{Check this line for an equation number!}
+				\end{split}
+			\end{equation}
+		\item This is a reference to an align environment with alignment \ref{alignment}.
+			\begin{align}%
+				a &= 1,\label{alignment}\\%
+				cd &= 2\label{rowTwo}%
+			\end{align}%
+		\item This is an align environment with alignment and no text before the equation sign (there once was an error with the optional argument handling of the newline command).
+			\begin{align}
+				a &= 1,\label{eq:a}\\
+				&= 2\label{eq:b}
+			\end{align}
+	\end{itemize}
+	\section{Using ref in section \ref{i1}}\label{i1} text
+	\ifcleveref{
+		% \cref with hyperref makes problems inside of \section: http://tex.stackexchange.com/a/138950. This seems to be unknown for cleveref's author according to 14.2 in cleveref's documentation. If it would be possible to detect that we are inside a moving argument, there could be an automatic solution.
+		\section{Using cref in \texorpdfstring{\cref{i2}}{Section \ref{i2}}}\label{i2} text
+		\begin{figure}
+			\caption{Ref 2: \cref{i2} and \ref{i2}}
+		\end{figure}
+	}
+\tableofcontents
+\listoffigures
+\end{document}

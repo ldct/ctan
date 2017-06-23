@@ -1,0 +1,796 @@
+% 
+% \iffalse
+%<*driver>
+\documentclass{tclldoc}
+\PageIndex\CodelineNumbered
+\IndexPrologue{%
+   \section*{Index}%
+   All numbers in this index are page numbers.
+   Underlined entries refer to places where the item in
+   question is defined.%
+}
+\setcounter{IndexColumns}{2}
+\begin{document}
+\DocInput{pdf.dtx}
+\end{document}
+%</driver>
+% \fi
+% 
+% \title{A simple PDF writer in \Tcllogo}
+% \author{Lars Hellstr\"om}
+% \maketitle
+% 
+% \begin{abstract}
+%   This file contains some basic routines that allow a \Tcllogo\ 
+%   script to write PDF files.
+% \end{abstract}
+% 
+% \tableofcontents
+% 
+% \section{PDF files and objects}
+% 
+% A Portable Document Format (PDF) file is, when compared with for example 
+% a PostScript file or HTML file, a rather disorganised document. This 
+% is because at the basic level, a PDF file is a heap rather than a 
+% text; it \emph{can} be ``disorganised'' since its logical structure 
+% is based on cross-referencing rather than on sequentiality. The first 
+% step is therefore to provide support for writing well-formed heaps.
+% 
+% \changes{0.0}{2003/01/02}{Initial version. (LH)}
+% 
+% \begin{tcl}
+%<*pkg>
+package require Tcl 8.1
+package provide writepdf 0.1
+namespace eval pdf {}
+% \end{tcl}
+% \setnamespace{pdf}
+% 
+% 
+% \subsection{Building objects}
+% 
+% The independent units in a PDF file are called objects. An 
+% \emph{object} is essentially a value (which includes a type). The 
+% procedures below construct strings of PDF code that encode objects of 
+% various types. The strings returned are generally such that one must 
+% insert whitespace between two such strings if the data is to be 
+% properly encoded. The strings may contain newlines if some building 
+% routine thinks the lines should otherwise be too long.
+% 
+% \begin{proc}{boolean_obj}
+%   The |boolean_obj| procedure returns a boolean object, corresponding 
+%   to the string passed as its only argument. Most of it is about 
+%   parsing this string: \texttt{true}, \texttt{yes}, \texttt{on}, and 
+%   nonzero numbers are interpreted as boolean true, whereas 
+%   \texttt{false}, \texttt{no}, \texttt{off}, and the zero number is 
+%   interpreted as boolean false. The matching is case-insensitive.
+%   \begin{tcl}
+proc pdf::boolean_obj {value} {
+   switch -nocase -- $value {
+     true - yes - on {return true}
+     false - no - off {return false}
+     default {
+       if {$value} then {return true} else {return false}
+     }
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{int_obj}
+%   The |int_obj| procedure returns the PDF object corresponding to 
+%   the integer supplied as argument.
+%   \begin{tcl}
+proc pdf::int_obj {value} {format %d $value}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{real_obj}
+% \begin{variable}{precision}
+%   The |real_obj| procedure returns the PDF object corresponding to 
+%   the real number supplied as argument. The syntax is
+%   \begin{quote}
+%     |pdf::real_obj| \word{value} \word{precision}\regopt
+%   \end{quote}
+%   where \word{precision} is the number of decimals that will be 
+%   included in the object. If omitted, the value of the |precision| 
+%   variable is used, and that defaults to $3$.
+%   \begin{tcl}
+set pdf::precision 3
+proc pdf::real_obj {value {precision -1}} {
+   if {$precision<0} then {
+      unset precision
+      variable precision
+   }
+   format %.[format %d $precision]f $value
+}
+%   \end{tcl}
+% \end{variable}\end{proc}
+% 
+% \begin{proc}{string_obj}
+%   The |string_obj| procedure returns the PDF string object 
+%   corresponding to the argument. Backslashes and parentheses are 
+%   escaped. Control characters are converted to escape sequences. 
+%   Characters with character code above 255 cause an error to be 
+%   thrown (PDF strings correspond more to \Tcllogo\ byte arrays than to 
+%   general strings). If the string produced is longer than 100 
+%   characters, then backslash--newline sequences are inserted in 
+%   suitable places.
+%   \begin{tcl}
+proc pdf::string_obj {str} {
+   if {[regexp "\[^\n\r -\xff\]" $str]} then {
+      set estr [string map [list \\ \\\\ ( \\( ) \\) \r \\r \n \\n] $str]
+      set str "("
+      set len 1
+      foreach ch [split $estr {}] {
+         scan $ch %c code
+         if {$code==92} then {
+            append str \\
+            incr len
+            continue
+         } elseif {$code<32} then {
+            append str "\\[format %03o $code]"
+            incr len 4
+         } elseif {$code<256} then {
+            append str $ch
+            incr len
+         } else {
+            error "Bad character $ch [format (U+%04x) $code]\
+              in PDF string."
+         }
+         if {$len > 100} then {
+            append str \\\n
+            set len 0
+         }
+      }
+      append str ")"
+   } else {
+      set L [list]
+      while {[string length $str]>=100} {
+         lappend L [string map [list \\ \\\\ ( \\( ) \\) \r \\r \n \\n]\
+           [string range $str 0 99]]
+         set str [string range $str 100 end]
+      }
+      if {[string length $str]} then {
+         lappend L\
+           [string map [list \\ \\\\ ( \\( ) \\) \r \\r \n \\n] $str]
+      }
+      set str ([join $L \\\n])
+   }
+   return $str
+} 
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{hexstring_obj}
+%   The |hexstring_obj| procedure returns the PDF string object, 
+%   encoded as hexadecimal digits, that corresponds to the argument. 
+%   If the string is longer than 31 characters then it will be broken 
+%   on several lines.
+%   \begin{tcl}
+proc pdf::hexstring_obj {str} {
+   set hstr "<"
+   set len 1
+   foreach ch [split $str {}] {
+      scan $ch %c code
+      if {$len>=63} then {
+         append hstr \n
+         set len 0
+      }
+      if {$code<256} then {
+         append hstr [format %02x $code]
+         incr len 2
+      } else {
+         error "Bad character $ch [format (U+%04x) $code]\
+           in PDF string."
+      }
+   }
+   append hstr ">"
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{text_obj}
+%   The |text_obj| procedure returns the PDF string object, encoded as 
+%   hexadecimal digits, that corresponds to the argument string. This is 
+%   meant to be used for \emph{text strings} 
+%   (see~\cite[Ssec.~4.4.1]{PDFspec}), which are \Tcllogo-style strings 
+%   rather than byte arrays. Text strings may contain general Unicode 
+%   characters, although they will then be encoded using UTF-16BE.
+%   
+%   The implementation constructs the 8-bit and 16-bits encodings of the 
+%   string in parallel, and only when it is done will it decide which to 
+%   return.
+%   \begin{tcl}
+proc pdf::text_obj {str} {
+   set hstr "<"
+   set ustr "<FEFF"
+   set lenh 1
+   set lenu 5
+   set eight_ok 1
+   foreach {chh chl} [split [encoding convertto unicode $str] {}] {
+      scan $chh %c codeh
+      scan $chl %c codel
+      if {$lenu>=62} then {
+         append ustr \n
+         set lenu 0
+      }
+      append ustr [format %02x%02x $codeh $codel]
+      incr lenu 4
+      if {$codeh>0} then {set eight_ok 0}
+      if {!$eight_ok} then {continue}
+      if {$lenh>=63} then {
+         append hstr \n
+         set lenh 0
+      }
+      append hstr [format %02x $codel]
+      incr lenh 2
+   }
+   append hstr ">"
+   append ustr ">"
+   if {$eight_ok && ![string match {<feff*} $hstr]} then {
+      return $hstr
+   } else {
+      return $ustr
+   }
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{name_obj}
+%   The |name_obj| procedure returns the PDF name object corresponding 
+%   to its argument. It is useful mainly for names with strange 
+%   characters in them (such as spaces), but most names (e.g.\ dictionary 
+%   keys) appearing in PDF files do not require any quoting and can 
+%   therefore just as well be written as explicit PDF code.
+%   \begin{tcl}
+proc pdf::name_obj {str} {
+   if {[string length $str]>126} then {
+      error "String too long to be a PDF name."
+   }
+   set res /
+   foreach ch [split $str {}] {
+      switch -glob -- $ch {
+         ( - ) - < - > - \\[ - \\] - \{ - \} - / - % - # {
+            scan $ch %c code
+            append res [format #%02x $code]
+         }
+         [!-~] {append res $ch}
+         default {
+            scan $ch %c code
+            append res [format #%02x $code]
+         }
+      }
+   }
+   return $res
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{array_obj}
+%   The |array_obj| procedure builds an array object of the objects it 
+%   is given as arguments. The syntax is
+%   \begin{quote}
+%     |pdf::array_obj| \word{object}\regstar
+%   \end{quote}
+%   Newlines are inserted between the objects if it does not appear as 
+%   if the object would fit on a single (100 character) line.
+%   \begin{tcl}
+proc pdf::array_obj {args} {
+   set res \[
+   set len 1
+   foreach item $args {
+      if {[string length $item] + $len >= 100} then {
+         append res \n
+         set len 0
+      } elseif {[string length $res]>1} then {
+         append res " "
+         incr len
+      }
+      append res $item
+      incr len [string length $item]
+   }
+   if {$len >= 100} then {
+      append res \n
+   }
+   append res \]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{dict_obj}
+%   The |dict_obj| procedure builds a dictionary object from its 
+%   arguments. The syntax is
+%   \begin{quote}
+%     |pdf::dict_obj| 
+%     \begin{regexp}[\regstar]\word{key} \word{value}\end{regexp}
+%   \end{quote}
+%   where each \word{key} must be a name object and each \word{value} 
+%   must be an object. It is checked that the number of elements is 
+%   correct and that the keys begin with a slash.
+%   \begin{tcl}
+proc pdf::dict_obj {args} {
+   if {[llength $args] % 2 != 0} then {
+      error "Not the same number of keys and values."
+   }
+   set res "<<\n"
+   foreach {key value} $args {
+      if {![string match {/*} $key]} then {
+         error "'$key' isn't a name object."
+      }
+      if {[string length $key] + [string length $value]>99} then {
+         append res $key \n $value \n
+      } else {
+         append res $key { } $value \n
+      }
+   }
+   append res ">>"
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{null_obj}
+%   The |null_obj| procedure returns a null object. It has no arguments.
+%   \begin{tcl}
+proc pdf::null_obj {} {return null}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% Objects can also be \emph{streams}, but those have a special relation 
+% to the file structure and are therefore best treated in conjunction 
+% with that. In particular, streams cannot be used as arguments of 
+% |array_obj| or |dict_obj|. The arguments of these procedures can 
+% however be \emph{indirect references} to objects of any type, but 
+% these too are best treated in the context of the basic PDF file 
+% structure.
+% 
+% 
+% \subsection{File structure}
+% 
+% The body of a PDF file consists of a sequence of \emph{indirect 
+% objects}, which are mainly a sort of declarations: a pair of integers 
+% are associated with an object value. Since any composite object can 
+% (and in several cases must) contain a reference to any indirect object, 
+% this makes it possible to build up arbitrary data structures. It is 
+% however also a complication, since it requires that there is a 
+% mechanism for allocating these numbers.
+% 
+% \begin{arrayvar}{file\meta{fnum}}
+%   Every file that \Tcllogo\ opens gets a unique identifier which is 
+%   used in calls to |puts| and such. This identifier is also used as 
+%   the name of an array in the |pdf| namespace, in which the 
+%   procedures below store all auxiliary information they need to create 
+%   a proper PDF file.
+% \end{arrayvar}
+% 
+% \begin{arrayentry}{file\meta{fnum}}{!\meta{reference label}}
+% \begin{arrayentry}{file\meta{fnum}}{last_object_num}
+%   In this API, references to indirect objects can be arbitrary 
+%   strings, called \emph{reference labels}. The correspondence to the 
+%   object numbers actually found in the file is given by the 
+%   \texttt{!}\meta{reference label} entries in the array of the file in 
+%   question. The entries in this array are lists with the structure
+%   \begin{quote}
+%     \word{object number} \word{generation number} \word{file 
+%     position}\regopt
+%   \end{quote}
+%   where the \word{file position} is present only if the indirect 
+%   object in question has been written to file already. The 
+%   \word{object number} is the number of the object referred to. The 
+%   \word{generation number} is currently always zero; it appears that 
+%   it can only be nonzero for files that have incrementally updated, 
+%   and this API only supports creating a file from scratch. The 
+%   \word{file position} is the position in the file of the beginning 
+%   of the indirect object begin referred to.
+%   
+%   The |last_object_num| entry in the array holds the most recently 
+%   allocated object number. It is incremented whenever a new reference 
+%   label is encountered.
+% \end{arrayentry}\end{arrayentry}
+% 
+% \begin{proc}{obj_ref}
+%   The |obj_ref| procedure returns PDF code for an indirect reference 
+%   to an object. The syntax is
+%   \begin{quote}
+%     |pdf::obj_ref| \word{file} \word{reference label}
+%   \end{quote}
+%   where \word{file} is the indentifier of the PDF file in question. 
+%   If the \word{reference label} has not been encountered before for 
+%   this particular file, then a new object number is allocated for it.
+%   \begin{tcl}
+proc pdf::obj_ref {F label} {
+   upvar #0 [namespace current]::$F A
+   if {![info exists A(!$label)]} then {
+      incr A(last_object_num)
+      set A(!$label) [list $A(last_object_num) 0]
+   }
+   format {%d %d R} [lindex $A(!$label) 0] [lindex $A(!$label) 1]
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{begin_stream}
+% \begin{proc}{end_stream}
+%   The |begin_stream| and |end_stream| procedures delimit the creation 
+%   of a \emph{stream object}. Between two such commands, it is possible 
+%   to write arbitrary text (usually page descriptors or some sort of 
+%   embedded data) to the PDF file and have it inserted correctly into 
+%   the file as the data stored in the stream object.
+%   
+%   The syntax for |begin_stream| is
+%   \begin{quote}
+%     |pdf::begin_stream| \word{file} \word{reference label}
+%     \begin{regexp}[\regstar]\word{key} \word{value}\end{regexp}
+%   \end{quote}
+%   where \word{file} of course is the file to write to and 
+%   \word{reference label} is the string that should be used to 
+%   reference this object. Each stream consists of one dictionary part 
+%   and one data part, where the primary task of the dictionary part is 
+%   to specify how the data part should be interpreted. The most 
+%   important element in the dictionary is the \texttt{/Length} key and 
+%   its value---these are inserted by the |begin_stream| and 
+%   |end_stream| commands, so one needs not worry about those---but if 
+%   for example the data part is encoded in some special way (for 
+%   example, it might be compressed) then it is necessary to include 
+%   additional elements in the dictionary. This is what the \word{key} 
+%   and \word{value} arguments are for.
+%   
+%   \begin{arrayentry}{file\meta{fnum}}{current_stream}
+%     The |current_stream| entry in a PDF file array is set if and only 
+%     if the current position in that file is inside a stream. It is 
+%     not possible to begin a new stream when this entry is set. The 
+%     value of this entry is a list with the structure
+%     \begin{quote}
+%       \word{reference label} \word{start}
+%     \end{quote}
+%     where \word{reference label} is the reference label of the stream 
+%     and \word{start} is the position in the file of the first byte in 
+%     the stream data. Both of these are needed at |end_stream| to 
+%     record the length of the stream data.
+%   \end{arrayentry}
+%   
+%   \begin{arrayentry}{file\meta{fnum}}{?\meta{reference label}}
+%     This kind of entry is used for indirect objects that are lengths 
+%     of the stream whose reference label is the \meta{reference label}. 
+%     They have the same syntax as their |!| ordinary counterparts.
+%   \end{arrayentry}
+%   
+%   \begin{tcl}
+proc pdf::begin_stream {F label args} {
+   upvar #0 [namespace current]::$F A
+   if {[info exists A(current_stream)]} then {
+      error "There is already a stream ([lindex $A(current_stream) 0])\
+        being written to in this file."
+   }
+   if {![info exists A(!$label)]} then {
+      incr A(last_object_num)
+      set A(!$label) [list $A(last_object_num) 0]
+   }
+   set A(?$label) [list [incr A(last_object_num)] 0]
+   lappend A(!$label) [tell $F]
+   puts $F\
+     [format {%d %d obj} [lindex $A(!$label) 0] [lindex $A(!$label) 1]]
+   puts $F [eval\
+     [list dict_obj /Length [format {%d 0 R} $A(last_object_num)]]\
+     $args]
+   puts $F stream
+   set A(current_stream) [list $label [tell $F]]
+}
+%   \end{tcl}
+%   
+%   The |end_stream| procedure takes the target file as its only argument. 
+%   It finishes off the stream as necessary. It also evaluates 
+%   everything that has been placed in the backlog of the file.
+%   
+%   \begin{arrayentry}{file\meta{fnum}}{backlog}
+%     It is not possible to output a new indirect object when a stream 
+%     is being written to, but it can still be at such a time that the 
+%     need for such an object is discovered. The |backlog| entry 
+%     provides a way around that limitation---this entry is a script 
+%     that is evaluated (and cleared) at the end of every |end_stream|, 
+%     hence commands can be delayed by appending them to this script, 
+%     instead of evaluating them immediately.
+%     
+%     New commands are appended to the |backlog|, and must be preceeded 
+%     by a command separator.
+%   \end{arrayentry}
+%   
+%   \begin{tcl}
+proc pdf::end_stream {F} {
+   upvar #0 [namespace current]::$F A
+   if {![info exists A(current_stream)]} then {
+      error "There is no stream to end."
+   }
+   set length [expr {[tell $F] - [lindex $A(current_stream) 1]}]
+   set label [lindex $A(current_stream) 0]
+   unset A(current_stream)
+   puts $F "endstream endobj"
+   lappend A(?$label) [tell $F]
+   puts $F [format {%d %d obj %d endobj} [lindex $A(?$label) 0]\
+     [lindex $A(?$label) 1] $length]
+   eval "set A(backlog) {}; $A(backlog)"
+}
+%   \end{tcl}
+% \end{proc}\end{proc}
+% 
+% \begin{proc}{put_obj}
+%   The |put_obj| procedure writes a direct object to a PDF file. The 
+%   syntax is
+%   \begin{quote}
+%     |pdf::put_obj| \word{file} \word{reference label} \word{object}
+%   \end{quote}
+%   \begin{tcl}
+proc pdf::put_obj {F label obj} {
+   upvar #0 [namespace current]::$F A
+   if {[info exists A(current_stream)]} then {
+      append A(backlog) \n [list put_obj $F $label $obj]
+      return
+   }
+   if {![info exists A(!$label)]} then {
+      incr A(last_object_num)
+      set A(!$label) [list $A(last_object_num) 0]
+   }
+   lappend A(!$label) [tell $F]
+   puts $F\
+     [format {%d %d obj} [lindex $A(!$label) 0] [lindex $A(!$label) 1]]
+   puts $F $obj
+   puts $F endobj
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% \begin{proc}{rewrite_pdf}
+%   The |rewrite_pdf| procedure opens a new PDF file for writing and 
+%   initialises the associated data structures. The syntax is
+%   \begin{quote}
+%     |pdf::rewrite_pdf| \word{file name} \meta{options}
+%   \end{quote}
+%   and the return value is the identifier of the file opened. The 
+%   \word{file name} is of course the name of that file. The 
+%   \meta{options} is zero or more of
+%   \begin{quote}
+%     |-permissions| \word{integer}\\
+%     |-header| \word{string}
+%   \end{quote}
+%   The permissions are the default permissions for the file in question. 
+%   If this is not specified, then no such value is specified to |open|, 
+%   The header is a string that will be put first in the file (as header). 
+%   It defaults to
+%   \begin{quote}
+%     \texttt{\%PDF-1.3}\\
+%     \texttt{\%\r{a}\"a\"o}
+%   \end{quote}
+%   where the first line is a standard header line, and the second line 
+%   is there to help some software understand that the file should be 
+%   treated as a binary file. \textbf{Note} that no newline is inserted 
+%   after this string; be sure to include it in the string if necessary.
+%   \begin{tcl}
+proc pdf::rewrite_pdf {name args} {
+   set Opt(-header) %PDF-1.3\n%\xe5\xe4\xf6\n
+   array set Opt $args
+   if {[info exists Opt(-permissions)]} then {
+      set F [open $name w $Opt(-permissions)]
+   } else {
+      set F [open $name w]
+   }
+   fconfigure $F -translation binary
+   puts -nonewline $F $Opt(-header)
+   upvar #0 [namespace current]::$F A
+   array unset A
+   set A(last_object_num) 0
+   set A(backlog) ""
+   return $F
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}{close_pdf}
+%   The |close_pdf| procedure performs the non-trivial task of finishing 
+%   off the PDF file and closing it. The syntax is
+%   \begin{quote}
+%     |pdf::close_pdf| \word{file} \word{catalog label}
+%     \begin{regexp}[\regstar]\word{key} \word{value}\end{regexp}
+%   \end{quote}
+%   and the return value is a report detailing any problems 
+%   encountered (such as objects that are referred to but never 
+%   defined). This is a report rather than an error, because there is 
+%   in many cases no sharp distinction. If the return value is 
+%   non-empty, then there is probably a bug in your program that needs 
+%   to be fixed.
+%   
+%   The \word{file} is the identifier of the file to write. The 
+%   \word{catalog label} is the reference label of the Catalog object 
+%   in the document. The remaining arguments can be used to insert 
+%   additional information (such as a reference to the Info dictionary 
+%   of the document) in the trailer dictionary.
+%   
+%   \begin{tcl}
+proc pdf::close_pdf {F label args} {
+   upvar #0 [namespace current]::$F A
+   set reportL [list]
+%   \end{tcl}
+%   The first step is to compile the cross-reference table of the 
+%   document. I originally made one subsection for each range of defined 
+%   indirect objects, giving the mandatory free entry \#0 a separate 
+%   subsection, but for some reason Adobe software didn't like that at 
+%   all.\footnote{Whether this means Adobe isn't following their own 
+%   standard I leave to others to decide. Neither GhostScript nor 
+%   Quartz (the PDF-based graphics system in Mac~OS~X) seemed to have 
+%   any problems with this arrangement.} Hence the current 
+%   implementation is to make a cross-reference table with only one 
+%   subsection, with an explicit free entry for every missing item.
+%   
+%   \changes{0.1}{2003/02/24}{Changed cross-reference section to avoid 
+%      what is probably a bug in Adobe PDF readers. (LH)}
+%    
+%   The |xrA| array constructed below is a prototype for the 
+%   cross-reference section. It is indexed by object number and the 
+%   entries have the list structure
+%   \begin{quote}
+%     \word{file position} \word{generation number} \word{type}
+%   \end{quote}
+%   Just as in a PDF file, the \word{type} is either \texttt{f} or 
+%   \texttt{n} depending on whether the entry is ``free'' or 
+%   ``in use''. The \word{file position} and \word{generation number} 
+%   are however not padded with zeros, and the \word{file position} is 
+%   initially an empty string in the ``free'' entries.
+%   
+%   This first round simply collects the information and detects 
+%   collisions.
+%   \begin{tcl}
+   set xrA(0) [list "" 65535 f]
+   foreach lbl [array names A {[!?]*}] {
+      set idx [lindex $A($lbl) 0]
+      set ent [list [lindex $A($lbl) 2] [lindex $A($lbl) 1] n]
+      if {[llength $A($lbl)]<3} then {
+         lappend reportL "There is no indirect object with label:\
+           [string range $lbl 1 end]"
+         set ent [replace $ent 2 2 f]
+      } elseif {[llength $A($lbl)]>3} then {
+         lappend reportL "Multiple indirect objects for label\
+           [string range $lbl 1 end]; at\
+           [join [lrange $A($lbl) 2 end]]."
+      }
+      if {![info exists xrA($idx)]} then {
+         set xrA($idx) $ent
+      } elseif {[lindex $xrA($idx) 2]=="f" && [lindex $ent 2]=="n"}\
+      then {
+         lappend reportL "This shouldn't happen:\
+           There are several reference labels for\
+           indirect object $idx. Using that with label:\
+           [string range $lbl 1 end]"
+         set xrA($idx) $ent
+      } else {
+         lappend reportL "This shouldn't happen:\
+           There are several reference labels for\
+           indirect object $idx. Ignoring that with label:\
+           [string range $lbl 1 end]"
+      }
+   }
+%   \end{tcl}
+%   The second round makes sure that there is a contiguous sequence of 
+%   reference numbers and constructs the linked list of free entries.
+%   \begin{tcl}
+   set last_free 0
+   set maxidx [lindex [lsort -integer -decreasing [array names xrA]] 0]
+   for {set n $maxidx} {$n>=0} {incr n -1} {
+      if {![info exists xrA($n)]} then {
+         set xrA($n) [list "" 0 f]
+         lappend reportL "This shouldn't happen:\
+           Object number $n was allocated, but not\
+           assigned a reference label."
+      }
+      if {[lindex $xrA($n) 2]=="f"} then {
+         set xrA($n) [lreplace $xrA($n) 0 0 $last_free]
+         set last_free $n
+      }
+   }
+%   \end{tcl}
+%   Now the cross-reference section can be written to file.
+%   \begin{tcl}
+   set startxref [tell $F]
+   puts $F xref
+   puts $F [format {%d %d} 0 [expr {$maxidx + 1}]]
+   for {set n 0} {$n<=$maxidx} {incr n} {
+      puts $F [eval [list format {%010d %05d %1s }] $xrA($n)]
+   }
+%   \end{tcl}
+%   Having completed the cross-reference table, the second step is 
+%   to write the trailer.
+%   \begin{tcl}
+   puts $F trailer
+   if {[info exists A(!$label)]} then {
+      lappend args /Root [format {%d %d R} [lindex $A(!$label) 0]\
+        [lindex $A(!$label) 1]]
+   } else {
+      lappend reportL "ERROR: The document does not have a catalog."\
+        "There is no indirect object with label: $label"
+   }
+   lappend args /Size [array size xrA]
+   puts $F [eval [list dict_obj] $args]
+   puts $F "startxref\n${startxref}\n%%EOF"
+%   \end{tcl}
+%   The final step is to close the file and compile the report.
+%   \begin{tcl}
+   close $F
+   join $reportL \n
+}
+%</pkg>
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \subsection{Hello World}
+% 
+% The code below creates a PDF file matching the basic ``Hello World'' 
+% example \cite[Sec.~A.2]{PDFspec}.
+% 
+% \begin{tcl}
+%<*example1>
+set F [pdf::rewrite_pdf hello.pdf]
+pdf::put_obj $F "The catalog" [pdf::dict_obj\
+%
+  /Type /Catalog\
+%
+  /Pages [pdf::obj_ref $F "The pages"]\
+%
+  /Outlines [pdf::obj_ref $F "The outlines"]]
+pdf::put_obj $F "The outlines"\
+  [pdf::dict_obj /Type /Outlines /Count [pdf::int_obj 0]]
+pdf::put_obj $F "The pages" [pdf::dict_obj\
+%
+  /Type /Pages\
+%
+  /Count [pdf::int_obj 1]\
+%
+  /Kids [pdf::array_obj [pdf::obj_ref $F "Page 1"]]]
+pdf::put_obj $F "Page 1" [pdf::dict_obj\
+%
+  /Type /Page\
+%
+  /Parent [pdf::obj_ref $F "The pages"]\
+%
+  /Resources [pdf::dict_obj\
+%
+    /Font [pdf::dict_obj /F1 [pdf::obj_ref $F "Helvetica"]]\
+%
+    /ProcSet [pdf::obj_ref $F "The procs"]]\
+%
+  /MediaBox [pdf::array_obj [pdf::int_obj 0] [pdf::int_obj 0]\
+    [pdf::int_obj 612] [pdf::int_obj 792]]\
+%
+  /Contents [pdf::obj_ref $F "Page 1 contents"]]
+pdf::begin_stream $F "Page 1 contents"
+puts $F {BT}
+puts $F {/F1 24 Tf}
+puts $F {100 100 Td (Hello World) Tj}
+puts $F {ET}
+pdf::end_stream $F
+pdf::put_obj $F "The procs" [pdf::array_obj /PDF /Text]
+pdf::put_obj $F "Helvetica" [pdf::dict_obj\
+  /Type /Font /Subtype /Type1\
+  /Name /F1 /BaseFont /Helvetica /Encoding /MacRomanEncoding]
+pdf::close_pdf $F "The catalog"
+%</example1>
+% \end{tcl}
+% 
+% 
+% \begin{thebibliography}{9}
+% \bibitem{PDFspec}
+%   Adobe Systems Incorporated:
+%   \textit{Portable Document Format Reference Manual},
+%   version~1.3 (second edition), Addison--Wesley, 1999;
+%   ISBN 0-201-61588-6;
+%   \textsc{http:}/\slash \texttt{partners.adobe.com}\slash
+%   \texttt{asn}\slash \texttt{developer}\slash \texttt{acrosdk}\slash
+%   \texttt{docs}\slash \texttt{filefmtspecs}\slash 
+%   \texttt{PDFReference13.pdf}.
+%   \emph{Note:} There is now a version~1.4 of this specification.
+% \end{thebibliography}
+% 
+% \PrintIndex
+% 
+% 
+\endinput

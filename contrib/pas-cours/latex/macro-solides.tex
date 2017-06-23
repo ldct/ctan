@@ -1,0 +1,753 @@
+% Fichier comprenant les macros construisant les solides
+
+% \prismereg : dessine un prisme à base régulière
+% Synthaxe : \prismreg[	n = nombre de côtés de la base (>2) - par défaut : 3,
+%						bordercolor = ... (par défaut : noir),
+%						incolor = ... (par défaut : blanc),
+%						coefopaq = ... (par défaut : 0.5),
+%						axe (booléen : si oui, axe tracé),
+%						axecolor = couleur de l'axe (par défaut : rouge),
+%						name (booléen : si oui, nom du sommet et du centre de la base mentionnés),
+%						sommet = nom du sommet (par défaut : S),
+%						posommet = ...,
+%						centre = nom du centre de la base (par défaut : O),
+%						scalecentre = coef. d'agrandissement du point du centre de la base,
+%						poscentre = position du nom du centre de la base (par défaut : below),
+%						hauteur = ... (par défaut, 5 cm),
+%						rayon = ... (par défaut, 2 cm),
+%						legende : booléen,
+%						incl = coefficient d'inclinaison de la base (par défaut : 1),
+%						rotat = angle de rotation (par défaut : 0°)]
+
+\define@cmdkey [PAS] {prismereg} {n}{}
+\define@cmdkey [PAS] {prismereg} {bordercolor}{}
+\define@cmdkey [PAS] {prismereg} {incolor}{}
+\define@cmdkey [PAS] {prismereg} {coefopaq}{}
+\define@boolkey[PAS] {prismereg} {axe}[true]{}
+\define@cmdkey [PAS] {prismereg} {axecolor}{}
+\define@boolkey[PAS] {prismereg} {name}[true]{}
+\define@boolkey[PAS] {prismereg} {legende}[true]{}
+\define@cmdkey [PAS] {prismereg} {hauteur}{}
+\define@cmdkey [PAS] {prismereg} {rayon}{}
+\define@cmdkey [PAS] {prismereg} {incl}{}
+\define@cmdkey [PAS] {prismereg} {rotat}{}
+
+\presetkeys    [PAS] {prismereg} {
+								n = 3,
+								bordercolor = black,
+ 							 	incolor = white,
+ 							 	coefopaq = 0.5,
+ 							 	axe = false,
+ 							 	axecolor = red,
+ 							 	legende = false,	
+								name = false,
+ 							 	hauteur = 5,
+ 							 	rayon = 2,
+ 							 	rotat = 0.1,
+ 							 	incl = 1}{}
+
+\newcommand*{\prismereg}[1][]{\pasPrismereg[#1]}
+
+\def\pasPrismereg[#1]{
+	\setkeys[PAS]{prismereg}{#1}
+		\pgfmathparse{\cmdPAS@prismereg@n==3}
+		\IfStrEq{\pgfmathresult}{1.0}{\def\rotat{10}}{\def\rotat{\cmdPAS@prismereg@rotat}}
+		\def\cotes{\cmdPAS@prismereg@n}
+		\pgfmathparse{\cotes-1}\let\cote\pgfmathresult
+		\ifPAS@prismereg@name
+			\foreach \i in {1,2,...,\cotes}
+			{
+				\pgfmathparse{(360/\cotes)*(\i-1)+\cmdPAS@prismereg@rotat}\let\angle\pgfmathresult
+				\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\angle)}\let\Mx\pgfmathresult
+				\pgfmathparse{\cmdPAS@prismereg@incl*sin(\angle)}\let\My\pgfmathresult
+				\IfStrEq{\angle}{0.1}
+				{
+					\def\posname{right}
+				}
+				{
+					\IfStrEq{\angle}{180.0}
+					{
+						\def\posname{left}
+					}
+					{
+						\IfStrEq{\angle}{90.0}
+						{
+							\def\posname{above}
+						}
+						{
+							\IfStrEq{\angle}{270.0}
+							{
+								\def\posname{below}
+							}
+							{
+								\pgfmathparse{\angle<180}
+								\IfStrEq{\pgfmathresult}{1.0}
+								{
+									\pgfmathparse{\angle<90}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{above right}
+									}
+									{
+										\def\posname{above left}
+									}
+								}
+								{
+									\pgfmathparse{\angle<270}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{below left}
+									}
+									{
+										\def\posname{below right}
+									}
+								}
+							}
+						}
+					}
+				}
+				\node[\posname,\cmdPAS@prismereg@bordercolor] at (\Mx,\My) {$A_{\i}$};
+			}
+		\fi
+		\pgfmathparse{\cmdPAS@prismereg@rayon*cos((360/\cotes)*\cote+\rotat)}\let\Mx\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@incl*sin((360/\cotes)*\cote+\rotat)}\let\My\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\rotat)}\let\Nx\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@incl*sin(\rotat)}\let\Ny\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@rayon*cos((360/\cotes)+\rotat)}\let\Px\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@incl*sin((360/\cotes)+\rotat)}\let\Py\pgfmathresult
+		\shade[draw=\cmdPAS@prismereg@bordercolor,shading=ball, ball color=\cmdPAS@prismereg@incolor,opacity=\cmdPAS@prismereg@coefopaq] (\Nx,\Ny) -- (\Px,\Py) -- (\Px,\Py+\cmdPAS@prismereg@hauteur) -- (\Nx,\Ny+\cmdPAS@prismereg@hauteur) -- cycle;
+		\draw[\cmdPAS@prismereg@bordercolor] (\Mx,\My) -- (\Nx,\Ny) -- (\Nx,\Ny+\cmdPAS@prismereg@hauteur);
+		\foreach \i in {1,...,\cote}
+		{
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos((360/\cotes)*\i+\rotat)}\let\Mx\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin((360/\cotes)*\i+\rotat)}\let\My\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@hauteur+\cmdPAS@prismereg@incl*sin((360/\cotes)*\i+\rotat)}\let\MMy\pgfmathresult
+			\path[coordinate] (\Mx,\MMy) coordinate (T\i);
+			\IfStrEq{\i}{1}{\global\def\xi{\Mx}\global\def\yi{\My}}{}
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos((360/\cotes)*(\i-1)+\rotat)}\let\Nx\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin((360/\cotes)*(\i-1)+\rotat)}\let\Ny\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos((360/\cotes)*(\i+1)+\rotat)}\let\Px\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin((360/\cotes)*(\i+1)+\rotat)}\let\Py\pgfmathresult
+			\IfStrEq{\cotes}{3}{\def\ang{120}}{\def\ang{140}}
+			\pgfmathparse{(360/\cotes)*\i<181}
+			\IfStrEq{\pgfmathresult}{1.0}
+				{
+					\draw[dotted,\cmdPAS@prismereg@bordercolor] (\Nx,\Ny) -- (\Mx,\My);
+				}
+				{
+					\draw[\cmdPAS@prismereg@bordercolor] (\Nx,\Ny) -- (\Mx,\My);
+				}
+			\pgfmathparse{(360/\cotes)*\i<\ang}
+			\IfStrEq{\pgfmathresult}{1.0}
+				{
+					\shade[shading=ball, ball color=\cmdPAS@prismereg@incolor,opacity=\cmdPAS@prismereg@coefopaq] (\Mx,\My+\cmdPAS@prismereg@hauteur) -- (\Mx,\My) -- (\Px,\Py) -- (\Px,\Py+\cmdPAS@prismereg@hauteur) -- cycle;
+					\draw[dotted,\cmdPAS@prismereg@bordercolor] (\Mx,\My) -- (\Mx,\My+\cmdPAS@prismereg@hauteur);
+				}
+				{
+					\shade[shading=ball, ball color=\cmdPAS@prismereg@incolor,opacity=\cmdPAS@prismereg@coefopaq] (\Mx,\My+\cmdPAS@prismereg@hauteur) -- (\Mx,\My) -- (\Px,\Py) -- (\Px,\Py+\cmdPAS@prismereg@hauteur) -- cycle;
+					\draw[\cmdPAS@prismereg@bordercolor] (\Mx,\My+\cmdPAS@prismereg@hauteur) -- (\Mx,\My) -- (\Px,\Py) -- (\Px,\Py+\cmdPAS@prismereg@hauteur);
+				}
+		}
+		\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\rotat)}\let\Mx\pgfmathresult
+		\pgfmathparse{\cmdPAS@prismereg@hauteur+\cmdPAS@prismereg@incl*sin(\rotat)}\let\MMy\pgfmathresult
+		\path[coordinate] (\Mx,\MMy) coordinate (T\cotes);
+		\shade[shading=ball, ball color=\cmdPAS@prismereg@incolor,opacity=\cmdPAS@prismereg@coefopaq] (T1)
+		\foreach \i in {2,...,\cotes}{--(T\i)}--cycle;
+		\draw[\cmdPAS@prismereg@bordercolor] (T1)
+		\foreach \i in {2,...,\cotes}{--(T\i)}--cycle;
+		\ifPAS@prismereg@legende
+			\IfStrEq{\cmdPAS@prismereg@incolor}{white}{\def\couleur{black}}{\def\couleur{\cmdPAS@prismereg@incolor}}
+			% Bases
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos(-85)+.5}\let\x\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin(-85)-1}\let\y\pgfmathresult
+			\draw[<-,>=stealth,dotted,\couleur] (.5,-.5) to [bend right=30] (\x,\y) node[right,\couleur] {\texttt{base (polygonale)}};
+			\draw[<-,>=stealth,dotted,\couleur] (.5,.5+\cmdPAS@prismereg@hauteur) to [bend left=30] (\x,\y+\cmdPAS@prismereg@hauteur+4) node[right,\couleur] {\texttt{base (polygonale)}};
+			% Faces latérales
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\rotat)}\let\Mx\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin(\rotat)}\let\My\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\rotat-360/\cotes)}\let\Nx\pgfmathresult
+			\pgfmathparse{\cmdPAS@prismereg@incl*sin(\rotat-360/\cotes)}\let\Ny\pgfmathresult
+			\coordinate (M) at (\Mx,\My);
+			\coordinate (N) at (\Nx,\Ny);
+			\coordinate (T) at (\Nx,\Ny+\cmdPAS@prismereg@hauteur);
+			\coordinate (G) at (barycentric cs:M=1,N=1,T=1,T\cotes=1);
+			\draw[<-,>=stealth,\couleur] (G) to [bend left=30] ($(G)+(1.5,.5)$) node[right,\couleur] {\begin{minipage}{3cm}\texttt{face lat\'erale (rectangulaire)}\end{minipage}};
+			% Hauteur
+			\draw[\cmdPAS@prismereg@axecolor,dotted] (T\cotes) -- ($(T\cotes)+(5,0)$);
+			\draw[\cmdPAS@prismereg@axecolor,dotted] (M) -- ($(M)+(5,0)$);
+			\draw[<->,\cmdPAS@prismereg@axecolor,>=stealth'] ($(T\cotes)+(5,0)$) -- ($(M)+(5,0)$) node[midway,right,\cmdPAS@prismereg@axecolor] {\texttt{hauteur}};
+		\fi
+		\ifPAS@prismereg@axe
+			\draw[dotted,\cmdPAS@prismereg@axecolor] (0,\cmdPAS@prismereg@hauteur) -- (0,-\cmdPAS@prismereg@incl);
+			\draw[\cmdPAS@prismereg@axecolor] (0,\cmdPAS@prismereg@hauteur) -- (0,\cmdPAS@prismereg@hauteur+1);
+			\draw[\cmdPAS@prismereg@axecolor] (0,-\cmdPAS@prismereg@incl) -- (0,-\cmdPAS@prismereg@incl-1);
+			\ifPAS@prismereg@legende
+				\draw[<-,>=stealth',\cmdPAS@prismereg@axecolor] (0,\cmdPAS@prismereg@hauteur+.5) to [bend right=20] (-\cmdPAS@prismereg@rayon/2,\cmdPAS@prismereg@hauteur+1) node[left,\cmdPAS@prismereg@axecolor] {\texttt{axe de rotation}};
+			\fi
+		\fi
+		\ifPAS@prismereg@name
+			\foreach \i in {1,2,...,\cotes}
+			{
+				\pgfmathparse{(360/\cotes)*(\i-1)+\cmdPAS@prismereg@rotat}\let\angle\pgfmathresult
+				\pgfmathparse{\cmdPAS@prismereg@rayon*cos(\angle)}\let\Mx\pgfmathresult
+				\pgfmathparse{\cmdPAS@prismereg@incl*sin(\angle)}\let\My\pgfmathresult
+				\IfStrEq{\angle}{0.1}
+				{
+					\def\posname{right}
+				}
+				{
+					\IfStrEq{\angle}{180.0}
+					{
+						\def\posname{left}
+					}
+					{
+						\IfStrEq{\angle}{90.0}
+						{
+							\def\posname{above}
+						}
+						{
+							\IfStrEq{\angle}{270.0}
+							{
+								\def\posname{below}
+							}
+							{
+								\pgfmathparse{\angle<180}
+								\IfStrEq{\pgfmathresult}{1.0}
+								{
+									\pgfmathparse{\angle<90}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{above right}
+									}
+									{
+										\def\posname{above left}
+									}
+								}
+								{
+									\pgfmathparse{\angle<270}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{below left}
+									}
+									{
+										\def\posname{below right}
+									}
+								}
+							}
+						}
+					}
+				}
+				\node[\posname,\cmdPAS@prismereg@bordercolor] at (\Mx,\My+\cmdPAS@prismereg@hauteur) {$B_{\i}$};
+			}
+		\fi
+}
+
+
+% \pyramreg : dessine une pyramide à base régulière
+% Synthaxe : \pyramreg[	n = nombre de côtés de la base (>2) - par défaut : 3,
+%						bordercolor = ... (par défaut : noir),
+%						incolor = ... (par défaut : blanc),
+%						coefopaq = ... (par défaut : 0.5),
+%						axe (booléen : si oui, axe tracé),
+%						axecolor = couleur de l'axe (par défaut : rouge),
+%						name (booléen : si oui, nom du sommet et du centre de la base mentionnés),
+%						sommet = nom du sommet (par défaut : S),
+%						posommet = ...,
+%						centre = nom du centre de la base (par défaut : O),
+%						scalecentre = coef. d'agrandissement du point du centre de la base,
+%						poscentre = position du nom du centre de la base (par défaut : below),
+%						hauteur = ... (par défaut, 5 cm),
+%						rayon = ... (par défaut, 2 cm),
+%						legende : booléen,
+%						incl = coefficient d'inclinaison de la base (par défaut : 1),
+%						rotat = angle de rotation]
+
+\define@cmdkey [PAS] {pyramreg} {n}{}
+\define@cmdkey [PAS] {pyramreg} {bordercolor}{}
+\define@cmdkey [PAS] {pyramreg} {incolor}{}
+\define@cmdkey [PAS] {pyramreg} {coefopaq}{}
+\define@boolkey[PAS] {pyramreg} {axe}[true]{}
+\define@cmdkey [PAS] {pyramreg} {axecolor}{}
+\define@boolkey[PAS] {pyramreg} {name}[true]{}
+\define@boolkey[PAS] {pyramreg} {legende}[true]{}
+\define@cmdkey [PAS] {pyramreg} {sommet}{}
+\define@cmdkey [PAS] {pyramreg} {posommet}{}
+\define@cmdkey [PAS] {pyramreg} {centre}{}
+\define@cmdkey [PAS] {pyramreg} {poscentre}{}
+\define@cmdkey [PAS] {pyramreg} {scalecentre}{}
+\define@cmdkey [PAS] {pyramreg} {hauteur}{}
+\define@cmdkey [PAS] {pyramreg} {rayon}{}
+\define@cmdkey [PAS] {pyramreg} {rotat}{}
+\define@cmdkey [PAS] {pyramreg} {incl}{}
+
+\presetkeys    [PAS] {pyramreg} {
+								n = 3,
+								bordercolor = black,
+ 							 	incolor = white,
+ 							 	coefopaq = 0.5,
+ 							 	axe = false,
+ 							 	axecolor = red,
+ 							 	name = false,
+ 							 	legende = false,
+ 							 	sommet = S, 
+ 							 	posommet = above,							 	
+ 							 	centre = O,
+ 							 	poscentre = below,
+ 							 	scalecentre = 1,
+ 							 	hauteur = 5,
+ 							 	rayon = 2,
+								rotat = 0.1,
+ 							 	incl = 1}{}
+
+\newcommand*{\pyramreg}[1][]{\pasPyramreg[#1]}
+
+\def\pasPyramreg[#1]{
+	\setkeys[PAS]{pyramreg}{#1}
+		\def\cotes{\cmdPAS@pyramreg@n}
+		\pgfmathparse{\cotes-1}\let\cote\pgfmathresult
+		\ifPAS@pyramreg@legende
+			\pgfmathparse{\cmdPAS@pyramreg@rayon*cos(-85)+.5}\let\x\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@incl*sin(-85)-1}\let\y\pgfmathresult
+			\draw[<-,>=stealth,dotted,\cmdPAS@pyramreg@incolor] (.5,-.5) to [bend right=30] (\x,\y) node[right,\cmdPAS@pyramreg@incolor] {\texttt{base (polygonale)}};
+		\fi
+		\ifPAS@pyramreg@name
+			\fill[\cmdPAS@pyramreg@bordercolor] (0,0) circle (\cmdPAS@pyramreg@scalecentre*0.01cm) node[\cmdPAS@pyramreg@bordercolor,\cmdPAS@pyramreg@poscentre] {\cmdPAS@pyramreg@centre};
+			\node[\cmdPAS@pyramreg@posommet,\cmdPAS@pyramreg@bordercolor] at (0,\cmdPAS@pyramreg@hauteur) {\cmdPAS@pyramreg@sommet};
+			\foreach \i in {1,2,...,\cotes}
+			{
+				\pgfmathparse{(360/\cotes)*(\i-1)+\cmdPAS@pyramreg@rotat}\let\angle\pgfmathresult
+				\pgfmathparse{\cmdPAS@pyramreg@rayon*cos(\angle)}\let\Mx\pgfmathresult
+				\pgfmathparse{\cmdPAS@pyramreg@incl*sin(\angle)}\let\My\pgfmathresult
+				\IfStrEq{\angle}{0.1}
+				{
+					\def\posname{right}
+				}
+				{
+					\IfStrEq{\angle}{180.0}
+					{
+						\def\posname{left}
+					}
+					{
+						\IfStrEq{\angle}{90.0}
+						{
+							\def\posname{above}
+						}
+						{
+							\IfStrEq{\angle}{270.0}
+							{
+								\def\posname{below}
+							}
+							{
+								\pgfmathparse{\angle<180}
+								\IfStrEq{\pgfmathresult}{1.0}
+								{
+									\pgfmathparse{\angle<90}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{above right}
+									}
+									{
+										\def\posname{above left}
+									}
+								}
+								{
+									\pgfmathparse{\angle<270}
+									\IfStrEq{\pgfmathresult}{1.0}
+									{
+										\def\posname{below left}
+									}
+									{
+										\def\posname{below right}
+									}
+								}
+							}
+						}
+					}
+				}
+				\node[\posname,\cmdPAS@pyramreg@bordercolor] at (\Mx,\My) {$A_{\i}$};
+			}
+		\fi
+		\foreach \i in {1,...,\cote}
+		{
+			\pgfmathparse{\cmdPAS@pyramreg@rayon*cos((360/\cotes)*\i+\cmdPAS@pyramreg@rotat)}\let\Mx\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@incl*sin((360/\cotes)*\i+\cmdPAS@pyramreg@rotat)}\let\My\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@rayon*cos((360/\cotes)*(\i-1)+\cmdPAS@pyramreg@rotat)}\let\Nx\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@incl*sin((360/\cotes)*(\i-1)+\cmdPAS@pyramreg@rotat)}\let\Ny\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@rayon*cos((360/\cotes)*(\i+1)+\cmdPAS@pyramreg@rotat)}\let\Px\pgfmathresult
+			\pgfmathparse{\cmdPAS@pyramreg@incl*sin((360/\cotes)*(\i+1)+\cmdPAS@pyramreg@rotat)}\let\Py\pgfmathresult
+			\IfStrEq{\cotes}{3}{\def\ang{120}}{\def\ang{140}}
+			\pgfmathparse{(360/\cotes)*\i<181}
+			\IfStrEq{\pgfmathresult}{1.0}{\draw[dotted,\cmdPAS@pyramreg@bordercolor] (\Nx,\Ny) -- (\Mx,\My);}{\draw[\cmdPAS@pyramreg@bordercolor] (\Nx,\Ny) -- (\Mx,\My);}
+			\pgfmathparse{(360/\cotes)*\i+\cmdPAS@pyramreg@rotat<\ang}
+			\IfStrEq{\pgfmathresult}{1.0}{\draw[dotted,\cmdPAS@pyramreg@bordercolor] (\Mx,\My) -- (0,\cmdPAS@pyramreg@hauteur);}
+			{
+			\shade[draw=\cmdPAS@pyramreg@bordercolor,shading=ball, ball color=\cmdPAS@pyramreg@incolor,opacity=\cmdPAS@pyramreg@coefopaq] (0,\cmdPAS@pyramreg@hauteur) -- (\Mx,\My) -- (\Px,\Py) -- cycle;
+		\draw[\cmdPAS@pyramreg@bordercolor] (0,\cmdPAS@pyramreg@hauteur) -- (\Mx,\My) -- (\Px,\Py);
+			}
+		}
+		\pgfmathparse{\cmdPAS@pyramreg@rayon*cos((360/\cotes)*\cote+\cmdPAS@pyramreg@rotat)}\let\Mx\pgfmathresult
+		\pgfmathparse{\cmdPAS@pyramreg@incl*sin((360/\cotes)*\cote+\cmdPAS@pyramreg@rotat)}\let\My\pgfmathresult
+		\pgfmathparse{\cmdPAS@pyramreg@rayon*cos(\cmdPAS@pyramreg@rotat)}\let\Nx\pgfmathresult
+		\pgfmathparse{+\cmdPAS@pyramreg@incl*sin(\cmdPAS@pyramreg@rotat)}\let\Ny\pgfmathresult
+		\draw[\cmdPAS@pyramreg@bordercolor] (\Mx,\My) -- (\Nx,\Ny) -- (0,\cmdPAS@pyramreg@hauteur);
+		\ifPAS@pyramreg@axe
+			\draw[dotted,\cmdPAS@pyramreg@axecolor] (0,\cmdPAS@pyramreg@hauteur) -- (0,-\cmdPAS@pyramreg@incl);
+			\draw[\cmdPAS@pyramreg@axecolor] (0,\cmdPAS@pyramreg@hauteur) -- (0,\cmdPAS@pyramreg@hauteur+1);
+			\draw[\cmdPAS@pyramreg@axecolor] (0,-\cmdPAS@pyramreg@incl) -- (0,-\cmdPAS@pyramreg@incl-1);
+			\ifPAS@pyramreg@legende
+				\draw[<-,>=stealth',\cmdPAS@pyramreg@axecolor] (0,\cmdPAS@pyramreg@hauteur+.5) to [bend left=20] (-\cmdPAS@pyramreg@rayon/2,\cmdPAS@pyramreg@hauteur) node[left,\cmdPAS@pyramreg@axecolor] {\texttt{axe de rotation}};
+			\fi
+		\fi
+		\ifPAS@pyramreg@legende
+			\pgfmathparse{(\cmdPAS@pyramreg@hauteur-\Ny)/2}\let\y\pgfmathresult
+			\pgfmathparse{1-\cmdPAS@pyramreg@coefopaq}\let\op\pgfmathresult
+			\draw[<-,>=stealth,\cmdPAS@pyramreg@bordercolor] (\Nx/2,\y) to [bend left=30] (\cmdPAS@pyramreg@rayon+.5,\y+1) node[right,\cmdPAS@pyramreg@bordercolor] {\texttt{ar\^ete lat\'erale}};
+			\draw[<-,>=stealth,\cmdPAS@pyramreg@bordercolor] (0,\cmdPAS@pyramreg@hauteur) to [bend left=10] (\cmdPAS@pyramreg@rayon+.5,\cmdPAS@pyramreg@hauteur+0.5) node[right,\cmdPAS@pyramreg@bordercolor] {\texttt{sommet}};
+			\draw[gray,dotted] (0,\cmdPAS@pyramreg@hauteur) -- (\cmdPAS@pyramreg@rayon+4,\cmdPAS@pyramreg@hauteur);
+			\draw[gray,dotted] (\cmdPAS@pyramreg@rayon,0) -- (\cmdPAS@pyramreg@rayon+4,0);
+			\draw[gray,dotted,opacity=\op] (0,0) -- (\cmdPAS@pyramreg@rayon,0);
+			\draw[<->,>=stealth',\cmdPAS@pyramreg@bordercolor] (\cmdPAS@pyramreg@rayon+4,\cmdPAS@pyramreg@hauteur) -- (\cmdPAS@pyramreg@rayon+4,0) node[midway,right,\cmdPAS@pyramreg@bordercolor] {\texttt{hauteur}};
+			\draw[<-,>=stealth,\cmdPAS@pyramreg@incolor] (\Nx/2,.5) to [bend right=30] (\cmdPAS@pyramreg@rayon+.5,-1) node[right,\cmdPAS@pyramreg@incolor] {\texttt{face lat\'erale (triangulaire)}};
+		\fi
+}
+
+
+% \boule : dessine une boule
+% Synthaxe : \boule[border, (booléen : si oui, un bord est dessiné
+%					bordercolor = ... (par défaut : noir),
+%					name, (booléen : si oui, le centre est dessiné),
+%					centre = nom du centre,
+%					poscentre = position du nom du centre,
+%					incolor = couleur de remplissage (par défaut : blanc),
+%					coefopaq = coefficient d'opacité,
+%					grandcercle (booléen : si oui, le grand cercle est dessiné),
+%					legende (booléen),
+%					scale = coefficient d'agrandissement,
+%					greenwich (booléen)]
+
+\define@boolkey[PAS] {boule} {border}[true]{}
+\define@cmdkey [PAS] {boule} {bordercolor}{}
+\define@boolkey[PAS] {boule} {name}[true]{}
+\define@cmdkey [PAS] {boule} {centre}{}
+\define@cmdkey [PAS] {boule} {poscentre}{}
+\define@cmdkey [PAS] {boule} {incolor}{}
+\define@cmdkey [PAS] {boule} {coefopaq}{}
+\define@boolkey[PAS] {boule} {grandcercle}[true]{}
+\define@boolkey[PAS] {boule} {legende}[true]{}
+\define@boolkey[PAS] {boule} {greenwich}[true]{}
+\define@boolkey[PAS] {boule} {greenwichlegende}[true]{}
+\define@boolkey[PAS] {boule} {equateurlegende}[true]{}
+\define@boolkey[PAS] {boule} {exemplecoord}[true]{}
+\define@cmdkey [PAS] {boule} {scale}{}
+\define@cmdkey [PAS] {boule} {greenwichcolor}{}
+\define@cmdkey [PAS] {boule} {exemplecoordcolor}{}
+\define@cmdkey [PAS] {boule} {exemplecoordname}{}
+
+\presetkeys    [PAS] {boule} {	border = false,
+								bordercolor = black,
+ 							 	incolor = white,
+ 							 	coefopaq = 0.5,
+ 							 	centre = O,
+ 							 	poscentre = below,
+ 							 	scale = 1,
+ 							 	grandcercle = false,
+ 							 	legende = false,
+								greenwich = false, % NEW 2016-08-04
+								greenwichcolor = black, % NEW 2016-08-04
+								greenwichlegende = false, % NEW 2016-08-04
+								equateurlegende = false, % NEW 2016-08-04
+								exemplecoord = false, % NEW 2016-08-04
+								exemplecoordcolor = green!50!black, % NEW 2016-08-04
+								exemplecoordname = A, % NEW 2016-08-04
+ 							 	name = false}{}
+
+\newcommand*{\boule}[1][]{\pasBoule[#1]}
+
+\def\pasBoule[#1]{
+	\setkeys[PAS]{boule}{#1}
+	\begin{scope}[scale=\cmdPAS@boule@scale]
+		\ifPAS@boule@grandcercle		
+			\draw[\cmdPAS@boule@bordercolor,dotted] (2,0) arc (0:180:2cm and .5cm);
+		\fi	
+		\ifPAS@boule@name
+			\fill[\cmdPAS@boule@bordercolor] (0,0) circle (0.03cm) node[\cmdPAS@boule@poscentre,scale=\cmdPAS@boule@scale] {\cmdPAS@boule@centre};
+		\fi
+		\shade[shading=ball, ball color=\cmdPAS@boule@incolor,opacity=\cmdPAS@boule@coefopaq] (0,0) circle (2cm);
+		\ifPAS@boule@grandcercle	
+			\draw[\cmdPAS@boule@bordercolor] (2,0) arc (0:-180:2cm and .5cm);
+		\fi
+		\ifPAS@boule@border
+			\draw[\cmdPAS@boule@bordercolor] (0,0) circle (2cm);
+		\fi
+		\ifPAS@boule@greenwich
+			\draw[\cmdPAS@boule@greenwichcolor] (0,2) arc (90:270:1cm and 2cm);
+		\fi	
+		\ifPAS@boule@legende
+			\pgfmathparse{2*cos(-60)}\let\x\pgfmathresult
+			\pgfmathparse{.5*sin(-60)}\let\y\pgfmathresult	
+			\draw[<-,>=stealth',\cmdPAS@boule@bordercolor] (\x,\y) to [bend right=30] (3,-0.4) node[right,\cmdPAS@boule@bordercolor] {\texttt{un grand cercle}};
+			\begin{scope}[rotate=50]
+				\draw[\cmdPAS@boule@bordercolor!50!black,dotted] (2,0) arc (0:180:2cm and .5cm);
+				\draw[\cmdPAS@boule@bordercolor!50!black] (2,0) arc (0:-180:2cm and .5cm);				
+			\end{scope}
+			\pgfmathparse{1.5*cos(38)}\let\x\pgfmathresult
+			\pgfmathparse{1.5*sin(38)}\let\y\pgfmathresult	
+			\draw[<-,>=stealth',\cmdPAS@boule@bordercolor!50!black] (\x,\y) to [bend right=30] (3,\y) node[right,\cmdPAS@boule@bordercolor!50!black] {\texttt{un autre grand cercle}};
+		\fi
+		\ifPAS@boule@greenwichlegende
+			\draw[<-,>=stealth',\cmdPAS@boule@greenwichcolor] (-0.6,-1.8) to [bend left=30] (-3,-1.9) node[left,\cmdPAS@boule@greenwichcolor] {\texttt{M\'eridien de Greenwich}};
+		\fi
+		\ifPAS@boule@equateurlegende
+			\draw[<-,>=stealth',\cmdPAS@boule@bordercolor] (1.8,-.3) to [bend right=30] (3,-0.4) node[right,\cmdPAS@boule@bordercolor] {\texttt{\'Equateur}};
+		\fi
+		\ifPAS@boule@exemplecoord
+			\filldraw[fill=\cmdPAS@boule@exemplecoordcolor!50,draw=\cmdPAS@boule@exemplecoordcolor] (0,0) -- (-155:0.4) arc (-110:-50:0.7 and 0.3) -- (-17:0.4)  -- (0,0);
+			\filldraw[fill=\cmdPAS@boule@exemplecoordcolor!25,draw=\cmdPAS@boule@exemplecoordcolor] (0,0) -- (-17:0.4) arc (-17:50:0.7 and 0.3) -- (50:0.4)  -- (0,0);
+			\node[\cmdPAS@boule@exemplecoordcolor,scale={\cmdPAS@boule@scale*0.6}] at (-102:0.4) {80$^\circ$};
+			\node[\cmdPAS@boule@exemplecoordcolor!70,scale={\cmdPAS@boule@scale*0.6}] at (20:0.6) {40$^\circ$};
+			\fill[fill=\cmdPAS@boule@exemplecoordcolor] (50:1.6cm) circle (0.05cm) node[right,\cmdPAS@boule@exemplecoordcolor] {\cmdPAS@boule@exemplecoordname};
+			\draw[dashed,\cmdPAS@boule@greenwichcolor] (-0.98,-0.43) -- (0,0);
+			\draw[dashed,\cmdPAS@boule@exemplecoordcolor] (0,0) -- (1.28,-0.38);
+			\draw[dashed,\cmdPAS@boule@exemplecoordcolor] (0,0) -- (50:1.6cm);
+			\fill[\cmdPAS@boule@greenwichcolor] (-0.98,-0.43) circle (0.05cm) node[below left,scale=\cmdPAS@boule@scale,color=\cmdPAS@boule@greenwichcolor] {G};
+			\draw[\cmdPAS@boule@exemplecoordcolor] (0,2) arc (90:-90:1.3cm and 2cm);
+			\fill[\cmdPAS@boule@exemplecoordcolor] (1.28,-0.38) circle (0.05cm) node[below right,scale=\cmdPAS@boule@scale,color=\cmdPAS@boule@exemplecoordcolor] {H};
+		\fi
+	\end{scope}
+}
+
+% \cone : dessine un cône de révolution
+% Synthaxe :  \cone[bordercolor=couleur des bords, (black par défaut)
+%					incolor = couleur de la face, (white par défaut)
+%					coefopaq = coefficient d'opacité (0.5 par défaut),
+%					rayon = rayon du disque de base, (1 cm par défaut),
+%				    hauteur = hauteur du sommet (3 cm par défaut),
+%					sommet = nom du sommet, (par défaut : S)
+%					posommet = position du nom du sommet (par défaut : above),
+%					centre = nom du centre du disque de base, (par défaut : O),
+%					incl = coefficient d'inclinaison du disque de base,
+%					poscentre = position du centre du disque de base (par défaut : below),
+%					scalecentre = coefficient d'agrendissement du point du centre du disque de base,
+%					axe : booléen,
+%					axecolor = couleur de l'axe de révolution,
+%					legende : booléen,
+%					name : booléen]
+
+\define@cmdkey [PAS] {cone} {bordercolor}{}
+\define@cmdkey [PAS] {cone} {incolor}{}
+\define@cmdkey [PAS] {cone} {hauteur}{}
+\define@cmdkey [PAS] {cone} {coefopaq}{}
+\define@cmdkey [PAS] {cone} {rayon}{}
+\define@cmdkey [PAS] {cone} {sommet}{}
+\define@cmdkey [PAS] {cone} {posommet}{}
+\define@cmdkey [PAS] {cone} {centre}{}
+\define@cmdkey [PAS] {cone} {poscentre}{}
+\define@cmdkey [PAS] {cone} {scalecentre}{}
+\define@cmdkey [PAS] {cone} {incl}{}
+\define@boolkey[PAS] {cone} {name}[true]{}
+\define@boolkey[PAS] {cone} {axe}[true]{}
+\define@boolkey[PAS] {cone} {legende}[true]{}
+\define@cmdkey [PAS] {cone} {axecolor}{}
+\presetkeys    [PAS] {cone} {bordercolor = black,
+ 							 incolor = white,
+ 							 coefopaq = 0.5,
+ 							 rayon = 1,
+ 							 hauteur = 3,
+ 							 sommet = S,
+ 							 posommet = above,
+ 							 centre = O,
+ 							 poscentre = below,
+ 							 scalecentre = 1,
+ 							 incl = 0.33,
+ 							 name = false,
+ 							 axe = false,
+ 							 legende = false,
+ 							 axecolor = red}{}
+
+\newcommand*{\cone}[1][]{\pasCone[#1]}
+
+\def\pasCone[#1]{
+	\setkeys[PAS]{cone}{#1}
+		\pgfmathparse{\cmdPAS@cone@incl*\cmdPAS@cone@rayon}\let\petitaxe\pgfmathresult
+		\pgfmathparse{2*\cmdPAS@cone@rayon}\let\grandaxe\pgfmathresult		
+		\pgfmathparse{0.01*\cmdPAS@cone@scalecentre}\let\centre\pgfmathresult			
+		\draw[dashed,\cmdPAS@cone@bordercolor] (0,0) arc (180:0:\cmdPAS@cone@rayon cm and \petitaxe cm);
+		\ifPAS@cone@axe
+			\draw[dotted,\cmdPAS@cone@axecolor] (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) -- (\cmdPAS@cone@rayon,-\petitaxe);
+			\draw[\cmdPAS@cone@axecolor] (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) -- (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur+1);
+			\draw[\cmdPAS@cone@axecolor] (\cmdPAS@cone@rayon,-\petitaxe) -- (\cmdPAS@cone@rayon,-\petitaxe-1);
+			\ifPAS@cone@legende
+				\draw[\cmdPAS@cone@axecolor,<-,>=stealth'] (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur+.5) to [bend left=30] (\cmdPAS@cone@rayon+1,\cmdPAS@cone@hauteur+1) node[right,\cmdPAS@cone@axecolor] {\texttt{axe de r\'evolution}};
+			\fi		
+		\fi
+		\shade[draw=\cmdPAS@cone@bordercolor,shading=ball, ball color=\cmdPAS@cone@incolor,opacity=\cmdPAS@cone@coefopaq] (0,0) -- (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) -- (\grandaxe,0) arc (0:-180:\cmdPAS@cone@rayon cm and \petitaxe cm);
+		\ifPAS@cone@name
+			\node[\cmdPAS@cone@posommet,\cmdPAS@cone@bordercolor] at (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) {\cmdPAS@cone@sommet};
+			\node[\cmdPAS@cone@poscentre,\cmdPAS@cone@bordercolor] at (\cmdPAS@cone@rayon,0) {\cmdPAS@cone@centre};
+			\fill[\cmdPAS@cone@bordercolor]	(\cmdPAS@cone@rayon,0) circle (\centre cm);
+		\fi
+		\ifPAS@cone@legende
+			\pgfmathparse{\petitaxe*sin(-40)}\let\y\pgfmathresult
+			\pgfmathparse{\cmdPAS@cone@rayon*(1+cos(-40))}\let\x\pgfmathresult			
+			\draw[\cmdPAS@cone@bordercolor,thick] (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) -- (\x,\y);
+			\draw[<-,>=stealth',\cmdPAS@cone@bordercolor] (\x,\y) to [bend right=30] (2*\cmdPAS@cone@rayon+1,0) node[\cmdPAS@cone@bordercolor,right] {\texttt{g\'en\'eratrice}};
+			\draw[black,<-,>=stealth'] (\cmdPAS@cone@rayon,\cmdPAS@cone@hauteur) to [bend right=45] (\cmdPAS@cone@rayon/2,\cmdPAS@cone@hauteur) node[black,below left] {\texttt{sommet}};
+			\draw[black,<-,>=stealth'] (\cmdPAS@cone@rayon,0) to [bend right=30] (\cmdPAS@cone@rayon/2,-\petitaxe-.5) node[black,below] {\texttt{centre du disque de base}};
+		\fi
+}
+
+
+% \cylindre : dessine un cône de révolution
+% Synthaxe :  \cylindre[bordercolor=couleur des bords, (black par défaut)
+%					incolor = couleur de la face, (white par défaut)
+%					coefopaq = coefficient d'opacité (0.5 par défaut),
+%					rayon = rayon du disque de base, (1 cm par défaut),
+%				    hauteur = hauteur du sommet (3 cm par défaut),
+%					incl = coefficient d'inclinaison du disque de base,
+%					centrebas = nom du centre du disque de base, (par défaut : B),
+%					centrehaut = nom du centre du disque de base, (par défaut : H),
+%					poscentrebas = position du centre du disque de base (par défaut : below),
+%					poscentrehaut = position du centre du disque du haut (par défaut : below),
+%					scalecentre = coefficient d'agrendissement du point du centre du disque de base,
+%					axe : booléen,
+%					axecolor = couleur de l'axe de révolution,
+%					legende : booléen,
+%					name : booléen]
+
+\define@cmdkey [PAS] {cylindre} {bordercolor}{}
+\define@cmdkey [PAS] {cylindre} {incolor}{}
+\define@cmdkey [PAS] {cylindre} {hauteur}{}
+\define@cmdkey [PAS] {cylindre} {coefopaq}{}
+\define@cmdkey [PAS] {cylindre} {rayon}{}
+\define@cmdkey [PAS] {cylindre} {centrebas}{}
+\define@cmdkey [PAS] {cylindre} {poscentrebas}{}
+\define@cmdkey [PAS] {cylindre} {centrehaut}{}
+\define@cmdkey [PAS] {cylindre} {poscentrehaut}{}
+\define@cmdkey [PAS] {cylindre} {scalecentre}{}
+\define@cmdkey [PAS] {cylindre} {incl}{}
+\define@boolkey[PAS] {cylindre} {name}[true]{}
+\define@boolkey[PAS] {cylindre} {axe}[true]{}
+\define@boolkey[PAS] {cylindre} {legende}[true]{}
+\define@boolkey[PAS] {cylindre} {rectgener}[true]{}
+\define@cmdkey [PAS] {cylindre} {axecolor}{}
+\presetkeys    [PAS] {cylindre} {bordercolor = black,
+ 							 incolor = white,
+ 							 coefopaq = 0.5,
+ 							 rayon = 1,
+ 							 hauteur = 3,
+ 							 centrebas = B,
+ 							 poscentrebas = above,
+ 							 centrehaut = H,
+ 							 poscentrehaut = below,
+ 							 scalecentre = 1,
+ 							 incl = 0.33,
+ 							 name = false,
+ 							 axe = false,
+ 							 legende = false,
+							 rectgener = false,
+ 							 axecolor = red}{}
+
+\newcommand*{\cylindre}[1][]{\pasCylindre[#1]}
+
+\def\pasCylindre[#1]{
+	\setkeys[PAS]{cylindre}{#1}
+		\pgfmathparse{\cmdPAS@cylindre@incl*\cmdPAS@cylindre@rayon}\let\petitaxe\pgfmathresult
+		\pgfmathparse{2*\cmdPAS@cylindre@rayon}\let\grandaxe\pgfmathresult		
+		\pgfmathparse{0.01*\cmdPAS@cylindre@scalecentre}\let\centre\pgfmathresult	
+		\ifPAS@cylindre@rectgener
+			\pgfmathparse{\petitaxe*sin(-40)}\let\y\pgfmathresult
+			\pgfmathparse{\cmdPAS@cylindre@rayon*(cos(-40))}\let\x\pgfmathresult	
+			\filldraw[opacity=2*\cmdPAS@cylindre@coefopaq,fill=\cmdPAS@cylindre@incolor,draw=\cmdPAS@cylindre@bordercolor] (0,0) -- (\x,\y) -- (\x,\y+\cmdPAS@cylindre@hauteur) -- (0,\cmdPAS@cylindre@hauteur);
+			\ifPAS@cylindre@legende
+				\draw[\cmdPAS@cylindre@bordercolor,<-,>=stealth'] (.75*\x,.75*\y+.3) to [bend right=45] (1.3*\x,2*\y) node[right,\cmdPAS@cylindre@bordercolor] {\texttt{rectangle g\'en\'erateur}};
+			\fi
+		\fi			
+		\draw[dashed,\cmdPAS@cylindre@bordercolor] (\cmdPAS@cylindre@rayon,0) arc (0:180:\cmdPAS@cylindre@rayon cm and \petitaxe cm);
+		\ifPAS@cylindre@axe
+			\draw[dotted,\cmdPAS@cylindre@axecolor] (0,\cmdPAS@cylindre@hauteur) -- (0,-\petitaxe);
+			\draw[\cmdPAS@cylindre@axecolor] (0,\cmdPAS@cylindre@hauteur) -- (0,\cmdPAS@cylindre@hauteur+1);
+			\draw[\cmdPAS@cylindre@axecolor] (0,-\petitaxe) -- (0,-\petitaxe-1);
+			\ifPAS@cylindre@legende
+				\draw[\cmdPAS@cylindre@axecolor,<-,>=stealth'] (0,\cmdPAS@cylindre@hauteur+.5) to [bend left=30] (1,\cmdPAS@cylindre@hauteur+1) node[right,\cmdPAS@cylindre@axecolor] {\texttt{axe de r\'evolution}};
+			\fi		
+		\fi
+		\shade[draw=\cmdPAS@cylindre@bordercolor,shading=ball, ball color=\cmdPAS@cylindre@incolor,opacity=\cmdPAS@cylindre@coefopaq] (-\cmdPAS@cylindre@rayon,0) arc (180:360:\cmdPAS@cylindre@rayon cm and \petitaxe cm) -- (\cmdPAS@cylindre@rayon,\cmdPAS@cylindre@hauteur) arc (0:180:\cmdPAS@cylindre@rayon cm and \petitaxe cm) -- cycle;
+		\draw[draw=\cmdPAS@cylindre@bordercolor] (-\cmdPAS@cylindre@rayon,0) arc (180:360:\cmdPAS@cylindre@rayon cm and \petitaxe cm) -- (\cmdPAS@cylindre@rayon,\cmdPAS@cylindre@hauteur) arc (0:180:\cmdPAS@cylindre@rayon cm and \petitaxe cm) -- cycle;
+		\draw[draw=\cmdPAS@cylindre@bordercolor] (-\cmdPAS@cylindre@rayon,\cmdPAS@cylindre@hauteur) arc (180:360:\cmdPAS@cylindre@rayon cm and \petitaxe cm);
+		\ifPAS@cylindre@name
+			\node[\cmdPAS@cylindre@poscentrehaut,\cmdPAS@cylindre@bordercolor] at (0,\cmdPAS@cylindre@hauteur) {\cmdPAS@cylindre@centrehaut};
+			\node[\cmdPAS@cylindre@poscentrebas,\cmdPAS@cylindre@bordercolor] at (0,0) {\cmdPAS@cylindre@centrebas};
+			\fill[\cmdPAS@cylindre@bordercolor]	(0,0) circle (\centre cm);
+			\fill[\cmdPAS@cylindre@bordercolor]	(0,\cmdPAS@cylindre@hauteur) circle (\centre cm);
+		\fi
+		\ifPAS@cylindre@legende		
+			\draw[dotted,\cmdPAS@cylindre@bordercolor] (\cmdPAS@cylindre@rayon,0) -- (\cmdPAS@cylindre@rayon+1,0);
+			\draw[dotted,\cmdPAS@cylindre@bordercolor] (\cmdPAS@cylindre@rayon,\cmdPAS@cylindre@hauteur) -- (\cmdPAS@cylindre@rayon+1,\cmdPAS@cylindre@hauteur);
+			\draw[<->,>=stealth',\cmdPAS@cylindre@bordercolor] (\cmdPAS@cylindre@rayon+1,0) -- (\cmdPAS@cylindre@rayon+1,\cmdPAS@cylindre@hauteur) node[midway,right,\cmdPAS@cylindre@bordercolor] {\texttt{hauteur}};
+			\draw[black,<-,>=stealth',\cmdPAS@cylindre@bordercolor] (-0.5*\cmdPAS@cylindre@rayon,0.5*\cmdPAS@cylindre@hauteur) to [bend right=45] (-1.2*\cmdPAS@cylindre@rayon,0.5*\cmdPAS@cylindre@hauteur+.3) node[\cmdPAS@cylindre@bordercolor,left] {\texttt{face lat\'erale}};
+		\fi	
+}
+
+
+% \cube : dessine un cube
+% Synthaxe : \cube[bordercolor=couleur voulue pour les bords, - par défaut : black (noir)
+%				   incolor = couleur d'intérieur, - par défaut : white (blanc)
+%				   angle = angle de la perspective, - par défaut : 45°
+%				   coefopaq = coefficient d'opacité - par défaut : 0.5,
+%				   name (booléen : si mentionné, noms des sommets apparents,
+%				   prof = profondeur pour un parallélépipède rectangle,
+%				   scale = agrandissement,
+%				   legende : booléen pour mettre les légendes ou pas]
+
+\define@cmdkey [PAS] {cube} {bordercolor}{}
+\define@cmdkey [PAS] {cube} {incolor}{}
+\define@cmdkey [PAS] {cube} {angle}{}
+\define@cmdkey [PAS] {cube} {coefopaq}{}
+\define@cmdkey [PAS] {cube} {scale}{}
+\define@cmdkey [PAS] {cube} {prof}{}
+\define@boolkey[PAS] {cube} {name}[true]{}
+\define@boolkey[PAS] {cube} {legende}[true]{}
+\presetkeys    [PAS] {cube} {angle = 45,
+ 							 bordercolor = black,
+ 							 incolor = white,
+ 							 coefopaq = 0.5,
+ 							 prof = 1,
+ 							 scale = 1,
+ 							 legende = false,
+ 							 name = false}{}
+
+\newcommand*{\cube}[1][]{\pasCube[#1]}
+
+\def\pasCube[#1]{
+	\setkeys[PAS]{cube}{#1}
+	\begin{scope}[scale=\cmdPAS@cube@scale]
+		\shade[draw=\cmdPAS@cube@bordercolor,shading=ball, ball color=\cmdPAS@cube@incolor,opacity=\cmdPAS@cube@coefopaq] (0,0) -- (1,0) -- (1,1) -- (0,1) -- cycle;
+		\pgfmathparse{\cmdPAS@cube@prof*cos(\cmdPAS@cube@angle)/2}\let\x\pgfmathresult
+		\pgfmathparse{\cmdPAS@cube@prof*sin(\cmdPAS@cube@angle)/2}\let\y\pgfmathresult
+		\pgfmathparse{1+\x}\let\xx\pgfmathresult
+		\pgfmathparse{1+\y}\let\yy\pgfmathresult
+		\draw[dotted,\cmdPAS@cube@bordercolor] (0,0) -- (\x,\y) -- (\xx,\y);
+		\draw[dotted,\cmdPAS@cube@bordercolor] (\x,\y) -- (\x,\yy);
+		\shade[draw=\cmdPAS@cube@bordercolor,shading=ball, ball color=\cmdPAS@cube@incolor,opacity=\cmdPAS@cube@coefopaq] (0,1) -- (\x,\yy) -- (\xx,\yy) -- (1,1) -- cycle;
+		\filldraw[draw=\cmdPAS@cube@bordercolor,shading=ball, ball color=\cmdPAS@cube@incolor,opacity=\cmdPAS@cube@coefopaq] (1,0) -- (1,1) -- (\xx,\yy) -- (\xx,\y) -- cycle;
+		\ifPAS@cube@name
+			\node[below left,\cmdPAS@cube@bordercolor] at (0,0) {A};
+			\node[below right,\cmdPAS@cube@bordercolor] at (1,0) {B};
+			\node[below right,\cmdPAS@cube@bordercolor] at (\xx,\y) {C};
+			\node[below,\cmdPAS@cube@bordercolor] at (\x,\y) {D};
+			\node[left,\cmdPAS@cube@bordercolor] at (0,1) {E};
+			\node[below right,\cmdPAS@cube@bordercolor] at (1,1) {F};
+			\node[right,\cmdPAS@cube@bordercolor] at (\xx,\yy) {G};
+			\node[above,\cmdPAS@cube@bordercolor] at (\x,\yy) {H};
+		\fi
+		\ifPAS@cube@legende
+			\pgfmathparse{(\xx-1)/2+1}\let\xxx\pgfmathresult
+			\pgfmathparse{(\yy-1)/2+1}\let\yyy\pgfmathresult			
+			\draw[<-,>=stealth',\cmdPAS@cube@bordercolor] (.5,0) to [bend right=30] (2,0) node[right,\cmdPAS@cube@bordercolor] {\texttt{ar\^ete}};
+			\IfStrEq{\cmdPAS@cube@incolor}{white}{\def\c{black}}{\def\c{\cmdPAS@cube@incolor}}
+			\draw[<-,>=stealth',\c] (\xxx,.5) to [bend left=30] ($(\xxx,.5)+(1,0.25)$) node[right,\c] {\texttt{face}};
+			\fill[\cmdPAS@cube@bordercolor] (1,1) circle (0.01cm);
+			\draw[<-,>=stealth',\cmdPAS@cube@bordercolor] (1,1) to [bend left=45] ($(\xx,\yy)+(0.25,0.25)$) node[right,\cmdPAS@cube@bordercolor] {\texttt{sommet}};
+		\fi
+	\end{scope}
+}

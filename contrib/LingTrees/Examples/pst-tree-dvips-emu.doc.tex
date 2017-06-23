@@ -1,0 +1,358 @@
+\documentclass[12pt]{article}
+
+\usepackage{cm-lingmacros, pst-tree-dvips-emu, avm, pst-coil}
+
+\def\pstricks{PSTricks}
+
+ \def\bck{\char'134}
+
+\def\makespace#1{\makebox[#1]{}}
+
+\begin{document}
+\begin{center}{\large Partial Emulation of {\sf tree-dvips.sty} in {\pstricks}
+({\sf pst-node} module)}\\
+Avery D Andrews\\
+Jan 2006
+\end{center}
+The {\pstricks} package {\sf pst-node} is far more powerful than Emma Pease's
+{\sf tree-dvips}, but the latter strikes me as being frequently more convenient
+for tasks that arise in linguistics.  So this is a partial emulation of
+{\sf tree-dvips} built on the {\sf pst-node} module of \pstricks.
+Most of the original {\sf tree-dvips} commands work unaltered
+(\verb&\(a)nodecurve& being the most important exception), although some
+have been extended to take advantage of the facilities of \pstricks.
+
+So in this emulation, some {\sf tree-dvips} facilities are extended to support
+additional possibilities afforded by {\sf pst-node} (and its parent package
+{\pstricks}), while others will require (modest) changes in the source text
+to run.  And there are a few completely new facilities which seem to me to
+be useful and in the spirit of {\sf tree-dvips}, and easy to provide with
+{\sf pst-node} available as the basis.
+
+One of the advantages of {\sf pst-node} is that many {\tt .dvi} viewers
+understand its Postscript specials, so that lines will tend to be drawn.
+However not always quite correctly: in Yap, for example (the Postscript
+viewer that comes with MiKTeX), lines aren't drawn when they cross over nodes,
+resulting in wrong-looking displays of arrows leading into f-structures, for
+example.  And some of the positioning commands don't work either.
+So if things look wrong, check the postscript output before attempting
+serious debugging of your line-drawing code.
+
+It might also be worth mentioning that the {\pstricks} error-messages aren't
+always very illuminating, and the {\sf tree-dvips} emulation layer does
+nothing to improve this situation.
+
+The treatment is divided into basics, which can be used without serious knowledge
+of \pstricks, and advanced.  It assumes previous knowledge of {\sf tree-dvips}.
+
+\section{Basic Commands}
+\subsection{\tt \bck node(point)}
+The \verb&\node& command looks just like it does in {\sf tree-dvips}:
+\begin{example}
+\begin{verbatim}
+\node{label}{stuff}
+\end{verbatim}
+\end{example}
+{\tt stuff} can be anything, even a regular {\pstricks} node.
+
+\verb&\nodepoint& is slightly extended with an option for the final argument
+to be an angle, in parentheses:
+\begin{example}
+\begin{verbatim}
+\nodepoint{label}[horizontal displacement][vertical displacement]
+\nodepoint{label}[displacement](angle}
+\end{verbatim}
+\end{example}
+where the displacements are dimensions, and the angle is a number, 0 by
+default, so sole displacement is always horizontal to the right.
+
+\subsection{\tt \bck treelinewidth}
+This is a dimension, setting the default width of the lines produced
+by the node connection commands.  Its default is .4pt, rather thinner
+than default {\pstricks} lines.  So if we want the thicken up the
+node connection lines a bit, this will do the trick:
+\begin{example}
+\begin{verbatim}
+\treelinewidth=.6pt
+\end{verbatim}
+\end{example}
+The {\tt linewidth} graphics parameter in individual line-drawing commands
+overrides this.
+
+\subsection{\tt \bck(a)nodeconnect}
+\verb&\nodeconnect& takes the same arguments as in {\sf tree-dvips}, with a final optional
+\verb&[ ]& argument taking {\pstricks} graphics parameters:
+\begin{example}
+\begin{verbatim}
+\nodeconnect[from loc]{from node}[to loc]{to node}[gr. params]
+\end{verbatim}
+\end{example}
+The locations are the usual edges and corners,
+\verb&t&, \verb&tr&, \verb&r&, \verb&br&, \verb&b&, \verb&bl&,
+\verb&l&, and \verb&tl&, with the obvious interpretations. 
+
+So here's an example:
+\begin{example}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\nodeconnect[r]a[l]b[linewidth=1pt, nodesepB=.5ex]
+\end{example}
+which is produced by this input:
+\begin{example}
+\begin{verbatim}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\nodeconnect[r]a[l]b[linewidth=1pt, nodesepB=.5ex]
+\end{verbatim}
+\end{example}
+The final (new) {\tt [ ]} argument allows many further properties of the
+line to be set; for example we get this:
+\begin{example}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\nodeconnect[r]a[l]b[linewidth=1pt, nodesepB=.5ex, arrows=->>]
+\end{example}
+from this:
+\begin{example}
+\begin{verbatim}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\nodeconnect[r]a[l]b[linewidth=1pt, nodesepB=.5ex, arrows=->>]
+\end{verbatim}
+\end{example}
+For the full assortment of graphics parameters, see the {\pstricks}
+documentation, but here are some that strike me as useful in the
+present context:
+\begin{examples}
+\item {\tt nodesep=Xdim}, {\tt nodesepA=Xdim}, {\tt nodesepB=Xdim}: the distance between
+the edge of the node and the endpoints of the connection line; {\tt nodesep}
+applies to beginning and the end, {\tt nodesepA} only to the beginning,
+and {\tt nodesepB} only to the end.
+\item {\tt arrows=ARR}: the style of arrow head, stated iconically (value of
+{\tt -} gives no arrowhead)
+\item {\tt linewidth=Xdim}
+\item {\tt dashed}: (no value)
+\item {\tt dash=Xdim Ydim}: {\tt Xdim} is the length of the blank portion,
+{\tt Ydim} of the dashes
+\item {\tt dotted}: (no value)
+\end{examples}
+
+\verb&\anodeconnect& takes all the same arguments as \verb&\nodeconnect&,
+but draws an arrowhead at the end of the connection.  So from this:
+\begin{example}
+\begin{verbatim}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\anodeconnect[r]a[l]b[nodesepB=.5ex]
+\end{verbatim}
+\end{example}
+We get this:
+\begin{example}
+\node{a}{\begin{tabular}{c}Some fairly\\silly stuff\end{tabular}}\hskip 3em
+\node{b}{explained}
+\anodeconnect[r]a[l]b[nodesepB=.5ex]
+\end{example}
+You can or course specify an {\tt arrows} parameter with {\tt anodeconnect},
+but if you do, plain old {\tt nodeconnect} would do the job as well.
+
+\subsection{\tt \bck arrow(width|length)}
+These aren't implemented, since the {\pstricks} scheme is so different.
+Use:
+\begin{example}
+\begin{verbatim}
+\psset{arrowsize=Xdim Y, arrowlength=Z. arrowinset=W}
+\end{verbatim}
+\end{example}
+{\tt pst-tree-dvips-emu.sty} sets defaults which look decent to me.
+
+
+\subsection{\tt \bck (a)nodecurve}
+Not a full implementation, because the way in which {\pstricks} handles
+curvature of links between nodes is quite different from the way in which
+{\sf tree-dvips} does (and, I'd say, is better).  {\sf tree-dvips} requires
+a final argument which specifies the curvature in terms of a dimension,
+with no sensible default, while {\pstricks} uses a number that does have
+a sensible default.  The current \verb&\anodecurve& command simply doesn't
+read this final argument, so it will be dumped into the text, so that an
+the input:
+\begin{example}
+\begin{verbatim}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b{2ex}
+\end{verbatim}
+\end{example}
+produces this wrong result
+\begin{example}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b{2ex}
+\end{example}
+What we have instead to specify curvature is an optional argument in
+parentheses, containing one or two numbers, the bigger the number, the bigger
+the `pull' of the curve away from its beginning or final endpoint.  So to
+get this:
+\begin{example}\vskip 4ex
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b(1.3)
+\end{example}
+we write this:
+\begin{example}
+\begin{verbatim}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b(1.3)
+\end{verbatim}
+\end{example}
+And this:
+\begin{example}
+\begin{verbatim}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b(2,.4)
+\end{verbatim}
+\end{example}
+yields this:
+\begin{example}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b(2,.4)
+\end{example}
+And finally we get all the usual graphics parameterss in square brackets at
+the end.  Of these, there are two that are specifically important for curves,
+{\tt angleA} and {\tt angleB}.  These specify the angle at which the line
+goes from its source and two its target node.  If nothing is specified,
+this is determined by the position just as in {\sf tree-dvips}.  So we
+can `flatten' the curve above by writing for example:
+\begin{example}
+%begin{verbatim}
+\node{a}{the dog}\hskip 5em\node{b}{barked}
+\nodecurve[tr]a[tl]b[angleA=20, angleB=160]
+%\end{verbatim}
+\end{example}
+An angle of 0 degrees points to the right edge of the page.
+
+\subsection{\tt \bck (a)barnodeconnect}
+As in {\sf tree-dvips.sty}, except with final graphics parameters.
+So we get this:
+\begin{example}
+\node{a}{connect} some words with a
+  \node{b}{\tt barnodeconnect} command
+\barnodeconnect {a}{b}
+\end{example}
+from this:
+\begin{example}
+\begin{verbatim}
+\node{a}{connect} some words with a
+  \node{b}{\tt barnodeconnect} command
+\barnodeconnect {a}{b}
+\end{verbatim}
+\end{example}
+A useful set of options is {\tt offset(A|B)}, which shifts the connection
+points to the left or right, so that:
+\begin{example}
+\begin{verbatim}
+\node{a}{connect} some words with the
+  \node{b}{barnodeconnect} command
+\barnodeconnect[2ex]{a}{b}[offsetB=3em]
+\end{verbatim}
+\end{example}
+produces:
+\begin{example}
+\node{a}{connect} some words with the
+  \node{b}{barnodeconnect} command
+\barnodeconnect[2ex]{a}{b}[offsetB=3em]
+\end{example}
+
+And if we want an arrow at the end, we can use \verb&\abarnodeconnect&,
+which takes all the same options.
+
+
+\subsection{\tt \bck nodetriangle}
+\verb&\nodetriangle{a}{b}[gr. params]& draws a triangle with apex
+at bottom of {\tt a}, and base the top side of {\tt b} (for `triangles of
+laziness') in syntax trees).  
+
+\subsection{\tt \bck node\{circle|oval|box\}}
+Circle and oval require dimensions to be specified, but since I have hopes of eventually
+overcoming this limitations, the specifications are in parentheses even
+though they're obligatory.  For the circle there is one dimension, the radius,
+for the oval, two: \verb&(height,width)&. Here's some sample input:
+\begin{example}
+\begin{verbatim}
+\makespace{2em}\node{a}{A}
+\nodecircle{a}(1em)[linewidth=1pt, linestyle=dotted]\\[4ex]
+\makespace{2em}\node{a}{A}
+\nodeoval{a}(2em, 1em)\\[4ex]
+\end{verbatim}
+\end{example}
+These commands differ from the {\pstricks} ovalnode, etc, in that they
+don't create nodes (ovalnodes containing text are bigger than a plain node
+containing the same text), but just draw lines around a pre-existing
+node.
+
+The \verb&\nodebox{node}& box works as in {\sf tree-dvips}, drawing
+the box at a distance of \verb&\nodemargin& around its content.  Put
+as usual, there's an optional square-bracketted graphics parameter argument,
+which can be used to specify the corner-rounding {\tt framearc} parameter:
+\begin{examples}
+\item
+\node{a}{Some Stuff$\/$}
+\nodebox{a}[framearc=.3]
+\item
+\begin{verbatim}
+\node{a}{Some Stuff$\/$}
+\nodebox{a}[framearc=.3]
+\end{verbatim}
+\end{examples}
+
+
+\section{More advanced}
+These commands depend on a bit more of a knowledge of {\pstricks} than
+the previous ones.
+\subsection{\tt \bck putpoint, \bck putstuff}
+\verb&\putpoint& one puts a {\pstricks} point node at a position relative to a
+{\sf tree-dvips} node center or corner.  The usage is:
+\begin{example}
+\begin{verbatim}
+\putpoint{new node name}{distance}(angle)[corner]{old node name}
+\end{verbatim}
+\end{example}
+Where {\tt distance} can be either a single dimension (distance), or a
+ pair of dimensions
+ \verb&{horizontal, vertical}&, in which case the
+angle is ignored.
+For examples, see the file {\tt treetest.txp}, where it is used in
+conjunction with \verb&\psccurve& to put loops around contiguous
+sets of phrase-structure nodes.
+
+\verb&\putstuff& takes the same arguments, except that the first one
+is any
+regular text or {\LaTeX} code, rather than a label for a point node.
+
+\subsection{\tt <command>(options) arguments to \bck nodeconnect}
+In addition to the regular arguments, \verb&\nodeconnect& can take an
+initial argument in angle-brackets, to specify the actual node connection
+command to be used, followed by graphics parameters in parentheses.  This makes
+it easy to define variants of the node connection commands, such as
+\verb%\coilconnect%
+below:
+\begin{examples}
+\item
+\begin{verbatim}
+\def\coilconnect{\nodeconnect<\nccoil>(coilwidth=1ex,coilarmA=1ex,
+   coilarmB=2ex, arrows=->)}
+\node{a}{source}\hskip 5em\node{b}{target}
+\coilconnect[r]a[l]b
+\end{verbatim}
+\item
+\def\coilconnect{\nodeconnect<\pccoil>(coilwidth=1ex,coilarmA=1ex,
+   coilarmB=2ex, arrows=->)}
+\node{a}{source}\hskip 5em\node{b}{target}
+\coilconnect[r]a[l]b
+\end{examples}
+Only \verb$\pc...$ commands will work here, their \verb$\nc...$ commands
+will produce enigmatic errors, such as \verb&! Argument of \nodeloc has an extra }&.
+
+\subsection{\tt \bck nodeloc}
+This command delivers locations of nodes, taking the corner/edge as the first,
+argument, the node name as the second.  These locations can only be used when
+\verb$\SpecialCoor$ is active, and must be enclosed in parentheses to work.
+For examples, look at some of the definitions in {\tt pst-tree-dvips-emu.sty}.
+
+\end{document}

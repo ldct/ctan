@@ -1,0 +1,234 @@
+%
+% \iffalse
+%<*driver>
+\documentclass{tclldoc}
+\begin{document}
+\DocInput{sourcedtx.dtx}
+\end{document}
+%</driver>
+% \fi
+% 
+% \title{The \textsf{sourcedtx} package}
+% \author{Lars Hellstr\"om}
+% \date{18 July 2003}
+% \maketitle
+% 
+% \begin{abstract}
+%   The \textsf{sourcedtx} package provides a \Tcllogo\ command 
+%   |dtx::source| that makes it possible to |source| \Tcllogo\ code 
+%   from a \textsf{doc}-style \texttt{.dtx} file without docstripping 
+%   it first.
+% \end{abstract}
+% 
+% 
+% \begin{tcl}
+%<*pkg>
+namespace eval dtx {}
+% \end{tcl}
+% \setnamespace{dtx}
+% 
+% \begin{proc}{strip_string}
+%   The |strip_string| procedure does the actual docstripping for 
+%   |source_dtx|. The syntax is
+%   \begin{quote}
+%     |dtx::strip_string| \word{text} \word{option list}
+%     \word{meta prefix}\regopt\ \word{interaction}\regopt
+%   \end{quote}
+%   where \word{text} is the string to docstrip and \word{option list} 
+%   is the list of options to use. The \word{meta prefix} (by default 
+%   two percent signs) is the string to use for the \textsc{docstrip} 
+%   parameter \verb|\MetaPrefix|. The \word{interation} (by default 1) 
+%   is a flag for the ``interaction'' level to use. |0| means error 
+%   messages are simply written to |stderr|, whereas |1| means an error 
+%   will be raised. (It is possible that \word{interaction} will be 
+%   extended to a ``flag word'' where each bit controls some aspect of 
+%   the interaction.)
+%   
+%   When errors are raised, the |errorCode| is set to a list with the 
+%   format
+%   \begin{quote}
+%     |DOCSTRIP| \word{situation} \word{lineno}
+%   \end{quote}
+%   where \word{lineno} is the line number (starting at one) of the line 
+%   where the error was detected. The \word{situation}s are described 
+%   below, at the positions in the code where they can occur.
+%   
+%   \begin{tcl}
+proc dtx::strip_string {text options {metaprefix %%} {interaction 1}} {
+%   \end{tcl}
+%   The |O| array has entires for precisely the specified options, so 
+%   that an opion can be tested using |info exists|.
+%   \begin{tcl}
+   foreach option $options {set O($option) ""}
+%   \end{tcl}
+%   |stripped| is where the text that passes docstripping is collected.
+%   \begin{tcl}
+   set stripped ""
+%   \end{tcl}
+%   |block_stack| is the list of modules inside which the current line 
+%   lies. |offlevel| is the number of modules that must be exited 
+%   before code lines should once again be included. |verbatim| is a 
+%   flag for whether verbatim mode is in force.
+%   \begin{tcl}
+   set block_stack [list]
+   set offlevel 0
+   set verbatim 0
+%   \end{tcl}
+%   |lineno| is the input line number counter, for use in error 
+%   messages. 
+%   \begin{tcl}
+   set lineno 1
+%   \end{tcl}
+%   Here starts the main loop over lines in the \word{text}. It 
+%   constitutes the majority of the procedure and is split in two 
+%   parts. The smaller part handles lines in verbatim mode (unusual), 
+%   the large part handles lines in normal mode (with comment lines, 
+%   code lines, guard lines, and so on).
+%   \begin{tcl}
+   foreach line [split $text \n] {
+      if {$verbatim} then {
+         if {$line eq $endverbline} then {
+            set verbatim 0
+         } elseif {!$offlevel} then {
+            append stripped $line \n
+         }
+      } else {
+         switch -glob -- $line %%* {
+            if {!$offlevel} then {
+               append stripped $metaprefix\
+                 [string range $line 2 end] \n
+            }
+         } %<<* {
+            set endverbline "%[string range $line 3 end]"
+            set verbatim 1
+         } %<* {
+            if {[regexp -- {^%<([*/+-]?)([^>]*)>(.*)$} $line ""\
+              modifier expression line]} then {
+%   \end{tcl}
+%   There is a well-formed guard line. First the expression is 
+%   evaluated, by converting it to an |expr| expression.
+%   \begin{tcl}
+               regsub -all -- {\\|\{|\}|\$|\[|\]| |;} $expression\
+                 {\\&} E
+               regsub -all -- {,} $E {|} E
+               regsub -all -- {[^()|&!]+} $E {[info exists O(&)]} E
+               set val [expr $E]
+               switch -exact -- $modifier * {
+                  lappend block_stack $expression
+                  if {$offlevel || !$val} then {incr offlevel}
+               } / {
+                  if {![llength $block_stack]} then {
+%   \end{tcl}
+%   In this case there was no open block for this guard to end. That 
+%   is a \describestring[error situation]{SPURIOUS}|SPURIOUS| 
+%   \word{situation}.
+%   \begin{tcl}
+                     if {$interaction} then {
+                        error "Spurious end block </$expression>\
+                          ignored." ""\
+                          [list DOCSTRIP SPURIOUS $lineno]
+                     } else {
+                        puts stderr "docstrip: Spurious end\
+                          block </$expression> ignored on line\
+                          $lineno."
+                     }
+                  } else {
+                     if {[string compare $expression\
+                       [lindex $block_stack end]]} then {
+%   \end{tcl}
+%   In this case the expression of the block being closed does not match 
+%   the expression on the block on top of the stack. That is a 
+%   \describestring[error situation]{MISMATCH}|MISMATCH| 
+%   \word{situation}. \textsc{docstrip} by default raises an error and 
+%   recovers by treating this situation as a typo.
+%   \begin{tcl}
+                        if {$interaction} then {
+                           error "Found </$expression> instead of\
+                             </[lindex $block_stack end]>." ""\
+                             [list DOCSTRIP MISMATCH $lineno]
+                        }
+                        puts stderr "docstrip:\
+                          Found </$expression> instead of\
+                          </[lindex $block_stack end]> on line\
+                          $lineno."
+                     }
+%   \end{tcl}
+%   All that error processing makes it easy to lose track, but the 
+%   following two lines are what does the real work for an end of block 
+%   guard: pop a block off the stack and decrement the |offlevel|.
+%   \begin{tcl}
+                     if {$offlevel} then {incr offlevel -1}
+                     set block_stack [lreplace $block_stack end end]
+                  }
+               } - {
+                  if {!$offlevel && !$val} then {
+                     append stripped $line \n
+                  }
+               } default {
+                  if {!$offlevel && $val} then {
+                     append stripped $line \n
+                  }
+               }
+            } else {
+%   \end{tcl}
+%   In this case the line looks like a guard line, but there is no |>| 
+%   terminating the guard expression. This is a 
+%   \describestring[error situation]{BADGUARD}|BADGUARD| 
+%   \word{situation}.
+%   \begin{tcl}
+               if {$interaction} then {
+                  error "Malformed guard on line $lineno." ""\
+                    [list DOCSTRIP BADGUARD $lineno]
+               } else {
+                  puts stderr "docstrip: Malformed guard\
+                    on line $lineno:"
+                  puts stderr $line
+               }
+            }
+         } %* {}\
+%   \end{tcl}
+%   With comment lines, nothing is done. A line being the exact string 
+%   |\endinput| terminates the stripping.
+%   \begin{tcl}
+         {\\endinput} {
+           break
+         } default {
+%   \end{tcl}
+%   Other lines are code lines. These are included or not, depending on 
+%   the |offlevel|.
+%   \begin{tcl}
+            if {!$offlevel} then {append stripped $line \n}
+         }
+      }
+      incr lineno
+   }
+   return $stripped
+}
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+% \begin{proc}{source}
+%   This procedure behaves as a docstripping |source| command: it reads 
+%   a file, docstrips its contents in memory, and evaluates the result 
+%   as a \Tcllogo\ script in the context of the caller. The syntax is
+%   \begin{quote}
+%     |dtx::source| \word{dtx-file} \word{options}
+%   \end{quote}
+%   where \word{dtx-file} is the file name and \word{options} is the 
+%   list of options.
+%   \begin{tcl}
+proc dtx::source {name options} {
+   set F [open $name r]
+   set text [read $F]
+   close $F
+   uplevel 1 [dtx::strip_string $text $options #]
+}
+%</pkg>
+%   \end{tcl}
+% \end{proc}
+% 
+% 
+\endinput
+
+  

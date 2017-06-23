@@ -1,0 +1,199 @@
+\documentclass{article}
+
+\usepackage{etex}
+\usepackage{xifthen}
+\usepackage[ascii]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[warn]{textcomp}
+\usepackage[a4paper, pdftex, margin=1.5in]{geometry}
+\usepackage{lmodern}
+\usepackage{typetex}
+\usepackage{xoptarg}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[bottom,hang]{footmisc}
+\usepackage[babel]{csquotes}
+\usepackage[british]{babel}
+\usepackage{hyperref}
+
+\setcounter{secnumdepth}{-\maxdimen}
+
+\newcommand*{\pack}{\textsf}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newenvironment*{display}{%
+  \list{}{}%
+  \item \relax
+}{%
+  \endlist
+}
+
+\newcommand*{\setdate}{}
+\def \setdate #1/#2/#3#4{%
+  \year  = #1
+  \month = #2
+  \day   = #3#4
+}
+
+\makeatletter
+\newcommand*{\getfileinfo}[1]{%
+  \def \filename {#1}%
+  \def \@tempb ##1 ##2 ##3\relax ##4\relax {%
+    \def \filedate    {##1}%
+    \def \fileversion {##2}%
+    \def \fileinfo    {##3}%
+  }%
+  \edef \@tempa {\csname ver@#1\endcsname}%
+  \expandafter \@tempb \@tempa \relax ? ? \relax \relax
+}
+
+\newcommand*{\TypeOut}[1]{%
+  \texttt{%
+    \frenchspacing
+    \begingroup
+      \let \protect = \string
+      \xdef \@gtempa {#1}%
+    \endgroup
+    \let \@tempa = \@gtempa
+    \@onelevel@sanitize \@tempa \@tempa}%
+}
+\makeatother
+
+\title  {The \pack{xoptarg} Package}
+\author {Josselin Noirel\\\url{http://www.jnoirel.fr/}}
+\date   {%
+  \getfileinfo{xoptarg.sty}
+  \expandafter \setdate \filedate
+  \today\ (\fileversion)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  Because they rely on the \cmd{futurelet} primitive, the macros with
+  optional arguments cannot be expandable.  However, it is possible to
+  make them expandable if there is at least one mandatory argument
+  (see `Limitations').
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+
+\newcommand*{\cmda}[1]{1. #1 2. #1 3. #1 4. #1}
+\newcommand*{\cmdb}[3]{[#1#2#3 #1#3#2 #2#1#3 #2#3#1 #3#1#2 #3#2#1]}
+\newcommand*{\cmdc}[2][X]{(#1,#2)}
+
+Normal macros are expandable:
+%
+\begin{texcode}
+\cmd[3]{newcommand}*{\cmd{cmda}}[1]{1. \#1 2. \#1 3. \#1 4. \#1} \newline
+\cmd[3]{newcommand}*{\cmd{cmdb}}[3]{[\#1\#2\#3 \#1\#3\#2 \#2\#1\#3
+  \#2\#3\#1 \#3\#1\#2 \#3\#2\#1]} \newline
+\end{texcode}
+%
+`Expandable' means that if you print them on the terminal with
+\cmd{typeout}
+%
+\begin{texcode}
+\cmd[1]{typeout}{\cmd[1]{cmda}{Test}...and \cmd[3]{cmdb}{T}{h}{e} rest} \par
+\end{texcode}
+%
+it will result in the processed message which is printed during the
+compilation:
+%
+\begin{display}
+\TypeOut{\cmda{Test}...and \cmdb{T}{h}{e} rest}
+\typeout{TEST>>> \cmda{Test}...and \cmdb{T}{h}{e} rest}
+\end{display}
+
+But, commands defined to take an optional argument behave
+differently.  The code:
+%
+\begin{texcode}
+\cmd[3]{newcommand}*{\cmd{cmdc}}[2][X]{(\#1,\#2)} \newline
+\cmd[1]{typeout}{\cmd[2]{cmdc}[A]{B} \cmd[1]{cmdc}{C}}
+\end{texcode}
+%
+prints the unprocessed
+%
+\begin{display}
+\TypeOut{\cmdc[A]{B} \cmdc{C}}
+\typeout{TEST>>> \cmdc[A]{B} \cmdc{C}}
+\end{display}
+%
+and not \tex{(A,B)~(X,C)}!  (Of course, in typesetting context, it
+doesn't make any difference\dots\ the interest of the package lies
+in the expandability in moving-argument contexts.)  The \pack{xoptarg}
+helps you to make your macros expandable even when they take an
+optional argumen (see `Limitations' though).
+
+\section{Usage}
+
+\subsection{Defining commands}
+
+Your macros, including those that take an optional argument can be
+expandable provided they also take at least one mandatory
+argument\footnote{If your macros don't take any optional argument, the
+  standard behaviour prevails so that you don't to have to worry about
+  them.  The `at least one mandatory argument' condition applies only
+  when the macro takes an optional argument.}.  Practically spoken,
+your command, when it takes an optional argument, must take at least
+two arguments in total\footnote{A~second requirement is that the
+  mandatory arguments be surrounded by explicit braces \tex{\{\dots\}}.}.
+
+Load the package with
+%
+\begin{texcode}
+\cmd[1]{usepackage}{xoptarg}
+\end{texcode}
+%
+then, instead of using \cmd{newcommand}, use \cmd{xnewcommand}
+%
+\begin{texcode}
+\cmd[4]{xnewcommand}*{\<command\>}[$n$][\<default\>]{\<definition\>}
+\end{texcode}
+%
+This is the same syntax as \cmd{newcommand}'s and it works even if the
+command does take any optional argument.  A~normal, non-expandable,
+macro is defined when you define a~macro that takes one optional argument
+and no mandatory one.  A~warning is issued to inform you that it won't
+be possible to make it expandable\footnote{The command will be made
+  robust using \cmd{protected} if \eTeX\ is available.}.
+
+\subsection{Changing the prefix}
+
+This package uses \pack{newcommand} that allows a~more sophisticated
+syntax:
+%
+\begin{texcode}
+\cmd[5]{xnewcommand}[\<prefix\>]{\<command\>}[$n$][\<default\>]{\<definition\>}
+\end{texcode}
+%
+For instance, to define a~macro globally, use
+%
+\begin{texcode}
+\cmd[3]{xnewcommand}[\cmd{global}]{\<command\>}{\<definition\>}
+\end{texcode}
+%
+(But \cmd{newcommand} would do the job as well, as \pack{newcommand}
+improves it also.)
+
+\section{Limitations}
+
+The limitations of the package are the following:
+%
+\begin{itemize}
+\item To be expandable, the macros with an optional argument must have
+      at least one mandatory argument.
+
+\item The mandatory arguments must be surrounded by braces in this
+      case.
+
+\item There is no \cmd{rexnewcommand} command.
+\end{itemize}
+
+\end{document}

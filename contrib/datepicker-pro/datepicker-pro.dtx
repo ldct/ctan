@@ -1,0 +1,424 @@
+%\iffalse
+% makeindex -s gglo.ist -o datepicker-pro.gls datepicker-pro.glo
+% makeindex -s gind.ist -o datepicker-pro.ind datepicker-pro.idx
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% datepicker-pro.sty package,             2016-05-06   %%
+%% Copyright (C) 2013-16  D. P. Story                   %%
+%%   dpstory@acrotex.net                                %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{datepicker-pro}
+%<package> [2016/05/06 v1.0 Date picker using FLEX]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex=false]{hyperref}
+\OnlyDescription  % comment out for implementation details
+\EnableCrossrefs
+\CodelineIndex
+\RecordChanges
+\InputIfFileExists{aebdocfmt.def}{\PackageInfo{datepicker-pro}{Inputting aebdocfmt.def}}
+    {\def\IndexOpt{\DescribeMacro}\def\IndexKey{\DescribeMacro}\let\setupFullwidth\relax
+     \PackageInfo{datepicker-pro}{aebdocfmt.def cannot be found}}
+\begin{document}
+  \GetFileInfo{datepicker-pro.sty}
+  \title{\textsf{datepicker-pro}: A Date picker using FLEX}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@acrotex.net}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \DocInput{\jobname.dtx}
+\IfFileExists{\jobname.ind}{\newpage\setupFullwidth\par\PrintIndex}{\paragraph*{Index} The index goes here.\\Execute
+    \texttt{makeindex -s gind.ist -o aeb\_pro.ind aeb\_pro.idx} on the command line and recompile
+    \texttt{aeb\_pro.dtx}.}
+\IfFileExists{\jobname.gls}{\PrintChanges}{\paragraph*{Change History} The list of changes goes here.\\Execute
+    \texttt{makeindex -s gglo.ist -o aeb\_pro.gls aeb\_pro.glo} on the command line and recompile
+    \texttt{aeb\_pro.dtx}.}
+\end{document}
+%</driver>
+% \fi
+%
+% \MakeShortVerb{|}
+% \InputIfFileExists{aebdonotindex.def}{\PackageInfo{datepicker-pro}{Inputting aebdonotindex.def}}
+%    {\PackageInfo{datepicker-pro}{cannot find aebdonotindex.def}}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+%
+% \section{Introduction}
+% This package creates a date picker for a PDF document using a \emph{rich media
+% annotation} (RMA). Development of this package occurred in July, 2013.
+%
+% When you have a text field that requires a date, the
+% user clicks on the date picker icon to the right of the field and a
+% floating window opens to display a standard calendar. The user may scroll
+% through the dates and and choose a date by clicking one of the dates in the calendar.
+% The floating window closes, and the formatted date appears in the input field.
+%
+% The document author has some control over the positioning of the window; the window can open a various
+% location in the application window: upper left, lower right, etc.
+% There are numerous other options for
+% customizing the calendar and formatting the return string.
+%
+% This is a ``pro'' package\marginpar{\raggedleft\textsf{Acrobat} and\strut}\marginpar{\raggedleft\textsf{Distiller} required} for AeB, which mean the PDF creator is \textsf{Adobe Distiller}.
+% The document author needs to use the usual combination of \textsf{Acrobat} and \textsf{Distiller}.
+%
+% \section{Options and Required Packages}
+% The required packages are \textsf{aeb\_pro}, \textsf{eforms}, and \textsf{rmannot}.
+% The \textsf{aeb\_pro} is used only to import icon appearance of the date picker
+% push button. Obviously, \textsf{eforms} is for text fields and push buttons; and
+% \textsf{rmannot} for importing the date picker SWF file into the document.
+%    \begin{macrocode}
+\RequirePackage{aeb_pro}[2013/08/05]
+\RequirePackage{eforms}[2013/06/05]
+\RequirePackage{rmannot}[2011/09/11]
+%    \end{macrocode}
+%
+% \section{The Main Code}
+%
+% \DescribeMacro{\useFLEXVer} determines the version of the FLEX SWF file to be
+% used, supported are version~3 (|\useFLEXVer{3}|) and version~4 (|\useFLEXVer{4}|).
+% As of this reading the version~4, the SWF file is very slow in loading, so version~3 is strongly
+% recommended.
+%    \begin{macrocode}
+\newcommand{\useFLEXVer}[1]{\def\argi{#1}\ifnum\argi=3\relax
+    \def\flexVer{3}\else\ifnum\argi=4\relax\def\flexVer{4}\else
+    \def\flexVer{3}\PackageInfo{datepicker-pro}{FLEX version number not
+    supported,\space\MessageBreak using FLEX 3}\fi\fi}
+\def\flexVer{3}
+\@onlypreamble\useFLEXVer
+%    \end{macrocode}
+% \DescribeMacro{\dppToolTip} is used for setting the tool tip of the
+% icon push button.
+%    \begin{macrocode}
+\newcommand{\dppToolTip}[1]{\def\dpp@ToolTip{#1}}
+\dppToolTip{Date Picker\n Click to toggle open and close\n
+    Shift-click to clear and close}
+\newcommand{\pickerOpts}[1]{\def\dpp@pickerOpts{#1}}
+    \pickerOpts{}
+\newcommand{\pickerInputOpts}[1]{\def\dpp@pickerInputOpts{#1}}
+    \pickerInputOpts{}
+\newcommand{\pickersep}{3bp}
+%    \end{macrocode}
+% Options passed through the first optional argument of \cs{datepicker}.
+% \paragraph*{Format date string.} The
+% \IndexKey{formatstring}\texttt{formatstring} uses various
+% combinations of \texttt{M}, \texttt{D}, \texttt{Y}, and possible
+% \texttt{E} as well as spaces and delimiters to format the date string.
+% The following table was extracted from the page:
+%\begin{quote}\small
+% \nolinkurl{http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/mx/formatters/DateFormatter.html}
+% (found \href{http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/mx/formatters/DateFormatter.html}{here})
+%\end{quote}
+%\begin{tabular}{cp{2in}cp{2in}}
+% \textbf{Pattern} & \textbf{Examples} &\textbf{Pattern} & \textbf{Examples}\\
+% \texttt{Y} & \texttt{YY = 05}\par \texttt{YYY=2005}\par\texttt{YYY=02005}&
+% \texttt{D} &\texttt{D = 4}\par \texttt{DD=04}\\
+% \texttt{M} &  \texttt{M = 7}\par \texttt{MM=07}\par\texttt{MMM=Jul}\par\texttt{MMMM=July}&
+%  \texttt{E} & \texttt{E = 1}\par \texttt{EE=01}\par\texttt{EEE=Mon}\par\texttt{EEEE=Monday}\\
+%\end{tabular}\par\medskip\noindent
+% One example is \verb!formatstring={EEEE, DD. MMMM YYYY}!.
+%    \begin{macrocode}
+\define@key{ddp}{formatstring}[MM/DD/YYYY]{\def\dpp@FormatStr{#1}}
+%    \end{macrocode}
+% \paragraph*{Formatting the calendar.} The \texttt{dateChooser} control
+% that is used in the SWF file contains the name of the month
+% at the top and the names of the days of the week just below it. By
+% default, the usual English month names are used (January,
+% February, \dots,December) and the usual English days of the week names are
+% used (Sunday, Monday, \dots,Saturday). However, these can be changed through
+% the use of \IndexKey{monthnames}\texttt{monthnames} and
+% \IndexKey{daynames}\texttt{daynames}. For example,
+%\begin{verbatim}
+%   monthnames={Jan,Feb,Mar,Apr,May,June,July,Aug,Sept,Oct,Nov,Dec}.
+%   daynames={Su,M,Tu,W,Th,F,Sa}
+%\end{verbatim}
+% The order must be the first month of the year (January, or the equivalent
+% in another language) and the first day of the week (Sunday, or its
+% equivalent). Some calendars consider Monday as the first day of the week,
+% if this is so, \emph{still} place Sunday, or its local equivalent, as the
+% first entry in the list. A different starting day is set using the
+% \IndexKey{firstday}\texttt{firstday} key. Setting
+% \texttt{firstday=1} puts Monday as the first day of the week on the
+% calendar. The values of the keys \texttt{monthnames} and \texttt{daynames} are
+% comma-delimited list of month or day names, for example,
+%\begin{verbatim}
+%    daynames={So,Mo,Di,Mi,Do,Fr,Sa},
+%    monthnames={Jan,Febr,Mrz,Apr,Mai,Jun,Jul,Aug,Sept,Okt,Nov,Dez},
+%\end{verbatim}
+% The value of the key \texttt{firstday} is an integer, 0\dots7.
+%    \begin{macrocode}
+\define@key{ddp}{daynames}[]{\def\ddp@DayNames{#1}}
+\define@key{ddp}{monthnames}[]{\def\ddp@MonthNames{#1}}
+\def\warningMsgFirstDay{%
+    The value of firstday must be a\MessageBreak
+    nonnegative integer less than 6.\MessageBreak
+    Setting firstday=0%
+}
+\define@key{ddp}{firstday}[0]{%
+    \@tempcnta=#1
+    \def\ddp@FirstDayOfWeek{#1}%
+    \ifnum\@tempcnta<0\relax\PackageWarning{datepicker-pro}
+        {\warningMsgFirstDay}{}\def\ddp@FirstDayOfWeek{0}\else
+    \ifnum\@tempcnta>6\relax\PackageWarning{datepicker-pro}
+        {\warningMsgFirstDay}{}\def\ddp@FirstDayOfWeek{0}\fi\fi
+}
+%    \end{macrocode}
+% \paragraph*{Formatting the Month and Day in the return value.}
+% These keys are not needed unless in your \texttt{formatstring} you use \texttt{MMM},
+% \texttt{MMMM}, \texttt{DDD}, or \texttt{DDDD}. These should be consistent with the
+% calendar headings as well. You don't want English days of the week on a German calendar.
+% The key \IndexKey{monthnamesLong}\texttt{monthnamesLong} is used with \texttt{MMMM} and
+% \IndexKey{monthnamesShort}\texttt{monthnamesShort} with \texttt{MMM}. Similarly,
+% \IndexKey{daynamesLong}\texttt{daynamesLong} is used for formatting \texttt{DDDD}
+% and \IndexKey{daynamesShort}\texttt{daynamesShort} is used with \texttt{DDD}.
+% The values of each of these keys is a comma-delimited list of month or day names, for example
+%\begin{verbatim}
+%    daynamesLong={Sonntag,Montag,Dienstag,Mittwoch,Donnerstag,%
+%        Freitag,Samstag},
+%    daynamesShort={So,Mo,Di,Mi,Do,Fr,Sa},%
+%    monthnamesLong={Januar,Februar,März,April,Mai,Juni,Juli,%
+%        August,September,Oktober,November,Dezember},
+%    monthnamesShort={Jan,Feb,Mrz,Apr,Mai,Jun,Jul,Aug,Sep,%
+%        Okt,Nov,Dez},
+%\end{verbatim}
+%    \begin{macrocode}
+\define@key{ddp}{monthnamesLong}[]{\def\ddp@monthnamesLong{#1}}
+\define@key{ddp}{monthnamesShort}[]{\def\ddp@monthnamesShort{#1}}
+\define@key{ddp}{daynamesLong}[]{\def\ddp@daynamesLong{#1}}
+\define@key{ddp}{daynamesShort}[]{\def\ddp@daynamesShort{#1}}
+%    \end{macrocode}
+% The keys \IndexKey{halign}\texttt{halign}, \IndexKey{valign}\texttt{valign}, \IndexKey{hoffset}\texttt{hoffset},
+% and \IndexKey{voffset}\texttt{voffset} determine the positioning of the floating windows when it opens. The default is
+% the center of the window (for versions \texttt> 9), for version 9, this key is ignored and the window
+% appears in the upper-right of the application window. See the documentation of the \texttt{rmannot}
+% package for more detail.
+%    \begin{macrocode}
+\define@key{ddp}{halign}[center]{\def\ddp@halign{#1}}
+\define@key{ddp}{valign}[center]{\def\ddp@valign{#1}}
+\define@key{ddp}{hoffset}[0]{\def\ddp@hoffset{#1}}
+\define@key{ddp}{voffset}[0]{\def\ddp@voffset{#1}}
+%    \end{macrocode}
+% \paragraph*{Setting the dimensions of the window.}
+% The dimensions of the floating window are determined by
+% \IndexKey{widthOfWindow}\texttt{widthOfWindow} and
+% \IndexKey{heightOfWindow}\texttt{heightOfWindow}.
+%    \begin{macrocode}
+\define@key{ddp}{widthOfWindow}[180]{\def\ddp@widthOfWindow{#1}}
+\define@key{ddp}{heightOfWindow}[180]{\def\ddp@heightOfWindow{#1}}
+%    \end{macrocode}
+% \DescribeMacro{\setPickerOpts} can be used to globally set picker options.
+%    \begin{macrocode}
+\newcommand{\setPickerOpts}[1]{%
+    \edef\@tempexp{\noexpand\setkeys{ddp}{#1}}\@tempexp}
+%    \end{macrocode}
+% \DescribeMacro{\setPickerOptsToDefaults}resets picker options back to their
+% original defaults.
+%    \begin{macrocode}
+\newcommand{\setPickerOptsToDefaults}{%
+    \setkeys{ddp}{formatstring,daynames,monthnames,firstday,halign,%
+        valign,hoffset,voffset,widthOfWindow,heightOfWindow,%
+        monthnamesLong,monthnamesShort,daynamesLong,daynamesShort}%
+}
+\setPickerOptsToDefaults
+%    \end{macrocode}
+% \DescribeMacro{\dppBtnAction} sets the action of the icon push button. When
+% pressed, it simply activates the RMA, when shift-clicked, it resets the field
+% and closes the RMA.
+%    \begin{macrocode}
+\def\dppBtnAction#1{%
+   var annot = this.getAnnotRichMedia(this.pageNum,"#1");\r
+   if (event.shift){\r\t
+        this.resetForm(["txt#1"]);\r\t
+        annot.activated=false;\r
+    } else {
+%    \end{macrocode}
+% If widget is already activated close it.
+%    \begin{macrocode}
+        if ( annot.activated )
+            annot.activated=false;
+%    \end{macrocode}
+% Else, if it is not open, open it.
+%    \begin{macrocode}
+        else annot.activated=true;
+    }
+}
+%    \end{macrocode}
+% \DescribeMacro{\datepicker} is the primary command for this package. It produces
+% a readonly text field to hold the chosen date, a rich media annotation that holds
+% the flash widget (SWF), \texttt{datepickerN.swf}, and a push button containing
+% script to activate the annotation.
+%
+% \paragraph*{Naming conventions.} Argument \texttt{\#2} is the base name passed
+% by the author. The name of the RMA is \texttt{name=\#2}; the field name of the
+% input text field is \texttt{txt\#2} and the field name of the push button is
+% \texttt{btn\#2}. There is also a hidden text field named \texttt{htxt\#2}.
+%    \begin{macrocode}
+\newcommand{\datepicker}[4][]{\begingroup
+%    \end{macrocode}
+% Expand \texttt{\#1} then get options. Useful if options are passed as a macro.
+%    \begin{macrocode}
+    \edef\@tempexp{\noexpand\setkeys{ddp}{#1}}\@tempexp
+%    \end{macrocode}
+% Set window related parameters.
+%    \begin{macrocode}
+    \setWindowDimPos{width={default=\ddp@widthOfWindow},%
+        height={default=\ddp@heightOfWindow},%
+        position={halign=\ddp@halign,valign=\ddp@valign,
+        hoffset=\ddp@hoffset,voffset=\ddp@voffset}}%
+%    \end{macrocode}
+% This hidden field holds the date selected in a standard format of \texttt{MM/DD/YYYY},
+% this helps me to highlight the date when the user opens the date picker again.
+%    \begin{macrocode}
+    \makebox[0pt][l]{\textField[\F{\FHidden}\BC{}\BG{}\W0
+        ]{htxt#2}{1bp}{1bp}}%
+%    \end{macrocode}
+% The text field that holds the date selected by the user through the date package.
+%    \begin{macrocode}
+    \expandafter\textField\expandafter[\dpp@pickerInputOpts\Ff{\FfReadOnly}
+            \AA{\AAValidate{%
+            this.getAnnotRichMedia(this.pageNum,"#2").activated=false;}
+        }]{txt#2}{#3}{#4}\makebox[0pt][r]{%
+%    \end{macrocode}
+% Followed by the SWF widget, very small, invisible, transparent, and hidden by the
+% text field.
+%    \begin{macrocode}
+    \rmAnnot[invisible,transparentBG,deactivated=pageclose,
+            passcontext,\dpp@pickerOpts,windowed,name=#2,
+            flashvars={field=txt#2&formatstring=\dpp@FormatStr
+            \ifx\ddp@DayNames\@empty\else
+                &daynames=\ddp@DayNames\fi
+            \ifx\ddp@MonthNames\@empty\else
+                &monthnames=\ddp@MonthNames\fi
+            \ifnum\ddp@FirstDayOfWeek=0 \else
+                &firstday=\ddp@FirstDayOfWeek\fi
+            \ifx\ddp@monthnamesLong\@empty\else
+                &monthnamesLong=\ddp@monthnamesLong\fi
+            \ifx\ddp@monthnamesShort\@empty\else
+                &monthnamesShort=\ddp@monthnamesShort\fi
+            \ifx\ddp@daynamesLong\@empty\else
+                &daynamesLong=\ddp@daynamesLong\fi
+            \ifx\ddp@daynamesShort\@empty\else
+                &daynamesShort=\ddp@daynamesShort\fi
+            }
+        ]{4bp}{4bp}{dppDatePicker}}\kern\pickersep
+%    \end{macrocode}
+% Finally, the push button that has an icon for its appearance.
+%    \begin{macrocode}
+    \pushButton[\TU{\dpp@ToolTip}\H{O}\S{S}\BC{}\BG{}
+            \FB{true}\I{null}\TP{1}\A{\JS{\dppBtnAction{#2}}}
+        ]{btn#2}{\dp@iconWidth}{\dp@iconHeight}\endgroup
+}
+%    \end{macrocode}
+% \paragraph*{Installing the picker icon.} We use \cs{declareMultiImages} from AeB Pro
+% to create a simplified method of installing the picker icon.
+%    \begin{macro}{\setpickerIcon}
+% The command takes two arguments, the path to the icon, and the names of the
+% date picker fields.
+%\begin{verbatim}
+%   \setpickerIcon{icons/dp_icon2.pdf}{PickADate,GERDate}
+%\end{verbatim}
+% The second argument is a comma-delimited list picker names (the first argument
+% of the \cs{datepicker} command).
+%    \begin{macrocode}
+\newcommand{\setpickerIcon}[2]{% #1=path, #2=placement
+    \let\@thesetoks\@empty
+    \@for\@dppName:=#2\do{\edef\@thesetoks{\@thesetoks btn\@dppName,}}%
+    \def\stripOffComma##1,\@nil{\def\@placeIcons{##1}}%
+    \expandafter\stripOffComma\@thesetoks\@nil
+    \declareImageAndPlacement{name=dppIcon,path=#1,%
+        placement={\@placeIcons}}%
+%    \end{macrocode}
+% We then write a \texttt{execJS} environment to a CUT file, then
+% input it back in immediately. Here, I'm using the write handle
+% from the \textsf{comment} package, brought in by \textsf{AeB Pro}.
+% At this moment, it is not being used.
+%    \begin{macrocode}
+    \immediate\openout\CommentStream=ddpdocassmbly.cut
+    \immediate\write\CommentStream{\string\begin{execJS}{dppicons}}%
+    \immediate\write\CommentStream{\string\insertPreDocAssembly}%
+    \immediate\write\CommentStream{\string\end{execJS}}%
+    \immediate\closeout\CommentStream
+    \input{ddpdocassmbly.cut}%
+}
+\@onlypreamble\setpickerIcon
+%    \end{macrocode}
+%    \end{macro}
+% The two commands \DescribeMacro\pickerIconWidth\cmd\pickerIconWidth{}
+% and \DescribeMacro\pickerIconHeight\cmd\pickerIconHeight{} set the width
+% and the height, respectively, of the icon picker icon. The default to \texttt{6bp}.
+%    \begin{macrocode}
+\newcommand\pickerIconWidth[1]{\def\dp@iconWidth{#1}}
+\pickerIconWidth{10bp}
+\newcommand\pickerIconHeight[1]{\def\dp@iconHeight{#1}}
+\pickerIconHeight{12bp}
+%    \end{macrocode}
+%
+% \section{Supporting Document JavaScript}
+% The \texttt{popDateField} is called from the Flash widget to pass the date from the widget
+% to the input field.
+%    \begin{macrocode}
+\begin{insDLJS}{dppdljs}{JavaScript for Date Picker Pro}
+%    \end{macrocode}
+% The \DescribeMacro{setDateField}\texttt{setDateField} function is called by the widget to set the field value. The widget
+% passes three arguments: \texttt{fname} (the field name that is the target of the date),
+% \texttt{value} is the value of the field that will appear to the user, and \texttt{svalue}
+% is the value formatted using the date template \texttt{MM/DD/YYYY}. This latter value is used
+% to highlight this date if the user returns to the same calendar to change the date.
+%    \begin{macrocode}
+function setDateField(fname,value,svalue) {
+%console.println("setDateField: fname="+fname
+%    +", value="+value+", svalue="+svalue);
+    var f = this.getField(fname);
+    var g = this.getField("h"+fname);
+    if (f !=null ) {
+        f.value = value;
+        g.value = svalue;
+    }
+}
+%    \end{macrocode}
+%\DescribeMacro{getDateValue}The JavaScript function \texttt{getDateValue} is also called
+% by the widget to get the current values of the target field. The return value
+% is an object containing these two values.
+%    \begin{macrocode}
+function getDateValue(fname) {
+%console.println("getDateValue: fname="+fname);
+    var f = this.getField(fname);
+    var g = this.getField("h"+fname);
+    var value;
+    if ( f != null )
+        value = { value: f.value, svalue: g.value };
+    return value;
+}
+\end{insDLJS}
+%    \end{macrocode}
+% We wait until after the preamble to see if the document author chooses a version
+% for FLEX. We also check to see if a path to the widget has been set. The document
+% author is required to define a path to the datepicker SWF with the name of \cs{dppPath}:
+%\begin{verbatim}
+%\definePath{\dppPath}{C:/Users/Public/Documents/My TeX Files/%
+%    tex/latex/aeb/aebpro/datepicker_pro/swf}
+%\end{verbatim}
+%    \begin{macrocode}
+\def\dpp@initdpp{%
+    \@ifundefined{dppPath}{\PackageError{datepicker-pro}
+        {You must specify the path to datepicker\flexVer.swf\MessageBreak
+        by defining \string\dppPath, see documentation}{}}
+        {\saveNamedPath{dppDatePicker}{\dppPath/datepicker\flexVer.swf}}%
+}
+\AtBeginDocument{\dpp@initdpp}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</package>
+%    \end{macrocode}
+%\Finale
+\endinput

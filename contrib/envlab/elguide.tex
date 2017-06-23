@@ -1,0 +1,1103 @@
+\documentclass{ltxguide}
+
+
+
+\usepackage{shortvrb}
+
+\newcommand{\EL}{\textsl{EnvLab}}
+\newcommand{\dvips}{\textsl{dvips}}
+\newcommand{\PS}{\textsl{PostScript}}
+\newcommand{\DS}{\textsl{DocStrip}}
+\newcommand{\mailing}{\textsl{mailing}}
+\newcommand{\graphics}{\textsl{graphics}}
+\newcommand{\gs}{\textsl{ghostscript}}
+\providecommand{\cs}[1]{{\ttfamily\char`\\{}#1}}
+\MakeShortVerb{\|}
+\renewcommand\star{{\ttfamily*}}
+\providecommand\marg[1]{%
+ {\ttfamily\char`\{}{\em#1\/}{\ttfamily\char`\}}}
+\providecommand\oarg[1]{%
+  {\ttfamily[}{\em#1\/}{\ttfamily]}}
+\providecommand\parg[1]{%
+  {\ttfamily(}{\em#1\/}{\ttfamily)}}
+
+\newenvironment{figpage}{%
+  \begin{minipage}{0.8\textwidth}}{\end{minipage}}
+
+\newcommand{\meta}[1]{$\langle${\em#1\/}$\rangle$}
+
+\begin{document}
+
+\title{Printing Envelopes and Labels in \LaTeXe: \EL\ Package.\\
+User Guide\thanks{\copyright Boris Veytsman, 1996, 1997}}
+\author{Boris Veytsman}
+\date{July 16, 1997}
+
+\maketitle
+
+\begin{abstract}
+  This package provides a comprehensive and easily customizable system
+  for creating mailing envelopes and labels in \LaTeXe. Includes
+  printing barcodes and address formatting according to the US Postal
+  Service rules.
+\end{abstract}
+ 
+\tableofcontents
+\listoffigures
+\listoftables
+
+
+
+
+\section{Introduction}
+\label{sec:Intro}
+
+The standard |\makelabels| command in the \LaTeXe\ |letter.cls|
+document class typesets labels on Avery 5352 sheets. A typical user
+may want more. \EL\ redefines |\makelabels| in\footnote{hopefully}
+a more useful and customizable way. \EL:
+\begin{itemize}
+\item Typesets mailing labels or envelopes on a number
+  of pre-defined label sheets \emph{or} envelopes.
+\item Can be easily configured for any customized label or envelope
+  sizes. The rule of thumb is: if you printer can print this, \EL\ can
+  typeset this.
+\item Can optionally print barcodes and/or process addresses according
+  to the United States Postal Service Rules.
+\item Allows you to include your logo in the return address.
+\item Painlessly interacts with mail merging packages such as
+  |mailing|.
+\item Does not require special fonts for address and barcodes
+  printing.  The typesetting is implemented with standard fonts and
+  \LaTeX\ |\rule| commands.
+\end{itemize}
+
+This package was written with US mailing standards in mind. This is
+not a reflection of the author's americanocentrism: US standard was
+only one I had official documents about. If you want to add your
+national standards, please contact me with pointers to the
+corresponding documents.
+
+This document describes the basic usage of the package. More
+sophisticated users would want to typeset and browse |envlab.dtx| as
+well. 
+
+\section{Installation}
+\label{sec:Install}
+
+The distribution of this package includes the following files:
+\begin{enumerate}
+\item |envlab.dtx|---fully documented program,
+\item |envlab.ins|---\DS\ instruction module,
+\item |elold.ins|---\DS\ instruction module for older
+  versions of \DS,
+\item |elguide.tex| (this file)---User Guide,
+\item |readme.|\emph{version\_number}---ReadMe file.
+\end{enumerate}
+To install the package
+\begin{enumerate}
+\item \LaTeX\ the file |envlab.ins|\footnote{If your |docstrip.tex| is
+    earlier than version 2.3, use |elold.ins| instead of
+    |envlab.ins|.}.  It will produce three files: |envlab.drv|,
+  |envlab.sty| and |envlab.cfg|.
+\item (Optional) Look at the file |envlab.cfg| and change it
+  accordingly to your taste (see Section~\ref{sec:Cust}).
+\item Move the files |envlab.sty| and  |envlab.cfg| to the
+  \LaTeX\ search path\footnote{The users of kpathsea based \TeX---like
+  te\TeX---should also issue |texhash| to update the search database.}
+\item Produce the documentation by \LaTeX ing the files |elguide.tex|
+  and (optional) |envlab.drv|.
+\item Enjoy!
+\end{enumerate}
+
+
+\section{Usage}
+\label{sec:Usage}
+
+
+\subsection{The basics}
+\label{sec:Basics}
+
+The package \EL\ is intended to be used with the \LaTeXe\ |letter|
+document class and similar custom classes. The standard document class
+defines the environment |letter|, which, among other things, writes to
+the main |.aux| file the information about mailing address. \EL\ 
+retrieves and typesets this information. In general one should not use
+\EL\ with document classes that do not provide this information. The
+package types an error message if it cannot find the |makelabels|
+command in the class it is called from\footnote{If you want to create
+  a custom letter class to be used with \EL, take care to write
+  commands \cs{startlabels} and
+  \cs{mlabel}\marg{from-address}\marg{to-address} to the |.aux| file.
+  Also define a \cs{makelabels} command. The latter can do
+  anything---\EL\ will redefine it anyway, but the package needs to
+  see \cs{makelabels} defined at the start up}.
+
+
+There are three ways to use \EL:
+
+\subsubsection{Automatic generation of envelopes or labels}
+  \begin{decl}
+    |\makelabels|
+  \end{decl}
+  Put in the preamble of your document:
+  |\usepackage|\oarg{options}|{envlab}| and |\makelabels|. The package
+  will generate envelopes or labels at the end of your document, ready
+  to be printed. An example of such usage is shown on
+  Fig.~\ref{fig:Auto}.
+  
+  An interesting extension of this method is the use of \EL\ with
+  mail-merge packages. If such packages generate |letter|
+  environments, then \EL\ will happily produce envelopes or labels for
+  them. I tested \EL\ with the \mailing\ package available at
+  CTAN with excellent results. See an example on Fig.~\ref{fig:Merge}.
+
+\begin{figure}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\usepackage[personalenvelope]{envlab}
+\makelabels
+
+\address{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}
+\signature{Joe}
+
+\begin{document}
+\begin{letter}{%
+  Mary McKeen\\2 Alpha Street\\Otherplace, NY 12346}
+  \opening{Dear Mary:} 
+  I love only you 
+  \closing{With love,}
+\end{letter}
+
+\begin{letter}{%
+  Lisa O'Hara\\2 Beta Street\\Anotherplace, NY 12347}
+  \opening{Dear Lisa:} 
+  I love only you 
+  \closing{With love,}
+\end{letter}
+\end{document}
+
+\end{verbatim}
+    \end{figpage}
+    \caption{Automatic generation of envelopes}
+    \label{fig:Auto}
+  \end{center}
+\end{figure}
+
+\begin{figure}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\usepackage[avery5061label,alwaysbarcodes]{envlab}
+\makelabels
+
+\address{%
+Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}
+\signature{Joe}
+
+\usepackage{mailing}
+\addressfile{lovers.dat}
+\mailingtext{%
+  I love only you
+  \closing{With love,}}
+
+\begin{document}
+\makemailing
+\end{document}
+\end{verbatim}
+    \end{figpage}    
+    \caption[\EL\ and \textsl{mailing} package.]{\EL\ and
+      \textsl{mailing} package. The file |lovers.dat| contains the
+      address data in the format described in the documentation for
+      \textsl{mailing} package.}
+    \label{fig:Merge}
+  \end{center}
+\end{figure}
+
+
+\subsubsection{Manual generation of envelopes or labels}
+\begin{decl}
+  |\startlabels|, |\mlabel|\marg{from-address}\marg{to-address}
+\end{decl}
+Sometimes you need to generate only mailing labels or envelopes, but
+not letters themselves. In this case prepare a separate document of
+|letter| document class. Put in the preamble of your document
+|\usepackage|\oarg{options}|{envlab}| and |\makelabels|, and in the
+body of your document the command |\startlabels|\footnote{It sets up
+  page parameters for envelopes and letters}, and commands
+|\mlabel|\marg{from-address}\marg{to-address} for each label you want
+to generate (see Fig.~\ref{fig:Manual})
+
+  \begin{figure}[tbp]
+    \begin{center}
+      \leavevmode
+    \begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\usepackage[businessenvelope]{envlab}
+\makelabels
+
+\begin{document}
+\startlabels
+\mlabel{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}{%
+  Mary McKeen\\2 Alpha Street\\Otherplace, NY 12346}
+\mlabel{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}{%
+  Lisa O'Hara\\2 Beta Street\\Anotherplace, NY 12347}
+\end{document}
+\end{verbatim}
+    \end{figpage}          
+      \caption{Manual generation of envelopes}
+      \label{fig:Manual}
+    \end{center}
+  \end{figure}
+
+
+\subsubsection{Printing of return labels}
+\begin{decl}
+  |\printreturnlabels|\marg{number}\marg{text}
+\end{decl}
+
+Sometimes you need to print only return labels. To print \marg{number}
+of labels with the \marg{text} on each use the command
+|\printreturnlabels|\marg{number}\marg{text}. It is better to put it in
+a separate document (see Fig.~\ref{fig:Return}).
+
+\begin{figure}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\usepackage[avery5160label,noprintbarcodes,%
+nocapaddress]{envlab}
+\makelabels
+
+\begin{document}
+\printreturnlabels{180}{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}
+\end{document}
+\end{verbatim}
+    \end{figpage}              
+    \caption{Printing of return labels}
+    \label{fig:Return}
+  \end{center}
+\end{figure}
+
+
+\subsection{Sizes of labels and envelopes}
+
+\NEWdescription{Version 1.2} \EL\ package recognizes three kinds of media:
+envelopes, labels and \NEWfeature{Version 1.2}``big labels''. Envelopes are
+printed one per physical page, they could be rotated (i.~e.\ inserted
+in the printer sidewise) and could carry both the shipping address and
+return address. Labels and big labels are peel-off labels that are
+printed several per physical page, they could not be rotated. The
+difference between labels and big labels is that labels have only
+shipping address while big labels have both return \emph{and} shipping
+addresses. These differences are summarized in Table~\ref{tab:diff}.
+The kind and the size of the media are set either by package options
+or by the corresponding commands.
+\begin{table}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{tabular}{cccc}
+       \hline
+       Media & Number per page & Rotation & Return address \\
+       \hline
+       Envelopes & One & Settable & Yes\\
+       Labels & Several & Not rotated & No\\
+       Big Labels & Several & Not rotated & Yes\\
+       \hline
+    \end{tabular}
+    \caption{Differences between envelopes, labels and big labels}
+    \label{tab:diff}
+  \end{center}
+\end{table}
+
+
+\begin{decl}
+  |businessenvelope|,
+  |executiveenvelope|,
+  |bookletenvelope|,
+  |personalenvelope|,\\
+  |c6envelope|,
+  |c65envelope|,
+  |c5envelope|, |dlenvelope|
+\end{decl}
+\EL\ knows about a number of standard envelopes. The options listed in
+Table~\ref{tab:Env} are used to typeset the addresses for envelopes
+with the given width and height. For example, if you have
+$9.5''\times4.125''$ envelopes, use the command
+|\usepackage[businessenvelope]{envlab}|. 
+
+\begin{table}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{tabular}{ccc}
+    \hline
+    Package option & Width & Height\\
+    \hline
+    businessenvelope & 9.5$''$ & 4.125$''$\\
+    executiveenvelope & 7.5$''$ & 3.875$''$\\
+    bookletenvelope & 10.5$''$ & 7.5$''$\\
+    personalenvelope & 6.5$''$ & 3.625$''$\\
+    c6envelope & 162 mm & 114 mm\\
+    c65envelope & 224 mm & 114 mm\\
+    c5envelope & 229 mm & 162 mm\\
+    dlenvelope & 220 mm & 110 mm\\
+    \hline
+    \end{tabular}
+    \caption{Standard envelope sizes}
+    \label{tab:Env}
+  \end{center}
+\end{table}
+
+\begin{decl}
+  |\SetEnvelope|\oarg{top margin}\marg{width}\marg{height}
+\end{decl}
+If your envelope is not listed in Table~\ref{tab:Env}, put in the
+preamble of your document the command
+|\SetEnvelope|\marg{width}\marg{height}\footnote{The optional first
+  argument of this command is described in Section~\ref{sec:Print}}.
+Its arguments are dimensions of your envelope (together with the
+units!). For example, if you have $8''\times4''$ envelopes, use the
+command |\SetEnvelope{8in}{4in}|.
+
+\begin{decl}
+|avery5160label|,
+|avery5161label|,
+|avery5162label|,
+|avery5163label|,\\
+|avery5164label|,
+|avery5262label|,
+|herma4625label|
+\end{decl}
+\EL\ knows also about a number of commercially available labels. 
+They are listed in Table~\ref{tab:Lab}. The dimensions $W$ and $H$ are
+the label total width and height, $t$ and $l$ are the distance between
+the edge of the paper and the label (see Fig.~\ref{fig:Labels}). The
+numbers $N_c$ and $N_r$ are correspondingly the numbers of columns and
+rows of labels on a sheet.
+
+\begin{figure}[tbp]
+  \begin{center}
+    \leavevmode
+\setlength{\unitlength}{0.00083300in}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(5169,4051)(76,-3305)
+\thicklines
+\put(1201,-2761){\framebox(1700,900){}}
+\put(901,539){\line( 0,-1){975}}
+\put(1201,539){\line( 0,-1){1200}}
+\put(301,-361){\line( 1, 0){675}}
+\put(301,-661){\line( 1, 0){1125}}
+\put(301,-1861){\line( 1, 0){1200}}
+\put(376,-361){\vector( 0, 1){  0}}
+\put(376,-361){\vector( 0,-1){300}}
+\put(376,-661){\vector( 0, 1){  0}}
+\put(376,-661){\vector( 0,-1){1200}}
+\put(901,464){\vector(-1, 0){  0}}
+\put(901,464){\vector( 1, 0){300}}
+\put(901,-361){\line( 0,-1){2900}}
+\put(1201,-1561){\framebox(1700,900){}}
+\put(3201,-1561){\framebox(1700,900){}}
+\put(3201,-2761){\framebox(1700,900){}}
+\put(901,-361){\line( 1, 0){4300}}
+\put(2901,239){\line( 0,-1){975}}
+\put(3201,539){\line( 0,-1){1275}}
+\put(2901,164){\vector(-1, 0){  0}}
+\put(2901,164){\vector( 1, 0){300}}
+\put(1201,464){\vector(-1, 0){  0}}
+\put(1201,464){\vector( 1, 0){2000}}
+\put( 76,-1336){\makebox(0,0)[lb]{\smash{\SetFigFont{12}{14.4}{\rmdefault}{\mddefault}{\updefault}$H$}}}
+\put(976,614){\makebox(0,0)[lb]{\smash{\SetFigFont{12}{14.4}{\rmdefault}{\mddefault}{\updefault}$l$}}}
+\put(151,-586){\makebox(0,0)[lb]{\smash{\SetFigFont{12}{14.4}{\rmdefault}{\mddefault}{\updefault}$t$}}}
+\put(2976,239){\makebox(0,0)[lb]{\smash{\SetFigFont{12}{14.4}{\rmdefault}{\mddefault}{\updefault}$r$}}}
+\put(2051,614){\makebox(0,0)[lb]{\smash{\SetFigFont{12}{14.4}{\rmdefault}{\mddefault}{\updefault}$W$}}}
+\end{picture}
+    \caption{Labels parameters}
+    \label{fig:Labels}
+  \end{center}
+\end{figure}
+
+\begin{table}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{tabular}{ccccccccc}
+      \hline
+      Package option & $W$ & $H$ & $t$ & $l$ & $r$ & $N_c$ & $N_r$\\
+      \hline
+      avery5160label & 2.75$''$ & 1$''$ & 0.5$''$ & 0.19$''$ &
+      0.12$''$ & 3 & 10\\ 
+      avery5161label & 4.19$''$ & 1$''$ & 0.5$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 10\\ 
+      avery5162label & 4.19$''$ & 1.33$''$ & 0.83$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 7\\ 
+      avery5163label & 4.19$''$ & 2$''$ & 0.5$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 5\\ 
+      avery5164label & 4.19$''$ & 3.33$''$ & 0.5$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 3\\
+      avery5262label & 110 mm & 34 mm & 21 mm & 4 mm & 
+      5 mm & 2 & 7\\ 
+      herma4625label & 105 mm & 42.3 mm & 0 mm & 5 mm & 
+      5 mm & 2 & 7\\
+      \hline
+    \end{tabular}
+    \caption{Standard label sizes}
+    \label{tab:Lab}
+  \end{center}
+\end{table}
+
+\begin{decl}
+  |\SetLabel|%
+  \marg{$W$}\marg{$H$}\marg{$t$}\marg{$l$}\marg{$r$}\marg{$N_c$}\marg{$N_r$}
+\end{decl}
+If your label size is not listed in Table~\ref{tab:Lab}, put in the
+preamble of your document the command |\SetLabel|\marg {$W$}\marg
+{$H$}\marg {$t$}\marg {$l$}\marg {$r$}\marg {$N_c$} \marg{$N_r$}. This
+command is completely analogous to the command |\SetEnvelope|
+described above.
+
+\begin{decl}
+|avery5163biglabel|,
+|avery5164biglabel|
+\end{decl}
+\NEWfeature{Version 1.2}
+``Big labels'' are big enough to carry both shipping and return
+addresses, otherwise their dimensions are completely analogous to the
+ones of labels. The predefined big labels are listed in
+Table~\ref{tab:BigLab}. Note the difference between package options,
+say, |avery5163label| and |avery5163biglabel|: while the physical
+media is same, the formatting of addresses is quite different.
+
+\begin{table}[tbp]
+  \begin{center}
+    \leavevmode
+    \begin{tabular}{ccccccccc}
+      \hline
+      Package option & $W$ & $H$ & $t$ & $l$ & $r$ & $N_c$ & $N_r$\\
+      \hline
+      avery5163biglabel & 4.19$''$ & 2$''$ & 0.5$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 5\\ 
+      avery5164biglabel & 4.19$''$ & 3.33$''$ & 0.5$''$ & 0.16$''$ &
+      0.19$''$ & 2 & 3\\
+      \hline
+    \end{tabular}
+    \caption{Standard big label sizes}
+    \label{tab:BigLab}
+  \end{center}
+\end{table}
+
+\begin{decl}
+  |\SetBigLabel|%
+  \marg{$W$}\marg{$H$}\marg{$t$}\marg{$l$}\marg{$r$}\marg{$N_c$}\marg{$N_r$}
+\end{decl}
+\NEWfeature{Version 1.2}
+If your label size is not listed in Table~\ref{tab:BigLab}, put in the
+preamble of your document the command |\SetBigLabel|\marg {$W$}\marg
+{$H$}\marg {$t$}\marg {$l$}\marg {$r$}\marg {$N_c$} \marg{$N_r$}. 
+
+
+\subsection{Printing details}\label{sec:Print}
+
+\EL\ typesets envelopes or sheets of labels just after the main text
+of all letters in the documents. Most printers that have paper tray
+and manual feeding slot use manual slot if it is not empty and tray
+otherwise. When printing envelopes or labels on such printers, you
+wait until the text of letters is printed, and then insert envelopes
+or label sheets one by one in the manual feeding slot.
+
+\begin{decl}
+  |\AtBeginLabels|\marg{Printer specific commands}\\
+  |\AtBeginLabelPage|\marg{Printer specific commands}
+\end{decl}
+However some printers have several paper trays and even paper trays
+for envelopes. Moreover, sometimes the switching between trays can be
+performed automatically by software commands. If you know such
+commands for your printer and know how to insert them in the |.dvi| file
+(e.g. through |\special|s), you can use the hook
+|\AtBeginLabels|. Put the printer specific commands in the
+argument of |\AtBeginLabels|. If you succeed, please e-mail me these
+commands and the specifications of your printer, so I can include them
+in the future releases of \EL. \NEWfeature{Version 1.1} Note that the 
+command |\AtBeginLabels| is cumulative: if you use it several times in 
+the same document, the new commands will be appended without overwriting 
+the previous definitions. 
+
+\NEWfeature{Version 1.1} 
+The command |\AtBeginLabelPage| works in the
+same way, but its argument will be inserted at the beginning of each
+\emph{page} of \EL\ output, i.e. before printing each envelope or
+label sheet.
+
+The code for \PS{} printers is described in Section~\ref{sec:PS}.
+
+There are differences in the handling of the text close to paper edges
+from printer to printer.  Since envelopes and label sheets have text
+near the edges, you might need to tune the offsets.  For labels you
+can use the command |\SetLabel| to do this.  The optional first
+argument of the command |\SetEnvelope| sets the distance between the
+leading edge of ``logical paper'' and the physical leading edge of the
+envelope (0 pt by default).
+
+\begin{decl}
+  |rotateenvelopes|, |norotateenvelopes| \\
+  Options for \graphics\ package
+\end{decl}
+Usually envelopes are printed in the landscape mode, i.e. rotated by
+$90^\circ$. The package options |rotateenvelopes| (default) and
+|norotateenvelopes| control the rotation. Note that if you want to
+rotate envelopes, you need the standard package \graphics\
+installed on your system. Also, you need a |dvi| driver that
+understands rotation commands of the \graphics\ package. (I
+think currently only \dvips\ does this). The package
+\graphics\ is called internally by \EL. If you need to pass
+specific options to the \graphics\ package, include it in the
+list of options of \EL. For example, the command
+|\usepackage[personalenvelope,dvips]{envlab}| calls \graphics\
+with the option |dvips|.
+
+\begin{decl}
+  |centerenvelopes|, |leftenvelopes|, 
+  |rightenvelopes|,\\
+  |customenvelopes|, |\EnvelopeLeftMargin|
+\end{decl}
+Most of manual feeding slots accept non-standard paper (like
+envelopes) \emph{centered}. However there are some printers that
+require non-standard paper to be pushed to the left or right end of
+the slot. The package options |centerenvelopes| (this is the default
+option), |leftenvelopes|, |rightenvelopes| and |customenvelopes|
+control the position of the envelope with respect to the slot. The
+first three options are self-explanatory. The fourth gives the control
+over the envelope positioning to the user. If you choose this option,
+you must set the length |\EnvelopeLeftMargin| before printing the
+envelopes. For example to shift the envelope for $2''$ from the left
+edge use |\setlength{\EnvelopeLeftMargin}{2in}|
+
+\begin{decl}
+  |\FirstLabel|\marg{Row}\marg{Col}
+\end{decl}
+\NEWdescription{Version 1.2} Sometimes you need to print labels on a
+partially used sheet.  \NEWfeature{Version 1.1} The command
+|\FirstLabel|\marg{Row}\marg{Col} allows you to start printing of
+labels from the given position.  For example, the command
+|\FirstLabel{3}{2}| causes \EL\ to start printing labels beginning
+with the second label in the third row. Note that labels are printed
+row by row (\emph{not} column by column, like in the standard \LaTeXe\ 
+|letter| class).
+
+
+\subsection{Formatting of the address (barcodes and capitalization)}
+
+In the United States (and many other countries as well) the mailing
+pieces are sorted by machines. This process is greatly facilitated if
+the addresses typesetting is enhanced for machine readability.
+
+
+USPS standards \cite{Pub25} establish two ways for making the addresses
+machine readable: barcodes and special printing of addresses for
+optical character recognition (OCR) devices. In principle any method
+would be sufficient, but it seems reasonable to play it safe using
+\emph{both} methods. Therefore \EL\ by default both prints barcodes
+and prepares addresses for OCR. This behavior can be controlled
+through package options.
+
+Note that only ``To-Address'' should be machine-readable. The return
+address can be formatted more freely. You can, for example, include
+your logo in the \emph{return} address (see Section~\ref{sec:Cust})
+
+\begin{decl}
+  |printbarcodes|, |noprintbarcodes|
+\end{decl}
+The addresses in the US contain ``zipcodes''---strings of five digits
+(5-code) or 9 digits divided by dash (5+4 code). The 5+4 code is
+actually a detalization\footnote{There is an even finer detalization
+  provided by the so called DPC numbers \cite{Pub25}. \EL\ does not
+  support it yet}, so the zipcode 12345-6789 can be written as just
+12345. This code is converted into a series of long and short bars and
+printed on a label or envelope. If the option |printbarcodes|
+(default) is selected, \EL\ tries to extract zipcode from the address
+and print it. It defines zipcode as  a sequence of digits that:
+\begin{enumerate}
+\item Has no characters other than digits and dashes (-) inside it
+\item Has no groups in braces (|{}|)inside it and is not braced itself
+\item \label{item:Last} Is the last in the address field
+\end{enumerate}
+The option |noprintbarcodes| suppresses the typesetting of barcodes.
+
+\begin{decl}
+    |alwaysbarcodes|, |noalwaysbarcodes|
+\end{decl}
+Sometimes the rule~\ref{item:Last} is too harsh. Consider, for example,
+the following address:
+\begin{quote}
+  Mr. A. B. User\\
+  32 Omega Road\\
+  Palo Alto Ca 12345\\
+  USA
+\end{quote}
+Obviously it has a zipcode, however \EL\ normally will not see it.  The 
+option |alwaysbarcodes| lifts this restriction, and \EL\ typesets barcodes 
+for the last number met in the address even if it is followed by some other 
+characters.  Be careful with this option! If you select it, all addresses 
+must actually have zipcodes.  Otherwise \EL\ will happily convert to bars a 
+street or apartment number.
+
+This option is especially useful if the addresses are not typed in
+manually, but are prepared by some mail merge program like
+\mailing\ package. Then they can contain spaces at the end, and
+\EL\ will not recognize zipcodes unless |alwaysbarcodes| is selected.
+The option |noalwaysbarcodes| (default) suppresses this behavior.
+
+\begin{decl}
+  |capaddress|, |nocapaddress|
+\end{decl}
+To facilitate OCR \EL\ typesets addresses in \textsf{\large 12pt sans
+  serif} font. The machine readability of the addresses is increased
+if the following recommendations of US Postal service are followed:
+\begin{itemize}
+\item Converting the addresses to uppercase
+\item Stripping punctuation from the addresses
+\item Inserting 1 pt kern between the letters
+\end{itemize}
+The result looks rather ugly for human eye. However, it is intended not for
+humans, but for machines. We will call this processing \emph{address
+  capitalization}. \EL\ performs capitalization of the
+``To-addresses'' automatically if the option |capaddress| (default) is
+selected. The option |nocapaddress| suppresses capitalization of the
+addresses. 
+
+If you decide to capitalize the addresses, be careful with the
+accented letters. Since \EL\ processes the address letter by
+letter\footnote{Rather, token by token}, it tries to insert kern
+between |\"| and |u| in the word |M\"uller| causing an
+error. Therefore all accented letters should be enclosed in
+braces. The correct way to typeset Herr.~M{\"u}ller is
+|Herr.~M{\"u}ller|\footnote{I probably should strip all accents since
+  they might confuse OCR. However USPS says nothing about accents, and
+  I decided to preserve them.}.
+  
+\subsection{Printing of return addresses}
+
+
+\begin{decl}
+  |printreturnaddress|, |noprintreturnaddress|
+\end{decl}
+\NEWfeature{Version 1.1}
+The return addresses are printed on the envelopes if the package option 
+|printreturnaddress| (default) is chosen.  Alternatively, the package 
+option |noprintreturnaddress| suppresses the printing of the return 
+address.  Section~\ref{sec:Cust} describes how to customize your return 
+address.
+
+
+\subsection{Change of settings for some labels}
+
+\begin{decl}
+  |\suppresslabels|, |\resumelabels|,\\
+  |\suppressonelabel|, |\resumeonelabel|
+\end{decl}
+\NEWfeature{Version 1.2} In many cases your |.tex| file contains many
+|letter| environments. By default, if the command |\makelabels|
+appears in the preamble, all them will generate mailing labels.
+Sometimes you may want to override this behavior. \EL{} provides four
+handy commands for this. The command |\suppresslabels| issued anywhere
+before |\end{letter}| will suppress printing of mailing labels for the
+current and subsequent letters---until the command |\resumelabels| is
+issued. The commands |\suppressonelabel| and |\resumeonelabel| are
+similar, but act only on the current label.
+
+
+
+
+\begin{decl}
+  |\ChangeEnvelope|, |\ChangeLabel|, |\ChangeBigLabel|
+\end{decl}
+\NEWfeature{Version 1.2} The commands |\SetEnvelope|, |\SetLabel|,
+|\SetBigLabel| have immediate effect: they set the sizes of all
+following mailing labels.  The mailing labels, automatically generated
+by |letter| environments, are written to the |.aux| file, and
+therefore they all will be printed for the envelope or labels size set
+by the last |\Set| command. Sometimes, however, one needs to print
+envelopes for the different |letter| environments at different sizes.
+The commands |\ChangeEnvelope|, |\ChangeLabel| and |\ChangeBigLabel|
+have the same meaning and arguments as the corresponding |\Set|
+commands. However, instead of setting the media, they write the
+information into the |.aux| file, and the actual change is delayed
+until the |.aux| file is read (i.~e.~at the end of the document).
+Therefore they act only on the mailing labels, extracted from the
+|letter| environments, that follow this command.
+
+
+
+\subsection{Enhancements for the \texttt{letter} environment}
+
+\NEWfeature{Version 1.2}
+Some people letters contain below the address the subject like this
+\begin{quote}
+  Re: our recent talk
+\end{quote}
+A way to do this is to include it in the address (see
+Figure~\ref{fig:wrong}).  However, this additional info will be put in
+the mailing label, which is wrong. The package \EL{} defines a command
+|\re| to cope with this.
+
+\begin{figure}[tbp]
+    \leavevmode
+\begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\address{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}
+\signature{Joe}
+
+\begin{document}
+
+\begin{letter}{%
+  Mary McKeen\\
+  2 Alpha Street\\
+  Otherplace, NY 12346\\[2ex]
+  Re: Our love}
+  \opening{Dear Mary:} 
+  I love only you 
+  \closing{With love,}
+\end{letter}
+\end{document}
+\end{verbatim}
+\end{figpage}
+\caption{A wrong way to include subject information in the letter}
+    \label{fig:wrong}
+\end{figure}
+
+\begin{decl}
+  |re|, |nore|
+\end{decl}
+This command poses the following problem. The rest of the \EL{}
+package meant to work not only with the standard |letter| class, but
+with any other letter classes that write address information to the
+|.aux| file in the standard format. However, if a package makes a
+change to the formatting of the letter itself, we cannot be guaranteed
+that it will work with all letter classes. Therefore we chose the
+following solution: the additional features are enabled only if the
+package option |re| is selected. If the option |nore| (default) is
+selected, the package works in the ``compatibility mode'', and the
+additional features are disabled\footnote{For \TeX perts: if the
+  option |re| is chosen, \EL{} redefines the \cs{opening} command. See
+  the file |envlab.dtx| for additional information.}.
+
+
+
+
+\begin{decl}
+  |\re|
+\end{decl}
+\NEWfeature{Version 1.2}
+The command |\re| defines additional subject information to be put
+between the address and opening. It is very simple: just put
+|\re|\marg{Subject} anywhere before the |\opening| command (see
+Figure~\ref{fig:right}).
+
+\begin{figure}[tbp]
+\leavevmode
+\begin{figpage}
+\begin{verbatim}
+\documentclass[12pt]{letter}
+
+\usepackage[avery5160label,re]{envlab}
+\makelabels
+
+\address{%
+  Joe Casanova\\1 Lambda Street\\Anyplace, NY 12345}
+\signature{Joe}
+
+\begin{document}
+
+ \begin{letter}{%
+     Mary McKeen\\
+     2 Alpha Street\\
+     Otherplace, NY 12346}
+   \re{Our love}
+   \opening{Dear Mary:} 
+   I love only you 
+   \closing{With love,}
+ \end{letter}
+\end{document}
+\end{verbatim}
+\end{figpage}
+\caption{The \EL{} way to include subject information in the letter}
+    \label{fig:right}
+\end{figure}
+
+Actually the scope of the |\re| command is the same as the scope of
+the commands like |\address| or |\signature|: if it is issued outside
+the |letter| environment, it affect all subsequent letters. If it is
+issued inside the |letter| environment (but before the |\opening|
+command), it is local to the current letter. To disable global |\re|,
+just issue this command with empty argument: |\re{}|. 
+
+
+\section{Customization}
+\label{sec:Cust}
+
+\begin{decl}
+  |\returnaddress| 
+\end{decl}
+Many people and companies want to print their logos on the
+envelopes. You can include any image in your return address. The macro
+|\returnaddress| controls the contents of the ``From-address'' field
+on your envelope. \EL\ takes it from the |\address| command in your
+document. However you can easily redefine it. For example, if the file
+|mylogo.eps| contains your logo, you put in the preamble
+|\renewcommand{\returnaddress}{\protect\includegraphics{mylogo}}| to
+customize your envelopes. If you want return labels with your logo,
+use command like
+|\printreturnlabels{180}{{\protect\includegraphics{mylogo}}|. 
+\NEWdescription{Version 1.1} You can 
+include both logos and textual information into the |\returnaddress| macro.  
+While customizing return address, it is useful to know that
+\LaTeX\ |letter| document class stores the contents of the |\address| 
+command in the |\fromaddress| macro, so the default definition of the 
+return address implemented in \EL\ is 
+|\renewcommand{\returnaddress}{\fromaddress}|.
+
+\begin{decl}
+    Customization of lengths
+\end{decl}
+All lengths (heights, widths, margins) are user-customizable. Consult
+the file |envlab.dtx| for their definitions and use.
+
+\begin{decl}
+  |\ReName|
+\end{decl}
+\NEWfeature{Version 1.2}
+The subject name for the |\re| command is stored in the |\ReName|
+macro. Normally it is defined as plain style ``Re: ''. To
+|\newcommand{\ReName}{Re: }| (note the space after semicolon!). To
+change this, use |\renewcommand|, for example
+|\renewcommand{\ReName}{\textbf{Subject: }}|.
+
+
+\begin{decl}
+  |envlab.cfg|
+\end{decl}
+If you use \EL\ for some time, you probably would have a number of
+options and commands that you execute in most documents prepared with
+the package. You can save the typing by putting such commands in the
+configuration file |envlab.cfg|. A sample configuration file is
+included in the \EL\ distribution. You are free to hack it in any way
+you like\footnote{\emph{Important:} |envlab.cfg| is the only file you
+  should modify. You are \emph{not} allowed to modify any other files
+  in the \EL\ distribution.}. This file consists of two parts:
+|\ExecuteOptions|\marg{options} and
+|\AtEndOfPackage|\marg{customization commands}. The options listed in
+the first part supersede the default options of \EL. However the
+options explicitly listed as the arguments of the |\usepackage|
+command supersede the options in the configuration file. The commands
+listed in the second part of the configuration file---as the arguments
+of the |\AtEndOfPackage| command---supersede all definitions in the
+package itself. Therefore by hacking |envlab.cfg| you can completely
+change the behavior of the package without modifying \EL.
+
+
+\section{Commands for \PS{} printers}
+\label{sec:PS}
+
+
+I myself know next to nothing about programming of \PS{} printers, and
+the following is based on contributions of \EL{} users.
+
+\begin{decl}
+  |pswait|, |nopswait|
+\end{decl}
+\NEWfeature{Version 1.1}
+If you use \dvips, you can ask it to switch your printer to manual 
+mode just before printing envelopes and labels.  The printer will print the 
+main body of the letter(s) using the paper tray, and then stop, waiting for 
+envelopes or label sheets to be fed in the manual slot.  The option 
+|pswait|, based on the code by \emph{William Slough} 
+\texttt{<cfwas@eiu.edu>}, 
+inserts the corresponding \PS\ |special|s in your output.  
+The option |nopswait| (default) suppresses this behavior.
+
+\begin{decl}
+        |\PSwait|
+\end{decl}
+\NEWfeature{Version 1.1} William Slough's code can be useful in
+other situations when you need to switch to manual mode in the
+middle of the document. The command |\PSwait| inserts the
+corresponding \PS\ code in the \dvips\ output. (An attentive reader
+has probably already guessed that the |pswait| option is implemented
+through the command |\AtBeginLabels{\PSwait}|).
+
+\begin{decl}
+ |psautotray|, |nopsautotray|
+\end{decl}
+\NEWfeature{Version 1.2}
+\emph{Uri Blumenthal} \texttt{<uri@ibm.net>} wrote code for automatic
+switching to other trays For example, if your envelopes are loaded
+into \texttt{/otherenvelopetray}, try the following code:
+\begin{verbatim}
+\AtBeginLabels{%
+  \special{ps:clear grestore 
+    statusdict begin false setduplexmode
+    /manualfeed true def
+    /otherenvelopetray end 0 0 bop }}
+\end{verbatim}
+If the package option |psautotray| is selected, \EL{} will try to
+guess the proper tray from the envelope you chose. The option
+|nopsautotray| (default) disables this feature. At present this
+mechanism is rather experimental; I would be grateful for
+failure/success reports as well as for suggestions. Note that |pswait|
+and |psautotray| options are not compatible (|psautotray| switches the
+printer to the manual mode anyway). If you selected them both, only
+the one selected last will be chosen.
+
+\NEWdescription{Version 1.2}
+Another solution by \emph{Robert Estes}
+\texttt{<estes@ece.ucdavis.edu>} works for Optra R+ printers:
+\begin{verbatim}
+\AtBeginLabels{\special{ps:
+clear grestore
+1 dict dup /MediaPosition null put setpagedevice
+1 dict dup /ManualFeed true put setpagedevice
+1 dict dup /Policies 1 dict dup /PageSize 2 put put setpagedevice
+2 dict dup /PageSize [297 684] put dup /ImagingBBox null put setpagedevice
+0 0 bop
+}}
+\end{verbatim}
+
+\NEWdescription{Version 1.2}
+The code by \emph{Greg Jumper} \texttt{<jumper@lens.sri.com>} works
+for HP LaserJet 4MV:
+\begin{verbatim}
+  \special{! <</ManualFeed true /DeferredMediaSelection true
+               /PageSize [297 684] /ImagingBBox null>> setpagedevice}
+\end{verbatim}
+
+
+
+\section{Bugs and limitations}
+\label{sec:Bugs}
+
+\NEWdescription{Version 1.1}
+The most important limitation of \EL\ is related to an essential 
+limitation of \TeX\ itself. People usually want their envelopes printed 
+rotated $90^\circ$, so the envelopes are inserted in the printed by the 
+short side. Unfortunately \TeX\ was not designed with the text rotation 
+in mind. Therefore ``basic'' \TeX\ does not allow to typeset envelopes in 
+this manner. The standard \LaTeXe\ package \graphics\ uses \PS\ to add 
+this functionality to \TeX. \EL\ uses \graphics\ internally if the option 
+|rotateenvelopes| (default) is in effect. Therefore to typeset rotated 
+envelopes you need \graphics\ and either a \PS\ printer or \gs. Otherwise 
+use |norotatenvelopes| option if your printed can process envelopes 
+inserted by the long side. I understand that there is a problem with 
+printing rotated text on non-\PS\ printers. Probably the authors of 
+|dvi| drivers should be urged to address it.
+
+\NEWdescription{Version 1.1}
+\EL\ thinks that all options it cannot understand belong to the 
+\graphics\ package and sends them there. Therefore if you misspell 
+an option of the \EL\ package, you will receive an error message from the 
+\graphics\ package rather than from \EL.
+
+
+Please send bug reports to |boris@plmsc.psu.edu|. You can find
+experimental versions of \EL\ at my homepage
+(|http://planck.psu.edu/~boris|).  
+
+
+
+\section{Acknowledgements}
+
+\NEWdescription{Version 1.2} Since the first version of \EL{} was
+released, many users helped me with bug reports, suggestions and code
+contributions to enhance it. I would like to express my gratitude to
+Uri Blumenthal, Arnie Ostebee, William Slough, Ed Reingold, Jos
+Jansen, Juergen Schlegelmilch, Jim Hill, Greg Jumper, Robert Estes,
+Genick Bar-Meir and many others for their help.
+
+
+\section{Legalese}
+
+The package \EL\ is provided ``as is'' and comes with absolutely no
+warranty of any kind, either expressed or implied, including, but not
+limited to, the implied warranties of merchantability and fitness for
+a particular purpose.  The entire risk as to the quality and
+performance of the program is with you.  Should the program prove
+defective, you assume the cost of all necessary servicing, repair or
+correction.
+
+In no event unless required by applicable law will the author of the
+program be liable to you for damages, including any general, special,
+incidental or consequential damages arising out of any use of the
+program or out of inability to use the program (including but not
+limited to loss of data or data being rendered inaccurate or losses
+sustained by you or by third parties as a result of a failure of the
+program to operate with any other programs), even if such holder or
+other party has been advised of the possibility of such damages.
+
+In particular, while every effort was made to provide typesetting of
+mailing pieces accordingly to the United States Postal Service
+recommendations, the author of the package does not warrant neither
+successful delivery of mail nor granting of mailing discounts in the
+USA or any other countries.
+
+
+
+
+\EL\ package is covered by the same license as the current \LaTeXe\ 
+package (see the files |legal.txt| and |modguide.tex| in the \LaTeXe\
+distribution).
+
+Avery and all Avery codes are trademarks of Avery Dennison Corporation. 
+\bigskip
+
+
+
+\begin{thebibliography}{1}
+\addcontentsline{toc}{section}{\protect\refname}
+ \bibitem{Pub25}
+ USPS.
+ \newblock {\em Designing Business Letter Mail (Pub 25)}, August 1995.
+\end{thebibliography}
+
+
+
+
+
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
+
+
+
+
+
+
+
+
+

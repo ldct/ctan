@@ -1,0 +1,746 @@
+\documentclass[11pt,dvips]{mtn}
+\usepackage{palatino}
+\begin{document}
+%
+\title{The D Operator and Algorithmic \\ Differentiation}
+\author{Michael Monagan
+\thanks{Informatik E.T.H., Z\"{u}rich, Switzerland. monagan@inf.ethz.ch}
+\and J. S. Devitt\thanks{Faculty  of Mathematics, University of Waterloo, 
+Canada, jsdevitt@daisy.uwaterloo.ca}
+}
+\shorttitle{D Operator}
+\maketitle
+
+\section{Introduction}
+In this article we would like to inform our readers and users about
+the development of the \mexpr{D} operator in Maple.
+As with many major tasks in system development, getting something like
+this nicely integrated into a system, and working correctly,
+notationally correct, and making it easy to use, requires the design
+of new facilities and changes to many parts of the system.
+
+Although ``differentiation'' is often regarded as a
+relatively simple task for a computer algebra system, it turns
+out that this is not actually the case.
+A paper by Stanly Steinberg and Michael Wester {\cite {MUC84}} presented
+at the 1984 Macsyma Users Conference pointed out problems with
+the differentiation facility in the computer algebra systems available
+at that time.  In particular, Maple and other systems could not distinguish
+correctly between total and partial derivatives.
+
+Operators were first introduced into Maple in version 4.2
+by Gaston Gonnet {\cite {OPERATORS}}.  The addition of the \mexpr{D} operator
+addressed the distinction of total and partial derivatives, and also
+a representation of the derivative of a function evaluated at a
+point (for example, $y'(0)$ by \mexpr{D(y)(0)}).  
+Partial derivatives and the ability to
+apply the chain rule to an unknown function were added in Maple V.
+Presently the \mexpr{D} operator is being extended to address the
+problem of algorithmic differentiation, that is, to differentiate
+Maple procedures.
+
+In this article we follow the development of the \mexpr{D} operator
+by way of examples discussing some of details and system design
+issues as we go.
+
+\section{Functions -- Expressions or Mappings?}
+
+Users will find two facilities for differentiation in Maple,
+the \mexpr{diff} procedure, and the \mexpr{D} procedure.
+
+The \mexpr{diff} procedure takes as input what Maple calls
+an {\em expression} or a {\em formula} which is a function of
+zero of more variables ($x_1, x_2, \ldots x_n$) which appear explicitly
+in the expression.
+It computes the partial derivative of the formula with respect to
+a given variable.
+
+The \mexpr{D} procedure in Maple (often called the
+\mexpr{D} operator) takes as input a function which is
+a mapping from $R^N \rightarrow R$.  In Maple this is called an
+{\em operator} or a {\em mapping}.
+For example, $sin(x)$ is an expression in $x$ but $sin$ by itself is a
+mapping from $R \rightarrow R$.
+Another mapping in Maple is $sin+cos^2$.
+A {\em mapping} can always be applied to an argument.
+For example, given the mapping
+
+\begin{mapleinput}
+F := sin+cos^2;
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{F} := {\rm sin} + {\rm cos}^{2}
+\]
+\end{maplelatex}
+if we apply it to a number we get a number and if we apply
+it to a formula we get a formula, e.g.
+
+\begin{mapleinput}
+F(1.0);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+1.133397567
+\]
+\end{maplelatex}
+\begin{mapleinput}
+F(Pi/3);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\displaystyle \frac {1}{2}}\,\sqrt {3} + {\displaystyle \frac {1
+}{4}}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+F(x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\rm sin}(\,{x}\,) + {\rm cos}(\,{x}\,)^{2}
+\]
+\end{maplelatex}
+
+Strictly speaking,
+Maple would call both the formula $sin(x) + cos(x)^2$ and
+the mapping $sin + cos^2$ expressions.
+Any distinction between the two comes from how we use them.
+Mappings are mappings because our intention is
+to {\em apply} them to arguments, while formulae are the
+result of applying mappings to their arguments.
+Throughout this article we will call the former
+mappings and the latter formulae.
+Thus the \mexpr{diff} procedure differentiates a formula and returns
+a formula.  The \mexpr{D} operator differentiates a mapping
+and returns a mapping.  Compare
+
+\begin{mapleinput}
+diff( sin(x)^2, x );
+\end{mapleinput}
+\begin{maplelatex}
+\[
+2\,{\rm sin}(\,{x}\,)\,{\rm cos}(\,{x}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+D(sin^2);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+2\,{\rm cos}\,{\rm sin}
+\]
+\end{maplelatex}
+
+Note, for mappings, functional composition is represented
+explicitly by use of the \mexpr{@} operator, and repeated composition
+is represented by the \mexpr{@@} operator.  Compare
+
+\begin{mapleinput}
+diff( sin(cos(x)), x );
+\end{mapleinput}
+\begin{maplelatex}
+\[
+ - {\rm cos}(\,{\rm cos}(\,{x}\,)\,)\,{\rm sin}(\,{x}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+D( sin@cos );
+\end{mapleinput}
+\begin{maplelatex}
+\[
+ - {\rm cos}^{(\,2\,)}\,{\rm sin}
+\]
+\end{maplelatex}
+
+\section{Derivatives of Unknown Functions}
+
+As well as being able to compute with known functions, like
+$\sin, \cos, \exp, \ln$, etc., Maple has always supported the ability to
+compute with unknown functions.  In the following examples
+of partial and repeated partial differentiation of an unknown function $f$, the
+notation \mexpr{D[i](f)} means the partial derivative of $f$ with
+respect to the $i^{th}$ argument.
+
+\begin{mapleinput}
+diff(f(x,y),y);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\frac {{ \partial}}{{ \partial}{y}}}\,{\rm f}(\,{x}, {y}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+D[2](f);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{{D}_{2}}(\,{f}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+diff(f(x,y),x,y,x) = diff(diff(diff(f(x,y),x),y),x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\frac {{ \partial}^{3}}{{ \partial}{y}\,{ \partial}{x}^{2}}}\,
+{\rm f}(\,{x}, {y}\,)={\frac {{ \partial}^{3}}{{ \partial}{y}\,{ 
+\partial}{x}^{2}}}\,{\rm f}(\,{x}, {y}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+D[1,2,1](f) = D[1](D[2](D[1](f)));
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{{D}_{1, 1, 2}}(\,{f}\,)={{D}_{1, 1, 2}}(\,{f}\,)
+\]
+\end{maplelatex}
+
+In Maple, the \mexpr{D} operator is an ordinary Maple procedure.
+When we input \mexpr{D[1,2,1](f)}, what happens?
+If \mexpr{D} was an array or table then the entry \mexpr{D[1,2,1]}
+would be applied to $f$.  In the case of a procedure, what happens
+is that it is called with the given arguments and inside
+the procedure the $procname$ variable's value will be the subscript.
+In our example, \mexpr{D} is called with $f$ as an argument
+and the value of $procname$ will be \mexpr{D[1,2,1]}.
+The \mexpr{D} code sorts the indices (assumes partial derivatives commute)
+and returns \mexpr{D[1,1,2](f)} unevaluated.
+This subscripted function calling facility is new in Maple V.
+It is also used for the log function for different bases.
+For example, \mexpr{log[b](x)} means $\log _b x$ i.e. logarithm base $b$ of $x$.
+
+One of the main reasons why Maple has a \mexpr{D} operator as well
+as a \mexpr{diff} procedure is because it is not possible to specify $y'(0)$ using
+\mexpr{diff}.  Maple users reading this article might think of
+using the Maple \mexpr{subs} procedure e.g. \mexpr{subs(x=0,diff(sin(x),x))}.
+This works if Maple can actually differentiate the function
+but it will not work for an unknown function $y$.
+Being able to represent $y'(0)$ simply as $D(y)(0)$ motivated the
+introduction of operators, in particular the \mexpr{D} operator in Maple.
+This notation is used to specify the initial conditions for the
+\mexpr{dsolve} procedure, which solves systems of ODE's,
+replacing an earlier defunct notation $yp(0), ypp(0), \ldots$
+It is also used in series; for example, here is the
+Taylor series for an unknown function $f$ to order $O(x^6)$
+
+\begin{mapleinput}
+taylor(f(x),x);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\begin{eqnarray*}
+\lefteqn{{\rm f}(\,0\,) + {\rm D}(\,{f}\,)(\,0\,)\,{x} + 
+{\displaystyle \frac {1}{2}}\,{D}^{(\,2\,)}(\,{f}\,)(\,0\,)\,{x}
+^{2} + {\displaystyle \frac {1}{6}}\,{D}^{(\,3\,)}(\,{f}\,)(\,0\,
+)\,{x}^{3} + {\displaystyle \frac {1}{24}}\,{D}^{(\,4\,)}(\,{f}\,
+)(\,0\,)\,{x}^{4} + } \\
+ & & {\displaystyle \frac {1}{120}}\,{D}^{(\,5\,)}(\,{f}\,)(\,0\,
+)\,{x}^{5} + {\rm O}(\,{x}^{6}\,)\mbox{\hspace{200pt}}
+\end{eqnarray*}
+\end{maplelatex}
+And here is a multivariate Taylor series to third order.
+
+\begin{mapleinput}
+readlib(mtaylor); # load the multivariate series package
+\end{mapleinput}
+\begin{maplelatex}
+\end{maplelatex}
+\begin{maplettyout}
+proc() ... end
+
+\end{maplettyout}
+\begin{mapleinput}
+mtaylor(f(x,y),[x,y],3);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\begin{eqnarray*}
+\lefteqn{{\rm f}(\,0, 0\,) + {{D}_{1}}(\,{f}\,)(\,0, 0\,)\,{x} + 
+{{D}_{2}}(\,{f}\,)(\,0, 0\,)\,{y} + {\displaystyle \frac {1}{2}}
+\,{{D}_{1, 1}}(\,{f}\,)(\,0, 0\,)\,{x}^{2} + {x}\,{{D}_{1, 2}}(\,
+{f}\,)(\,0, 0\,)\,{y}} \\
+ & & \mbox{} + {\displaystyle \frac {1}{2}}\,{{D}_{2, 2}}(\,{f}\,
+)(\,0, 0\,)\,{y}^{2}\mbox{\hspace{250pt}}
+\end{eqnarray*}
+\end{maplelatex}
+
+\newpage
+Without use of the \mexpr{D} operator it would be difficult to apply
+the chain rule to unknown functions.  For example, we have
+
+\begin{mapleinput}
+diff(f(x^2),x);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+2\,{\rm D}(\,{f}\,)(\,{x}^{2}\,)\,{x}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+diff(f(x^2,x*y),x);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+2\,{{D}_{1}}(\,{f}\,)(\,{x}^{2}, {y}\,{x}\,)\,{x} + {{D}_{2}}(\,{
+f}\,)(\,{x}^{2}, {y}\,{x}\,)\,{y}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+D(f@g);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{\rm D}(\,{f}\,){\rm @}{g}\,{\rm D}(\,{g}\,)
+\]
+\end{maplelatex}
+There are distinct advantages to manipulating mappings as if
+they were expressions.  The following example illustrates implicit
+differentiation of $y$ as a function of $x$.
+Given the equation
+
+\begin{mapleinput}
+eq := y^2*x + y^3*x^2 + y + 3*x = 0;
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\it eq} := {y}^{2}\,{x} + {y}^{3}\,{x}^{2} + {y} + 3\,{x}=0
+\]
+\end{maplelatex}
+we can regard $x$ and $y$ as arbitrary mappings.  Then applying
+\mexpr{D} to both sides of the equation we have
+
+\begin{mapleinput}
+map(D,eq);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+2\,{\rm D}(\,{y}\,)\,{y}\,{x} + {y}^{2}\,{\rm D}(\,{x}\,) + 3\,
+{\rm D}(\,{y}\,)\,{y}^{2}\,{x}^{2} + 2\,{y}^{3}\,{\rm D}(\,{x}\,)
+\,{x} + {\rm D}(\,{y}\,) + 3\,{\rm D}(\,{x}\,)=0
+\]
+\end{maplelatex}
+This equation can be interpreted in many different ways.  For example,
+it can be solved to obtain a formula for $D(y)$
+\begin{mapleinput}
+D(y) = solve(",D(y));
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{\rm D}(\,{y}\,)= - \,{\displaystyle \frac {{y}^{2}\,{\rm D}(\,{x
+}\,) + 2\,{y}^{3}\,{\rm D}(\,{x}\,)\,{x} + 3\,{\rm D}(\,{x}\,)}{2
+\,{y}\,{x} + 3\,{y}^{2}\,{x}^{2} + 1}}
+\]
+\end{maplelatex}
+while the interpretation that $x$ is an independent variable can
+be indicated by the substitution
+\begin{mapleinput}
+subs(D(x)=1,");
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{\rm D}(\,{y}\,)= - \,{\displaystyle \frac {{y}^{2} + 2\,{y}^{3}
+\,{x} + 3}{2\,{y}\,{x} + 3\,{y}^{2}\,{x}^{2} + 1}}
+\]
+\end{maplelatex}
+
+Earlier we mentioned that application of a mapping to a symbolic
+variable yields a formula.  And hence the identity
+\mexpr{D(f)(x) = diff(f(x),x)}.  For example
+
+\begin{mapleinput}
+F := sin+cos^2;
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{F} := {\rm sin} + {\rm cos}^{2}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+F(x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\rm sin}(\,{x}\,) + {\rm cos}(\,{x}\,)^{2}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+diff(F(x),x) - D(F)(x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+0
+\]
+\end{maplelatex}
+
+Given the formula, how can we get back the mapping $F$?
+This is called {\em lambda abstraction} in the language of lambda calculus.
+In Maple it is called \mexpr{unapply} because it
+is the inverse of application, that is, it takes a formula and returns
+a mapping. For example
+
+\begin{mapleinput}
+G := unapply(F(x),x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{G} := {x} \rightarrow {\rm sin}(\,{x}\,) + {\rm cos}(\,{x}\,)^{2
+}
+\]
+\end{maplelatex}
+is a mapping in the form of a Maple procedure equivalent to 
+\mexpr{proc(x) sin(x)+cos(x)^2 end:} except it has been
+displayed using a more succinct format, 
+known as arrow operators.  The arrow notation above is used often in algebra.
+This new notation is essentially equivalent to Maple's
+older angle bracket notation
+
+\begin{mapleinput}
+<sin(x)+cos(x)^2|x>;
+\end{mapleinput}
+\begin{maplelatex}
+\[
+ \langle {\rm sin}(\,{x}\,) + {\rm cos}(\,{x}\,)^{2}\,{ \mid}\,{x
+} \rangle 
+\]
+\end{maplelatex}
+differing only in how the procedure is entered and displayed.
+
+Another notation for functions that is used often in applied mathematics
+is the $F(x)=sin(x)+cos(x)^2$ notation.  In Maple one might use
+\mexpr{F(x):=sin(x)+cos(x)^2}, but this already has a meaning in Maple (which
+unfortunately is different) and this does lead to confusion.
+The meaning of \mexpr{F(x):=y} is to enter the entry $(x,y)$ in $F$'s remember
+table so that when $F$ is called with the literal symbol
+$x$, $y$ is returned.  It is rather like making $F$ work like a table
+of values.
+
+\section{Equivalence of Mappings}
+
+Notice though, that \mexpr{unapply} did not return the mapping
+in the same {\em form} $F$ that we started with.
+This raises another question, namely, given two mappings, how could one
+test if they are the same?  Users are familiar with the problem of testing
+whether two formulae are the same.  For example, suppose we are
+given the two formulae
+
+\begin{mapleinput}
+f1 := sin(x)+cos(x)^2:
+f2 := sin(x)+cos(2*x)/2+1/2:
+\end{mapleinput}
+
+How would we test whether $f_1 = f_2$?  This is the problem of
+simplification, or zero recognition.
+In Maple, one would use the expand (or simplify) function as follows
+
+\begin{mapleinput}
+expand(f1-f2);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+0
+\]
+\end{maplelatex}
+
+In this case, expand applies the transformation $cos(2 x) = 2 cos(x)^2 - 1$
+hence recognizing that $f_1 = f_2$.
+But what about mappings?
+
+\begin{mapleinput}
+expand(eval(G));
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\rm sin} + {\rm cos}^{2}
+\]
+\end{maplelatex}
+
+Expand tries to write an arrow (or angle bracket)
+operator as an algebraic combination of other mappings, in this case
+allowing us to recognize that $F$ and $G$ are effectively
+the same mapping.
+
+\begin{mapleinput}
+expand(F-eval(G));
+\end{mapleinput}
+\begin{maplelatex}
+\[
+0
+\]
+\end{maplelatex}
+
+Maple can differentiate those arrow operators too, even
+in their unexpanded form.
+
+\begin{mapleinput}
+D(G);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{x} \rightarrow {\rm cos}(\,{x}\,) - 2\,{\rm cos}(\,{x}\,)\,{\rm 
+sin}(\,{x}\,)
+\]
+\end{maplelatex}
+
+\section{Notational Equivalence and Conversions}
+
+Two important identities relating \mexpr{D} and
+\mexpr{diff} are \mexpr{D(f)(x)} = \mexpr{diff(f(x),x)} (and its
+multiviate counterpart), and \mexpr{D(f)} = \mexpr{unapply(diff(f(x),x))}.
+When two notations are involved for essentially the same
+expression, it is essential to be able to convert from
+one notation to the other.  For example
+
+\begin{mapleinput}
+diff(f(x),x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\frac {{ \partial}}{{ \partial}{x}}}\,{\rm f}(\,{x}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+convert(",D);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{\rm D}(\,{f}\,)(\,{x}\,)
+\]
+\end{maplelatex}
+\begin{mapleinput}
+unapply(",x);
+\end{mapleinput}
+\begin{maplettyout}
+\end{maplettyout}
+\begin{maplelatex}
+\[
+{\rm D}(\,{f}\,)
+\]
+\end{maplelatex}
+
+\section{Algorithmic Differentiation}
+
+The use of arrow operators, or more generally, arbitrary procedures
+leads us to the interesting problem of program differentiation.
+Consider the function $f$ defined by the following Maple procedure
+
+\begin{mapleinput}
+f := proc(x) local s,t; s := sin(x); t := x^2; s*t+2*t end:
+\end{mapleinput}
+
+\vspace{1mm}
+What is its derivative?
+We could compute its value as a formula and differentiate
+the formula.
+
+\begin{mapleinput}
+f(x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\rm sin}(\,{x}\,)\,{x}^{2} + 2\,{x}^{2}
+\]
+\end{maplelatex}
+\begin{mapleinput}
+diff(",x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+{\rm cos}(\,{x}\,)\,{x}^{2} + 2\,{\rm sin}(\,{x}\,)\,{x} + 4\,{x}
+\]
+\end{maplelatex}
+
+The Maple V Release 2 Share Library%
+\footnote{Information about the Share Library
+is included in the {\em News and Announcements} section.}
+introduced a facility for differentiating programs.  This has
+since been incoporated into Release 3 and is accessible directly
+as
+\begin{mapleinput}
+PD := readlib('`PD/PD`'):
+\end{mapleinput}
+The \mexpr{PD} procedure takes as input a Maple procedure $f$ which
+is a function of $n$ parameters, and a positive integer $i$, and it returns
+a Maple procedure which computes the partial derivative of $f$ with
+respect to the $i^{th}$ parameter.
+For example
+
+\begin{mapleinput}
+g := PD(f,1);
+\end{mapleinput}
+\begin{maplelatex}
+\end{maplelatex}
+\begin{maplettyout}
+g := proc(x)
+     local s,t,sx,tx;
+         sx := cos(x); s := sin(x); tx := 2*x; t := x^2; sx*t+s*tx+2*tx
+     end
+
+\end{maplettyout}
+Does the procedure $g$ really compute $f'$?
+In this case we can \emph{prove} that it does by executing the procedure
+on symbolic parameters, in effect converting the function represented
+by the procedure into a formula.
+
+\begin{mapleinput}
+diff(f(x),x) - g(x);
+\end{mapleinput}
+\begin{maplelatex}
+\[
+0
+\]
+\end{maplelatex}
+
+Clearly one couldn't do this if a procedure had a conditional
+statement involving the formal parameter $x$ and one called the procedure
+with a symbolic parameter,  but
+under what conditions could one differentiate a 
+procedure involving more than just an expression?
+For example, can this be done
+if the procedure had loops or subroutine calls?
+It turns out that the answer to this question is, surprisingly, yes.
+And moreover, there exists a very simple algorithm for computing the
+derivative of a procedure or a program.
+
+To construct the derivative procedure,
+for each assignment statement $v := f(v_1, \ldots , v_n)$ that appears
+in the procedure, where the $v_i$ are local variables or formal parameters,
+precede it by $v_x := g(v_1, \ldots , v_n)$ where
+$g(v_1, \ldots , v_n)$ is obtained by differentiating $f(v_1, \ldots , v_n)$
+formally.  That is, $v_i$ may depend on $x$, hence its derivative
+will be $v_{i_x}$.
+Replace the last statement (or any RETURN value) by its derivative.
+This very simple algorithm is called ``forward differentiation''.
+There is actually quite a lot of literature on this subject. Many different
+algorithms, and quite a number of implementations have been
+written to differentiate Fortran code.
+For a good reference see {\cite {PROCEEDINGS}}, which also contains a
+fairly complete bibliography on algorithmic differentiation.
+
+Here is an example which illustrates the power of algorithmic
+differentiation.
+In this example, the use of a loop allows us to represent
+a very large formula in a very compact way.
+There is a theoretical gain here.  In general, a function that can
+be represented by a formula can be represented by a program
+in an exponentially more compact way by using local variables and loops.
+
+\begin{mapleinput}
+f := proc(x,n) local i,t;
+     t := x;
+     for i to n do t := ln(t) od;
+     t
+end:
+g := PD(f,1,2); # compute D(D(f))
+\end{mapleinput}
+\begin{maplelatex}
+\end{maplelatex}
+\begin{maplettyout}
+g := proc(x,n)
+     local tx,i,t,txx;
+         txx := 0;
+         tx := 1;
+         t := x;
+         for i to n do  txx := txx/t-tx^2/t^2; tx := tx/t; t := ln(t) od;
+         txx
+     end
+
+\end{maplettyout}
+
+Another nice theoretical result is that the size of the resulting
+program which computes the derivative is linear in the size of the
+original program.  In fact, in most cases, it is not much bigger.
+What can algorithmic differentiation be used for?
+In numerical computation, one often is given a function $f:R^N \rightarrow R$,
+where $f$ is given by a program, rather than an analytic formula.
+The standard fast methods for computing the zeros
+of $f$ or the extrema require the derivatives of $f$.
+An example is given in the article \emph{The Billiard Problem}
+in this issue, by Walter Gander and Dominik Gruntz, where a Newton
+iteration is used to find the zeroes of a function.
+
+Here is another example where we are given a function which
+evaluates a polynomial input as an array of coefficients using Horner's
+rule and we compute its derivative.
+
+\begin{mapleinput}
+f := proc(x,b,n) local i,s;
+    # the array b represents the polynomial b = sum( b[i]*x^i, i=0..n )
+    s := 0;
+    for i from n by -1 to 0 do s := s*x+b[i]; od;
+    s
+end:
+g := PD(f,1);
+\end{mapleinput}
+\begin{maplelatex}
+\end{maplelatex}
+\begin{maplettyout}
+g := proc(x,b,n)
+     local i,s,sx;
+         sx := 0;
+         s := 0;
+         for i from n by -1 to 0 do  sx := sx*x+s; s := s*x+b[i] od;
+         sx
+     end
+
+\end{maplettyout}
+
+It may not be apparent from these examples, but the difficult
+part of algorithmic differentiation is program optimization.
+This is because differentiation produces redundant computation.
+For example, repeatedly differentiating formulae results in
+lots of repeated common subexpressions.  And, when computing partial
+derivatives, a lot of zeroes may result.
+Thus two of the main focuses of algorithmic differentiation is
+to avoid as much of this redundancy as possible and 
+do program optimization.
+We are presently working on extending Maple's capabilities for
+differentiating procedures to compute gradients and jacobians,
+and improving the optimization of the resulting procedures.
+
+\begin{thebibliography}{10}
+
+\bibitem{MUC84}
+Michael Wester and Stanly Steinberg,
+A Survey of Symbolic Differentiation Implementations,
+\emph{Proceedings of the 1984 MACSYMA Users' Conference},
+Schenectady NY, (1984).
+
+\bibitem{OPERATORS}
+Gaston Gonnet,
+An Implementation of Operators for Symbolic Algebra Systems,
+\emph{Proceedings of the 1986 Symposium on Symbolic and Algebraic Computations},
+Symsac `86, ACM, (1986).
+
+\bibitem{PROCEEDINGS}
+Automatic Differentiation of Algorithms: Theory, Implementation
+and Application, SIAM, Philadelphia 1991.
+\textit{Proceedings of the SIAM Workshop on Automatic Differentiation},
+Breckenridge, CO, (1991).
+
+\end{thebibliography}
+
+\end{document}

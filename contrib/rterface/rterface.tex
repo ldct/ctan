@@ -1,0 +1,145 @@
+%  Copyright 2013 Thomas Bogue
+% 
+%  This work may be distributed and/or modified under the
+%  conditions of the LaTeX Project Public License, either version 1.3
+%  of this license or (at your option) any later version.
+%  The latest version of this license is in
+%    http://www.latex-project.org/lppl.txt
+%  and version 1.3 or later is part of all distributions of LaTeX
+%  version 2005/12/01 or later.
+% 
+%  This work has the LPPL maintenance status `maintained'.
+%  
+%  The Current Maintainer of this work is Tom Bogue
+% 
+%  This work consists of the files rterface.tex and r.sty
+%  and the derived file r.pdf.
+
+\documentclass{article}
+\usepackage{rterface}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\newcommand{\DescribeMacro}[2]{\par\noindent\texttt{#1}\par\noindent#2}
+\newcommand{\oarg}[1]{[ \emph{#1} ]}
+\newcommand{\marg}[1]{\{ \emph{#1} \}}
+
+\title{rterface package documentation}
+\author{Tom Bogue \url{thomasbogue@gmail.com}}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This package allows the user to interface with R from the \LaTeX\ environment.  This allows the user to freely mix the reporting and typesetting capabilities of \LaTeX\ with the numerical abilities of R, for a form of literate analysis.
+\end{abstract}
+
+ \section{Usage}
+\subsection{compilation}
+\emph{This package requires modification of the commands used to compile a document.}  It requires an additional pass, and R must be invoked to process the numerical data.  Normally the sequence 
+\begin{verbatim}
+latex filename
+R --slave < filename.R > filename.R.out
+latex filename
+latex filename
+dvips filename.ps
+ps2pdf filename.pdf
+\end{verbatim}
+will serve.  This works in both Unix and Windows under the command line if necessary programs are on the path.
+
+To summarize, the following steps are necessary to use this package
+\begin{enumerate}
+\item run latex on the source file
+\item run the command \texttt{R --slave < filename.R > filename.R.out}
+\item process the source file as normal (i.e. run latex twice to ensure references are correct, and if necessary process the dvi to the necessary final file format)
+\end{enumerate}
+
+\DescribeMacro{\textbackslash{}Rvalue\oarg{significant figures}\marg{expression}}
+This command will instruct R to evaluate the expression, round the result to the specified number of significant figures (default is 4), and display the result inline in your document.
+
+Since this command rounds, the expression must evaluate to a number.  If your expression evaluates to a string, use \verb|\Rvalue*| instead.
+To execute R commands, use the \LaTeX\ command
+
+\DescribeMacro{\textbackslash{}Rvalue*\oarg{significant figures}\marg{expression}}
+This command functions like the unstarred version, but does not round the resulting value.  It can display string values.
+
+\DescribeMacro{\textbackslash{}Rcmd\marg{command}}
+This command will be passed to R to be executed.  Nothing is displayed in your document from this command, but it can affect variables which can later be displayed.
+
+The most common use for this function is to set a variable.
+
+\DescribeMacro{\textbackslash{}Rset\oarg{significant figures}\marg{variable}\marg{expression}}
+This command will set the specified variable equal to the specified expression.  It will also display the assignment and the result of the expression in the document.
+
+\DescribeMacro{\textbackslash{}Rset*\oarg{significant figures}\marg{variable}\marg{expression}}
+This is just like \texttt{Rset}, but will not display the expression, only the resulting value.
+
+\DescribeMacro{\textbackslash{}Rcode\marg{expression}}
+Like \texttt{\textbackslash{}Rcmd}, this will instruct R to evaluate the expression.  It will also display the expression in your document.
+
+\DescribeMacro{\textbackslash{}Rtable\marg{col1,col2,...}\marg{num rows}}
+This command produces the body of a \LaTeX\ formatted table using the given values.  Multiple columns can be listed by separating the columns with commas.  The number of rows must be specified separately as the second argument.
+
+The results here are not rounded, but may be strings.  To round values, use the R function \texttt{round} or \texttt{signif} on a column.
+
+\section{R definitions}
+A small number of R functions and variables are defined in addition to the \LaTeX\ macros.  The most important of these allows users to easily format numbers as percentages.
+\subsection{topercent(value,decimal places=0)}
+This function converts the specified value to a percentage with the specified number of decimal places.  Note that since the result is a string, it can only be displayed via the \verb|\Rvalue*| macro.
+\subsection{variables}
+\begin{tabular}{l r}
+name & value\\
+\hline
+backslash & "\textbackslash"\\
+percent & "\%"\\
+\end{tabular}
+
+\section{Examples}
+\subsection{Quadratic Formula}
+Consider solving a quadratic equation.  Using the code
+\begin{verbatim}
+\Rcmd{a<-3}
+\[ a = \Rvalue{a} \]
+\Rcmd{b<-4}
+\[ b = \Rvalue{b} \]
+\Rcmd{c<--2}
+\[ c = \Rvalue{c} \]
+
+\Rcmd{xm<-(b-sqrt(b^2-4*a*c))/(2*a)}
+\Rcmd{xp<-(b+sqrt(b^2-4*a*c))/(2*a)}
+\[ x = \frac{b \pm \sqrt{b^2-4 a c}}{2 a} = \Rvalue{xm},\Rvalue{xp}\]
+\end{verbatim}
+produces the output
+\Rcmd{a<-3}
+\[ a = \Rvalue{a} \]
+\Rcmd{b<-4}
+\[ b = \Rvalue{b} \]
+\Rcmd{c<--2}
+\[ c = \Rvalue{c} \]
+
+\Rcmd{xm<-(b-sqrt(b^2-4*a*c))/(2*a)}
+\Rcmd{xp<-(b+sqrt(b^2-4*a*c))/(2*a)}
+\[ x = \frac{b \pm \sqrt{b^2-4 a c}}{2 a} = \Rvalue{xm},\Rvalue{xp}\]
+
+\subsection{Table}
+If we wanted a table of perfect squares, we could use the code
+\begin{verbatim}
+\begin{tabular}{l r}
+$x$ & $x^2$\\
+\hline
+\Rtable{1:5,(1:5)^2}{5}
+\end{tabular}
+\end{verbatim}
+to produce the following output
+
+\begin{tabular}{l r}
+$x$ & $x^2$\\
+\hline
+\Rtable{1:5,(1:5)^2}{5}
+\end{tabular}
+
+\section{Troubleshooting}
+The first run-through of the document produces the R code which then can be used to create the data to be displayed.  Because of this, on the first pass \textbackslash{}Rvalue produces no output, and \textbackslash{}Rtable produces only \verb|0\\|.  This is usually harmless, but can cause \LaTeX\ to balk, especially if in a table which is formated in strange ways.  
+
+I'd prefer a more elegant solution, but normally hitting the enter key until \LaTeX\ finishes this first run will solve all issues.
+
+\end{document}

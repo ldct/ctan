@@ -1,0 +1,1840 @@
+% \changes{v1.1}{1996/11/22}{Bug fix in indxcite.ins, extra section in docs.}
+% \changes{v1.0}{1996/5/5}{First Release}
+%
+% \iffalse   % this is a METACOMMENT !
+%
+% Package `indxcite' for use with LaTeX2e
+% Copyright (C) 1996 James Ashton (email `James.Ashton@anu.edu.au').
+% All rights reserved.  You may not alter the contents of this file
+% unless you also change its name.
+%
+% \fi
+%
+% \MakeShortVerb{\+}
+% 
+% \title{Indexing Citations with \texttt{indxcite}}
+% \author{James Ashton}
+% \maketitle
+% \begin{abstract}
+% The \texttt{indxcite} package allows author index entries to be
+% generated automatically each time a citation is made.
+% Every author (or editor if there are no authors) of a cited work will appear
+% in an index giving the page numbers where the work is cited.
+% \end{abstract}
+% 
+% \section{Introduction}
+% 
+% Sometimes authors of technical books desire an `Author Index' listing
+% authors whose work is referenced in the text.
+% The \texttt{index} package can be used to allow for separate author
+% and subject indices but the work of adding +\index+ commands can
+% be tedious, especially when many of the index entries correspond with
+% citations to the authors' works.
+% The \texttt{indxcite} package allows a citation
+% and appropriate index entries to be generated with a single command.
+%
+% The use of this package requires additional runs of \LaTeX{}
+% before the output reaches its final form.
+% Starting from scratch the following execution sequence is generally adequate.
+% \begin{verbatim}
+% latex
+% bibtex
+% latex
+% makeindex
+% latex
+% \end{verbatim}
+%
+% \section{\BibTeX{} issues}
+%
+% The +\bibliographystyle+ and +\citationstyle+ commands should be used
+% as required by the \texttt{harvard} package.
+% Note that a specially modified \BibTeX{} style file is required for
+% use with \texttt{indxcite} and that currently +dcu_ic+ is the only
+% style available.
+% The modifications performed on +dcu.bst+ to produce +dcu_ic.bst+ could
+% be used as a guide to creating other \BibTeX{} style files suitable
+% for use with \texttt{indxcite}.
+%
+% With +dcu_ic.bst+ index entries are generated for the authors of papers
+% as they appear in the bibliography, i.e., the bibliography is indexed.
+% This feature could be disabled by creating a new \BibTeX{} style file
+% lacking the +output.bibindex+ function of +dcu_ic.bst+.
+%
+% A new \BibTeX{} entry field +indexkey+ is defined for \texttt{indxcite}.
+% It is defined to allow the key used to order an author's name within
+% the index to be different from the author's name.
+% This may be necessary where special characters are present in a name
+% or to handle unusual sorting conventions, e.g., for names beginning `Mc'.
+% If a cited work has multiple authors and the use of +indexkey+ is
+% required, the number and order of names in +indexkey+ must match
+% those in +author+.
+% An example follows:
+% 
+% \begin{verbatim}
+%         author = "K. J. {\AA}strom and B. Wittenmark",
+%         indexkey = "K. J. Astrom and B. Wittenmark",
+% \end{verbatim}
+% 
+% Where a cited work has no author, editors are indexed instead.
+% The +indexkey+ field can be used with the +editor+ field in this case.
+%
+% It may be necessary to recompile \BibTeX{} to increase the maximum
+% function space and the maximum number of global strings.
+% Have a local wizard do this if required.
+% Setting +wiz_fn_space=4000+ and +max_glob_strs=15+ should be adequate.
+%
+% \section{User interface}
+% 
+% \DescribeMacro{\citationindex}
+% This command controls which index will be used to index authors
+% of cited works.
+% Its one argument must be the \emph{tag} of the index used.
+% See the documentation for the \texttt{index} package for
+% more information.
+% In the absence of +\citationindex+ the +default+ index is used.
+% 
+% \DescribeMacro{\citationformat}
+% \noindent
+% Use +\citationformat+ to control the format of
+% the page numbers appearing in the index.
+% An optional argument makes
+% it possible to control the format of the text in the index as well.
+% Thus, +\citationformat[textbf]{textit}+ would generate entries like
+% \mbox{\textbf{Ashton,~J.},~~\textit{12}}.
+% 
+% \DescribeMacro{\indexcite}
+% \noindent
+% +\indexcite+ acts exactly like the +\cite+ command except that it
+% causes author index entries to be generated \emph{instead} of a citation.
+% Since +\indexcite+ doesn't generate a citation it's mainly useful
+% where there is a need to access the page range feature of +index+.
+% This is done via an optional argument, e.g., +\indexcite[(]{+\emph{tag}+}+
+% is equivalent to +\index{+\emph{author}+|(}+.
+% Where the page range feature is not needed, the following
+% commands are more convenient:
+% 
+% \DescribeMacro{\icite}
+% \DescribeMacro{\iciteaffixed}
+% \DescribeMacro{\iciteasnoun}
+% \DescribeMacro{\ipossessivecite}
+% \DescribeMacro{\icitename}
+% \DescribeMacro{\iciteyear}
+% \noindent
+% These commands all generate both a citation and one or more index entries.
+% Except for their index generation feature, they mirror the function
+% of the \texttt{harvard} package functions with similar names.
+% Their argument should match the tag of a work described in a
+% bibliographical database (+.bib+ file).
+% An optional argument can be used to provide additional text to
+% be included with the citation although this will not fit in well
+% with the text of a document when used with commands like +\iciteasnoun+.
+%
+% \section{An example}
+%
+% The following is a small example which illustrates a few of the
+% features of the package.
+% Just run it through \LaTeX{} twice, then use +makeindex+ (with the
+% arguments noted in the comment in the file, and finally run \LaTeX{} again.
+%    \begin{macrocode}
+%<*example>
+\documentclass{article}
+\usepackage{indxcite}
+\newindex{aut}{adx}{and}{Author Index} % makeindex -o example.and example.adx
+\begin{document}
+\bibliographystyle{dcu_ic}
+\citationstyle{dcu}
+\citationindex{aut}
+\citationformat{textit}
+This is a small example demonstrating the use of the \texttt{indxcite}
+package.
+It is possible, with a single command, to both make a citation and
+generate index entries for the authors of the cited word,
+for example, \iciteasnoun{latexcomp}.
+
+\pagebreak
+
+Unusual effects are possible.  If you want you can have the authors' names to
+appear in small caps in the index with a typewriter font used for the
+page numbers thusly.
+\citationformat[textsc]{texttt}
+And make the citation \icite[Chapter 5]{latexcomp}.
+You can then reset the format back to a more conventional setting.
+\citationformat{textit}
+Using a format other than roman can be a good idea so that automatically
+generated index entries are distinguishible from manually generated
+ones\index[aut]{Goossens, M.}.
+
+Note that if the authors' names are indexed with more than one format
+as in this document (i.e., usually in roman but once in small caps) then
+multiple index entries will be generated.
+
+\pagebreak
+
+\indexcite[(]{latexcomp}
+If a citation is refered to over several paragraphs you may want to
+index the whole range of text.
+In this case you need to use three commands:  one to generate the
+citation\cite{latexcomp}; one to mark the begining of the text to
+be indexed and one to mark the end of the text to be indexed.
+
+\pagebreak
+
+Then, if the indexed text runs over multiple pages, this will be
+reflected in the index entry\indexcite[)]{latexcomp}.
+
+It is a good idea to reset the citation format before the bibliography
+is processed so that index entries for the bibliography can be easily
+distinguished for those for the rest of the document.
+
+\citationformat{textbf}
+\begin{thebibliography}{xx}
+
+\harvarditem[Goossens et~al.]{Goossens, Mittelbach \harvardand\
+  Samarin}{1993}{latexcomp}{\\{Goossens, M.}\\{Mittelbach, F.}\\{Samarin, A.}}
+Goossens, M., Mittelbach, F. \harvardand\ Samarin, A.  \harvardyearleft
+  1993\harvardyearright .
+\newblock {\em The {\LaTeX{}} Companion}, Addison-Wesley, Reading,
+  Massachusetts.\indexcite{latexcomp}
+
+\end{thebibliography}
+\printindex[aut]
+\end{document}
+%</example>
+%    \end{macrocode}
+%
+% \section{Modifying \texttt{.bst} files}
+%
+% As noted earlier, examining the differences between +dcu.bst+ (from
+% the \texttt{harvard} package) and +dcu_ic.bst+
+% gives an indication of how to write other +.bst+ files for use
+% with \texttt{indxcite}.
+% This section provides some more details of the process.  The simplest
+% procedure is to modify an existing \texttt{harvard} package file.
+%
+% The main change required is to provide an additional argument for the
+% +\harvarditem+ command.
+% This argument provides a list of authors (or editors) to be indexed
+% with each citation.
+% The list is simply a sequence of +\\+ commands each with the author's
+% name as the argument.  If an \texttt{indexkey} field is present then
+% it is given as an optional argument.  The example of +indexkey+
+% usage given above results in the following as the last argument
+% to +\harvarditem+.
+% \begin{verbatim}
+% {\\[Astrom, K.~J.]{{\AA}strom, K.~J.}\\{Wittenmark, B.}}
+% \end{verbatim}
+% The functions +make.indx.label+ and +format.indx.names.full+ from
+% +dcu_ic.bst+ can be used to generate this argument.  Code is then
+% added to +output.bibitem+ to call the new functions.  Note that
+% +format.indx.names.full+ requires two additional global strings (called
+% +u+ and +v+ which must be declared in the +STRINGS+ statement.
+%
+% To allow the use of the \texttt{indexkey} \BibTeX{} field 
+% the field name must be added to the \texttt{ENTRY} list
+%
+% If the index is to include entries for references appearing in the
+% bibliography the simplest technique is to insert a call to +\indexcite+
+% after the each +\harvarditem+.  In +dcu_ic.bst+ this is done by
+% the function +output.bibindex+ which is called by +fin.entry+.
+%
+% \StopEventually{}
+%
+% \section{The code}
+% This package is titled \texttt{indxcite} and it requires
+% \LaTeXe{} and the packages \texttt{index}
+% and \texttt{harvard} to run.
+%    \begin{macrocode}
+%<*package>
+\def\fileversion{1.1}
+\def\filedate{1996/11/22}
+\def\docdate{1996/11/22}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{indxcite}[\filedate\space\fileversion\space Index citation package]
+\RequirePackage{index}
+\RequirePackage{harvard}
+\typeout{Package `indxcite' \fileversion\space<\filedate>}
+%    \end{macrocode}
+%
+% To make \texttt{indxcite} work properly it was necessary to modify
+% the operation of the \BibTeX{} style files used by the \texttt{harvard}
+% package so that more information was passed back.
+% A fifth parameter, listing the Authors names as they are to appear
+% in the index entry is produced by \BibTeX{} and must be handled by
+% the macros +\harvarditem+,
+%    \begin{macrocode}
+\renewcommand{\harvarditem}[5][\null]{\item[]%
+\if@filesw{ \def\protect##1{\string ##1\space}%
+\ifthenelse{\equal{#1}{\null}}
+  {\def\next{{#4}{#2}{#2}{#3}{#5}}}
+  {\def\next{{#4}{#2}{#1}{#3}{#5}}}
+\immediate\write\@auxout{\string\harvardcite\codeof\next}%
+}\fi%
+\protect\hspace*{-\labelwidth}\protect\hspace*{-\labelsep}\ignorespaces%
+}
+%    \end{macrocode}
+% +\harvardcite+ and
+%    \begin{macrocode}
+\renewcommand{\harvardcite}[5]{
+  \global\@namedef{HAR@fn@#1}{#2}
+  \global\@namedef{HAR@an@#1}{#3}
+  \global\@namedef{HAR@yr@#1}{#4}
+  \global\@namedef{HAR@df@#1}{\csname HAR@fn@#1\endcsname}
+  \global\@namedef{HAR@ix@#1}{#5}
+}
+%    \end{macrocode}
+% +\HAR@checkcitations+.
+%    \begin{macrocode}
+\renewcommand{\HAR@checkcitations}[5]{
+  \def\HAR@tempa{#2}\expandafter
+  \ifx \csname HAR@fn@#1\endcsname \HAR@tempa
+    \def\HAR@tempa{#3}\expandafter
+    \ifx \csname HAR@an@#1\endcsname \HAR@tempa
+      \def\HAR@tempa{#4}\expandafter
+      \ifx \csname HAR@yr@#1\endcsname \HAR@tempa
+        \def\HAR@tempa{#5}\expandafter
+        \ifx \csname HAR@ix@#1\endcsname \HAR@tempa
+        \else
+          \@tempswatrue
+        \fi
+      \else
+        \@tempswatrue
+      \fi
+    \else
+      \@tempswatrue
+    \fi
+  \else
+    \@tempswatrue
+  \fi
+}
+%    \end{macrocode}
+%
+% The key command of the package is +\indexcite+.
+% It expects that the list of authors is stored in +\HAR@ix@+\emph{tag}
+% +\index+
+%    \begin{macrocode}
+\newcommand{\indexcite}[2][]{%
+{\def\\{\@ifnextchar[{\@HARex[#1]}{\@HARey[#1]}}%
+\csname HAR@ix@#2\endcsname}}
+%    \end{macrocode}
+% It passes this list to +\@HARex+ which formats the authors' names
+% so that they can be used with +\index+.
+%    \begin{macrocode}
+\long\def\@HARex[#1][#2]#3{\ifthenelse{\equal{#2}{#3}}%
+{\def\HAR@ixtmp{{#2|#1}}}%
+{\def\HAR@ixtmp{{#2@#3|#1}}}%
+\expandafter\HAR@index\HAR@ixtmp}
+%    \end{macrocode}
+% +\@HARey+ is used to handle the case when no optional parameter is present.
+%    \begin{macrocode}
+\def\@HARey[#1]#2{\@HARex[#1][#2]{#2}}
+%    \end{macrocode}
+% The actual processing of the list of formatted names is done
+% by +\HAR@index+.
+%    \begin{macrocode}
+\def\HAR@index#1{\index[\HAR@citeindex]{#1}}
+%    \end{macrocode}
+%
+% The tag of the index to be used is stored in +\HAR@citeindex+
+%    \begin{macrocode}
+\newcommand{\HAR@citeindex}{\default}
+%    \end{macrocode}
+% which can be set using +\citationindex{+\emph{tag}+}+.
+%    \begin{macrocode}
+\newcommand{\citationindex}[1]{\renewcommand{\HAR@citeindex}{#1}}
+%    \end{macrocode}
+% Varying of the index format is achieved by redefining +\@HARex+
+% and the user interface for this is the command +\citationformat+.
+%    \begin{macrocode}
+\catcode`\?=0 \catcode`\\=12%
+?newcommand{?citationformat}[2][]{?@citationformat[#1]{#2}{\}}%
+?catcode`?\=0 \catcode`\?=12%
+%    \end{macrocode}
+% This command uses a temporary catcode redefinition to allow
+% a `+\+' to be passed to +\@citationformat+ which does the work.
+% The availablity of the `+\+' as an argument is useful in adding
+% the character to the redefinition of +\@HARex+.
+%    \begin{macrocode}
+\newcommand{\@citationformat}[3][]{%
+  \ifthenelse{\equal{#1}{}}%
+      {\long\def\@HARex[##1][##2]##3{\ifthenelse{\equal{##2}{##3}}%
+         {\def\HAR@ixtmp{{##2|##1#2}}}%
+         {\def\HAR@ixtmp{{##2@##3|##1#2}}}%
+       \expandafter\HAR@index\HAR@ixtmp}}%
+      {\long\def\@HARex[##1][##2]##3{\def\HAR@ixtmp{{##2@#3#1{##3}|##1#2}}\expandafter\HAR@index\HAR@ixtmp}}%
+}
+%    \end{macrocode}
+%
+% Finally we define the main user interface commands.
+% These merely call both +\indexcite+ and their \texttt{harvard} package
+% equivalents.
+%    \begin{macrocode}
+\newcommand{\icite}[2][]{\ifthenelse{\equal{#1}{}}{\cite{#2}}{\cite[#1]{#2}}\indexcite{#2}}
+\newcommand{\iciteaffixed}[2][]{\ifthenelse{\equal{#1}{}}{\citeaffixed{#2}}{\citeaffixed[#1]{#2}}\indexcite{#2}}
+\newcommand{\iciteasnoun}[2][]{\ifthenelse{\equal{#1}{}}{\citeasnoun{#2}}{\citeasnoun[#1]{#2}}\indexcite{#2}}
+\newcommand{\ipossessivecite}[2][]{\ifthenelse{\equal{#1}{}}{\possessivecite{#2}}{\possessivecite[#1]{#2}}\indexcite{#2}}
+\newcommand{\icitename}[2][]{\ifthenelse{\equal{#1}{}}{\citename{#2}}{\citename[#1]{#2}}\indexcite{#2}}
+\newcommand{\iciteyear}[2][]{\ifthenelse{\equal{#1}{}}{\citeyear{#2}}{\citeyear[#1]{#2}}\indexcite{#2}}
+%</package>
+%    \end{macrocode}
+%
+%\section{The documentation driver}
+% This will generate the documentation root file.
+%    \begin{macrocode}
+%<*driver>
+\documentclass{article}
+\usepackage{doc}
+\OnlyDescription
+\setlength{\parindent}{0pt}
+\begin{document}
+\DocInput{indxcite.dtx}
+\PrintIndex
+\PrintChanges
+\end{document}
+%</driver>
+%    \end{macrocode}
+%
+%\section{The \BibTeX style file}
+%
+% The +dcu_ic.bst+ file is a modified version of +dcu.bst+ as distributed
+% with the \texttt{harvard} package.
+%    \begin{macrocode}
+%<*dcu>
+ % Modified for use with the indxcite package.
+ % dcu_ic.bst - harvard bibliography style indexing extension.
+ %
+ % BibTeX standard bibliography style `dcu' (one of the harvard family)
+ % version 0.99a for BibTeX versions 0.99a or later, LaTeX version 2.09.
+ % Copyright (C) 1991, all rights reserved.
+ % Copying of this file is authorized only if either
+ % (1) you make absolutely no changes to your copy, including name, or
+ % (2) if you do make changes, you name it something other than
+ % btxbst.doc, plain.bst, unsrt.bst, alpha.bst, abbrv.bst, agsm.bst,
+ % dcu.bst or kluwer.bst.
+ % This restriction helps ensure that all standard styles are identical.
+ % The file harvard.tex has the documentation for this style.
+ %
+ % Copyright (C) 1995 James Ashton
+ % Restrictions as above plus the fact that, if you make changes,
+ % you must not name the file `dcu_ic.bst'.
+
+ % ACKNOWLEDGEMENT:
+ %   This document is a modified version of alpha.bst to which it owes much of
+ %   its functionality.
+
+ % AUTHOR
+ %   Peter Williams, Key Centre for Design Quality, Sydney University %   e-mail: peterw@archsci.arch.su.oz.au
+ %
+ %   indxcite modifications by James Ashton, Australian National University
+ %   James.Ashton@anu.edu.au.  Search for `JAA' to find the mods.
+
+ENTRY
+  { address
+    author
+    booktitle
+    chapter
+    edition
+    editor
+    howpublished
+    indexkey		% JAA added
+    institution
+    journal
+    key
+    month
+    note
+    number
+    organization
+    pages
+    publisher
+    school
+    series
+    title
+    type
+    URL
+    volume
+    year
+  }
+  { field.used etal.allowed etal.required }
+  { extra.label sort.label list.year }
+
+INTEGERS { output.state before.all mid.sentence after.sentence after.block }
+
+FUNCTION {init.state.consts}
+{ #0 'before.all :=
+  #1 'mid.sentence :=
+  #2 'after.sentence :=
+  #3 'after.block :=
+}
+
+STRINGS { s t u v f } % JAA added u and v
+
+FUNCTION {output.nonnull}
+{ 's :=
+  output.state mid.sentence =
+    { ", " * write$ }
+    { output.state after.block =
+	{ add.period$ write$
+	  newline$
+	  "\newblock " write$
+	}
+	{ output.state before.all =
+	    'write$
+	    { add.period$ " " * write$ }
+	  if$
+	}
+      if$
+      mid.sentence 'output.state :=
+    }
+  if$
+  s
+}
+
+FUNCTION {output}
+{ duplicate$ empty$
+    'pop$
+    'output.nonnull
+  if$
+}
+
+FUNCTION {output.check}
+{ 't :=
+  duplicate$ empty$
+    { pop$ "empty " t * " in " * cite$ * warning$ }
+    'output.nonnull
+  if$
+}
+
+FUNCTION {item.check}
+{ 't :=
+  empty$
+    { "empty " t * " in " * cite$ * warning$ }
+    { skip$ }
+  if$
+}
+
+FUNCTION {output.bibindex}	% JAA added function
+{ "\indexcite{" write$
+  cite$ write$
+  "}" write$
+  newline$
+}
+
+FUNCTION {fin.entry}
+{ add.period$
+  write$
+  output.bibindex	% JAA added
+  newline$
+}
+
+FUNCTION {new.block}
+{ output.state before.all =
+    'skip$
+    { after.block 'output.state := }
+  if$
+}
+
+FUNCTION {not}
+{   { #0 }
+    { #1 }
+  if$
+}
+
+FUNCTION {and}
+{   'skip$
+    { pop$ #0 }
+  if$
+}
+
+FUNCTION {or}
+{   { pop$ #1 }
+    'skip$
+  if$
+}
+
+FUNCTION {field.or.null}
+{ duplicate$ empty$
+    { pop$ "" }
+    'skip$
+  if$
+}
+
+FUNCTION {emphasize}
+{ duplicate$ empty$
+    { pop$ "" }
+    { "{\em " swap$ * "}" * }
+  if$
+}
+
+FUNCTION {embolden}
+{ duplicate$ empty$
+    { pop$ "" }
+    { "{\bf " swap$ * "}" * }
+  if$
+}
+
+FUNCTION {quote}
+{ duplicate$ empty$
+    { pop$ "" }
+    { "`" swap$ * "'" * }
+  if$
+}
+
+FUNCTION {write.url}
+{ URL empty$
+    { skip$ }
+    { "\newline\harvardurl{" URL * "}" * write$ newline$ }
+  if$
+}
+
+INTEGERS { nameptr namesleft numnames }
+
+FUNCTION {format.names}
+{ 's :=
+  'f :=
+  #1 'nameptr :=
+  s num.names$ 'numnames :=
+  numnames 'namesleft :=
+    { namesleft #0 > }
+    { s nameptr f format.name$ 't :=
+      nameptr #1 >
+	{ namesleft #1 >
+	    { ", " * t * }
+	    { t "others" =
+		{ " et~al." * }
+		{ " \harvardand\ " * t * }
+	      if$
+	    }
+	  if$
+	}
+	't
+      if$
+      nameptr #1 + 'nameptr :=
+      namesleft #1 - 'namesleft :=
+    }
+  while$
+}
+
+FUNCTION {format.authors}
+{ author empty$
+    { "" }
+    { "{vv~}{ll}{, jj}{, f.}" author format.names }
+  if$
+}
+
+FUNCTION {format.editors}
+{ editor empty$
+    { "" }
+    { "{vv~}{ll}{, jj}{, f.}" editor format.names
+      editor num.names$ #1 >
+	{ " (eds)" * }
+	{ " (ed.)" * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {format.editors.reverse}
+{ editor empty$
+    { "" }
+    { "{f.~}{vv~}{ll}{, jj}" editor format.names
+      editor num.names$ #1 >
+	{ " (eds)" * }
+	{ " (ed.)" * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {format.title}
+{ title empty$
+    { "" }
+    { title "t" change.case$ }
+  if$
+}
+
+FUNCTION {n.dashify}
+{ 't :=
+  ""
+    { t empty$ not }
+    { t #1 #1 substring$ "-" =
+	{ t #1 #2 substring$ "--" = not
+	    { "--" *
+	      t #2 global.max$ substring$ 't :=
+	    }
+	    {   { t #1 #1 substring$ "-" = }
+		{ "-" *
+		  t #2 global.max$ substring$ 't :=
+		}
+	      while$
+	    }
+	  if$
+	}
+	{ t #1 #1 substring$ *
+	  t #2 global.max$ substring$ 't :=
+	}
+      if$
+    }
+  while$
+}
+
+FUNCTION {format.btitle}
+{ title emphasize
+}
+
+FUNCTION {tie.or.space.connect}
+{ duplicate$ text.length$ #3 <
+    { "~" }
+    { " " }
+  if$
+  swap$ * *
+}
+
+FUNCTION {either.or.check}
+{ empty$
+    'pop$
+    { "can't use both " swap$ * " fields in " * cite$ * warning$ }
+  if$
+}
+
+FUNCTION {format.bvolume}
+{ volume empty$
+    { "" }
+    { "Vol." volume tie.or.space.connect
+      series empty$
+	'skip$
+	{ " of " * series emphasize * }
+      if$
+      "volume and number" number either.or.check
+    }
+  if$
+}
+
+FUNCTION {format.number.series}
+{ volume empty$
+    { number empty$
+	{ series field.or.null }
+	{ output.state mid.sentence =
+	    { "number" }
+	    { "Number" }
+	  if$
+	  number tie.or.space.connect
+	  series empty$
+	    { "there's a number but no series in " cite$ * warning$ }
+	    { " in " * series emphasize * }
+	  if$
+	}
+      if$
+    }
+    { "" }
+  if$
+}
+
+FUNCTION {format.edition}
+{ edition empty$
+    { "" }
+    { output.state mid.sentence =
+	{ edition "l" change.case$ " edn" * }
+	{ edition "t" change.case$ " edn" * }
+      if$
+    }
+  if$
+}
+
+INTEGERS { multiresult }
+
+FUNCTION {multi.page.check}
+{ 't :=
+  #0 'multiresult :=
+    { multiresult not
+      t empty$ not
+      and
+    }
+    { t #1 #1 substring$
+      duplicate$ "-" =
+      swap$ duplicate$ "," =
+      swap$ "+" =
+      or or
+	{ #1 'multiresult := }
+	{ t #2 global.max$ substring$ 't := }
+      if$
+    }
+  while$
+  multiresult
+}
+
+FUNCTION {format.pages}
+{ pages empty$
+    { "" }
+    { pages multi.page.check
+	{ "pp.~" pages n.dashify * }
+	{ "p.~" pages * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {format.vol.num.pages}
+{ volume embolden field.or.null
+  number empty$
+    'skip$
+    { "(" number * ")" * *
+      volume empty$
+	{ "there's a number but no volume in " cite$ * warning$ }
+	'skip$
+      if$
+    }
+  if$
+  pages empty$
+    'skip$
+    { duplicate$ empty$
+	{ pop$ format.pages }
+	{ ":~" * pages n.dashify * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {format.chapter.pages}
+{ chapter empty$
+    'format.pages
+    { type empty$
+	{ "chapter" }
+	{ type "l" change.case$ }
+      if$
+      chapter tie.or.space.connect
+      pages empty$
+	'skip$
+	{ ", " * format.pages * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {format.in.ed.booktitle}
+{ booktitle empty$
+    { "" }
+    { editor empty$
+	{ booktitle emphasize }
+	{ "{\em in} " format.editors.reverse * ", " * booktitle emphasize * }
+      if$
+    }
+  if$
+}
+
+FUNCTION {empty.misc.check}
+{ author empty$ title empty$ howpublished empty$
+  month empty$ year empty$ note empty$
+  and and and and and
+  key empty$ not and
+    { "all relevant fields are empty in " cite$ * warning$ }
+    'skip$
+  if$
+}
+
+FUNCTION {format.thesis.type}
+{ type empty$
+    'skip$
+    { pop$
+      type "t" change.case$
+    }
+  if$
+}
+
+FUNCTION {format.tr.number}
+{ type empty$
+    { "Technical Report" }
+    'type
+  if$
+  number empty$
+    { "t" change.case$ }
+    { number tie.or.space.connect }
+  if$
+}
+
+FUNCTION {format.article.crossref}
+{ key empty$
+    { journal empty$
+	{ "need key or journal for " cite$ * " to crossref " * crossref *
+	  warning$
+	  ""
+	}
+	{ "in {\em " journal * "\/}" * " \cite{" * crossref * "}" *
+        }
+      if$
+    }
+    { " {\em in} \citeasnoun{" crossref * "}" * }
+  if$
+}
+
+FUNCTION {format.book.crossref}
+{ volume empty$
+    { "empty volume in " cite$ * "'s crossref of " * crossref * warning$
+      "in "
+    }
+    { "Vol." volume tie.or.space.connect
+      " of " *
+    }
+  if$
+  editor empty$
+  editor field.or.null author field.or.null =
+  or
+    { key empty$
+	{ series empty$
+	    { "need editor, key, or series for " cite$ * " to crossref " *
+	      crossref * warning$
+	      "" *
+	    }
+	    { "{\em " * series * "\/}" * " \cite{" * crossref * "}" *}
+	  if$
+	}
+	{ " \citeasnoun{" * crossref * "}" * }
+      if$
+    }
+    { " \citeasnoun{" * crossref * "}" * }
+  if$
+}
+
+FUNCTION {format.incoll.inproc.crossref}
+{ editor empty$
+  editor field.or.null author field.or.null =
+  or
+    {
+      key empty$
+	{ booktitle empty$
+	    { "need editor, key, or booktitle for " cite$ * " to crossref " *
+	      crossref * warning$
+	      ""
+	    }
+	    { "in {\em " booktitle * "\/}" * " \cite{" * crossref * "}" *}
+	  if$
+	}
+	{ " {\em in} \citeasnoun{" crossref * "}" * }
+      if$
+    }
+    {  " {\em in} \citeasnoun{" crossref * "}" * }
+  if$
+ 
+}
+
+INTEGERS { len }
+
+FUNCTION {chop.word}
+{ 's :=
+  'len :=
+  s #1 len substring$ =
+    { s len #1 + global.max$ substring$ }
+    's
+  if$
+}
+
+INTEGERS { ind tsslen }
+
+STRINGS { tss ret rss istr }
+
+FUNCTION {replace.substring}{
+  'rss :=
+  'tss :=
+  'istr :=
+  "" 'ret :=
+  tss text.length$ 'tsslen :=
+  #1 'ind :=
+    { istr ind tsslen substring$ "" = not }
+    { istr ind tsslen substring$ tss =
+        { ret rss * 'ret :=
+          ind tsslen + 'ind :=
+        }
+        { ret istr ind #1 substring$ * 'ret :=
+          ind #1 + 'ind :=
+        }
+      if$
+    }
+  while$
+  ret
+}
+
+FUNCTION {format.lab.names.abbr}
+{ 's :=
+  s num.names$ 'numnames :=
+  numnames #1 >
+    { numnames #2 >
+	{ s #1 "{vv~}{ll}" format.name$ " et~al." * }
+	{ s #2 "{ff }{vv }{ll}{ jj}" format.name$ "others" =
+            { s #1 "{vv~}{ll}" format.name$ " et~al." * }
+	    { s #1 "{vv~}{ll}" format.name$ " \harvardand\ " *
+              s #2 "{vv~}{ll}" format.name$ * 
+            }
+          if$
+        }
+      if$
+    }
+    { s #1 "{vv~}{ll}" format.name$ }
+  if$
+}
+
+FUNCTION {format.indx.names.full}   % JAA added function
+{ 's :=
+  'u :=
+  #1 'nameptr :=
+  s num.names$ 'numnames :=
+  numnames 'namesleft :=
+    { namesleft #0 > }
+    { s nameptr "{vv~}{ll}{, jj}{, f.}" format.name$ 't :=
+      u nameptr "{vv~}{ll}{, jj}{, f.}" format.name$ 'v :=
+      t "others" =
+	{}
+	{ t v =
+	    { "\\{" t * "}" * 't := }
+	    { "\\[" v * "]{" * t * "}" * 't := }
+	  if$ }
+      if$
+      nameptr #1 >
+	{ namesleft #1 >
+	    { t * }
+	    { t "others" =
+		{}
+		{ t * }
+	      if$
+	    }
+	  if$
+	}
+	't
+      if$
+      nameptr #1 + 'nameptr :=
+      namesleft #1 - 'namesleft :=
+    }
+  while$
+}
+
+FUNCTION {format.lab.names.full}
+{ 's :=
+  #1 'nameptr :=
+  s num.names$ 'numnames :=
+  numnames 'namesleft :=
+    { namesleft #0 > }
+    { s nameptr "{vv~}{ll}" format.name$ 't :=
+      nameptr #1 >
+	{ namesleft #1 >
+	    { ", " * t * }
+	    { t "others" =
+		{ " et~al." * }
+		{ " \harvardand\ " * t * }
+	      if$
+	    }
+	  if$
+	}
+	't
+      if$
+      nameptr #1 + 'nameptr :=
+      namesleft #1 - 'namesleft :=
+    }
+  while$
+}
+
+INTEGERS { author.field editor.field organization.field title.field key.field }
+
+FUNCTION {init.field.constants}
+{ #0 'author.field :=
+  #1 'editor.field :=
+  #2 'organization.field :=
+  #3 'title.field :=
+  #4 'key.field :=
+}
+
+FUNCTION {make.list.label}
+{ author.field field.used =
+    { format.authors }
+    { editor.field field.used =
+        { format.editors }
+        { organization.field field.used =
+            { "The " #4 organization chop.word #3 text.prefix$ }
+            { title.field field.used =
+                { format.btitle }
+                { key.field field.used =
+                    { key #3 text.prefix$ }
+                    { "Internal error :001 on " cite$ * " label" * warning$ }
+                  if$
+                }
+              if$
+            }
+          if$
+        }
+      if$
+    }
+  if$
+}
+
+FUNCTION {make.full.label}
+{ author.field field.used =
+    { author format.lab.names.full }
+    { editor.field field.used =
+        { editor format.lab.names.full }
+        { organization.field field.used =
+            { "The " #4 organization chop.word #3 text.prefix$ }
+            { title.field field.used =
+                { format.btitle }
+                { key.field field.used =
+                    { key #3 text.prefix$ }
+                    { "Internal error :001 on " cite$ * " label" * warning$ }
+                  if$
+                }
+              if$
+            }
+          if$
+        }
+      if$
+    }
+  if$
+}
+
+FUNCTION {make.indx.label}	% JAA added function
+{ author.field field.used =
+    { indexkey empty$
+      {author author}
+      {indexkey author}
+    if$ format.indx.names.full }
+    { editor.field field.used =
+	{ indexkey empty$
+	  {editor editor}
+	  {indexkey editor}
+	if$ format.indx.names.full }
+	{ "" }
+      if$ }
+  if$
+}
+
+FUNCTION {make.abbr.label}
+{ etal.allowed
+    { author.field field.used =
+        { author format.lab.names.abbr }
+        { editor.field field.used =
+            { editor format.lab.names.abbr }
+            { organization.field field.used =
+                { "The " #4 organization chop.word #3 text.prefix$ }
+                { title.field field.used =
+                    { format.btitle }
+                    { key.field field.used =
+                        { key #3 text.prefix$ }
+                        { "Internal error :001 on " cite$ * " label" * warning$}
+                      if$
+                    }
+                  if$
+                }
+              if$
+            }
+          if$
+        }
+      if$
+    }
+    { make.full.label }
+  if$
+}
+
+FUNCTION {output.bibitem}
+{ newline$
+  etal.allowed        %%%XXX change
+  etal.required
+  and
+    {
+      "\harvarditem[" write$
+      make.abbr.label write$
+      "]{" write$
+    }
+    {
+      "\harvarditem{" write$
+    }
+  if$
+  make.full.label write$
+  "}{" write$
+  list.year write$
+  "}{" write$
+  cite$ write$
+  "}{" write$			%
+  make.indx.label write$	% 2 lines added by JAA
+  "}" write$
+  newline$
+  ""
+  before.all 'output.state :=
+}
+
+FUNCTION {list.label.output}
+{ make.list.label " " * write$
+}
+
+FUNCTION {article}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author "author" item.check
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  crossref missing$
+    { journal emphasize "journal" duplicate$ item.check
+      " " * format.vol.num.pages * output
+    }
+    { format.article.crossref output.nonnull
+      format.pages output
+    }
+  if$
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {book}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author empty$
+    { editor "author and editor" item.check }
+    { crossref missing$
+	{ "author and editor" editor either.or.check }
+	'skip$
+      if$
+    }
+  if$
+  title.field field.used =
+    { skip$ }
+    { format.btitle "title" output.check }
+  if$
+  crossref missing$
+    { format.bvolume output
+      format.number.series output
+      format.edition output
+      publisher "publisher" output.check
+      address output
+    }
+    { format.book.crossref output.nonnull
+      format.edition output
+    }
+  if$
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {booklet}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  howpublished output
+  address output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {inbook}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author empty$
+    { editor "author and editor" item.check }
+    { crossref missing$
+	{ "author and editor" editor either.or.check }
+	'skip$
+      if$
+    }
+  if$
+  title.field field.used =
+    { skip$ }
+    { format.btitle "title" output.check }
+  if$
+  crossref missing$
+    { format.bvolume output
+      format.number.series output
+      format.edition output
+      publisher "publisher" output.check
+      address output
+    }
+    { format.book.crossref output.nonnull
+      format.edition output
+    }
+  if$
+  format.chapter.pages "chapter and pages" output.check
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {incollection}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  author "author" item.check
+  crossref missing$
+    { format.in.ed.booktitle "booktitle" output.check
+      format.edition output
+      format.bvolume output
+      format.number.series output
+      publisher "publisher" output.check
+      address output
+    }
+    { format.incoll.inproc.crossref output.nonnull
+    }
+  if$
+  format.chapter.pages output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {inproceedings}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  author "author" item.check
+  crossref missing$
+    { format.in.ed.booktitle "booktitle" output.check
+      format.bvolume output
+      format.number.series output
+      address empty$
+	{ organization output
+	  publisher output
+	}
+	{ organization output
+	  publisher output
+	  address output.nonnull
+	}
+      if$
+    }
+    { format.incoll.inproc.crossref output.nonnull
+    }
+  if$
+  format.pages output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {conference} { inproceedings }
+
+FUNCTION {manual}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.btitle "title" output.check }
+  if$
+  format.edition output
+  author empty$
+    { organization empty$
+	{ address output
+	}
+	'skip$
+      if$
+    }
+    { organization output
+      address output
+    }
+  if$
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {mastersthesis}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author "author" item.check
+  title.field field.used =
+    { skip$ }
+    { format.title emphasize "title" output.check }
+  if$
+  "Master's thesis" format.thesis.type output.nonnull
+  school "school" output.check
+  address output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {misc}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.title output }
+  if$
+  howpublished output
+  new.block
+  note output
+  fin.entry
+  write.url
+  empty.misc.check
+}
+
+FUNCTION {phdthesis}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author "author" item.check
+  title.field field.used =
+    { skip$ }
+    { format.btitle "title" output.check }
+  if$
+  "PhD thesis" format.thesis.type output.nonnull
+  school "school" output.check
+  address output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {proceedings}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  title.field field.used =
+    { skip$ }
+    { format.btitle "title" output.check }
+  if$
+  format.bvolume output
+  format.number.series output
+  address empty$
+    { editor empty$
+	{ skip$ }
+	{ organization output
+	}
+      if$
+      publisher output
+    }
+    { editor empty$
+	'skip$
+	{ organization output }
+      if$
+      publisher output
+      address output.nonnull
+    }
+  if$
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {techreport}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author "author" item.check
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  format.tr.number emphasize output.nonnull
+  institution "institution" output.check
+  address output
+  new.block
+  note output
+  fin.entry
+  write.url
+}
+
+FUNCTION {unpublished}
+{ output.bibitem
+  list.label.output
+  " \harvardyearleft " list.year * "\harvardyearright " * output.nonnull
+  new.block
+  author "author" item.check
+  title.field field.used =
+    { skip$ }
+    { format.title "title" output.check }
+  if$
+  new.block
+  note "note" output.check
+  fin.entry
+  write.url
+}
+
+FUNCTION {default.type} { misc }
+
+MACRO {jan} {"January"}
+
+MACRO {feb} {"February"}
+
+MACRO {mar} {"March"}
+
+MACRO {apr} {"April"}
+
+MACRO {may} {"May"}
+
+MACRO {jun} {"June"}
+
+MACRO {jul} {"July"}
+
+MACRO {aug} {"August"}
+
+MACRO {sep} {"September"}
+
+MACRO {oct} {"October"}
+
+MACRO {nov} {"November"}
+
+MACRO {dec} {"December"}
+
+MACRO {acmcs} {"ACM Computing Surveys"}
+
+MACRO {acta} {"Acta Informatica"}
+
+MACRO {cacm} {"Communications of the ACM"}
+
+MACRO {ibmjrd} {"IBM Journal of Research and Development"}
+
+MACRO {ibmsj} {"IBM Systems Journal"}
+
+MACRO {ieeese} {"IEEE Transactions on Software Engineering"}
+
+MACRO {ieeetc} {"IEEE Transactions on Computers"}
+
+MACRO {ieeetcad}
+ {"IEEE Transactions on Computer-Aided Design of Integrated Circuits"}
+
+MACRO {ipl} {"Information Processing Letters"}
+
+MACRO {jacm} {"Journal of the ACM"}
+
+MACRO {jcss} {"Journal of Computer and System Sciences"}
+
+MACRO {scp} {"Science of Computer Programming"}
+
+MACRO {sicomp} {"SIAM Journal on Computing"}
+
+MACRO {tocs} {"ACM Transactions on Computer Systems"}
+
+MACRO {tods} {"ACM Transactions on Database Systems"}
+
+MACRO {tog} {"ACM Transactions on Graphics"}
+
+MACRO {toms} {"ACM Transactions on Mathematical Software"}
+
+MACRO {toois} {"ACM Transactions on Office Information Systems"}
+
+MACRO {toplas} {"ACM Transactions on Programming Languages and Systems"}
+
+MACRO {tcs} {"Theoretical Computer Science"}
+
+READ
+
+EXECUTE {init.field.constants}
+
+FUNCTION {sortify}
+{ purify$
+  "l" change.case$
+}
+
+FUNCTION {sortify.names}
+{ " \harvardand\ " " " replace.substring
+  " et~al." " zzz" replace.substring
+  sortify
+}
+
+FUNCTION {author.key.label}
+{ author empty$
+    { key empty$
+	{ title.field 'field.used := }
+	{ key.field 'field.used := }
+      if$
+    }
+    { author.field 'field.used := }
+  if$
+}
+
+FUNCTION {author.editor.key.label}
+{ author empty$
+    { editor empty$
+	{ key empty$
+	    { title.field 'field.used := }
+	    { key.field 'field.used := }
+	  if$
+  	}
+	{ editor.field 'field.used := }
+      if$
+    }
+    { author.field 'field.used := }
+  if$
+}
+
+FUNCTION {author.key.organization.label}
+{ author empty$
+    { key empty$
+	{ organization empty$
+	    { title.field 'field.used := }
+	    { organization.field 'field.used := }
+	  if$
+	}
+	{ key.field 'field.used := }
+      if$
+    }
+    { author.field 'field.used := }
+  if$
+}
+
+FUNCTION {editor.key.organization.label}
+{ editor empty$
+    { key empty$
+	{ organization empty$
+	    { title.field 'field.used := }
+	    { organization.field 'field.used := }
+	  if$
+	}
+	{ key.field 'field.used := }
+      if$
+    }
+    { editor.field 'field.used := }
+  if$
+}
+
+FUNCTION {sort.format.title}
+{ 't :=
+  "A " #2
+    "An " #3
+      "The " #4 t chop.word
+    chop.word
+  chop.word
+  sortify
+  #1 global.max$ substring$
+}
+
+FUNCTION {calc.label}
+{ make.abbr.label
+  title.field field.used =
+    { sort.format.title }
+    { sortify.names }
+  if$
+  year field.or.null purify$ #-1 #4 substring$ sortify
+  *
+  'sort.label :=
+}
+
+FUNCTION {preliminaries} %%%XXX change
+{ type$ "book" =
+  type$ "inbook" =
+  or
+    'author.editor.key.label
+    { type$ "proceedings" =
+	'editor.key.organization.label
+	{ type$ "manual" =
+	    'author.key.organization.label
+	    'author.key.label
+	  if$
+	}
+      if$
+    }
+  if$
+  author.field field.used = %%%XXX change
+    {
+      author num.names$ #2 >
+        { #1 }
+        { #0 }
+      if$
+      'etal.required :=
+    }
+    {
+      editor.field field.used = 
+        {
+          editor num.names$ #2 >
+            { #1 }
+            { #0 }
+          if$
+        }
+        { #0 }
+      if$
+      'etal.required :=
+    }
+  if$
+  #1 'etal.allowed :=
+}
+
+FUNCTION {first.presort}
+{ calc.label
+  sort.label
+  title.field field.used =
+    { skip$ }
+    { "    "
+      *
+      make.list.label sortify.names
+      *
+      "    "
+      *
+      title field.or.null
+      sort.format.title
+      *
+    }
+  if$
+  #1 entry.max$ substring$
+  'sort.key$ :=
+}
+
+ITERATE {preliminaries}
+
+ITERATE {first.presort}
+
+SORT
+
+STRINGS { last.sort.label next.extra last.full.label }
+
+INTEGERS { last.extra.num last.etal.allowed }
+
+FUNCTION {initialize.confusion}
+{ #0 int.to.chr$ 'last.sort.label :=
+  #0 int.to.chr$ 'last.full.label :=
+  #1 'last.etal.allowed :=
+}
+
+FUNCTION {confusion.pass}
+{ last.sort.label sort.label =
+    { last.etal.allowed 
+        { last.full.label make.full.label sortify.names =
+            { skip$ }
+            { #0 'etal.allowed :=
+              #0 'last.etal.allowed :=
+            }
+          if$
+        }
+        { #0 'etal.allowed := }
+      if$
+    }
+    { sort.label 'last.sort.label :=
+      make.full.label sortify.names 'last.full.label :=
+      #1 'last.etal.allowed :=
+    }
+  if$
+}
+
+EXECUTE {initialize.confusion}
+
+ITERATE {confusion.pass}
+
+EXECUTE {initialize.confusion}
+
+REVERSE {confusion.pass}
+
+FUNCTION {initialize.last.extra.num}
+{ #0 int.to.chr$ 'last.sort.label :=
+  "" 'next.extra :=
+  #0 'last.extra.num :=
+}
+
+FUNCTION {forward.pass}
+{ last.sort.label sort.label =
+    { last.extra.num #1 + 'last.extra.num :=
+      last.extra.num int.to.chr$ 'extra.label :=
+    }
+    { "a" chr.to.int$ 'last.extra.num :=
+      "" 'extra.label :=
+      sort.label 'last.sort.label :=
+    }
+  if$
+}
+
+FUNCTION {reverse.pass}
+{ next.extra "b" =
+    { "a" 'extra.label := }
+    'skip$
+  if$
+  year empty$
+    { "n.d." extra.label * 'list.year := }
+    { year extra.label * 'list.year := }
+  if$
+  extra.label 'next.extra :=
+}
+
+ITERATE {first.presort}
+
+SORT
+
+EXECUTE {initialize.last.extra.num}
+
+ITERATE {forward.pass}
+
+REVERSE {reverse.pass}
+
+FUNCTION {second.presort}
+{ make.list.label
+  title.field field.used =
+    { sort.format.title }
+    { sortify.names }
+  if$
+  "    "
+  *
+  list.year field.or.null sortify
+  *
+  "    "
+  *
+  title.field field.used =
+    { skip$ }
+    { title field.or.null
+      sort.format.title
+      *
+    }
+  if$
+  #1 entry.max$ substring$
+  'sort.key$ :=
+}
+
+ITERATE {second.presort}
+
+SORT
+
+FUNCTION {begin.bib}
+{ preamble$ empty$
+    'skip$
+    { "\harvardpreambledefs{%" write$ newline$
+      preamble$ write$ "}" write$ newline$
+      "\harvardpreambletext{%" write$ newline$
+      preamble$ write$ "}" write$ newline$ }
+  if$
+  "\begin{thebibliography}{xx}" write$ newline$
+}
+
+EXECUTE {begin.bib}
+
+EXECUTE {init.state.consts}
+
+ITERATE {call.type$}
+
+FUNCTION {end.bib}
+{ newline$
+  "\end{thebibliography}" write$ newline$
+}
+
+EXECUTE {end.bib}
+%</dcu>
+%    \end{macrocode}

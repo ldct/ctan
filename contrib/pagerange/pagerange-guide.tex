@@ -1,0 +1,308 @@
+\documentclass[10pt,a4paper]{article}
+\InputIfFileExists{pagerange-guide.cfg}{}{%
+  \errmessage{No file pagerange-guide.cfg}}
+\pagestyle{fancyplain}
+
+\begin{document}
+\label{page:first}
+
+\MakeShortVerb{\+}
+\title{\textbf{The {\tt pagerange} Package}\\[1ex] Version 0.5}
+\author{Ahmed Musa\\[.5ex]University of Central Lancashire\\
+  Preston, United Kingdom\\[1ex]\email{a.musa@rocketmail.com}
+}
+\maketitle
+
+\section{Introduction}
+This package emerged from my desire to resolve page ranges in the +draftmark+ package, but it may be useful to other \texorlatex enthusiasts and users.
+
+\section{Usage}
+
+When a given page range +xx-yy+ (simple/plain characters) or +\pages+ (control sequence, \eg, +\def\pages{xx-yy}+) is submitted to the macro +\pagerange+ (\eg, +\pagerange{xx-yy}+ or +\pagerange\pages+), this package splits the range as +xx+ in the macro +\pagestart+ and +yy+ in +\pageend+. The counter equivalents of these are +\prg@cnta+ and +\prg@cntb+. The control sequence containing the page range (\eg, +\pages+) is fully expanded before the page range is split.
+
+If you specify a range consisting of a hyphen (or any tie) but with one or two empty page numbers, the following will happen:
+\begin{compactenum}[a)]
+\item A range of the form ``+-34+'' is taken to mean pages +defaultfirstpage+ to 34. The default value of +defaultfirstpage+ is 1; it can be changed via +\pagerangeoptions+.
+\item A range of the form ``+12-+'' is taken to mean page~12 to +defaultlastpage+, where the default value of +defaultlastpage+ is the document's last page.
+\item A range of the form ``+-+'' (\ie, only hyphen and no pages) is taken to mean from +defaultfirstpage+ to +defaultlastpage+.
+\item A blank page range (\ie, containing no argument and no hyphen/tie) is taken to mean the range +defaultfirstpage+ to +defaultlastpage+, or it may prompt a fatal error, depending on whether the boolean +acceptempty+ is set true or false (respectively).
+\end{compactenum}
+
+Page ranges containing more than one hyphen/tie cause fatal error.
+
+If the upper limit of the page range is smaller than the lower limit, a fatal error is flagged.
+
+The tie between the pages in the page range can be any single non-active character; its default is the hyphen character ``+-+''. It can be changed in the call to the package (\eg, +\usepackage[tie=*]{pagerange}+) or at any moment through +\pagerangeoptions{tie=*}+.
+
+Because of the need for the last page of the document, at least~2 runs/passes are needed to obtain the correct last page.
+
+This package has been tested with the +hyperref+ package, which redefines the label used by the +lastpage+ package.
+
+\subsection{Using an active character as the ``tie''}
+
+Active characters can't, unfortunately, be used as ties. The package easily terminates with a fatal error when an active character is passed as +tie+. It wouldn't be safe to change the catcode of an active character submitted as +tie+ through +\pagerangeoptions+, since at the time the macro +\pagerangeoptions+ is invoked, the page may already be in the process of being built.
+
+To use an active character (say \string~) as a tie, it is necessary to first locally change its catcode, \eg, as follows:
+
+\begin{pverbatim}
+\begingroup
+\catcode`\~=11
+\pagerangeoptions{tie=~}
+\pagerange{1~4}
+\endgroup
+\end{pverbatim}
+
+which gives \pgresult{Pages 1 to 4}.
+
+\section{Package options}\label{sec:package-options}
+The package options are as follows:
+
+\begin{tabularx}{\linewidth}{p{3cm}p{2.0cm}X}
+\hline
+\bf Option & \bf Default & \bf Meaning\\\hline
++tie+ & hyphen (+-+) & The tie that show the breakpoint for the page range.\\\hline
++acceptempty+ & +false+ & The boolean option that specifies if empty page ranges (\ie, no page numbers and no tie) submitted to the package should be accepted. If true, the page range is assumed to be from page~1 to the last page.\\\hline
++defaultfirstpage+ & +1+ & The default start page number, used as the starting page when no starting page number is specified by the user.\\\hline
++defaultlastpage+ & document's last page & The default last page number, used as the last page when no last page number is specified by the user.\\\hline
+\end{tabularx}
+
+\section{Examples}
+\pgexample{}
+The following
+
+\begin{pverbatim}
+\pagerange{123-456}
+Pages~\pagestart\space to\space\pageend
+\end{pverbatim}
+
+\pagerange{123-456}
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+
+The following
+
+\begin{pverbatim}
+\pagerange{12345-67890}
+\end{pverbatim}
+
+\pagerange{12345-67890}
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following
+
+\begin{pverbatim}
+\pagerange{123-4567}
+\end{pverbatim}
+
+\pagerange{123-4567}
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following
+
+\begin{pverbatim}
+\pagerange{600-601}
+\end{pverbatim}
+
+\pagerange{600-601}
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following
+
+\begin{pverbatim}
+\pagerange{-34}
+\end{pverbatim}
+
+\pagerange{-34}
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{No page numbers given}
+The following
+
+\begin{pverbatim}
+\pagerange{-}
+\end{pverbatim}
+
+\pagerange{-}
+\par\medskip\noindent
+produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following logs a warning message or issues fatal error, depending on the status of +acceptempty+ option:
+
+\begin{pverbatim}
+\pagerange{}
+\end{pverbatim}
+
+%\pagerangeoptions{acceptempty}
+%\pagerange{}
+%Page~\pagestart\space to\space\pageend
+
+\pgexample{}
+The following fails because of multiple hyphens (ties):
+
+\begin{pverbatim}
+\pagerange{123-456-789}
+\end{pverbatim}
+
+%\pagerange{123-456-789}
+
+\pgexample{}
+The following fails because +\pagestart+ is larger than +\pageend+:
+
+\begin{pverbatim}
+\pagerange{34-12}
+\end{pverbatim}
+
+%\pagerange{34-12}
+
+\pgexample{}
+The following fails because +tie+ can't be active character:
+
+\begin{pverbatim}
+\pagerangeoptions{tie=~}
+\end{pverbatim}
+
+%\pagerangeoptions{tie=~}
+
+\pgexample{}
+For the same reason (\ie, the use of active character as +tie+), the following fails---although nested commands are permitted:
+
+\begin{pverbatim}
+\def\Xone{~}
+\def\Xtwo{\Xone}
+\pagerangeoptions{tie=\Xtwo}
+\end{pverbatim}
+
+%\def\Xone{~}
+%\def\Xtwo{\Xone}
+%\pagerangeoptions{tie=\Xtwo}
+
+\pgexample{}
+The following works because the +\pagerange+ is fully expanded before splitting:
+
+\begin{pverbatim}
+\def\Xone{-}
+\def\Xtwo{\Xone}
+\pagerange{22\Xtwo 23}
+\end{pverbatim}
+
+\def\Xone{-}
+\def\Xtwo{\Xone}
+\pagerange{22\Xtwo 23}
+This produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following also works because the +\pagerange+ is fully expanded before splitting:
+
+\begin{pverbatim}
+\def\X{-}
+\def\Y{2222}
+\def\Z{3333}
+\pagerange{\Y\X\Z}
+\end{pverbatim}
+
+\def\X{-}
+\def\Y{2222}
+\def\Z{3333}
+\pagerange{\Y\X\Z}
+This produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following also works because the +\pagerange+ and +tie+ are fully expanded before splitting page range:
+
+\begin{pverbatim}
+\def\X{-}
+\pagerangeoptions{tie=\X}
+\pagerange{123\X 234}
+\end{pverbatim}
+
+\def\X{-}
+\pagerangeoptions{tie=\X}
+\pagerange{123\X 234}
+This produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following works because infinite nesting of +tie+ and +\pagerange+ are permitted:
+
+\begin{pverbatim}
+\def\Xone{-}
+\def\Xtwo{\Xone}
+\pagerangeoptions{tie=\Xtwo}
+\pagerange{444\Xtwo 555}
+\end{pverbatim}
+
+\def\Xone{-}
+\def\Xtwo{\Xone}
+\pagerangeoptions{tie=\Xtwo}
+\pagerange{444\Xtwo 555}
+This yields \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following gives incorrect (in fact, weird) result because the prevailing +tie+ is not a star:
+
+\begin{pverbatim}
+\pagerange{33*44}
+\end{pverbatim}
+
+%\pagerange{33*44}
+%It produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The +tie+ can be changed to a star (or any non-active character) as follows:
+
+\begin{pverbatim}
+\pagerangeoptions{tie=*}
+\pagerange{2233*3344}
+\end{pverbatim}
+
+\pagerangeoptions{tie=*}
+\pagerange{2233*3344}
+This correctly produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+In the following the +tie+ is changed to letter ``T'':
+
+\begin{pverbatim}
+\pagerangeoptions{tie=T}
+\pagerange{1234T1235}
+\end{pverbatim}
+
+\pagerangeoptions{tie=T}
+\pagerange{1234T1235}
+It produces \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\pgexample{}
+The following
+
+\begin{pverbatim}
+\pagerangeoptions{tie=X}
+\pagerange{2034X2135}
+\end{pverbatim}
+
+\pagerangeoptions{tie=X}
+\pagerange{2034X2135}
+correctly yields \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+\section{Using page labels}
+
+From version 0.3 of the package, it has been possible to obtain page ranges from \LaTeX{} references, \eg, as in
+
+\begin{pverbatim}
+\label{page:label}
+\pagerangeoptions{tie=-}
+\let\getpage\getpagenumber
+\pagerange{\getpage{page:first}-\getpage{page:last}},
+\end{pverbatim}
+
+\label{page:last}
+\pagerangeoptions{tie=-}
+\pagerange{\getpagenumber{page:first}-\getpagenumber{page:last}}
+which yields \pgresult{Pages~\pagestart\space to\space\pageend}.
+
+The command +\getpagenumber+ is provided in the package and may, in general, be used to convert page labels into page numbers even in expansion contexts, where +\pageref+ will normally fail. If the page label or reference is undefined, the default start page number (+defaultfirstpage+) is used. The +defaultfirstpage+ is a package option (see Section~\ref{sec:package-options}).
+
+\end{document} 

@@ -1,0 +1,175 @@
+\section{The package sets}\label{sets}
+
+As described in the introduction, sets was designed to support set operations. The elements of a set are normally simple Text, but you can insert commands in a set, too.
+These commands will---except when printing the set---not expanded.
+The usage of braces (`\{' and `\}') unfortunately doesn't work. In this case you have to define a shortcut that doesn't need braces. However, Parameters without braces work.
+``\verb|H"agar|'' is therefore a valid element of a set. ``\verb|\endset|''  and ``\verb|\empty|'' can not be part of a set.
+
+As a document has only a few authors, not much effort was put in improving efficiency.
+Sets should therefore be relatively small. If you nevertheless try to create a set with hundreds or thousands of items, \TeX's stack might overflow.
+
+In most cases the sequence of items doesn't matter. This is also the case in most commands here. Exceptions will be marked.
+
+The package sets needs \LaTeXe.
+
+\subsection{Usage}\label{sets-usage}
+
+In this subsection the usage of the package sets is described. In the description, some example sets will be used:
+\begin{eqnarray*}
+	A &=& \{Alice, Bob, Charly\}\\
+	B &=& \{Alice, Bob\}\\
+	C &=& \{Bob, Dean\}\\
+	D &=& \{Dean\}\\
+	L &=& \emptyset
+\end{eqnarray*}
+
+%-----------------------------------------------------------------------------
+\subsubsection{Constructors}\label{constructors}
+To create a set, the commands\\
+\mbox{}\hspace{2em}\verb$\newset{<set>}{<content>}$\\
+and\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{<set>}{<content>}$\\
+can be used. \texttt{<set>} is a command name to access the set from now on.
+The items of a set are separated with \texttt{|}. The set $A$ could therefore be defined with:\\
+\mbox{}\hspace{2em}\verb$\newset{\sA}{Alice|Bob|Charly}$\\
+The set $L$ is defined with:\\
+\mbox{}\hspace{2em}\verb$\newset{\sL}{}$\\
+
+\verb$\newset$ creates a new set. This set will be sorted in alphabetical order and duplicates will be removed. So it would be no matter if in the definition of $A$ after ``Charly'' a second ``Alice'' was inserted.
+
+The effort for sorting and duplicate deleting is unnecessary at this point. If you want to skip these expensive steps, you can create a set with the command
+\verb$\newsetsimple$, too.
+
+Because they are needed later, we will create all sets mentioned above:\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{\sA}{Alice|Bob|Charly}$ \newsetsimple{\sA}{Alice|Bob|Charly}\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{\sD}{Alice|Bob}$ \newsetsimple{\sB}{Alice|Bob}\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{\sC}{Bob|Dean}$ \newsetsimple{\sC}{Bob|Dean}\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{\sD}{Dean}$ \newsetsimple{\sD}{Dean}\\
+\mbox{}\hspace{2em}\verb$\newsetsimple{\sL}{}$ \newsetsimple{\sL}{}
+%-----------------------------------------------------------------------------
+\subsubsection{Inspectors}\label{inspectors}
+Inspectores help you to retrieve informations about sets and to print sets.
+
+\paragraph{Printing:}A set can be printed using the command\\
+\mbox{}\hspace{2em}\verb$\listset$.\\
+The elements will be put in the sequence they are in the set. A comma is used as separator.\\
+\mbox{}\hspace{2em}\verb$\listset{\sA}$ therefore leads to the following output:\\
+\centerline{\listset{\sA}}
+
+Sometimes you might want to separate the items in a different way, for example with a \texttt{\&} to put them in a table. In this case a (temporary) redefinition of\\
+\mbox{}\hspace{2em}\verb$\setseparator$\\
+helps you. Normally this command expands to `\verb*$,\ $'.
+
+\paragraph{Determining the size of a set:} The next inspector has the syntax\\
+\mbox{}\hspace{2em}\verb$\sizeofset{$$S$\verb$}\is{<counter>}$,\\
+where \texttt{<counter>} is the name of a \LaTeX\ counter, which afterwards will contain the number of elements in set $S$. The sequence\\
+\mbox{}\hspace{2em}\verb$\newcounter{mycounter}$\newcounter{mycounter}\\
+\mbox{}\hspace{2em}\verb$\sizeofset{\sB}\is{mycounter}$\sizeofset{\sB}\is{mycounter}\\
+\mbox{}\hspace{2em}\verb$\arabic{mycounter}$\\
+leads to the output: ``\arabic{mycounter}''
+If you determine the size of set $L$, the result\sizeofset{\sL}\is{mycounter} (as you might have expected) is ``\arabic{mycounter}''.
+
+\paragraph{Testing for membership:}By using the command\\
+\mbox{}\hspace{2em}\verb$\iselementofset{$$e$\verb$}{$$S$\verb$}$\\
+you can check, whether $e \in S$ is true. The effort is $O(1)$, because all work is done by the pattern matching of \TeX. The sequence\\
+\mbox{}\hspace{2em}\verb$\if \iselementofset{Bob}{\sC}Yes\else No\fi$\\
+would result in the output ``\if \iselementofset{Bob}{\sC}Yes\else No\fi'', the same test with set $D$ in ``\if \iselementofset{Bob}{\sD}Yes\else No\fi''.
+
+%-----------------------------------------------------------------------------
+\subsubsection{Modificators}\label{modificators}
+
+\paragraph{Union of sets:}The operation $R := S_1 \cup S_2$ is realized in the command\\
+\mbox{}\hspace{2em}\verb|\unionsets{|$S_1$\verb|}{|$S_2$\verb|}\to{|$R$\verb|}|.\\
+Table \ref{tab:ops} contains some examples. The result of the operation is a sorted set without duplicates containing the items of sets $S_1$ and $S_2$.
+
+\paragraph{Difference of sets:}The operation $R := S_1 - S_2$ (also written as $R := S_1 \backslash S_2$) can be carried out with\\
+\mbox{}\hspace{2em}\verb|\minussets{|$S_1$\verb|}\minus{|$S_2$\verb|}\to{|$R$\verb|}|.\\
+If $S_1$ is a sorted set, $R$ will be sorted, too. If $S_1$ contains duplicates, $R$ might also contains these duplicate elements. Table \ref{tab:ops} contains several examples for the usage of this command.
+
+Colloquially you can formulate the operation as follows: Check for every element $e$ in $S_1$ if $e \in S_2$ is true. If not, insert $e$ into $R$. And that's exactly the way it has been implemented!
+
+\paragraph{Intersection of sets:} The operation $R := S_1 \cap S_2$ is made possible with the command\\
+\mbox{}\hspace{2em}\verb|\intersectsets{|$S_1$\verb|}{|$S_2$\verb|}\to{|$R$\verb|}|.\\
+As above: If $S_1$ is a sorted set, $R$ will be sorted, too. If $S_1$ contains duplicates, $R$ might also contains these duplicate elements. Table \ref{tab:ops} contains several examples for the usage of this command, too.
+
+This operation can colloquially be written down as: Check for every element $e$ in $S_1$ if $e \in S_2$ is true. If yes, insert $e$ into $R$. If you compare this with the formulation above, one can recognize that the only difference is the small word ``yes''. 
+In the source code, this expresses in a missing \verb|\else|. Acutally amazingly simple if you remember the formal relation $S_1 \cap S_2 \equiv S_1 \backslash (S_1\backslash S_2)$, which lets one expect a much higher complexity.
+
+\begin{table}%[htb]
+\begin{center}
+\begin{tabular}{ll}\hline
+\textbf{Operation} & \textbf{Result} \\ \hline 
+\unionsets{\sA}{\sC}\to{\sR}\global\let\sR\sR
+	\verb$\unionsets{\sA}{\sC}\to{\sR}$ & ``\listset{\sR}'' \\ 
+\unionsets{\sB}{\sD}\to{\sR}\global\let\sR\sR
+	\verb$\unionsets{\sB}{\sD}\to{\sR}$ & ``\listset{\sR}'' \\
+\unionsets{\sL}{\sC}\to{\sR}\global\let\sR\sR
+	\verb$\unionsets{\sL}{\sC}\to{\sR}$ & ``\listset{\sR}'' \\
+\unionsets{\sL}{\sL}\to{\sR}\global\let\sR\sR
+	\verb$\unionsets{\sL}{\sL}\to{\sR}$ & ``\listset{\sR}'' \\\hline
+%
+\minussets{\sA}\minus{\sC}\to{\sR}\global\let\sR\sR
+	\verb$\minussets{\sA}\minus{\sC}\to{\sR}$ & ``\listset{\sR}'' \\ 
+\minussets{\sD}\minus{\sC}\to{\sR}\global\let\sR\sR
+	\verb$\minussets{\sD}\minus{\sC}\to{\sR}$ & ``\listset{\sR}'' \\
+\minussets{\sD}\minus{\sB}\to{\sR}\global\let\sR\sR
+	\verb$\minussets{\sD}\minus{\sB}\to{\sR}$ & ``\listset{\sR}'' \\
+\minussets{\sA}\minus{\sL}\to{\sR}\global\let\sR\sR
+	\verb$\minussets{\sA}\minus{\sL}\to{\sR}$ & ``\listset{\sR}'' \\\hline
+%
+\intersectsets{\sA}{\sB}\to{\sR}\global\let\sR\sR
+	\verb$\intersectsets{\sA}{\sB}\to{\sR}$ & ``\listset{\sR}'' \\ 
+\intersectsets{\sC}{\sB}\to{\sR}\global\let\sR\sR
+	\verb$\intersectsets{\sC}{\sB}\to{\sR}$ & ``\listset{\sR}'' \\
+\intersectsets{\sB}{\sD}\to{\sR}\global\let\sR\sR
+	\verb$\intersectsets{\sB}{\sD}\to{\sR}$ & ``\listset{\sR}'' \\
+\intersectsets{\sA}{\sL}\to{\sR}\global\let\sR\sR
+	\verb$\intersectsets{\sA}{\sL}\to{\sR}$ & ``\listset{\sR}'' \\\hline
+\end{tabular}
+\caption{Set operations, examples}
+\label{tab:ops}
+\end{center}
+\end{table}
+
+\paragraph{Sorting:} A set $S$ can be sorted alphabetically by using the command\\
+\mbox{}\hspace{2em}\verb|\sortset{|$S$\verb|}{|$R$\verb|}|.\\
+After execution of the command, $R$ contains the sorted set. The sorting is done by the bubblesort algorithm, an algorithm, that can be implemented in \TeX\ without having to perform many contortions.
+
+At sorting, the elements are compared as they are, i.\,e. possibly contained macros are not expanded but compared by their name (including the backslash).
+
+\paragraph{Removing duplicates:} The operations \emph{only} works on sorted sets! You actually will not need it very often, because the creation of a set using \verb|\newset| does the work automatically (by using this macro). However, I decided to make this macro available to public; probably sometimes someone really needs it.
+Duplicate removal is called with:\\
+\mbox{}\hspace{2em}\verb|\deleteduplicates{|$S$\verb|}{|$R$\verb|}|,\\
+with $R$ being the result set and $S$ being the sorted set, whose duplicates shall be removed.
+
+%------------------------------------------------------------------------------
+\subsection{Effort estimations}
+Table \ref{tab:complexity} lists the complexity of the operations in O-notation. The following Assumptions are made:
+\begin{itemize}
+  \item Let the length of an element of a set be $m$.
+  \item Let the number of elements in a set be $n$. If an operation need two sets, $n_1$ is the cardinality of the first set and $n_2$ the cardinality of the second one.
+  \item For simplicity reasons the effort for pattern matching in parameter processing is assumed to be constant.
+\end{itemize}
+
+The given complexity classes can help you to arrange a set of operations in the optimal sequence. For example when using the commands \verb@\intersectsets@ or \verb@\minussets@ it is better to let the smaller set be the first parameter.
+
+\begin{table}[htb]
+  \begin{center}
+  \begin{tabular}{lc}\hline
+    \textbf{Operation} & \textbf{Operation}\\ \hline
+    Compare elements & $m$\\
+    \verb@\sizeofset@ & $n$\\
+    \verb@\listset@ & $n$\\
+    \verb@\iselementofset@ & $1$\\%\hline
+    \verb@\sortset@ & $m \cdot n^2$\\
+    \verb@\deleteduplicates@ & $n$\\%\hline
+    \verb@\newset@ & $m \cdot n^2$\\
+    \verb@\newsetsimple@ & $1$\\%\hline
+    \verb@\unionsets@ & $m \cdot (n_1 + n_2)^2$\\
+    \verb@\intersectsets@ & $n_1$\\
+    \verb@\minussets@ & $n_1$\\ \hline
+  \end{tabular}
+  \caption{Complexity classes of set operations}%
+  \label{tab:complexity}%
+  \end{center}
+\end{table}

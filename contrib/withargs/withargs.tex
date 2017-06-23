@@ -1,0 +1,225 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \iffalse %%%%
+%                                                                              %
+%  Copyright (c) 2016 - Michiel Helvensteijn   (www.mhelvens.net)              %
+%                                                                              %
+%  This work may be distributed and/or modified under the conditions           %
+%  of the LaTeX Project Public License, either version 1.3 of this             %
+%  license or (at your option) any later version. The latest version           %
+%  of this license is in     http://www.latex-project.org/lppl.txt             %
+%  and version 1.3 or later is part of all distributions of LaTeX              %
+%  version 2005/12/01 or later.                                                %
+%                                                                              %
+%  This work has the LPPL maintenance status `maintained'.                     %
+%                                                                              %
+%  The Current Maintainer of this work is Michiel Helvensteijn.                %
+%                                                                              %
+%  This work consists of the files withargs.tex and withargs.sty.              %
+%                                                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% \fi %%%%
+
+\documentclass[a4paper]{withargs-packagedoc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Setup                                                                        %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\moretexcs{
+	withargs,foo,bar,bas,expectedResult,
+	actualResult,MyPost,A,uniquecsname,NewPost,
+	cs_generate_variant:Nn,
+	withargs:nn,withargs:cn
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Global Changes                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\changes{0.0.1}{2013/10/01}
+  {initial version}
+  
+\changes{0.0.2}{2013/10/11}
+  {renamed package to \texttt{withargs}}
+  
+\changes{0.1.0}{2015/09/07}
+  {adjusted code to new version of expl3}
+
+\changes{0.2.0}{2016/12/19}
+  {adjusted code to new version of expl3}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}                                                               %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}                                                         %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+An example is worth a thousand words:
+
+\begin{latex-example-show}
+\withargs [!] [Hello] [world] { #2 #3#1 }
+\end{latex-example-show}
+
+A quick explanation: we're passing three pieces of \LaTeX\ code in the form
+of optional arguments to the final argument, which forms the output. We're
+defining a new anonymous macro and invoking it right away.
+Up to seven optional arguments are supported.
+
+
+
+\subsection{Why is this useful?} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One of the main use-cases for this package is to insert the expanded
+result of a computation into the middle of a big
+blob of code that \emph{shouldn't} be expanded. This is possible because
+argument substitution bypasses the expansion process:
+
+\begin{latex-example-show}
+\def \expectedResult {\bar}
+\def \actualResult   {\bas}
+\withargs (oo) [\actualResult] [\expectedResult] {
+    \texttt{\detokenize{
+        The \foo variable resulted in `#1' instead of `#2'!
+    }}
+}
+\end{latex-example-show}
+
+`|(oo)|' indicates that both arguments should be expanded `once'.
+Any optional \LaTeX3 style argument specification between parentheses
+may be specified to control expansion.
+
+\needspace{10\baselineskip}
+You can define your own commands accepting `templates'
+with \TeX-style parameters:
+
+\begin{latex-example-show}
+\newcommand{\NewPost}[4]{
+    % #1: author     % #2: title
+    % #3: content    % #4: template
+    \withargs (xnn) [#1] [#2] [#3] {#4}
+}
+
+\def\MyPost{ \NewPost{Author}{Title}
+    {Boy, do I have some important stuff to say!} }
+
+\begin{tabular}{p{3.5cm}p{3.5cm}p{3.5cm}}
+    \MyPost{\textbf{#2\hfill#1}\vskip1mm\hrule\vskip1mm\textit{#3}} &
+    \MyPost{\fbox{#1: ``#2''}\par#3\vskip1mm\hrule}                 &
+    \MyPost{#2: #3\hfill\textit{(#1)}}
+\end{tabular}
+\end{latex-example-show}
+
+Generally, if speed is not a concern, |\withargs| can be used
+to make \LaTeX\ code more readable in a variety of situations.
+
+
+
+%\vskip-.4\baselineskip
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Document Level Commands}                                              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\vskip-.5\baselineskip
+
+\def\mystrut{\rule{0pt}{4mm}}
+
+\describemacro{\withargs}{
+	\texttt{\bfseries(}%
+		\(\overbrace{\mystrut\hbox{\meta{argument specification}}}^x\)%
+	\texttt{\bfseries)}
+	\(\overbrace{\mystrut\hbox{\oarg{1} \oarg{2} \oarg{3} \oarg{4} \oarg{5} \oarg{6} \oarg{7}}}^x\)
+	\marg{body}
+}
+
+Leaves \meta{body} in the output with |#1|\ldots|#7| replaced
+by optional arguments \meta{1}\ldots\!\meta{7}.
+
+An optional \LaTeX3 style \meta{argument specification} between parentheses
+can be provided, in which case the arguments undergo expansion as specified
+before being placed in the \meta{body}.
+%%
+Here is an example demonstrating the possible expansion types:
+
+\begin{latex-example-show}
+\def\foo{\bar}   \def\s{s}   \def\bar{ba\s}   \def\bas{FOO-BAR-BAS}
+
+\withargs (n     o     f     x     c     v   )
+          [\foo][\foo][\foo][\foo][\foo][\foo] {
+    \begin{tabular}{llll}
+        n: & \texttt{\detokenize{#1}} &   % no expansion
+        o: & \texttt{\detokenize{#2}} \\  % expand once
+        f: & \texttt{\detokenize{#3}} &   % expand until unexpandable
+        x: & \texttt{\detokenize{#4}} \\  % exhaustive expansion
+        c: & \texttt{\detokenize{#5}} &   % \csname conversion
+        v: & \texttt{\detokenize{#6}}     % `c', then `o'
+    \end{tabular}
+}
+\end{latex-example-show}
+
+Note that all spaces in the \meta{argument specification} are ignored.
+For details about \LaTeX3 argument specifications, have a look at the
+following documentation:
+
+\begin{center}
+	\url{http://www.ctan.org/pkg/expl3}
+\end{center}
+
+
+\describemacro{\uniquecsname}{}\vskip-2\baselineskip
+
+Perhaps a bit misleading, |\uniquecsname| is not actually defined as a command,
+but |\withargs| recognizes it as a special marker. If an optional |\withargs|
+argument consists entirely of |\uniquecsname|, it is replaced by a
+command sequence name which is guaranteed to be unique\ldots unless
+you look at the source code (Section~\ref{sec:implementation})
+and intentionally replicate the naming scheme.
+
+\begin{latex-example-show}
+\withargs (ccc) [\uniquecsname][\uniquecsname][\uniquecsname] {
+    \def#1{A}  \let\A#1
+    \def#2{B}
+    \def#3{C}
+    #3#2#1%
+}%
+(\A)
+\end{latex-example-show}
+
+\vskip5mm
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\LaTeX3 Functions}                                                    %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \LaTeX3 functions underlying the functionality of |\withargs| are
+also available as is.
+
+\describeanymacro{\texttt{\textbackslash withargs:\smash{\(\overbrace{\mystrut\hbox{nnnnnnnn}\!}^x\,\)}n}}{
+	\(\overbrace{\mystrut\hbox{\marg{1} \marg{2} \marg{3} \marg{4} \marg{5} \marg{6} \marg{7} \marg{8}}}^x\)
+	\marg{body}
+}
+
+These functions do pretty much the same thing as the main |\withargs| macro,
+except that the argument specification is embedded in the function name
+as per \LaTeX3 coding convention, so a parameter slot is freed up for
+custom use. They are slightly faster than |\withargs|, as there is no
+need to gather optional arguments or do any error checking.
+The downside is that the |\uniquecsname| marker doesn't work for these.
+
+To use a specific expansion scheme, you have to define a variant:
+
+\begin{latex-example-show}
+\ExplSyntaxOn
+    \cs_generate_variant:Nn \withargs:nn {cn}
+    \withargs:cn {LaTeX} {#1}
+\ExplSyntaxOff
+\end{latex-example-show}
+
+Read the \LaTeX3 documentation for details.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}                                                                 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

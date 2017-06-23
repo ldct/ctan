@@ -1,0 +1,448 @@
+% Documentation for biblatex-caspervector
+%
+% Copyright (c) 2012-2016 Casper Ti. Vector
+%
+% This work may be distributed and/or modified under the conditions of the
+% LaTeX Project Public License, either version 1.3 of this license or (at
+% your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX version
+% 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+% The current maintainer of this work is Casper Ti. Vector.
+%
+% This work consists of the following files:
+%   readme.tex
+
+\documentclass[UTF8]{ctexart}
+\usepackage[margin = 2cm, centering, includefoot]{geometry}
+\usepackage[
+	backend = biber, style = caspervector, utf8,
+	giveninits = true, sortgiveninits = true
+]{biblatex}
+\usepackage{fancyhdr, hyperref, enumitem, fancyvrb, hologo}
+
+\pagestyle{fancy}\fancyhf{}\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\setlist{nolistsep}
+\hypersetup{colorlinks = true, allcolors = blue}
+
+\DeclareBibliographyCategory{cited}
+\AtEveryCitekey{\addtocategory{cited}{\thefield{entrykey}}}
+\addbibresource{readme.bib}
+
+\setlength{\hfuzz}{3pt}
+\ctexset{linestretch = {\maxdimen}}
+\renewcommand{\bibfont}{\small}
+\newcommand{\myemph}[1]{\emph{\textcolor{red}{#1}}}
+
+\begin{document}
+\title{\textbf{biblatex 参考文献和引用样式：\texttt{caspervector} v0.2.7}}
+\author{%
+	Casper Ti.\ Vector\thanks{\ %
+		\href{mailto:CasperVector@gmail.com}{\texttt{CasperVector@gmail.com}}.%
+	}%
+}
+\date{2017/03/01}
+\maketitle
+
+\section{引言}
+
+传统的 \hologo{BibTeX} 引擎存在一些固有的问题：
+首先，其样式文件（\verb|bst| 文件）使用后缀式的栈语言编写，
+使开发者难以入门和精通，更不便于一般用户进行自定义；
+其次，其排序方式很单一，
+无法直接实现中文 \hologo{TeX} 用户常常遇到的按汉语拼音排序等需求。
+
+与此相对应，
+biblatex\supercite{biblatex}/biber\supercite{biber}
+是一套新兴的 \hologo{TeX} 参考文献排版引擎，
+其样式文件（设定参考文献样式的 \verb|bbx| 文件和设定引用样式的 \verb|cbx| 文件）
+使用 \hologo{LaTeX} 编写，便于学习；
+同时，其支持根据 locale 进行排序。
+
+目前 \hologo{TeX} 社区中尚无人发布为中文用户设计的 biblatex 样式。
+为了个人需要，同时也是为了给社区提供一个有益的参考，
+本文作者根据实际应用中遇到的常见需求编写了
+\verb|caspervector| 这个用于顺序编码制的中英文 biblatex 样式。
+其逻辑框架基于
+国家标准 GB/T 7714--2005\supercite{gbt7714-2005}，
+但在其基础上根据个人审美趣味和 biblatex 所能实现的功能而
+对参考文献和引用格式进行了较大幅度的修改。
+
+\section{许可协议}
+
+版权所有 \copyright\ 2012--2017 Casper Ti.\ Vector。%
+\verb|caspervector| 参考文献和引用样式以
+\hologo{LaTeX} Project Public License\footnote{\ %
+	\url{http://www.latex-project.org/lppl/}.%
+}发布。%
+\verb|caspervector| 样式目前由其作者维护。
+
+\section{系统要求和安装方式}
+\subsection{系统要求}
+
+\begin{itemize}
+	\item biblatex 宏包（2.0 或以上版本）：%
+		\verb|caspervector| 样式基于 biblatex 宏包。
+	\item biber 程序（和 biblatex 相应的版本）：
+		用 biber 可以方便地实现文献按字母和拼音顺序排序。
+	\item 中文环境：%
+		\verb|caspervector| 样式虽支持中文，但其本身不提供中文环境。
+		用户仍然需要中文环境才能排版出文档。
+\end{itemize}
+
+以上要求在\myemph{最新}的\myemph{完全版}
+\hologo{TeX} Live 系统中都有完善的支持。
+
+\section{使用简介}
+\subsection{样式调用}
+
+用户应当通过以下命令调用 \verb|caspervector| 样式：
+\begin{Verbatim}[frame = single]
+% “utf8”可能需要改为“gbk”，根据用户使用的字符编码而定。
+% “...” 代表其它选项。
+\usepackage[
+	backend = biber, style = caspervector, utf8, sorting = centy, ...
+]{biblatex}
+\end{Verbatim}
+其中 \verb|sorting| 选项用于（全局）指定按哪些字段排序，
+除 biblatex 提供的标准选项\supercite{biblatex}外，%
+\verb|caspervector| 样式还提供 \verb|centy| 和 \verb|ecnty| 两种排序方案
+（\verb|caspervector| 默认设置为 \verb|none| 排序方案，即按引用顺序排序），
+表示依次按文献语言
+（\textbf{ce}nty 表示中文文献在前，\textbf{ec}nty 表示英文文献在前；
+文献语言根据 \verb|language| 字段进行区分，详见第 \ref{sec:fields} 部分）、
+编著者姓名（\textbf{n}ame）、标题（\textbf{t}itle）
+和出版年（\textbf{y}ear）排序。
+
+参考文献数据库
+（\verb|.bib| 文件，其格式见第 \ref{sec:fields}、\ref{sec:entries} 部分）
+通过 \verb|\addbibresource| 命令导入，%
+\myemph{注意不要省略扩展名 \texttt{.bib}}。
+例如，本文的参考文献数据库就是通过下述命令导入的：
+\begin{Verbatim}[frame = single]
+\addbibresource{readme.bib}
+\end{Verbatim}
+用户可以多次使用 \verb|\addbibresource| 命令，
+从多个参考文献数据库中导入参考文献。
+
+\subsection{引用命令}
+
+\verb|caspervector| 样式支持 biblatex 所提供的引用命令，
+其中最常用的是 \verb|\supercite|、\verb|\parencite| 和 \verb|\cite|。
+三个命令的用法类似：
+\begin{Verbatim}[frame = single]
+% 可选参数 prenote 和 postnote 分别用于设定引用记号前、后的注释。
+\citecommand[prenote][postnote]{key}
+\end{Verbatim}
+其中 \verb|\cite| 产生无格式化的引用标记\footnote{\ %
+	biblatex 的默认设置是带方括号，
+	而 \texttt{caspervector} 样式中出于功能完备性的考虑去掉了方括号。%
+}，\verb|\parencite| 产生带方括号的引用标记，
+而 \verb|\supercite| 产生上标且带方括号的引用标记\footnote{\ %
+	biblatex 的默认设置是只上标、不带方括号，
+	而 \texttt{caspervector} 样式中根据作者见到的常见需求加上了方括号。%
+}。
+
+例如，在本文中，%
+\verb|\parencite{gbt7714-2005}| 的输出是“\parencite{gbt7714-2005}”，
+而
+\begin{Verbatim}[frame = single]
+\cite[文献][第 4 页]{gbt7714-2005}
+\end{Verbatim}
+的输出是“\cite[文献][第 4 页]{gbt7714-2005}”。
+
+\subsection{文献列表}
+
+使用 \verb|\printbibliography| 命令可以在相应位置排版文献列表。
+其可（在方括号内）带一些可选参数\supercite{biblatex}，
+常见的有：
+\begin{itemize}
+	\item \verb|title = 标题|：
+		可以用于指定文献列表的标题（默认为“参考文献”）。
+	\item \verb|heading = 标题样式|：
+		最常用的是当 \verb|heading| 的值为 \verb|bibintoc| 时，
+		可以将参考文献加入目录中；
+		当其值为 \verb|bibnumbered| 时，
+		参考文献列表参与章节编号（当然也会被自动加入目录中）。
+\end{itemize}
+
+例如，用
+\begin{Verbatim}[frame = single]
+\printbibliography[title = {文献}, heading = bibnumbered]
+\end{Verbatim}
+可以将文献列表的标题改为 “文献”，
+并使文献列表参与章节编号。
+
+\subsection{编译方法}
+
+一般情况下，依次执行
+\begin{Verbatim}[frame = single]
+# “texfile”是被 TeX 编译的文件名中除去“.tex”的部分。
+# “pdflatex”可改为其它 TeX 程序，使用纯 latex 编译时可能还需要运行 dvipdfmx。
+pdflatex texfile
+biber -l zh__pinyin texfile
+pdflatex texfile
+pdflatex texfile
+\end{Verbatim}
+即可实现正确的排版。
+
+上述执行 \verb|biber| 的一行命令中，%
+\verb|-l| 的参数 \verb|zh__pinyin| 可改为其它
+被 Perl 的 \verb|Unicode::Collate| 模块支持的 locale\footnote{\ %
+	\url{http://search.cpan.org/~sadahiro/Unicode-Collate/Collate/Locale.pm}.%
+}，这样在排序时将使用相应的排序规则。
+例如，如果要按笔画排序的话，可以将 \verb|zh__pinyin| 改为 \verb|zh__stroke|。
+
+\section{字段介绍}\label{sec:fields}
+\subsection{基本字段}
+
+除非特别指出，此部分字段在所有类型条目中均可用。
+
+\begin{itemize}
+	\item \verb|author|、\verb|editor|、\verb|translator|：
+		作者、编者、译者。\\
+		\myemph{%
+			注：
+			在析出文献条目中，%
+			\texttt{author}、\texttt{editor}、\texttt{translator}
+			专指析出文献的作者、编者、译者。
+			在 \texttt{@patent} 类条目中，%
+			\texttt{author} 也可指专利的持有者。%
+		}
+	\item \verb|bookauthor|、\verb|booktitle|：析出文献所出自文献的作者和题名。
+	\item \verb|title|：文献题名。
+	\item \verb|type|：文献类型和电子文献载体标志代码\supercite{gbt7714-2005}。
+	\item \verb|location|：出版地，或（在 \verb|@patent| 类条目中）专利申请地。
+	\item \verb|publisher|：出版者，或学位论文作者申请学位的单位。
+	\item \verb|journal|/\verb|journaltitle|：连续出版物题名，这两个字段是等价的。
+	\item \verb|year|/\verb|date|：出版年、日期，这两个字段只需填写一个即可。
+	\item \verb|volume|：期刊中文献所处的卷号。
+	\item \verb|number|：期刊中文献所处的期号，或专利的申请号。
+	\item \verb|pages|：文献页码。
+	\item \verb|url|：文献的 URL。
+	\item \verb|urldate|：检索日期，或 URL 的访问日期。
+	\item \verb|addendum|：补充说明，排版在文献列表中相应条目的最后。
+\end{itemize}
+
+\subsection{特殊字段}
+
+\begin{itemize}
+	\item \verb|language|：
+		值为 \verb|chinese| 时，相应条目在文献列表中用中文排版；
+		否则（为其他值或未定义时）用英文排版。
+	\item \verb|userf|：\verb|caspervector| 样式内部使用。
+	\item 其它通用特殊字段，见 biblatex 手册\supercite{biblatex}。
+\end{itemize}
+
+\section{条目类型}\label{sec:entries}
+\subsection{\texttt{@book} 类型}
+
+\verb|@book| 类型对应于 GB/T 7714--2005 中所指的“专著”和“电子文献”，
+其支持的常见别名包括 \verb|@booklet|、\verb|@online|、\verb|@proceedings|、%
+\verb|@report|、\verb|@thesis|、\verb|@unpublished|。
+
+\verb|@book| 类条目必需的基本字段为 \verb|title|。
+
+除必需字段之外，\verb|@book| 类条目也支持以下基本字段：%
+\verb|author|、\verb|editor|、\verb|translator|、%
+\verb|type|、\verb|location|、\verb|publisher|、%
+\verb|year|/\verb|date|、\verb|pages|、%
+\verb|url|、\verb|urldate|、\verb|addendum|。
+
+\subsection{\texttt{@incollection} 类型}
+
+\verb|@incollection| 类型对应于 GB/T 7714--2005 中所指的“专著中的析出文献”，
+其支持的常见别名包括
+\verb|@bookinbook|、\verb|@conference|、\verb|@inbook|、\verb|@inproceedings|。
+
+\verb|@incollection| 类条目必需的基本字段为 \verb|title| 以及 \verb|booktitle|。
+
+除必需字段之外，\verb|@incollection| 类条目也支持以下基本字段：%
+\verb|author|、\verb|editor|、\verb|translator|、\verb|bookauthor|、%
+\verb|type|、\verb|location|、\verb|publisher|、%
+\verb|year|/\verb|date|、\verb|pages|、%
+\verb|url|、\verb|urldate|、\verb|addendum|。
+
+\subsection{\texttt{@periodical} 类型}
+
+\verb|@periodical| 类型对应于 GB/T 7714--2005 中所指的“连续出版物”。
+
+\verb|@periodical| 类条目必需的基本字段为
+\verb|title|/\verb|journal|/\verb|journaltitle| 三者中的至少一个。
+
+除必需字段之外，\verb|@periodical| 类条目也支持以下基本字段：%
+\verb|author|/\verb|editor|/\verb|translator|、%
+\verb|type|、\verb|location|、\verb|publisher|、%
+\verb|year|/\verb|date|、\verb|volume|、\verb|number|、\verb|pages|、%
+\verb|url|、\verb|urldate|、\verb|addendum|。
+
+\subsection{\texttt{@article} 类型}
+
+\verb|@article| 类型对应于 GB/T 7714--2005 中所指的“连续出版物中的析出文献”。
+
+\verb|@article| 类条目必需的基本字段为
+\verb|journal|/\verb|journaltitle| 两者中的至少一个，
+以及 \verb|year|/\verb|date| 两者中的至少一个。
+
+除必需字段之外，\verb|@article| 类条目也支持以下基本字段：%
+\verb|author|、\verb|title|、\verb|type|、%
+\verb|volume|、\verb|number|、\verb|pages|、%
+\verb|url|、\verb|urldate|、\verb|addendum|。
+
+\subsection{\texttt{@patent} 类型}
+
+\verb|@patent| 类型用于专利文献。
+
+\verb|@patent| 类条目必需的基本字段为 \verb|title|，
+以及 \verb|year|/\verb|date| 两者中的至少一个。
+
+除必需字段之外，\verb|@article| 类条目也支持以下基本字段：%
+\verb|author|、\verb|title|、\verb|type|、%
+\verb|location|、\verb|number|、%
+\verb|url|、\verb|urldate|、\verb|addendum|。
+
+\subsection{\texttt{@customf} 类型}
+
+\verb|@customf| 类型为特殊类型，
+专用于在文献列表的相应条目中排版自定义的文字。
+此类条目必需且唯一支持的基本字段为 \verb|addendum|，
+用户可将其设为自己希望排版的内容。
+
+\myemph{%
+	注：%
+	\texttt{@customf} 类型虽不支持 \texttt{author} 等字段，
+	但用户仍可以设定它们的值。
+	这样虽不能自动根据这些字段排版，
+	但仍可以根据它们
+	（主要是 \texttt{language}、\texttt{author}、\texttt{title}
+	和 \texttt{year} 四个字段）
+	进行排序。 %
+}
+
+\section{对参考文献进行分类排序}\label{sec:catsort}
+
+使用 biblatex 3.4 或更新版本的用户可以通过对不同的 \verb|\printbibliography|
+命令采用不同的调用环境来实现对不同部分文献按不同方案排序。
+例如，如需对被引用的文献按照引用顺序排序，
+而对未引用的文献按照英文文献在前、中文文献在后排序，
+则可以在导言区中加入下列几行代码：
+\begin{Verbatim}[frame = single]
+% 新建条目分类（category）用于区分被引用和未引用的文献条目。
+\DeclareBibliographyCategory{cited}
+% 每执行一次除 \nocite 之外的 \cite 类命令，将被引用的文献加到“cited”分类中。
+\AtEveryCitekey{\addtocategory{cited}{\thefield{entrykey}}}
+\end{Verbatim}
+在正文中准备排版文献列表的位置使用如下代码：
+\begin{Verbatim}[frame = single]
+% 按引用顺序排版“cited”分类，即被引用的文献条目。
+\begin{refcontext}[sorting = none]
+\printbibliography[category = cited, ..., title = {References}]
+\end{refcontext}
+% 按英文文献在前、中文文献在后排版“cited”分类之外，即未被引用的文献条目。
+\begin{refcontext}[sorting = ecnty]
+\printbibliography[notcategory = cited, ..., title = {Works Not Cited}]
+\end{refcontext}
+\end{Verbatim}
+并在最后一个除 \verb|\nocite| 之外的 \verb|\cite| 类命令之后、%
+\verb|\end{document}| 之前的任意合适位置\footnote{\ %
+	因为 biblatex 中的引用顺序记录是按每个条目被第一次引用的顺序计算的，
+	所以 \texttt{\string\nocite\{*\}} 时导入文献的顺序会覆盖掉后面
+	\texttt{\string\cite} 类命令的引用顺序。
+}（例如，在本说明文档中，就是在 \verb|\end{document}| 之前一行）
+加入以下代码：
+\begin{Verbatim}[frame = single]
+% 将 .bib 文件中所有的参考文献都加到引用列表中，但不将它们加到“cited”分类中，
+% 也不会排版引用标号，只是在最后的 \printbibliography 命令中排版相应的文献条目。
+\nocite{*}
+\end{Verbatim}
+
+使用 biblatex 2.x 或更旧版本的用户需要
+将在正文中准备排版文献列表的位置使用的代码改为：
+\begin{Verbatim}[frame = single]
+% 按引用顺序排版“cited”分类，即被引用的文献条目。
+\printbibliography[category = cited, ..., sorting = none, title = {References}]
+% 按英文文献在前、中文文献在后排版“cited”分类之外，即未被引用的文献条目。
+\printbibliography%
+	[notcategory = cited, ..., sorting = ecnty, title = {Works Not Cited}]
+\end{Verbatim}
+biblatex 3.0--3.3 中有一个 bug\footnote{\ %
+	可以参考 \url{https://tex.stackexchange.com/questions/250548/}。%
+} 导致分类排序失效，此问题基本无解。
+
+\section{FAQ 和其它使用提示}
+
+用户可以通过省略可选字段的方式来避免排版相应的内容。
+例如，省略 \verb|type| 字段便可使相应条目不排版文献类型和电子文献载体标志代码。
+
+用户可以通过手动调用格式化命令来临时覆盖预设的格式设定，
+例如文献 \parencite{1-7} 中的出版年便是通过以下设定得到的
+（\verb|sortyear| 字段的用法请参考 biblatex 手册\supercite{biblatex}）：
+\begin{Verbatim}[frame = single]
+sortyear = {1845},
+year = {1845\textmd{（\emph{清同治四年}）}},
+\end{Verbatim}
+
+\verb|caspervector| 样式不支持 \verb|edition| 字段，
+用户可以在 \verb|title| 等字段中手动标注。
+
+直接使用 \verb|userf| 字段是否等于 \verb|zh| 或 \verb|cn|
+来区分中英文文献的功能在近期仍将被支持，但在将来可能被去掉或修改。
+
+\section{存在的问题}
+
+如第 \ref{sec:catsort} 部分所述，biblatex 3.0--3.3 的功能调整导致分类排序失效。
+\verb|caspervector| 样式的作者对此表示遗憾，希望用户能谅解。
+
+因为 biblatex 现有功能的限制，一些需求无法直接实现。
+例如类似于文献 \parencite{3-2} 中同时有出版起止年和起止期号的情况就无法自动排版，
+只能通过用户手动实现。
+下面两种方式均可实现上述需求
+（\verb|sortyear| 字段的用法请参考 biblatex 手册\supercite{biblatex}）：
+\begin{Verbatim}[frame = single]
+@periodical{3-2,
+	author = {中国图书馆学会},
+	title = {图书馆学通讯},
+	type = {J},
+	sortyear = {1957},
+	year = {\textmd{\textbf{1957}(1) -- \textbf{1990}(4)}},
+	location = {北京},
+	publisher = {北京图书馆},
+	language = {chinese},
+}
+\end{Verbatim}
+或
+\begin{Verbatim}[frame = single]
+@customf{3-2,
+	author = {中国图书馆学会},
+	title = {图书馆学通讯},
+	sortyear = {1957},
+	addendum = {中国图书馆学会。
+		\textit{图书馆学通讯} [J]。
+		\textbf{1957}(1) -- \textbf{1990}(4)。
+		北京：北京图书馆。},
+	language = {chinese},
+}
+\end{Verbatim}
+这两种方法中更加推荐使用前者，因为前者只需手动实现出版年和期号的排版。
+
+\begin{refcontext}[sorting = none]
+\printbibliography[category = cited, heading = bibnumbered, title = {本文参考文献}]
+\end{refcontext}
+\begin{refcontext}[sorting = ecnty]
+\printbibliography[notcategory = cited, heading = bibnumbered, title = {%
+	其它参考文献示例
+	（引自\texorpdfstring{文献 \parencite{gbt7714-2005}}{ GB/T 7714-2005}）%
+}]
+\end{refcontext}
+
+\section{更新记录}
+\VerbatimInput[tabsize = 4, fontsize = {\small}, baselinestretch = 1]{ChangeLog.txt}
+
+\nocite{*}
+\end{document}
+
+% vim:ft=tex:ts=2:sw=2

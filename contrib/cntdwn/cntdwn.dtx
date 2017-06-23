@@ -1,0 +1,1306 @@
+% \iffalse
+%<*copyright>
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% cntdwn package,            2010-8-2                  %%
+%% Copyright (C) 2010  D. P. Story                      %%
+%%   dpstory@uakron.edu                                 %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%</copyright>
+%<package>\NeedsTeXFormat{LaTeX2e}
+%<package>\ProvidesPackage{cntdwn}
+%<package> [2014/11/26 v.6 countdown support (dps)]
+%<*driver>
+\documentclass{ltxdoc}
+\usepackage[colorlinks,hyperindex]{hyperref}
+\pdfstringdefDisableCommands{\let\\\textbackslash}
+\OnlyDescription
+\EnableCrossrefs
+\CodelineIndex
+\begin{document}
+  \GetFileInfo{cntdwn.sty}
+  \title{cntdwn: A countdown Package}
+  \author{D. P. Story\\
+    Email: \texttt{dpstory@uakron.edu}}
+  \date{processed \today}
+  \maketitle
+  \tableofcontents
+  \let\Email\texttt
+  \DocInput{cntdwn.dtx}
+  \PrintIndex
+\end{document}
+%</driver>
+% \fi
+%
+% \MakeShortVerb{|}
+%
+% \DoNotIndex{\def,\edef,\gdef,\xdef,\global,\long,\let}
+% \DoNotIndex{\expandafter,\string,\the,\ifx,\else,\fi}
+% \DoNotIndex{\csname,\endcsname,\relax,\begingroup,\endgroup}
+% \DoNotIndex{\DeclareTextCommand,\DeclareTextCompositeCommand}
+% \DoNotIndex{\space,\@empty,\special}
+%
+%    \begin{macrocode}
+%<*package>
+%    \end{macrocode}
+% This is a ``countdown'' package that features a countdown field and three events. Each event
+% is fired at designated points in the talk. The length of the talk is preset, it can be started,
+% paused, and stopped. There is an end of talk event as well. All these things are definable by
+% the document author, or the defaults can be taken. Only the length of the talk is required.
+%
+% We support four scenarios:
+% \begin{enumerate}
+%   \item short countdown: less than a day. Designed for talks
+%   \item short stopwatch: counting up from the start (less than a day)
+%   \item long countdown: a countdown to an event, the event is  some future date. There is an option
+%         that once reached, the countdown will stop, or continue as a ``countup.''
+%   \item long stopwatch: count up from the starting time/date
+%\end{enumerate}
+%    \begin{macrocode}
+\RequirePackage{xkeyval}
+\def\cntdwn@defaultcode{\makeatletter
+    \InputIfFileExists{shrtcnt.def}{}\makeatother}
+\DeclareOptionX{shortcount}{%
+    \def\cntdwn@shrtcnt{\cntdwn@defaultcode}%
+}
+\let\cntdwn@shrtcnt\@empty
+\DeclareOptionX{longcount}{%
+    \def\cntdwn@lngcnt{\makeatletter
+        \InputIfFileExists{lngcnt.def}{}\makeatother}%
+}
+\let\cntdwn@lngcnt\@empty
+\ProcessOptionsX
+%    \end{macrocode}
+% If no options are give, we assume \texttt{shortcount} and
+% input \texttt{shrtcnt.def}.
+% If only \texttt{longcount} is taken, then only \texttt{lngcnt.def} is input.
+% If shortcnt is taken only, we input \texttt{shrtcnt.def}, and if both options
+% are taken, we input \texttt{shrtcnt.def} followed by \texttt{lngcnt.def}.
+%    \begin{macrocode}
+\ifx\cntdwn@shrtcnt\@empty
+    \ifx\cntdwn@lngcnt\@empty\AtEndOfPackage{\cntdwn@defaultcode}\else
+    \AtEndOfPackage{\cntdwn@lngcnt}\fi
+\else
+    \AtEndOfPackage{\cntdwn@defaultcode}
+    \ifx\cntdwn@lngcnt\@empty\else\AtEndOfPackage{\cntdwn@lngcnt}\fi
+\fi
+%    \end{macrocode}
+% \texttt{\_oTime} is a JovaScript object that we must not let the user
+% ``overwrite'' by allowing him to name a timer with the name \texttt{Time}.
+%    \begin{macrocode}
+\@namedef{Time@timername}{Time}
+%    \end{macrocode}
+% \cs{cntdwnlTimers} and \cs{cntdwnaTimers} hold the JavaScript timer objects created by
+% \cs{setShortCntDwn}.
+%    \begin{macrocode}
+\def\cntdwn@namegdef#1{\expandafter\gdef\csname #1\endcsname}
+\def\cntdwn@namexdef#1{\expandafter\xdef\csname #1\endcsname}
+\let\cntdwnlTimers\@empty
+\let\cntdwnaTimers\@empty
+%    \end{macrocode}
+% \paragraph*{Language localizations}
+%    \begin{macrocode}
+\newcommand{\cntdwnYear}{year}
+\newcommand{\cntdwnYears}{years}
+\newcommand{\cntdwnDay}{day}
+\newcommand{\cntdwnDays}{days}
+\newcommand{\cntdwnHour}{hour}
+\newcommand{\cntdwnHours}{hours}
+\newcommand{\cntdwnMinute}{minute}
+\newcommand{\cntdwnMinutes}{minutes}
+\newcommand{\cntdwnSecond}{second}
+\newcommand{\cntdwnSeconds}{seconds}
+%    \end{macrocode}
+% The following JavaScript is common to both the \texttt{shortcount} and \texttt{longcount} options.
+%    \begin{macrocode}
+\begin{insDLJS*}[_timerObjsLoaded]{cntdwncom}
+\begin{newsegment}{CntDwn: DLJS for the cntdwn Package}
+/*
+        Document Level JavaScript for cntdwn
+        D. P. Story copyright 2010
+*/
+var _timerObjsLoaded=true;
+\end{newsegment}
+\begin{newsegment}{CntDwn: Timer Objects}
+var _oTime = new Object;
+    _oTime.second=1000;
+    _oTime.minute=60*_oTime.second;
+    _oTime.hour=60*_oTime.minute;
+    _oTime.day=24*_oTime.hour;
+    _oTime.year = 365*_oTime.day;
+%    \end{macrocode}
+% The commands \cs{cntdwnlTimers} and \cs{cntdwnaTimers} expand to objects and array assignments,
+% respectively.
+%    \begin{macrocode}
+\cntdwnlTimers
+var aTimers = new Array();
+\cntdwnaTimers
+\end{newsegment}
+\end{insDLJS*}
+%    \end{macrocode}
+%\changes{v.6}{2014/11/26}{Replaced the names of the fields that begin with
+%underscore with \cs{CDO}}
+%    \begin{macrocode}
+\begingroup
+\catcode`\_12
+\gdef\CDO{_o}
+\endgroup
+%</package>
+%<*shortcnt>
+%    \end{macrocode}
+% \section{Short Countdown Commands}
+% We introduce several commands for creating a countdown, for displaying the countdown,
+% and for controlling the countdown.
+%
+%    \begin{macro}{\cntdwnopts}
+% Sets the appearances, using \textsf{eforms}, for the interactive buttons
+% \cs{cntdwnStartT}, \cs{cntdwnPauseT}, and \cs{cntdwnStopT}
+%    \begin{macrocode}
+\newcommand{\cntdwnopts}[1]{\TU{#1}\H{N}\S{S}\BG{}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\cntdwnDisplay}
+% Displays the count of the (short) countdown.
+%    \begin{macrocode}
+\newcommand{\cntdwnDisplay}[4][]{%
+    \expandafter\ifnum\csname#2@autorun\endcsname=1\relax
+        \def\autorun@presets{%
+            \AA{\AAPageOpen{if (!\CDO#2.isCounting&&!\CDO#2.bNotify4)
+                sStartTimer(\CDO#2);}}}\else
+        \let\autorun@presets\@empty\fi
+    \textField[\Ff\FfReadOnly\Q{1}#1\presets{\autorun@presets}
+    ]{\CDO#2.cntdwn.TimeRemaining}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+%    \begin{macro}{\cntdwnStartT}
+% This start button does three things, pushing it starts/resumes the count, shift-clicking
+% starts the count over from the beginning, when the count reaches the first notification
+% time, the button turns green.
+%    \begin{macrocode}
+\newcommand{\cntdwnStartT}[4][]{%
+    \pushButton[\presets{\cntdwnopts{Start}}
+    \A{\JS{sStartTimer(\CDO#2);}}#1]{\CDO#2.cntdwn.Notify1}{#3}{#4}}
+%    \end{macrocode}
+%    \begin{macro}{\cntdwnStart}
+% This button has the same features as \cs{cntdwnStartT} except it is not the target
+% of the code, that is, it \emph{does not turn green} when the first notification time is reached.
+%    \begin{macrocode}
+\newcommand{\cntdwnStart}[4][]{%
+    \pushButton[\TU{Start}\A{\JS{sStartTimer(\CDO#2);}}#1
+    ]{\CDO#2.cntdwn.Start}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\cntdwnPauseT}
+% This pause button does two things, pushing it pauses the count
+% when the count reaches the second notification
+% time, the button turns yellow.
+%    \begin{macrocode}
+\newcommand{\cntdwnPauseT}[4][]{%
+    \pushButton[\presets{\cntdwnopts{Pause}}
+    \A{\JS{sPauseTimer(\CDO#2);}}#1
+    ]{\CDO#2.cntdwn.Notify2}{#3}{#4}}
+%    \end{macrocode}
+%    \begin{macro}{\cntdwnPause}
+% This button has the same features as \cs{cntdwnPauseT} except it is not the target
+% of the code, that is, it \emph{does not turn yellow} when the second notification time is reached.
+%    \begin{macrocode}
+\newcommand{\cntdwnPause}[4][]{%
+    \pushButton[\TU{Pause}\A{\JS{sPauseTimer(\CDO#2);}}#1
+    ]{\CDO#2.cntdwn.Pause}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\cntdwnStopT}
+% This stop button does two things, pushing it stops the count
+% and clears `End' fields. When the count reaches the third notification
+% time, the button turns blinks red, and when the end of the time limit
+% is reached, it turns solid red.
+%    \begin{macrocode}
+\newcommand{\cntdwnStopT}[4][]{%
+    \pushButton[\presets{\cntdwnopts{Stop}}
+    \A{\JS{sStopTimer(\CDO#2);}}#1
+    ]{\CDO#2.cntdwn.Notify3}{#3}{#4}}
+%    \end{macrocode}
+%    \begin{macro}{\cntdwnStop}
+% This button has the same features as \cs{cntdwnStopT} except it is not the target
+% of the code, that is, it \emph{does not turn red} when the second notification time is reached.
+%    \begin{macrocode}
+\newcommand{\cntdwnStop}[4][]{%
+    \pushButton[\TU{Stop}\A{\JS{sStopTimer(\CDO#2);}}#1
+    ]{\CDO#2.cntdwn.Stop}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+%    \end{macro}
+%    \begin{macro}{\cntdwnEndTarget}
+% The default end of time event (\texttt{EndOfTime}) sends a message to a multiline
+% text field. That field can be constructed using \cs{cntdwnEndTarget}
+%    \begin{macrocode}
+\newcommand{\cntdwnEndTarget}[4][]{%
+    \textField[\Ff\FfReadOnly\Ff\FfMultiline#1
+    ]{\CDO#2.cntdwn.End}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+% \subsection{Defining a short countdown}
+%    \begin{macro}{\setShortCntDwn}
+% Use this command to define a timer. It takes two arguments: (1) the name of the timer,
+% which must be unique among all named timers; (2) key-value pairs that define the
+% details of the timer.
+%    \begin{macrocode}
+\newcommand{\setShortCntDwn}[2]{\begingroup
+    \@ifundefined{#1@timername}{\cntdwn@namegdef{#1@timername}{#1}}%
+    {\PackageError{cntdwn}{The name `#1' is already defined as a timer
+    variable.}{Choose a unique timer variable name,
+    one different from `#1'.}}%
+    \def\seconds{_oTime.second}\def\minutes{_oTime.minute}%
+    \def\hours{_oTime.hour}%
+    \setkeys{cntdwn}{endmsg,#2}%
+    \cntdwn@namexdef{#1@autorun}{\ctndwn@autorun}%
+%    \end{macrocode}
+% An object that holds countdown data. The values in this object are
+%\begin{itemize}
+%   \item \texttt{length} $=$ length of the countdown (countup) in minutes
+%   \item \texttt{notify1} $=$ time (in minutes) when the first notification is given
+%   \item \texttt{notify2} $=$ time (in minutes) when the second notification is given
+%   \item \texttt{notify3} $=$ time (in minutes) when the third notification is given
+%   \item \texttt{refreshrate} $=$ time (in milliseconds) to refresh (default is 1000)
+%   \item \texttt{event1} $=$ the value of this key is a function that is executed when the first notification point is reached
+%   \item \texttt{event2} $=$ the value of this key is a function that is executed when the second notification point is reached
+%   \item \texttt{event3} $=$ the value of this key is a function that is executed when the third notification point is reached
+%   \item \texttt{endEvent} $=$ the value of this key is a function that is executed when the countdown is completed
+%\end{itemize}
+%    \begin{macrocode}
+    \def\r{^^J}\def\t{\space\space\space\space}%
+    \cntdwn@namexdef{#1TimerObject}{%
+%    \end{macrocode}
+% We build the timer object that contains all the data for running a timer.
+%    \begin{macrocode}
+        var _o#1 = {\r\t
+            name: "_o#1",\r\t
+            length: \cntdwn@length,\r\t
+            timeleft: \cntdwn@length,\r\t
+            notify1: \cntdwn@notifyi,\r\t
+            notify2: \cntdwn@notifyii,\r\t
+            notify3: \cntdwn@notifyiii,\r\t
+            refreshrate: \cntdwn@refreshrate,\r\t
+            event1: "\cntdwn@eventi",\r\t
+            event2: "\cntdwn@eventii",\r\t
+            event3: "\cntdwn@eventiii",\r\t
+            endEvent: "\cntdwn@eventiv",\r\t
+            weStopOnEnd: \cntdwn@ifstop,\r\t
+            isStopwatch: \isStopwatch,\r\t
+            startcolor: \cntdwn@startcolor,\r\t
+            pausecolor: \cntdwn@pausecolor,\r\t
+            stopcolor: \cntdwn@stopcolor,\r\t
+            endMsg: "\cntdwn@endmsg",\r\t
+%    \end{macrocode}
+% The keys above are determined by \cs{setShortCntDwn}, the ones below have constant
+% initial values.
+%    \begin{macrocode}
+            bNotify1:false,\r\t
+            bNotify2:false,\r\t
+            bNotify3:false,\r\t
+            bNotify4:false,\r\t
+            isCounting:false,\r\t
+            bBlinkOn:false,\r\t
+            startTime:0,\r\t
+            pauseTime:0,\r\t
+            EndOfTime:0,\r\t
+            blinkTimeOut:null,\r\t
+            timeout:null\r
+        };
+    }%
+%    \end{macrocode}
+% Once the macro is defined, we add it to \cs{cntdwnlTimers}.
+%    \begin{macrocode}
+    \ifx\cntdwnlTimers\@empty
+    \else\g@addto@macro\cntdwnlTimers{^^J}\fi
+    \expandafter\g@addto@macro\expandafter\cntdwnlTimers
+    \expandafter{\csname#1TimerObject\endcsname}%
+%    \end{macrocode}
+% We also create an associative array named \texttt{aTimers}, here we
+% add the name of the timer to the array.
+%    \begin{macrocode}
+    \ifx\cntdwnaTimers\@empty\else\g@addto@macro\cntdwnaTimers{^^J}\fi
+    \g@addto@macro\cntdwnaTimers{aTimers["_o#1"]=_o#1;}%
+    \endgroup}
+\def\thetimername#1{\csname#1@timername\endcsname}
+%    \end{macrocode}
+% We require \cs{setShortCntDwn} to be executed only in the preamble, as this
+% command updates the JavaScript code found below.
+%    \begin{macrocode}
+\@onlypreamble\setShortCntDwn
+%    \end{macrocode}
+%    \end{macro}
+% \subsubsection{Key-value Pairs for \texorpdfstring{\cs{setShortCntDwn}}
+%   {\textbackslash{setShortCntDwn}}}
+% We define the key-value pairs for \cs{setShortCntDwn}.
+%\par\medskip
+% \DescribeMacro{stopwatch} Determines whether the counter counts up or down.
+% The key \texttt{stopwatch} cause the counter to count up; the default is to
+% countdown (\texttt{stopwatch=false}).
+%    \begin{macrocode}
+\define@boolkey{cntdwn}{stopwatch}[true]{%
+    \edef\isStopwatch{\ifKV@cntdwn@stopwatch true\else false\fi}}
+%    \end{macrocode}
+% \DescribeMacro{autorun} A boolean, if true, the counter automatically
+% starts when the page is open that contains the counter display
+% (\cs{cntdwnDisplay})
+%    \begin{macrocode}
+\define@boolkey{cntdwn}{autorun}[true]{%
+    \edef\ctndwn@autorun{\ifKV@cntdwn@autorun1\else0\fi}}
+%    \end{macrocode}
+% \DescribeMacro{length} The length of the count in minutes.
+%    \begin{macrocode}
+\define@key{cntdwn}{length}[20*\minutes]{\def\cntdwn@length{#1}}
+%    \end{macrocode}
+% \DescribeMacro{notify1}\DescribeMacro{notify2}\DescribeMacro{notify3}
+% \texttt{notify1}, \texttt{notify2}, \texttt{notify2} measured in minutes.
+% When the timer countdowns, we should have \texttt{notify1>notify2>notify3};
+% when counting up, we should have \texttt{notify1<notify2<notify3}.
+%    \begin{macrocode}
+\define@key{cntdwn}{notify1}[5*\minutes]{\def\cntdwn@notifyi{#1}}
+\define@key{cntdwn}{notify2}[3*\minutes]{\def\cntdwn@notifyii{#1}}
+\define@key{cntdwn}{notify3}[1*\minutes]{\def\cntdwn@notifyiii{#1}}
+%    \end{macrocode}
+% \DescribeMacro{refreshrate} is the refresh rate of the counter, measured in
+% milliseconds. The default is 1000 (1 seconds).
+%    \begin{macrocode}
+\define@key{cntdwn}{refreshrate}[1000]{\def\cntdwn@refreshrate{#1}}
+%    \end{macrocode}
+% \DescribeMacro{event1}\DescribeMacro{event2}\DescribeMacro{event3}\DescribeMacro{endEvent}
+% When the first, second, third notifications are reached
+% (\texttt{notify1}, \texttt{notify2}, and \texttt{notify3}), events
+% (JavaScript functions) are executed. \textsf{Cntdwn} provides default events,
+% \texttt{sDefNotify1}, \texttt{sDefNotify2}, \texttt{sDefNotify3}, and \texttt{sDefEndEvent},
+% which are defined below in the JavaScript section.
+%    \begin{macrocode}
+% events, values are JavaScript function names
+\define@key{cntdwn}{event1}[sDefNotify1]{\def\cntdwn@eventi{#1}}
+\define@key{cntdwn}{event2}[sDefNotify2]{\def\cntdwn@eventii{#1}}
+\define@key{cntdwn}{event3}[sDefNotify3]{\def\cntdwn@eventiii{#1}}
+\define@key{cntdwn}{endEvent}[sDefEndEvent]{\def\cntdwn@eventiv{#1}}
+%    \end{macrocode}
+% \DescribeMacro{onfinish} determines what happens to the counter when
+% the time is up. This is a choice key, the permissible values are \texttt{stop}
+% and \texttt{continue}.
+%    \begin{macrocode}
+\define@choicekey{cntdwn}{onfinish}[\val\nr]{stop,continue}[stop]{%
+    \ifcase\nr\relax\def\cntdwn@ifstop{true}\or
+    \def\cntdwn@ifstop{false}\fi}
+%    \end{macrocode}
+%\DescribeMacro{startcolor}\DescribeMacro{pausecolor}\DescribeMacro{stopcolor}
+% Alert colors for countdown. The values are JavaScript colors.
+%    \begin{macrocode}
+\define@key{cntdwn}{startcolor}[color.green]{%
+    \def\cntdwn@startcolor{#1}}
+\define@key{cntdwn}{pausecolor}[color.yellow]{%
+    \def\cntdwn@pausecolor{#1}}
+\define@key{cntdwn}{stopcolor}[color.red]{\def\cntdwn@stopcolor{#1}}
+\newcommand{\cnddwnDefaultEndMsg}{This ends the
+    Presentation, any questions?}
+\define@key{cntdwn}{endmsg}[\cnddwnDefaultEndMsg]{%
+    \def\cntdwn@endmsg{#1}}
+%    \end{macrocode}
+% We set the default values of all timers.
+%    \begin{macrocode}
+\setkeys{cntdwn}{stopwatch=false,onfinish,length,%
+    notify1,notify2,notify3,refreshrate,startcolor,pausecolor,%
+    stopcolor,event1,event2,event3,endEvent,autorun=false,endmsg}
+%    \end{macrocode}
+%    \begin{macrocode}
+\begin{insDLJS*}[shrtcntdwn]{shrtcntdwn}
+%    \end{macrocode}
+%    \begin{macrocode}
+\begin{newsegment}{CntDwn: Countdown JavaScript}
+%    \end{macrocode}
+% \subsection{JavaScript for the short countdown}
+% \DescribeEnv{shrtcntdwn} This is the function that performs the countdown.
+%    \begin{macrocode}
+function shrtcntdwn(cTimer){
+    var oTimer=aTimers[cTimer];
+    var _delta,nDays,pDays,nHours,pHours,nMinutes,
+        pMinutes,nSeconds,pSeconds,timeValue,isEndReached;
+    _delta=(oTimer.isStopwatch)?new Date()%
+-new Date(oTimer.startTime):new Date(oTimer.EndOfTime)-new Date();
+    oTimer.timeleft=_delta;
+    _delta=(_delta<0)?-_delta:_delta;
+    this.delay=true;
+    nDays = Math.floor(_delta/_oTime.day);
+    pDays = _delta\%_oTime.day;
+    nHours = Math.floor(pDays/_oTime.hour);
+    pHours = pDays\%_oTime.hour;
+    nMinutes = Math.floor(pHours/_oTime.minute );
+    pMinutes = pHours\%_oTime.minute;
+    nSeconds = Math.floor(pMinutes/_oTime.second);
+    pSeconds = pMinutes\%_oTime.second;
+%    \end{macrocode}
+% Calculate the time remaining, prefixing single digit numbers with a zero
+%    \begin{macrocode}
+    timeValue=((nHours>=1)?((nHours<10)?"0":"")+nHours+":":"")
+        +((nMinutes<10)?"0":"")+nMinutes
+        +":"+((nSeconds<10)?"0":"")+nSeconds;
+    try { this.getField(oTimer.name%
++".cntdwn.TimeRemaining").value= timeValue; }
+        catch(e) {};
+%    \end{macrocode}
+% If the difference is negative, we've reached the end of the time period
+%    \begin{macrocode}
+    isEndReached=(oTimer.isStopwatch)?oTimer.timeleft>oTimer.length%
+:oTimer.timeleft< 0;
+    if ( isEndReached && !oTimer.bNotify4) {
+        oTimer.bNotify4=true;
+        eval(oTimer.endEvent)(this,cTimer);
+        if (oTimer.weStopOnEnd) {
+          oTimer.isCounting=false;
+          try { app.clearInterval(oTimer.timeout);
+            oTimer.timeout=null; } catch(e){};
+        }
+        try { app.clearInterval(oTimer.blinkTimeOut);
+            oTimer.blinkTimeOut=null; } catch(e){};
+        this.delay=false;this.dirty=false;
+        if (oTimer.weStopOnEnd) return;
+    }
+%    \end{macrocode}
+% If difference has reached one of our thresholds, run the notify event action
+%    \begin{macrocode}
+    if (oTimer.isStopwatch) {
+        if (!oTimer.bNotify1&&(_delta>oTimer.notify1))
+            {oTimer.bNotify1=true;eval(oTimer.event1)(this,cTimer);}
+        if (!oTimer.bNotify2&&(_delta>oTimer.notify2))
+            {oTimer.bNotify2=true;eval(oTimer.event2)(this,cTimer);}
+        if (!oTimer.bNotify3&&(_delta>oTimer.notify3))
+            {oTimer.bNotify3=true;eval(oTimer.event3)(this,cTimer);}
+    } else {
+        if (!oTimer.bNotify1&&(_delta<oTimer.notify1))
+            {oTimer.bNotify1=true;eval(oTimer.event1)(this,cTimer);}
+        if (!oTimer.bNotify2&&(_delta<oTimer.notify2))
+            {oTimer.bNotify2=true;eval(oTimer.event2)(this,cTimer);}
+        if (!oTimer.bNotify3&&(_delta<oTimer.notify3))
+            {oTimer.bNotify3=true;eval(oTimer.event3)(this,cTimer);}
+    }
+    this.delay=false;this.dirty=false;
+}
+%    \end{macrocode}
+% \DescribeEnv{sDefNotify1} The default first notification event.
+%    \begin{macrocode}
+function sDefNotify1(doc,cTimer) {
+    var oTimer=aTimers[cTimer];
+    var f = doc.getField(cTimer+".cntdwn.Notify1");
+    if (f!=null) f.fillColor = oTimer.startcolor;
+    app.beep();
+}
+%    \end{macrocode}
+% \DescribeEnv{sDefNotify2} The default second notification event.
+%    \begin{macrocode}
+function sDefNotify2(doc,cTimer) {
+    var oTimer=aTimers[cTimer];
+    var f = doc.getField(cTimer+".cntdwn.Notify2");
+    if (f!=null) f.fillColor = oTimer.pausecolor;
+    app.beep();
+}
+%    \end{macrocode}
+% \DescribeEnv{sDefNotify3} The default third notification event.
+%    \begin{macrocode}
+function sDefNotify3(doc,cTimer) {
+    var oTimer=aTimers[cTimer];
+    app.beep();
+    var f = doc.getField(cTimer+".cntdwn.Notify3");
+    if ( f!=null)
+        oTimer.blinkTimeOut=app.setInterval(%
+"_sBlinkRed(\""+cTimer+"\")",500);
+}
+%    \end{macrocode}
+% \DescribeEnv{\_sBlinkRed} The default event \texttt{sDefNotify3} calls this function
+% to blink the third notification field.
+%    \begin{macrocode}
+function _sBlinkRed(cTimer) {
+    var oTimer=aTimers[cTimer];
+    var f=this.getField(cTimer+".cntdwn.Notify3");
+    f.fillColor = ( oTimer.bBlinkOn )?color.white:oTimer.stopcolor;
+    oTimer.bBlinkOn=!oTimer.bBlinkOn;
+    this.dirty=false;
+}
+%    \end{macrocode}
+% \DescribeEnv{sDefEndEvent} The default event of the end of the countdown. This function
+% is fired when the count is completed.
+% This function performs an end of countdown action,
+% here we populate a field announcing the end of the countdown. An animation is
+% possible here too.
+%    \begin{macrocode}
+function sDefEndEvent(doc,cTimer) {
+    var oTimer=aTimers[cTimer];
+    var f=doc.getField(cTimer+".cntdwn.Notify3");
+    if (f!=null) f.fillColor = oTimer.stopcolor;
+    f=doc.getField(cTimer+".cntdwn.End");
+    if (f!=null) f.value = oTimer.endMsg;
+}
+%    \end{macrocode}
+% \DescribeEnv{sPauseTimer} Pause the timer.
+%    \begin{macrocode}
+function sPauseTimer(oTimer) {
+    oTimer.isCounting=false;
+    oTimer.pauseTime=new Date().valueOf();
+    try { app.clearInterval(oTimer.timeout);
+        oTimer.timeout=null; } catch(e){};
+}
+%    \end{macrocode}
+% \DescribeEnv{sStopTimer} Stop the timer.
+%    \begin{macrocode}
+function sStopTimer(oTimer) {
+    oTimer.isCounting=false;
+    oTimer.startTime=oTimer.pauseTime=0;
+    oTimer.timeleft=oTimer.length;
+    try { app.clearInterval(oTimer.timeout);
+        oTimer.timeout=null; } catch(e){};
+    try { app.clearInterval(oTimer.blinkTimeOut);
+        oTimer.blinkTimeOut=null; } catch(e){};
+    try { this.getField(oTimer.name%
++".cntdwn.Notify1").fillColor = color.white; } catch(e) {}
+    try { this.getField(oTimer.name%
++".cntdwn.Notify2").fillColor = color.white; } catch(e) {}
+    try { this.getField(oTimer.name%
++".cntdwn.Notify3").fillColor = color.white; } catch(e) {}
+    oTimer.bNotify1=oTimer.bNotify2=oTimer.bNotify3%
+=oTimer.bNotify4=false;
+    this.resetForm([oTimer.name]);
+    this.dirty=false;
+}
+%    \end{macrocode}
+% \DescribeEnv{sStartTimer} Start the timer.
+%    \begin{macrocode}
+function sStartTimer(oTimer) {
+    if (oTimer.isCounting) return;
+    oTimer.isCounting=true;
+    if (oTimer.startTime == 0 || (event.shift) %
+|| (oTimer.weStopOnEnd&&oTimer.bNotify4) ){
+        sStopTimer(oTimer);
+        oTimer.startTime=new Date().valueOf();
+    }
+    oTimer.pauseTime=(oTimer.pauseTime==0)?0:new Date()%
+-new Date(oTimer.pauseTime)+oTimer.refreshrate;
+    oTimer.startTime+=oTimer.pauseTime;
+    if (oTimer.isStopwatch)
+        oTimer.EndOfTime=oTimer.startTime+((event.shift)?oTimer.length%
+:oTimer.timeleft);
+    else
+        oTimer.EndOfTime=new Date().valueOf()%
++((event.shift)?oTimer.length:oTimer.timeleft);
+    oTimer.timeout=app.setInterval(%
+"shrtcntdwn(\""+oTimer.name+"\")",oTimer.refreshrate);
+}
+\end{newsegment}
+\end{insDLJS*}
+%</shortcnt>
+%<*lngcnt>
+%    \end{macrocode}
+% \section{Long Countdown Commands}
+% In this section, we countdown to a future event, or count-up from a previous event. These are
+% long countdowns, measured in years, days, hours, minutes, and seconds. We also define a clock
+% timer.
+%
+% \subsection{Define a long countdown}
+%
+% The author can optionally show the current time/date, and the target time/date. The required
+% field is the one that displays the countdown.
+%
+%    \begin{macro}{\lcntdwnDisplay} This field is the target of the countdown. It holds
+% the current formatted countdown.
+%    \begin{macrocode}
+\newcommand{\lcntdwnDisplay}[4][]{%
+    \let\autorun@presets\@empty
+    \expandafter\ifnum\csname#2@autorun\endcsname=1\relax
+        \edef\autorun@presets{%
+        \AAPageOpen{if (\CDO#2.bAutorunEnabled && \CDO#2.timeout==null) lStartTimer(\CDO#2);}}\fi
+    \expandafter\ifnum\csname#2@autopause\endcsname=1\relax
+        \edef\autorun@presets{\autorun@presets
+        \AAPageClose{if (\CDO#2.timeout!=null) lcntdwnPause(\CDO#2);}}\fi
+    \edef\autorun@presets{\noexpand\AA{\autorun@presets}}%
+    \textField[\Ff\FfReadOnly\textSize{0}#1
+        \presets{\autorun@presets}]%
+    {\CDO#2.lcntdwn.timeToFromEvent}{#3}{#4}}
+%    \end{macrocode}
+%    \end{macro}
+% \DescribeMacro{\lcntdwnToggle} A simple button to toggle the count off and one.
+%    \begin{macrocode}
+\newcommand{\lcntdwnToggle}[4][]{%
+    \pushButton[\TU{Toggle Countdown}\A{\JS{lcntdwnToggle(\CDO#2);}}#1
+    ]{\CDO#2.lcntdwn.Toggle}{#3}{#4}}
+%    \end{macrocode}
+%    \begin{macro}{\setLongCntDwn}
+% Use this command to define a timer. It takes two arguments: (1) the name of the timer,
+% which must be unique among all named timers; (2) key-value pairs that define the
+% details of the timer.
+%    \begin{macrocode}
+\newcommand{\setLongCntDwn}[2]{\begingroup
+    \@ifundefined{#1@timername}{\cntdwn@namegdef{#1@timername}{#1}}%
+    {\PackageError{cntdwn}{The name `#1' is already defined as a timer
+    variable.}{Choose a unique timer variable name,
+    one different from `#1'.}}%
+    \setkeys{lcntdwn}{date,endmsg,#2}%
+    \def\seconds{_oTime.second}\def\minutes{_oTime.minute}%
+    \def\hours{_oTime.hour}\def\days{_oTime.day}%
+    \def\weeks{7*_oTime.day}\def\years{_oTime.year}%
+    \cntdwn@namexdef{#1@autorun}{\lctndwn@autorun}%
+    \cntdwn@namexdef{#1@autopause}{\lctndwn@autopause}%
+    \ifx\lcntdwn@date\@empty\def\lcntdwn@date{1970/01/01}%
+    \PackageWarning{cntdwn}{!!Beware!!
+    The `date' key was not supplied,\MessageBreak
+    using the default date 1970/01/01}\fi
+    \def\r{^^J}\def\t{\space\space\space\space}%
+    \cntdwn@namexdef{#1TimerObject}{%
+%    \end{macrocode}
+% We build the timer object that contains all the data for running a timer.
+%    \begin{macrocode}
+        var _o#1 = {\r\t
+            name: "_o#1",\r\t
+            pdfdate:"D:\lcntdwn@date\lcntdwn@time\lcntdwn@tz",\r\t
+            target: null,\r\t
+            refreshrate: 1000,\r\t
+            notify1: \lcntdwn@notifyi,\r\t
+            notify2: \lcntdwn@notifyii,\r\t
+            notify3: \lcntdwn@notifyiii,\r\t
+            notify5: \lcntdwn@notifyv,\r\t
+            notify6: \lcntdwn@notifyvi,\r\t
+            notify7: \lcntdwn@notifyvii,\r\t
+            eventhandler: "\lcntdwn@eventhandler",\r\t
+            refreshrate: \lcntdwn@refreshrate,\r\t
+            timedateFunc: "\lcntdwn@timedateFunc",\r\t
+            displayfunc: "\lcntdwn@displayfunc",\r\t
+            endtimecolor: \cntdwn@endtimecolor,\r\t
+            weStopOnEnd: \lcntdwn@ifstop,\r\t
+            endMsg: "\lcntdwn@endmsg",\r\t
+            bAutorunEnabled:\lcntdwn@autorunenabled,\r\t
+%    \end{macrocode}
+% The keys above are determined by \cs{setLongCntDwn}, the ones below have constant
+% initial values.
+%    \begin{macrocode}
+            bNotify1:false,\r\t
+            bNotify2:false,\r\t
+            bNotify3:false,\r\t
+            bNotify4:false,\r\t
+            bNotify5:false,\r\t
+            bNotify6:false,\r\t
+            bNotify7:false,\r\t
+            lastSignDelta:1,\r\t
+            timeout:null\r
+        };
+    }%
+%    \end{macrocode}
+% Once the macro is defined, we add it to \cs{cntdwnlTimers}.
+%    \begin{macrocode}
+    \ifx\cntdwnlTimers\@empty
+    \else\g@addto@macro\cntdwnlTimers{^^J}\fi
+    \expandafter\g@addto@macro\expandafter\cntdwnlTimers
+    \expandafter{\csname#1TimerObject\endcsname}%
+%    \end{macrocode}
+% We also create an associative array named \texttt{aTimers}, here we
+% add the name of the timer to the array.
+%    \begin{macrocode}
+    \ifx\cntdwnaTimers\@empty\else\g@addto@macro\cntdwnaTimers{^^J}\fi
+    \g@addto@macro\cntdwnaTimers{aTimers["_o#1"]=_o#1;}%
+    \endgroup}
+%    \end{macrocode}
+% \subsubsection{Key-value Pairs for \texorpdfstring{\cs{setLongCntDwn}}{\textbackslash{setLongCntDwn}}}
+%    \end{macro}
+% In the next segment, we parse the \texttt{date} value.
+%    \begin{macrocode}
+\def\@lcntdwn@parse@YYYY#1#2#3#4{%
+    {\count0=#1\relax\count0=#2\relax
+     \count0=#3\relax\count0=#4\relax}%
+    \def\lcntdwn@date{#1#2#3#4}%
+    \@ifnextchar\@nil{\@gobbletonil}%
+    {\@ifnextchar/{\expandafter\@lcntdwn@parse@MM\@gobble}%
+    {\def\lcntdwn@date{#1#2#3#4}}}%
+}
+\def\@lcntdwn@parse@MM#1#2{%
+    {\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@date{\lcntdwn@date#1#2}%
+    \@ifnextchar\@nil{\@gobbletonil}%
+    {\@ifnextchar/{\expandafter\@lcntdwn@parse@DD\@gobble}%
+    {\edef\lcntdwn@date{\lcntdwn@date#1#2}}}%
+}
+\def\@lcntdwn@parse@DD#1#2{%
+    {\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@date{\lcntdwn@date#1#2}%
+    \@gobbletonil
+}
+%    \end{macrocode}
+% In the next segment, we parse the \texttt{time} value.
+%    \begin{macrocode}
+\def\@lcntdwn@parse@HH#1#2{%
+    {\count0=#1\relax\count0=#2\relax}%
+    \def\lcntdwn@time{#1#2}
+    \@ifnextchar\@nil{\@gobbletonil}%
+    {\@ifnextchar:{\expandafter\@lcntdwn@parse@mm\@gobble}%
+    {\def\lcntdwn@time{#1#2}}}%
+}
+\def\@lcntdwn@parse@mm#1#2{%
+    {\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@time{\lcntdwn@time#1#2}%
+    \@ifnextchar\@nil{\@gobbletonil}%
+    {\@ifnextchar:{\expandafter\@lcntdwn@parse@SS\@gobble}%
+    {\edef\lcntdwn@time{\lcntdwn@time#1#2}}}%
+}
+\def\@lcntdwn@parse@SS#1#2{%
+    {\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@time{\lcntdwn@time#1#2}%
+    \@gobbletonil
+}
+%    \end{macrocode}
+% In the next segment, we parse the \texttt{timezone} value.
+%    \begin{macrocode}
+% offset from UTC Z|[+-]HHMM
+\def\tz@Z{Z}\def\tz@p{+}\def\tz@m{-}
+\def\lcntdwn@parse@tz{\@ifnextchar\@nil
+    {\let\lcntdwn@tz\@empty}{\@lcntdwn@parse@tz}%
+}
+\def\@lcntdwn@parse@tz#1{%
+    \def\argi{#1}\ifx\argi\tz@Z
+    \def\lcntdwn@tz{Z}\def\@next{\@gobbletonil}%
+    \else\ifx\argi\tz@p\def\lcntdwn@tz{+}%
+    \def\@next{\tz@gethrs}\else
+    \ifx\argi\tz@m\def\lcntdwn@tz{-}%
+    \def\@next{\tz@gethrs}\else
+    \let\lcntdwn@tz\@empty\def\@next{\@gobbletonil}%
+    \fi\fi\fi\@next
+}
+\def\@gobbletonil#1\@nil{}
+\def\tz@gethrs#1#2{{\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@tz{\lcntdwn@tz#1#2'}%
+    \@ifnextchar\@nil{\@gobbletonil}{\tz@getmnts}}
+\def\tz@getmnts#1#2{{\count0=#1\relax\count0=#2\relax}%
+    \edef\lcntdwn@tz{\lcntdwn@tz#1#2'}\@gobbletonil}
+%    \end{macrocode}
+%    \begin{macrocode}
+% YYYY/MM/DD
+\define@key{lcntdwn}{date}[]{%
+    \edef\argi{#1}\ifx\argi\@empty
+    \def\lcntdwn@date{}\let\@next\relax\else
+    \def\@next{\expandafter\@lcntdwn@parse@YYYY\argi\@nil}\fi
+    \@next
+}
+% HH:MM:SS
+\define@key{lcntdwn}{time}[]{%
+    \edef\argi{#1}\ifx\argi\@empty
+    \let\lcntdwn@time\@empty\let\@next\relax\else
+    \def\@next{\expandafter\@lcntdwn@parse@HH\argi\@nil}\fi
+    \@next
+}
+% offset from UTC Z|[+-]HHMM
+\define@key{lcntdwn}{tzoffset}[]{%
+    \def\argi{#1}\ifx\argi\@empty
+    \let\lcntdwn@tz\@empty\let\@next\relax\else
+    \def\@next{\lcntdwn@parse@tz#1\@nil}\fi
+    \@next
+}
+\define@boolkey{lcntdwn}{autorun}[true]{%
+    \edef\lctndwn@autorun{\ifKV@lcntdwn@autorun1\else0\fi}}
+\define@boolkey{lcntdwn}{autopause}[true]{%
+    \edef\lctndwn@autopause{\ifKV@lcntdwn@autopause1\else0\fi}}
+\define@boolkey{lcntdwn}{autorunenabled}[true]{%
+    \edef\lcntdwn@autorunenabled{\ifKV@lcntdwn@autorunenabled
+    true\else false\fi}}
+%    \end{macrocode}
+% \DescribeMacro{notify1}\DescribeMacro{notify2}\DescribeMacro{notify3}
+% \DescribeMacro{notify5}\DescribeMacro{notify6}\DescribeMacro{notify7}
+% \texttt{notify1}, \texttt{notify2}, \texttt{notify2} are pre-event times.
+% The times must satisfy the relation\texttt{notify1>notify2>notify3}.
+% \texttt{notify5}, \texttt{notify6}, and \texttt{notify7}
+% are post-event times, the must satisf \texttt{notify5<notify6<notify7}.
+% Times are relative to the main event (time 0).
+%    \begin{macrocode}
+\define@key{lcntdwn}{notify1}[null]{\def\lcntdwn@notifyi{#1}}
+\define@key{lcntdwn}{notify2}[null]{\def\lcntdwn@notifyii{#1}}
+\define@key{lcntdwn}{notify3}[null]{\def\lcntdwn@notifyiii{#1}}
+\define@key{lcntdwn}{notify5}[null]{\def\lcntdwn@notifyv{#1}}
+\define@key{lcntdwn}{notify6}[null]{\def\lcntdwn@notifyvi{#1}}
+\define@key{lcntdwn}{notify7}[null]{\def\lcntdwn@notifyvii{#1}}
+%    \end{macrocode}
+%    \begin{environment}{eventhandler}
+% The JavaScript function that handles
+% the event of reaching one of the notification time values.
+%    \begin{macrocode}
+% events, values are JavaScript function names
+\define@key{lcntdwn}{eventhandler}[_NoOpt]{%
+    \def\lcntdwn@eventhandler{#1}}
+%    \end{macrocode}
+%    \end{environment}
+% \DescribeMacro{refreshrate} is the refresh rate of the counter, measured in
+% milliseconds. The default is 1000 (1 second).
+%    \begin{macrocode}
+\define@key{lcntdwn}{refreshrate}[1000]{\def\lcntdwn@refreshrate{#1}}
+%    \end{macrocode}
+% \DescribeMacro{currtimefunc} This keys allows a document author to define his/her
+% own JS function to display the time and date. The default is to show time and
+% date in separate fields.
+%    \begin{macrocode}
+\define@key{lcntdwn}{currtimefunc}[_defaultTimeDateFunc]{%
+    \def\lcntdwn@timedateFunc{#1}}
+%    \end{macrocode}
+% \DescribeMacro{displayfunc} This key allows you to define how the display the countdown.
+% Use a clock timer defined by \cs{setClockTimer}, not supported by timers created by
+% \cs{setLongCntDwn}.
+%    \begin{macrocode}
+\define@key{lcntdwn}{displayfunc}[_defaultLDisplayFunc]{%
+    \def\lcntdwn@displayfunc{#1}}
+%    \end{macrocode}
+% \DescribeMacro{endtimecolor} The color of the count changes when the end time value is reached.
+% the default is \texttt{color.red}, use this key to change the default color.
+%    \begin{macrocode}
+\define@key{lcntdwn}{endtimecolor}[color.red]{%
+    \def\cntdwn@endtimecolor{#1}}
+%    \end{macrocode}
+% \DescribeMacro{onfinish} A choice key to determine how the timer behave when the
+% end time is reached. Choices are \texttt{stop} or \texttt{continue} (the default).
+%    \begin{macrocode}
+\define@choicekey{lcntdwn}{onfinish}[\val\nr]{stop,continue}[stop]{%
+    \ifcase\nr\relax\def\lcntdwn@ifstop{true}\or
+    \def\lcntdwn@ifstop{false}\fi}
+%    \end{macrocode}
+% \DescribeMacro{endmsg} When \texttt{onfinish=stop} a message appears in the
+% display, the default message is ``The time has expired.'' This message may be
+% change locally by this key, or globally by redefining the command
+% \cs{lcnddwnDefaultEndMsg}.
+%    \begin{macrocode}
+\newcommand{\lcnddwnDefaultEndMsg}{The time has expired}
+\define@key{lcntdwn}{endmsg}[\lcnddwnDefaultEndMsg]{%
+    \def\lcntdwn@endmsg{#1}}
+%    \end{macrocode}
+% \paragraph*{Set the defaults for the long countdown}
+%    \begin{macrocode}
+\setkeys{lcntdwn}{time,tzoffset,refreshrate,autorun,autopause,%
+    autorunenabled,notify1,notify2,notify3,notify5,notify6,notify7,%
+    eventhandler,endtimecolor,displayfunc,currtimefunc,%
+    onfinish=continue,endmsg}
+%    \end{macrocode}
+% \subsection{Creating a clock}
+% A clock is a special timer what displays the current time and date.
+% Clocks defined by \cs{setClockTimer} show local time, by default, but
+% can also show time/date in other time zones.
+%    \begin{macro}{\setClockTimer}
+% Set the name and key-value pairs that describe the properties of this clock.
+%    \begin{macrocode}
+\newcommand{\setClockTimer}[2]{\begingroup
+    \@ifundefined{#1@timername}{\cntdwn@namegdef{#1@timername}{#1}}%
+    {\PackageError{cntdwn}{The name `#1' is already defined as a timer
+    variable.}{Choose a unique timer variable name,
+    one different from `#1'.}}%
+    \setkeys{lcntdwn}{#2}%
+    \def\seconds{_oTime.second}\def\minutes{_oTime.minute}%
+    \def\hours{_oTime.hour}\def\days{_oTime.day}%
+    \def\weeks{7*_oTime.day}\def\years{_oTime.year}%
+    \cntdwn@namexdef{#1@autorun}{\lctndwn@autorun}%
+    \cntdwn@namexdef{#1@autopause}{\lctndwn@autopause}%
+%    \end{macrocode}
+%    \begin{macrocode}
+    \def\r{^^J}\def\t{\space\space\space\space}%
+    \cntdwn@namexdef{#1TimerObject}{%
+%    \end{macrocode}
+% We build the clock timer object that contains all the data for running the clock.
+%    \begin{macrocode}
+        var _o#1 = {\r\t
+            name: "_o#1",\r\t
+            tzoffset:"\lcntdwn@tz",\r\t
+            refreshrate: \lcntdwn@refreshrate,\r\t
+            timedateFunc: "\lcntdwn@timedateFunc",\r\t
+            timeout:null\r
+        };
+    }%
+%    \end{macrocode}
+% Once the macro is defined, we add it to \cs{cntdwnlTimers}.
+%    \begin{macrocode}
+    \ifx\cntdwnlTimers\@empty
+    \else\g@addto@macro\cntdwnlTimers{^^J}\fi
+    \expandafter\g@addto@macro\expandafter\cntdwnlTimers
+    \expandafter{\csname#1TimerObject\endcsname}%
+%    \end{macrocode}
+% We also create an associative array named \texttt{aTimers}, here we
+% add the name of the timer to the array.
+%    \begin{macrocode}
+    \ifx\cntdwnaTimers\@empty\else\g@addto@macro\cntdwnaTimers{^^J}\fi
+    \g@addto@macro\cntdwnaTimers{aTimers["_o#1"]=_o#1;}%
+    \endgroup}
+%    \end{macrocode}
+%    \end{macro}
+% \DescribeMacro{\cntdwnclocktime} The text field that displays the time. It is also
+% the one that responds to the \texttt{autorun} and \texttt{autopause} options.
+%    \begin{macrocode}
+\newcommand{\cntdwnclocktime}[4][]{%
+    \let\autorun@presets\@empty
+    \expandafter\ifnum\csname#2@autorun\endcsname=1\relax
+        \edef\autorun@presets{%
+        \AAPageOpen{if (\CDO#2.timeout==null) clStartTimer(\CDO#2);}}\fi
+    \expandafter\ifnum\csname#2@autopause\endcsname=1\relax
+        \edef\autorun@presets{\autorun@presets
+        \AAPageClose{if (\CDO#2.timeout!=null) clcntdwnPause(\CDO#2);}}\fi
+    \edef\autorun@presets{\noexpand\AA{\autorun@presets}}%
+    \textField[\Ff\FfReadOnly\Q{1}\textSize{0}#1
+        \presets{\autorun@presets}]%
+    {\CDO#2.clock.time}{#3}{#4}}
+%    \end{macrocode}
+% \DescribeMacro{\cntdwnclockdate} The text field that displays the date. This field
+% is optional; both time and date may be displayed on the \cs{cntdwnclocktime} display,
+% this would require a custom value for the \texttt{timedateFunc} property.
+%    \begin{macrocode}
+\newcommand{\cntdwnclockdate}[4][]{\textField[%
+    \Ff\FfReadOnly\Q{1}\textSize{0}#1]{\CDO#2.clock.date}{#3}{#4}}
+%    \end{macrocode}
+% \DescribeMacro{\clockToggle} A simple button to toggle the clock off and one.
+%    \begin{macrocode}
+\newcommand{\clockToggle}[4][]{%
+    \pushButton[\TU{Toggle Countdown}\A{\JS{clockToggle(\CDO#2);}}#1
+    ]{\CDO#2.lcntdwn.Toggle}{#3}{#4}}
+%    \end{macrocode}
+% \subsection{JavaScript for long countdowns}
+%    \begin{macrocode}
+\begin{insDLJS*}[lngcntdwn]{lngcntdwn}
+\begin{newsegment}{CntDwn: Convert Time Function}
+/*
+   This function converts the PDF Date Format to a JavaScript
+   Date object. The PDF Date Format is specified in section
+   3.8.3 in the PDF Reference.
+*/
+function pdfDate2oDate( pdfDate ) {
+    // if present, remove the "D:" in format
+    if ( pdfDate.indexOf("D:")  != -1 )
+        pdfDate = pdfDate.substring(2);
+    // now see if the O component is there
+    var re = /[\+\-Z]/;
+    var nIndex =  pdfDate.search(re);
+    // separate the time date info from the time zone offset info
+    if ( nIndex != -1 ) {
+        var cTimeZone = pdfDate.substring(nIndex);
+        pdfDate = pdfDate.substring(0, nIndex);
+    } else cTimeZone = "";
+    // seg is an array of arrays. The first element is the field width,
+    // the second entry is the default value.
+    var seg = [[4,1970],[2,1],[2,1],[2,0],[2,0],[2,0]];
+    // an array to hold time arguments for the date constructor.
+    var args = new Array();
+    // as we determine the values of the PDF Date Format, push them onto
+    // the args array, if not present, push the default value on.
+    for ( var i=0; i < seg.length; i++) {
+        if ( pdfDate.length > 0 ) {
+            args.push(Number( pdfDate.substring(0, seg[i][0]) ) );
+            pdfDate = pdfDate.substring( seg[i][0] );
+        } else args.push( seg[i][1] );
+    }
+    // adjust month to base zero
+    args[1] =  args[1] - 1;
+    // see if there is time zone info
+    var pm = "";
+    if ( cTimeZone.length > 0  ) {
+        pm = cTimeZone.charAt(0);
+        var zoneOffsetHr=Number(cTimeZone.substring(1,3));
+        cTimeZone=cTimeZone.substring(3);
+        var zoneOffsetMin=0;
+        if ( cTimeZone.length > 0 && cTimeZone.charAt(0) == "'" )
+            var zoneOffsetMin = Number( cTimeZone.substring(1,3) );
+        var totalOffset=zoneOffsetHr*60+zoneOffsetMin;
+        totalOffset*= 60000;
+        totalOffset=( pm == "-" )?-1*totalOffset:totalOffset;
+        var msTime=Date.UTC.apply(global,args);
+        msTime = msTime - totalOffset;
+        var d = new Date( msTime );
+    } else {
+        var dateArgs = args.toSource().replace(/[\[\]]/g,"");
+        var d = eval("new Date(" + dateArgs + ")" );
+    }
+    return d
+}
+\end{newsegment}
+\begin{newsegment}{CntDwn: Long Countdown JavaScript}
+function lngcntdwn(cTimer){
+    var _delta,nYears,pYears,nDays,pDays,nHours,pHours,nMinutes,
+        pMinutes,nSeconds,pSeconds,f,thisSignDelta,msYear;
+    var oTimer=aTimers[cTimer];
+    var Clock=new Date();
+    this.delay=true;
+    _delta=oTimer.target-Clock;
+    var o=lCalcYears(oTimer,Clock,_delta);
+    nYears=o.nYears;
+    pYears=o.pYears;
+    _delta=o.delta;
+%    \end{macrocode}
+% Having made the correct calculation for the number of years, \texttt{pYears}
+% returns to us ready to calculate the number of days.
+%    \begin{macrocode}
+    nDays=Math.floor(pYears/_oTime.day);
+    pDays=pYears\%_oTime.day;
+    nHours=Math.floor(pDays/_oTime.hour);
+    pHours=pDays\%_oTime.hour;
+    nMinutes=Math.floor(pHours/_oTime.minute);
+    pMinutes=pHours\%_oTime.minute;
+    nSeconds=Math.round(pMinutes/_oTime.second);
+    pSeconds=pMinutes\%_oTime.second;
+%    \end{macrocode}
+% if \texttt{\_delta = oTimer.target - Clock} is positive, event is in future
+% at this time, if negative, it is in the past.
+%    \begin{macrocode}
+    f=this.getField(cTimer+".lcntdwn.timeToFromEvent");
+    thisSignDelta=(_delta<0)?-1:1;
+    if (thisSignDelta*oTimer.lastSignDelta<0&&!oTimer.bNotify4) {
+        if (f!=null) f.textColor=oTimer.endtimecolor;
+        oTimer.bNotify4=true;
+        oTimer.lastSignDelta=thisSignDelta;
+        eval(oTimer.eventhandler)(this,cTimer,4);
+        if (oTimer.weStopOnEnd) {
+            try { app.clearInterval(oTimer.timeout);
+            oTimer.timeout=null; } catch(e){};
+            if (f!=null) f.value=oTimer.endMsg;
+            return;
+        }
+    }
+    if (!oTimer.bNotify4&&_delta>0){ // event in future
+        if (!oTimer.bNotify1&&oTimer.notify1!=null%
+&&_delta<oTimer.notify1) {
+            oTimer.bNotify1=true;
+            eval(oTimer.eventhandler)(this,cTimer,1);
+        } else {
+            if (!oTimer.bNotify2&&oTimer.notify2!=null%
+&&_delta<oTimer.notify2) {
+                oTimer.bNotify2=true;
+                skipCheckB=true;
+                eval(oTimer.eventhandler)(this,cTimer,2);
+            } else {
+                if (!oTimer.bNotify3&&oTimer.notify3!=null%
+&&_delta<oTimer.notify3) {
+                    oTimer.bNotify3=true;
+                    eval(oTimer.eventhandler)(this,cTimer,3);
+                }
+            }
+        }
+    }
+    if (oTimer.bNotify4&&_delta<0){// event in past
+        var neg_delta=-1*_delta;
+        if (!oTimer.bNotify5&&oTimer.notify5!=null&&%
+neg_delta>oTimer.notify5) {
+            oTimer.bNotify5=true;
+            eval(oTimer.eventhandler)(this,cTimer,5);
+        } else {
+            if (!oTimer.bNotify6&&oTimer.notify6!=null&&%
+neg_delta>oTimer.notify6) {
+                oTimer.bNotify6=true;
+                eval(oTimer.eventhandler)(this,cTimer,6);
+        } else {
+            if (!oTimer.bNotify7&&oTimer.notify7!=null&&%
+neg_delta>oTimer.notify7) {
+                oTimer.bNotify7=true;
+                eval(oTimer.eventhandler)(this,cTimer,7);
+                }
+            }
+        }
+    }
+%    \end{macrocode}
+% Display the current time and date, and the countdown.
+%    \begin{macrocode}
+%    eval(oTimer.timedateFunc)(Clock,cTimer);
+    eval(oTimer.displayfunc)(f,nYears,nDays,nHours,nMinutes,nSeconds);
+    this.delay=false;
+    this.dirty=false;
+}
+function _defaultTimeDateFunc(oTime,cTimer) {
+    try{ this.getField(cTimer+".clock.time").value%
+=util.printd("H:MM:ss",oTime); } catch(e) {};
+    try { this.getField(cTimer+".clock.date").value=%
+util.printd("mm/dd/yyyy", oTime); } catch(e) {};
+}
+function _defaultLDisplayFunc(f,nYears,nDays,nHours,nMinutes,nSeconds) {
+    var strYears=(nYears==0)?""%
+:(""+nYears+((nYears == 1)?" \cntdwnYear, ":" \cntdwnYears, "));
+    var strDays=(nDays== 0)?""%
+:(""+nDays+((nDays==1)?" \cntdwnDay, ":" \cntdwnDays, "));
+    var strHours=(nHours==0)?""%
+:(""+nHours+((nHours==1)?" \cntdwnHour, ":" \cntdwnHours, "));
+    var strMinutes=(nMinutes==0)?""%
+:(""+nMinutes+((nMinutes==1)?" \cntdwnMinute, ":" \cntdwnMinutes, "));
+    var strSeconds=""+nSeconds+((nSeconds<2)?" \cntdwnSecond "%
+:" \cntdwnSeconds ");
+    var cCntDwnDisplay=strYears+strDays+strHours+strMinutes+strSeconds;
+    try { f.value=cCntDwnDisplay; } catch(e) {}
+}
+function lCalcYears(oTimer,Clock,_delta) {
+    var nYears,lengthOfYears,targetpdfdate,targetYear,thisYear,
+        otherYear,currAnnivDate,otherAnnivDate,tCurrAnnivDate,
+        tOtherAnnivDate,msYear=0;
+%    \end{macrocode}
+% Get the \texttt{pdfdate} for the target event, and\dots
+%    \begin{macrocode}
+    targetpdfdate=oTimer.pdfdate;
+%    \end{macrocode}
+% get the target year and the current year. The \texttt{otherYear} is
+% the year previous to the current year, if \texttt{\_delta<0}; otherwise,
+% it is the year following the current year.
+%    \begin{macrocode}
+    targetYear=Number(targetpdfdate.substring(2,6));
+    thisYear=Clock.getFullYear();
+    otherYear=(_delta<0)?thisYear-1:thisYear+1;
+%    \end{macrocode}
+% Build the \texttt{pdfdate} for the anniversary date in this year, and
+% for the \texttt{other\-Anniv\-Date}.
+%    \begin{macrocode}
+    currAnnivDate=targetpdfdate.substring(0,2)%
++thisYear+targetpdfdate.substring(6);
+    otherAnnivDate=targetpdfdate.substring(0,2)%
++otherYear+targetpdfdate.substring(6);
+%    \end{macrocode}
+% \texttt{tCurrAnnivDate} is the anniversary date (object) of target event in the current year,
+% and \texttt{tOtherAnnivDate} is either the previous anniversary date (if \texttt{\_delta<0}),
+% or the next anniversary date.
+%    \begin{macrocode}
+    tCurrAnnivDate=pdfDate2oDate( currAnnivDate );
+    tOtherAnnivDate=pdfDate2oDate( otherAnnivDate );
+    if (_delta<0) {
+        if ( Clock < tCurrAnnivDate ){
+%    \end{macrocode}
+% If we have not reached the anniversary date in the current year, the the number
+% of years that have passed since the target event is based on the date of the target
+% event, and the previous anniversary date of the event.
+%    \begin{macrocode}
+            nYears=otherYear-targetYear;
+            lengthOfYears=oTimer.target-tOtherAnnivDate;
+%    \end{macrocode}
+% We have reached the anniversary date in the current date. \texttt{nYears}
+% is based on the current year and the year of the target vent.
+%    \begin{macrocode}
+        } else {
+            nYears=thisYear-targetYear;
+            lengthOfYears=oTimer.target-tCurrAnnivDate;
+        }
+    } else {// _delta>=0
+        if ( Clock > tCurrAnnivDate ) {
+%    \end{macrocode}
+% We have passed the most recent anniversary in this year, so number of years
+% between the current date and the target event (which is in the future) is based
+% on the \texttt{otherYear} (the next anniversary date) and the target year.
+%    \begin{macrocode}
+            nYears=targetYear-otherYear;
+            lengthOfYears=oTimer.target-tOtherAnnivDate;
+        } else {
+%    \end{macrocode}
+% We have not passed the anniversary in this year, so number of years
+% between the current date and the target event (which is in the future) is based
+% on the \texttt{thisYear} and the target year.
+%    \begin{macrocode}
+            nYears=targetYear-thisYear;
+            lengthOfYears=oTimer.target-tCurrAnnivDate;
+        }
+    }
+%    \end{macrocode}
+% Now we subtract out the number of years (in milliseconds) from the difference
+% in time between the event and the current time.
+%    \begin{macrocode}
+    _delta-=lengthOfYears;
+    pYears=Math.abs(_delta);
+    return {
+        nYears:nYears,
+        pYears:pYears,
+        delta:_delta
+    };
+}
+function lStartTimer(oTimer) {
+    var cTimer=oTimer.name;
+    oTimer.target=pdfDate2oDate(oTimer.pdfdate).getTime();
+    var bWasNotified=oTimer.bNotify4;
+    var _delta=oTimer.target-new Date();
+    oTimer.lastSignDelta=(_delta<0)?-1:1;
+    if ( _delta > 0 ) {
+        oTimer.bNotify1=(_delta<oTimer.notify1);
+        oTimer.bNotify2=(_delta<oTimer.notify2);
+        oTimer.bNotify3=(_delta<oTimer.notify3);
+    } else {
+        oTimer.bNotify4=true;
+        oTimer.bNotify5=(-1*_delta>oTimer.notify5);
+        oTimer.bNotify6=(-1*_delta>oTimer.notify6);
+        oTimer.bNotify7=(-1*_delta>oTimer.notify7);
+    }
+%    \end{macrocode}
+% On start up, if the target event has  not been notified, we fire up
+% the main event.
+%    \begin{macrocode}
+    if (!bWasNotified&&oTimer.bNotify4) {
+        var f=this.getField(cTimer+".lcntdwn.timeToFromEvent");
+        if (f!=null) f.textColor=oTimer.endtimecolor;
+        eval(oTimer.eventhandler)(this,cTimer,4);
+    }
+%    \end{macrocode}
+% If we start the timer and we have already passed the main event, and we
+% are to stop on end, we put in the final message, and do not start the counter.
+%    \begin{macrocode}
+    if (_delta<0&&oTimer.weStopOnEnd) {
+        f.value=oTimer.endMsg;
+        return;
+    }
+    oTimer.timeout=app.setInterval(%
+"lngcntdwn(\""+cTimer+"\")",oTimer.refreshrate);
+}
+function lcntdwnPause(oTimer) {
+    try { app.clearInterval(oTimer.timeout);
+        oTimer.timeout=null; } catch(e){};
+}
+function lcntdwnToggle(oTimer) {
+    if (oTimer.timeout==null) // stopped or paused
+        lStartTimer(oTimer);
+    else
+        lcntdwnPause(oTimer);
+}
+function _NoOpt(doc,cTimer,nEvent){}
+%    \end{macrocode}
+% \subsection{JavaScript to control a clock}
+% Controls for the clock
+%    \begin{macrocode}
+function lngClockHandler(cTimer) {
+    var oTimer=aTimers[cTimer];
+    var Clock = new Date();
+    if ( oTimer.tzoffset != "" ) {
+        var localTime = Clock.getTime();
+        var localOffset = Clock.getTimezoneOffset()*60000;
+        // obtain UTC time in msec
+        var utc = localTime + localOffset;
+        var tzoffset=(oTimer.tzoffset=="Z")?0:oTimer.tzoffset;
+        var nonlocal=utc+oTimer.tzoffset;
+        Clock = new Date(nonlocal);
+    }
+    this.delay=true;
+    eval(oTimer.timedateFunc)(Clock,cTimer);
+    this.dirty=false;
+    this.delay=false;
+}
+function clStartTimer(oTimer) {
+    var tzoffset=oTimer.tzoffset;
+    if ( tzoffset !="" && tzoffset !="Z" ) {
+        var sign=tzoffset.charAt(0);
+        offset=tzoffset.substring(1);
+        var a=tzoffset.split("'");
+        var hrs=Number(a[0]);
+        var mins=Number(a[1]);
+        tzoffset=hrs*3600000+mins*60000;
+        tzoffset=((sign=="+")?1:-1)*tzoffset;
+        oTimer.tzoffset=tzoffset;
+    }
+    var cTimer=oTimer.name;
+    oTimer.timeout=app.setInterval(%
+"lngClockHandler(\""+cTimer+"\")",oTimer.refreshrate);
+}
+function clockToggle(oTimer) {
+    if (oTimer.timeout==null) // stopped or paused
+        clStartTimer(oTimer);
+    else
+        lcntdwnPause(oTimer);
+}
+\end{newsegment}
+\end{insDLJS*}
+%    \end{macrocode}
+%    \begin{macrocode}
+%</lngcnt>
+%<*package>
+%</package>
+%    \end{macrocode}
+%  \Finale
+\endinput

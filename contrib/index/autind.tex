@@ -1,0 +1,131 @@
+\documentclass{article}
+
+\newcommand*{\email}[1]{$\langle$\texttt{#1}$\rangle$}
+
+\newcommand{\BibTeX}{\textsc{Bib}\TeX}
+
+\begin{document}
+
+\title{Preliminary thoughts on automatic author indexing with \BibTeX\
+and \texttt{index.sty}}
+
+\author{David M. Jones}
+
+\date{September 28, 1995}
+
+\maketitle
+
+\begin{abstract}
+
+A method for automically indexing the names of authors in a
+bibliography is described.  The ideas presented here were developed in
+conjunction with Berwin A. Turlach \email{berwin@core.ucl.ac.be} in
+Spring 1994, but he has not seen the current writeup and is not
+responsible for its contents.
+
+\end{abstract}
+
+When producing a name index, one typically wants to include entries
+for all authors mentioned in the bibliography, as well entries for
+each point in the text where an item of the bibliography is cited.  It
+would obviously be useful if this stage of the index compilation could
+be automated.  This note sketches a procedure for doing this using
+\BibTeX\ and \texttt{index.sty}.  There are essentially two parts:
+modifying the BST file to produce appopriate indexing information in
+the BBL file, and modifying the \verb+\cite+ command to make use of
+this information.
+
+The BST file should produce something like
+\begin{verbatim}
+    \bibitem{Adamowicz92}
+    \authorindexentries{Adamowicz92}{\do{Adamowicz, Zofia}}
+    Zofia Adamowicz.
+\end{verbatim}
+
+Then \verb+\authorindexentries+ could both execute its argument to
+produce index entries for the bibliography and also store the index
+entries for later retrieval by the \verb+\cite+ command.  This
+requires two new functions and a slight modification of one old
+function (\verb+output.bibitem+):
+\begin{verbatim}
+    FUNCTION {format.name.index.entry}
+    {
+        "\do{"
+        s nameptr "{vv~}{ll}{, jj}{, ff}" format.name$
+        duplicate$ purify$ swap$ "@" swap$ * *
+        "}" * *
+    }
+
+    FUNCTION {format.author.index.entries}
+    {
+        author empty$
+            'skip$
+            { 
+                author 's :=
+                #1 'nameptr :=
+                s num.names$ 'numnames :=
+                "\authorindexentries{"
+                cite$ * 
+                "}{" *
+                numnames 'namesleft :=
+                { namesleft #0 > }
+                { format.name.index.entry *
+                    nameptr #1 + 'nameptr :=
+                    namesleft #1 - 'namesleft :=
+                }
+                while$
+                "}" * write$
+                newline$
+            }
+        if$
+    }
+
+    FUNCTION {output.bibitem}
+    { newline$
+      "\bibitem{" write$
+      cite$ write$
+      "}" write$
+      newline$
+      format.author.index.entries % modification
+      ""
+      before.all 'output.state :=
+    }
+\end{verbatim}
+These can be inserted into the bst file after the definition of
+\verb+format.names+.  (\verb+output.bibitem+ has to be moved from it's
+position earlier in the file.)
+
+A minimal definition of \verb+\authorindexentries+ can be found in the
+accompanying file \texttt{autind.sty}.
+
+The fun part is trying to modify the \verb+\cite+ command without
+assuming too much about how it is defined.  It would be nice if we
+could just type something like
+\begin{verbatim}
+    \adjustcitation\cite
+    \adjustcitation\citeasnoun
+\end{verbatim}
+and then have \verb+\cite+ and \verb+\citeasnoun+ automatically add
+the appropriate author index entries.  Assuming that the commands
+behave like the standard \LaTeX\ \verb+\cite+ command (i.e., they take
+one optional argument and one required argument, which is a list of
+citekeys), the \verb+\adjustcitation+ macro in \texttt{autind.sty} more
+or less does the job.
+
+The only other macro needed is \verb+\authorindex@cite+, which pulls
+in the author index entries from the appropriate
+\verb+\authorindexentries+ command.  This macro is also found in \texttt{autind.sty}.
+
+I've tried this approach on \texttt{plain.bst} and the standard
+\LaTeX\ \verb+\cite+ command and also on the \verb+\cite+ and
+\verb+\citeasnoun+ commands in \texttt{harvard.sty}, and it seems to
+work.  The accompanying files \texttt{plaintst.tex},
+\texttt{agsmtst.tex}, \texttt{test.bib}, \texttt{xplain.bst}, and
+\texttt{xagsm.bst} demonstrate the procedure.
+
+More testing is needed, but unless there's some major flaw that I'm
+overlooking, this should work with any citation commands that aren't
+too different from the standard \verb+\cite+ command and with any
+bibliography files that aren't too different from the standard styles.
+
+\end{document}

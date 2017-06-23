@@ -1,0 +1,991 @@
+\documentclass[12pt]{article}
+\usepackage{cm-lingmacros, lingtrees, avm,url}
+
+\def\bk{$\backslash$}
+
+\def\pstricks{PSTricks}
+\def\texlatex{\TeX/\LaTeX}
+
+\begin{document}
+\begin{center}
+{\Large\bf Linguistics Trees Preprocessor}\\
+\medskip
+{\large\bf Avery Andrews}\\
+\medskip
+v. 3.0 ({\tt pst-nodes} based)\\
+March, 2006
+\end{center}
+\medskip
+
+Consider the tree shown in \ex{1} drawn from Newmeyer (1986) following GKPS:
+
+\begin{example}
+\sisterskip=1.2em
+\hspace*{-1.8em}\small
+.[
+S
+  NP
+    that book|tri
+  {S/NP}
+    NP
+      I
+    {VP/NP}
+      V
+        want
+      {VP/NP}
+        to
+        {VP/NP}\sistergap{0em}
+          V
+            ask
+          NP
+            Mary
+          {VP/NP}
+            to
+            {VP/NP}\sistergap{0em}
+              V
+                tell
+              NP
+                Tom
+              {VP/NP}
+                to
+                {VP/NP}\sistergap{0em}
+                  V
+                    read
+                  {NP/NP}
+                    e
+.]
+\end{example}
+This would require some drama to do by hand, but the {\sf LingTrees}
+package provided here makes it reasonably easy.
+
+The package consists of a preprocessor that converts an indented
+list tree format into \LaTeX\ input (plain {\TeX} doesn't seem to work),
+and some macro files which lay out the trees and draw the
+lines.  There are currently two possibilities for the line-drawing,
+one a partial emulation and extension of Emma Pease's {\sf tree-dvips}
+based on the powerful graphics package {\pstricks} (the default), and the
+the other the original {\sf tree-dvips}, in case there is a problem with
+using {\pstricks}.  Some of the more advanced features won't work with
+{\sf tree-dvips}; these are noted as they come up below.
+
+This package is probably most suited for irregularly-branching trees with
+wide node-labels, as found in LFG or HPSG.  Some other
+packages worth looking at are {\sf pst-jtree} (John Frampton),
+{\sf qtree} (Jeffrey Siskind and Alexis Dimitriadis), {\sf xytree}
+(Koaunghi Un), and for unusual situtations,
+the {\sf pst-tree} module of {\pstricks} (which is oriented towards
+tree-like structures in mathematics, rather than linguistics, and can
+do wierd things such as change the direction of the branching in
+the middle of the tree).
+
+\section{Setup}
+The current version of the preprocessor is a Python script {\tt trees.py}.\footnote
+ {The original was written in C; a slightly modified version of the
+ source can be found on Chris Manning's (La)TeX web-page
+ \url{http://nlp.stanford.edu/~manning/tex/}.}
+For Windows (98 thru XP), there is a free-standing executable with installer
+that doesn't require Python to be installed that can be downloaded from
+\url{http://arts.anu.edu.au/linguistics/People/AveryAndrews/Software/latex}.\\
+%
+% utter bitch of a line-break here!
+%
+Most Linux distros and later versions of MacOS will have an adequate
+version of Python included (the preprocessor works for at least Python 1.5.2 thru
+Python 2.4.2).  Otherwise, Python will have to be installed.  Instructions
+for installing and running {\tt trees.py} under various OS's
+can be found in the file \verb&00_readme.txt&.
+
+At the above URL there are also links to the `TreeRunner' GUI for
+running the preprocessor and other {\LaTeX} components, which I find
+to be a useful alternative to setting up a {\tt make} file for small projects.
+
+The macro files are {\sf lingtrees.sty}, {\sf pst-tree-dvips-emu.sty}
+and {\sf trees-without-pstricks.sty}; they will have to be put whereever
+you put custom {\texlatex} files (\verb&c:\localtexmf\tex\latex& for
+MikTeX).  You'll also need the {\pstricks} package
+(including the {\sf pst-nodes} module), and {\sf tree-dvips} if you're planning
+to use that, both available on CTAN and included in many {\texlatex} distributions.
+If you have to install either of these yourself, note that they include files
+with the extension {\tt .pro} defining special commands for PostScript; these
+must be put somewhere where the {\sf dvips} program can see them
+({\tt localtexmf/dvips} in MiKTeX).
+
+\section{Basic Usage}
+The document needs to load the {\sf lingtrees.sty} style file, with a line like
+this before the \verb&\begin{document}&:
+\begin{example}
+\begin{verbatim}
+\usepackage{lingtrees}
+\end{verbatim}
+\end{example}
+This will load up the {\pstricks}-based implementation, to use the
+old {\sf tree-dvips}-based one instead, use {\tt lingtrees-without-pstricks}
+instead.
+
+In the document, a tree begins with \verb+.[+, ends with \verb+.]+, and has each
+node represented by a line of text, where
+nesting is indicated by increasing depth of embedding, so that sisters
+must be indented equally, i.e.:
+\begin{example}
+\begin{verbatim}
+ .[
+ S
+    NP
+      John
+    VP
+      V
+        bit
+      NP
+        Fido
+ .]
+\end{verbatim}
+\end{example}
+Blank lines are not allowed, and error messages will be
+triggered by various kinds of discrepancies, although
+there are plenty of ways of getting the wrong output without
+producing an error message, so the results need to be checked
+carefully.
+
+After running the preprocessor, you run \LaTeX.  Many current {\tt .dvi}
+viewers can then show the lines, at least in simple cases, but:
+\begin{examples}
+\item some drawn lines get wrongly obliterated by other material
+\item some things aren't positioned correctly
+\end{examples}
+So if you really
+want to be sure that you're seeing how it's going to be, you'll need to run
+{\tt dvips} and look at it with a postscript viewer.  The TreeRunner GUI can
+launch these automatically.
+
+The result of the above tree is:
+\begin{example}
+.[
+S
+   NP
+     John
+   VP
+     V
+       bit
+     NP
+       Fido
+.]
+\end{example}
+A complete file of this example can be found in {\tt examples/simple.txp}.
+
+\section{Work Methods}
+The method used above is to have your source document be say {\tt paper.txp},
+and run the preprocessor every time you change the text.  I personally don't
+tend to do things this way, since I find it alarming to have anything
+overwriting big files with the extension {\tt .tex}.  So an alternative
+method is to
+put all of the trees in a file of their own, with a name ending in
+{\tt \_trees.tex}, and then use the preprocessor's {\tt .>}
+directive to send the output of the next tree to the filename coming
+after the {\tt .>} (on the same line).  So that if for example the
+preprocessor encounters the line {\tt .> trees/firsttree.tex}, then
+the following tree gets written to the file {\tt trees/firsttree.tex} (and the
+material in between the {\tt .>}-line and the start of the tree, but
+nothing after the tree).  Then you use a \verb%\input trees/firsttree.tex%
+statement in your
+document to include the tree (I find it tidy to put them in a subfolder).
+This works nicely if you're the sort of person who rarely gets around
+to setting up makefiles for writing projects (since you only have to
+run the preprocessor when you change a tree, which is really not that
+often, in practice).  The technique is also useful for keeping trees
+synchronized  between a paper
+and a handout or presentation.  To send more than the next tree to
+a specific file, use {\tt .>> [filename]}; output will then go
+to file name until either the next {\tt .>>} directive, or a {\tt .<<}
+directive, which reverts the output to the default output file.
+
+These possibilites are illustrated in {\tt examples/outputfiles\_trees.txp},
+which makes the trees for {\tt examples/outputfiles.tex}.  Using
+{\tt .>} after {\tt .>>} will produce an error message.  Summing up the
+preprocessor directives, they are:
+\begin{example}
+\begin{tabular}[t]{lcl}
+{\tt .[} &:& begin a tree\\
+{\tt .]} &:& end a tree\\
+{\tt .-} &:& continuation line (see below)\\
+{\tt .>} {\it file} &:& write next tree to {\it file}\\
+{\tt .>>} {\it file} &:& write following material until {\tt .<<} to {\it file}\\
+{\tt .<<} &:& stop writing to file
+\end{tabular}
+\end{example}
+
+
+\section{Line-drawing Options}
+Line-drawing options are separated from the node label and each other by a vertical bar
+(`$\mid$').  There are currently five basic ones which will work with
+either the {\pstricks} or {\tt tree-dvips} as the line-drawer, the last
+three mutually exclusive:\footnote
+ {And due to Chris Manning.}
+\begin{examples}
+\item {\tt tag TAG}, where TAG is any alphabetic string,
+sets TAG as the tag of the node, for later use by
+custom line-drawing commands.
+\item {\tt tri} connects the node to its mother with a `triangle of laziness'.
+\item {\tt none} causes the line to the mother to be omitted
+\item {\tt dash} causes the line to the mother to be dashes
+\item {\tt dot} causes the line to the mother to be dotted
+   its mother
+\end{examples}
+Here's a sample illustrating some of the options:
+\newpage
+\begin{examples}
+\item
+\begin{verbatim}
+  .[
+   S
+    NP
+       the puppy|tri|tag a
+    VP
+      V|dot
+         barked|tag b
+  .]
+\abarnodeconnect ab
+\end{verbatim}
+\item
+.[
+ S
+  NP
+     the puppy|tri|tag a
+  VP
+    V|dot
+       barked|tag b
+.]
+\abarnodeconnect[1ex] ab
+\end{examples}
+Some more advanced possibilities will be illustrated later.
+
+\section{Node-Building Options}
+There are various options for controlling the spacing and style
+of nodes.
+\subsection{Spacing}
+Sometimes the default spacing produces not-so-good results.  For example
+the vanilla input (b) below produces the too-wide-and-spread-out result
+(a):
+\begin{examples}
+\item
+.[
+S
+ NP
+   the annoying child|tri
+ VP
+    V  
+       V
+          ran
+       Prt
+          away
+    PP
+       from the crazed puppy|tri
+.]
+\newpage
+\item
+\begin{verbatim}
+ .[
+ S
+  NP
+    the annoying child|tri
+  VP
+     V  
+        V
+           ran
+        Prt
+           away
+     PP
+        from the crazed puppy|tri
+ .]
+\end{verbatim}
+
+\end{examples}
+We can make it look better by increasing the vertical mother-daughter
+spacing by setting the \verb&\daughterskip& dimension, and decreasing the
+horizontal spacing between sisters with the \verb&\sisterskip& dimension:
+\begin{examples}
+\item
+\daughterskip=3ex
+\sisterskip=1em
+.[
+S
+ NP
+   the annoying child|tri
+ VP
+    V  
+       V
+          ran
+       Prt
+          away
+    PP
+       from the crazed puppy|tri
+.]
+\item
+\begin{verbatim}
+\daughterskip=3ex
+\sisterskip=1em
+ .[
+ S
+  NP
+    the annoying child|tri
+  VP
+     .
+     .
+     .
+ .]
+\end{verbatim}
+\end{examples}
+This is a bit better, but the triangles are still too flat, and there's a bit
+too much space between the subject NP node and the top V.
+These problems can be addressed with the \verb&\daughtergap& command,
+placed somewhere in a node to set the vertical spacing to its
+daughters, and the \verb&\sistergap& command, placed somewhere in a node
+to set the spacing between it and its \emph{preceeding} daughter:
+\begin{examples}
+\item
+\daughterskip=3ex
+\sisterskip=1em
+.[
+S
+ NP\daughtergap{4ex}
+   the annoying child|tri
+ VP\sistergap{0em}
+    V  
+       V
+          ran
+       Prt
+          away
+    PP\daughtergap{5ex}
+       from the crazed puppy|tri
+.]
+\item
+\begin{verbatim}
+\daughterskip=3ex
+\sisterskip=1em
+ .[
+ S
+  NP\daughtergap{4ex}
+    the annoying child|tri
+  VP\sistergap{0em}
+     V  
+        V
+           ran
+        Prt
+           away
+     PP\daughtergap{5ex}
+        from the crazed puppy|tri
+ .]
+\end{verbatim}
+\end{examples}
+
+\subsection{Nodes without Labels}
+Sometimes we want at least some nonterminal nodes to lack labels.
+Such trees look rather bad unless the lines all make constant
+angles, which can be effected with the \verb&\treeslantratio{rise/run}&
+command:
+\begin{examples}
+\item
+\treeslantratio{4/10}
+.[
+{}
+   {}
+      the
+      dog
+   {}\sistergap{-1em}
+      {}
+          freaked
+          out
+      {}
+         at
+         {}
+            the
+            cat
+.]
+\item
+\begin{verbatim}
+  \treeslantratio{4/10}
+  .[
+  {}
+     {}
+        the
+        dog
+     {}\sistergap{-1em}
+        {}
+            freaked
+            out
+        {}
+           at
+           {}
+              the
+              cat
+  .]
+\end{verbatim}
+\end{examples}
+This works by seizing control of the vertical spacing, so
+that \verb&\daughterskip& ceases to have any effect.
+
+Some trees look also look better with the length of the lines
+kept mostly uniform, which can be achieved by setting the
+\verb&\nodewidth& dimension, which causes all nodes to be treated
+as having the value of that dimension as their width:
+\begin{examples}
+\item
+\nodewidth=6em
+\treeslantratio{7/20}
+\sisterskip=1em
+.[
+{}
+   John
+   {}
+      thinks
+      {}
+         that
+         {}
+            Suzie
+            {}
+               wants
+               {}
+                  to
+                  {}
+                     kill
+                     him
+.]
+\item
+\begin{verbatim}
+  \nodewidth=6em
+  \treeslantratio{7/20}
+  \sisterskip=1em
+  .[
+  {}
+     John
+     {}
+        thinks
+        {}
+           that
+           {}
+              Suzie
+              {}
+                 wants
+                 {}
+                    to
+                    {}
+                       kill
+                       him
+  .]
+\end{verbatim}
+\end{examples}
+To my eye, the final branch looks a bit too wide; we can fix
+this by using the \verb&dtwidths& preprocessor command to
+set a different width for the daughters of some of the nodes
+near the bottom.  It takes a bit of fiddling to make things
+look nice:
+\begin{examples}
+\item
+\nodewidth=5em
+\treeslantratio{7/20}
+.[
+{}
+   John
+   {}
+      thinks
+      {}
+         that
+         {}
+            Suzie
+            {}|dtwidths 4.5em
+               wants
+               {}|dtwidths 3.5em
+                  to
+                  {}|dtwidths 3em
+                     kill
+                     him
+.]
+\item
+\begin{verbatim}
+  \nodewidth=5em
+  \treeslantratio{7/20}
+  .[
+  {}
+     John
+     {}
+        thinks
+        {}
+           that
+           {}
+              Suzie
+              {}|dtwidths 4.5em
+                 wants
+                 {}|dtwidths 3.5em
+                    to
+                    {}|dtwidths 3em
+                       kill
+                       him
+  .]
+\end{verbatim}
+\end{examples}
+Fixed width nodes can easily result in labels overlapping each
+other; one way to deal with this is to emulate the {\sf pst-jtree}
+\verb&\longer& command by putting in a right-branch with a nolabel
+node and no line:
+\begin{examples}
+\item
+\hspace{4em}
+\nodewidth=5em
+\treeslantratio{7/20}
+.[
+{}
+    {}
+        {}
+           the
+           {}
+             cheese
+             {}
+              that
+              {}
+                 Fred
+                 {}
+                    ate
+                    t
+        {}|none
+    {}
+        is
+        rotten
+.]
+\newpage
+\item
+\begin{verbatim}
+  \hspace{4em}
+  \nodewidth=5em
+  \treeslantratio{7/20}
+  .[
+  {}
+      {}
+          {}
+             the
+             {}
+               cheese
+               {}
+                that
+                {}
+                   Fred
+                   {}
+                      ate
+                      t
+          {}|none
+      {}
+          is
+          rotten
+  .]
+\end{verbatim}
+\end{examples}
+
+\subsection{Stacking}
+For writing LFG papers, there is a facility for `stacking' labels
+and annotations, by separating the things to be stacked with the
+`{\tt /}' symbol.  So for an annotated tree we can write:
+\begin{example}
+\begin{verbatim}
+ .[
+ S
+   ($\uparrow$ SUBJ)=$\downarrow$/NP
+     $\uparrow=\downarrow$/N
+       ($\uparrow$ PRED)=`Fido'/Fido
+   $\uparrow=\downarrow$/VP
+     $\uparrow=\downarrow$/V
+        ($\uparrow$ TENSE)=PAST/($\uparrow$ PRED)=`Bark(SUBJ)'/barked
+ .]
+\end{verbatim}
+\end{example}
+which produces:
+\begin{example}
+.[
+S
+   ($\uparrow$ SUBJ)=$\downarrow$/NP
+     $\uparrow=\downarrow$/N
+       ($\uparrow$ PRED)=`Fido'/Fido
+   $\uparrow=\downarrow$/VP
+     $\uparrow=\downarrow$/V
+        ($\uparrow$ TENSE)=PAST/($\uparrow$ PRED)=`Bark(SUBJ)'/barked
+.]
+\end{example}
+To include {\tt /} in the text, enclose it in braces.
+
+\subsection{Node Styles}
+The default is that the bottom line of a terminal nodes is set in italics,
+other things  in roman.  If you want the terminals to be, say slanted rather than
+italics, you can do this by redefining \verb%\tstyle% as follows:
+\verb%\def\tstyle{\sl}%.  Similarly using \verb&\rm& if you want them
+to be set in roman.  The nonterminal style can be changed
+with the same kind of redefinition of \verb%\ntstyle%.
+
+A more profound effect on nodes (which didn't used to work right)
+can be achieved by redefining the \verb%\nodeannotation#1{}%
+command, which is wrapped around each line in a stack (the same for
+terminal and nonterminal).  The default definition is:
+\begin{example}
+\begin{verbatim}
+\gdef\nodeannotation#1{#1}
+\end{verbatim}
+\end{example}
+But if you want to set each line of each node in math mode, without
+having to write in lots of \$'s, you can do it by redefining
+\verb%\nodeannotation% as follows:
+\begin{example}
+\begin{verbatim}
+\def\nodeannotation#1{$#1$}
+\end{verbatim}
+\end{example}
+
+For a more likely use, which can involve a new preprocessor feature
+as well, suppose you want to set trees whose nodes are avms, as
+produced by Christopher Manning's {\sf avm.sty} file.  If all of
+the nodes are going to be avms, we can spare ourselves the annoyance
+of typing out lots of \verb%\begin{avm}% and \verb%\end{avm}% commands
+by redefining \verb%\nodeannotation%:
+\begin{example}
+\begin{verbatim}
+\def\nodeannotation#1{\begin{avm}#1\end{avm}}
+\end{verbatim}
+\end{example}
+The one-node-per line convention of {\tt trees.py} is irksome
+for something like a complex avm, so there's a new `continuation
+line' directive; if a line in a tree begins with {\tt .-}, then
+it's interpreted as a continuation of the one before it:
+
+So using all this, example (12) from page 121 of Wechsler and Zlati\'{c}
+(2003) {\it The Many Faces of Agreement} (CSLI Publications) can
+be set like this:
+\begin{examples}
+\item
+\begin{verbatim}
+\def\nodeannotation#1{\begin{avm}#1\end{avm}}
+\def\tstyle{\rm}
+ .[
+ NP\[ HEAD & \@1\]\daughtergap{4ex}
+   \@2AP
+      ovih/these.GEN.PL
+   N$'$\[HEAD & \@1\]
+      N\[HEAD & \@1\\
+ .-      SPR  & \<\@2\>\\
+ .-      COMPS& \<\@3\>\]
+         pet/five
+      \@3NP\daughtergap{3ex}
+         studenata/students.GEN.PL|tri
+ .]
+\end{verbatim}
+\item
+\def\nodeannotation#1{\begin{avm}#1\end{avm}}
+\def\tstyle{\rm}
+.[
+NP\[ HEAD & \@1\]\daughtergap{4ex}
+  \@2AP
+     ovih/these.GEN.PL
+  N$'$\[HEAD & \@1\]
+     N\[HEAD & \@1\\
+.-      SPR  & \<\@2\>\\
+.-      COMPS& \<\@3\>\]
+        pet/five
+     \@3NP\daughtergap{3ex}
+        studenata/students.GEN.PL|tri
+.]
+\end{examples}
+Note that the stacking facility proved useful for HPSG as well as LFG,
+and that the fact that all nodes were set as avm's doesn't matter,
+since {\sf avm.sty} doesn't do anything until it encounters one of
+its commands.
+
+\section{{\pstricks}-based techniques}
+The use of {\pstricks} enables a substantial assortment of further
+possibilities.  {\sf lingtrees.sty} uses the {\sf pst-nodes} module
+of {\pstricks} via a partial emulation of {\sf tree-dvips}, provided
+by {\sf pst-tree-dvips-emu.sty}, which has its own included documentation
+{\sf pst-tree-dvips-emu.doc.pdf}.  In combination with {\sf lingtrees},
+you can combine techniques from the emulator (somewhat more convenient
+for certain linguistics tasks) and {\pstricks} itself (much more
+powerful).
+
+\subsection{More Line-Drawing Options}
+The easiest is {\tt dotted}, which gives {\pstricks}-style round
+dots instead of very short dashes:
+\begin{examples}
+\item
+\begin{verbatim}
+  .[
+  S
+     NP
+        the dog|tri|dotted
+     VP
+        V|dotted
+           barked
+  .]
+\end{verbatim}
+\item
+.[
+S
+   NP
+      the dog|tri|dotted
+   VP
+      V|dotted
+         barked
+.]
+\end{examples}
+Dots seem to be almost invisible with the usual {\sf lingtrees} line
+thickness, so they're set a bit thicker with the dimension {\tt treedotwidth},
+which is set to 0.6pt in {\sf lingtrees.sty}.
+
+Any \verb&\psset&-able property of the connecting line can be set with the {\tt style}
+option: what comes after `{\tt style}' must be an OK argument of
+\verb&\psset&.  For example:
+\begin{examples}
+\item
+.[
+S
+   NP
+      the dog
+   VP\daughtergap{4ex}
+      V|dash|style dash=3pt 3pt, arrows=->
+         barked
+.]
+\item
+\begin{verbatim}
+  .[
+  S
+     NP
+        the dog
+     VP\daughtergap{4ex}
+        V|dash|style dash=3pt 3pt, arrows=->
+           barked
+  .]
+\end{verbatim}
+\end{examples}
+
+The {\tt after} option is followed by any well-formed string of
+{\LaTeX} text, which appears in the output
+after the node connection command.  This is especially
+useful for using the {\pstricks} label-positioning commands, which
+appear after the command drawing the lines they are to attach
+labels to.  Here's an example where we use these to attach Greek letter
+labels to some of the lines:
+\begin{examples}
+\item
+.[
+S
+   NP|after \lput{U}(.2){\rput(-1.2em,.3ex){$\sigma$}}
+      the dog|tri
+   VP|after \lput{U}(.2){\rput(1.2em,.3ex){$\pi$}}
+      V|after \lput{U}{\rput(.8em,0ex){$\alpha$}}
+         barked|after \lput{U}(.3){\rput(.8em,0ex){$\lambda$}}
+.]
+\item
+\begin{verbatim}
+  .[
+  S
+     NP|after \lput{U}(.2){\rput(-1.2em,.3ex){$\sigma$}}
+        the dog|tri
+     VP|after \lput{U}(.2){\rput(1.2em,.3ex){$\pi$}}
+        V|after \lput{U}{\rput(.8em,0ex){$\alpha$}}
+           barked|after \lput{U}(.3){\rput(.8em,0ex){$\lambda$}}
+  .]
+\end{verbatim}
+\end{examples}
+It is a bit tricky to get the positions right, but I think that
+it's easier to position them relative to the lines than to the
+nodes.
+
+My {\tt .dvi} viewer (Yap) doesn't get the positions of things placed by
+{\tt lput} right, so check the results in postscript if things look wrong.
+
+The {\tt none} and {\tt after} options together can be used to
+entirely replace the line-drawing command that the preprocessor
+normally produces, but a slightly more convenient option
+is {\tt connect}, whose following material is put in
+place of the usual line-drawing command (\verb&\nodeconnect&),
+in front of the mother and daughter arguments.  So with
+a {\tt connect} option such as \verb&\nodeconnect<\pccoil>&,
+(see {\sf pst-tree-dvips-emu.doc.pdf}),
+you could replace a normal line with a coil.
+
+A final preprocessor option is \verb &|width&, followed by a dimension,
+which sets the width of a particular node, rather than its daughters.
+
+\subsection{Together with {\pstricks}}
+A major reason for using {\pstricks} as the basis is to be able to combine
+the powerful facilities of the latter with the convenience of the tree-formatter
+and the {\sf tree-dvips} commands it uses.  For example, one can produce something
+like this, where {\pstricks} allows loops to be drawn around sets of nodes,
+and labels to be attached to arrows:
+\newpage
+\begin{example}
+\makebox[0ex]{}\\[5ex]
+\hspace*{-1.8em}
+\sisterskip=1.3em
+.[
+S|tag s
+   NP|tag su
+      Det|tag sud
+         the
+      N|tag sun
+         dog
+   VP|tag vp
+      V|tag v
+         chased
+      NP\sistergap{2.5em}|tag ob
+        Det|tag obd
+          the
+        N|tag obn
+           cat
+.]
+{\SpecialCoor
+% loop around subject
+\putpoint{sutop}{1ex}(90)[t]{su}
+\putpoint{sunrt}{1ex}(-40)[r]{sun}
+\putpoint{sudlt}{1ex}(220)[l]{sud}
+\psccurve(sutop)(sunrt)(sudlt)
+% loop around S, VP V
+\putpoint{stop}{2ex}(120)[t]{s}
+\putpoint{vl}{1ex}(220)[l]{v}
+\putpoint{vpr}{1ex}(-40)[br]{vp}
+\putpoint{vprb}{1ex}(40)[tr]{vp}
+\psccurve(stop)(vl)(vpr)(vprb)
+% loop around object
+\putpoint{obtop}{1ex}(90)[t]{ob}
+\putpoint{obnrt}{1ex}(-40)[r]{obn}
+\putpoint{obdlt}{1ex}(220)[l]{obd}
+\psccurve(obtop)(obnrt)(obdlt)
+%
+\hskip 2em
+\begin{avm}
+\!{f}{\[SUBJ & \!{subj}{\[PRED & `Dog'\\
+          NUM  & SG\\
+          CASE & NOM\]}\\
+  TENSE & PAST\\
+  OBJ & \!{obj}{\[PRED & `Cat'\\
+          NUM & SG\\
+          CASE & ACC\]} \]}
+\end{avm}
+% properties of phi arrows
+\treelinewidth=1pt
+\psset{linestyle=dotted}
+% arrow to whole f-structure
+\anodecurve[tr]{vprb}[l]f
+\mput*{$\phi$}              %label for this
+% arrow to the SUBJ
+\anodecurve[t]{sutop}[tl]{subj}[angleA=60,angleB=145]
+\mput*{$\phi$}
+\anodecurve[br]{obnrt}[bl]{obj}(.9)[angleA=-60]
+\mput*{$\phi$}
+}\vskip 4ex
+\end{example}
+This was produced as follow.  First, the tree, with labels placed on many of the
+nodes (also some preliminary stuff to help the diagram fit into the space
+on the page):
+\begin{example}
+\begin{verbatim}
+\makebox[0ex]{}\\[5ex]
+\hspace*{-1.8em}
+\sisterskip=1.3em
+  .[
+  S|tag s
+     NP|tag su
+        Det|tag sud
+           the
+        N|tag sun
+           dog
+     VP|tag vp
+        V|tag v
+           chased
+        NP\sistergap{2.5em}|tag ob
+          Det|tag obd
+            the
+          N|tag obn
+             cat
+  .]
+\end{verbatim}
+\end{example}
+And then some commands to place points at positions relative to the corners of
+the nodes, and run closed curves through those points.  These begin with
+the {\pstricks} {\tt SpecialCoor} command, which allows a wide range of
+`Special Coordinate' specifications to be used, such as, here, the name
+of a node in parentheses as the specification of a point location:
+\begin{example}
+\begin{verbatim}
+  {\SpecialCoor
+% loop around subject
+\putpoint{sutop}{1ex}(90)[t]{su}
+\putpoint{sunrt}{1ex}(-40)[r]{sun}
+\putpoint{sudlt}{1ex}(220)[l]{sud}
+\psccurve(sutop)(sunrt)(sudlt)
+% loop around S, VP V
+\putpoint{stop}{2ex}(120)[t]{s}
+\putpoint{vl}{1ex}(220)[l]{v}
+\putpoint{vpr}{1ex}(-40)[br]{vp}
+\putpoint{vprb}{1ex}(40)[tr]{vp}
+\psccurve(stop)(vl)(vpr)(vprb)
+% loop around object
+\putpoint{obtop}{1ex}(90)[t]{ob}
+\putpoint{obnrt}{1ex}(-40)[r]{obn}
+\putpoint{obdlt}{1ex}(220)[l]{obd}
+\psccurve(obtop)(obnrt)(obdlt)
+\end{verbatim}
+\end{example}
+The difference between \verb&\putpoint& and the {\pstricks}
+command \verb&\uput& is that \verb&\putpoint& defines the
+`corners' ({\tt tl}, {\tt tr}, {\tt br}, {\tt bl}) and
+`edges' ({\tt t}, {\tt r}, {\tt b}, {\tt l} of the point,
+which are all the same location, but allows the
+{\tt pst-tree-dvips-emu.sty} commands \verb&\(a)nodeconnect&
+and \verb&\(a)nodecurve& to work, and sets the default direction
+of incoming arrows for the latter in accord with the standard
+conventions of {\sf tree-dvips}.
+
+So next we produce the f-structure, done with
+Chris Manning's {\sf avm.sty} package.  In {\sf avm.sty}, the \verb&\!{lab}{stuff}&
+command is an abbreviation inside avm's for \verb&\node{lab}{stuff}&, and it works
+when the nodes are implemented by {\sf pst-tree-dvips-emu.sty} as well as original
+{\sf tree-dvips.sty}:
+\begin{example}
+\begin{verbatim}
+\hskip 2em
+\begin{avm}
+\!{f}{\[SUBJ & \!{subj}{\[PRED & `Dog'\\
+          NUM  & SG\\
+          CASE & NOM\]}\\
+  TENSE & PAST\\
+  OBJ & \!{obj}{\[PRED & `Cat'\\
+          NUM & SG\\
+          CASE & ACC\]} \]}
+\end{avm}
+\end{verbatim}
+\end{example}
+And so all that remains is to draw the arrows from the
+loops to the f-structures (representing the c-structure-
+f-structure correspondence).  One could use the the
+{\pstricks} \verb&\pccurve& command for this, but
+\verb&\anodecurve& is more convenient, although sometimes
+we want to override the default angles for the corners and
+the edges.  After each connection comes a \verb&\mput*&
+command to label the arrow.
+\begin{example}
+\begin{verbatim}
+  % properties of phi arrows
+  \treelinewidth=1pt
+  \psset{linestyle=dotted}
+  % arrow to whole f-structure
+  \anodecurve[tr]{vprb}[l]f
+  \mput*{$\phi$}              %label for this
+  % arrow to the SUBJq
+  \anodecurve[t]{sutop}[tl]{subj}[angleA=60,angleB=145]
+  \mput*{$\phi$}
+  \anodecurve[br]{obnrt}[bl]{obj}(.9)[angleA=-60]
+  \mput*{$\phi$}
+}
+\end{verbatim}
+\end{example}
+I wish I could say it was easy to produce diagrams like
+this with this method, but that would be an untruth.  However
+it is possible, and isn't ridiculously hard.
+
+\section{Availability}
+This package may be found at
+\url{http://arts.anu.edu.au/linguistics/people/AveryAndrews/Software/LaTeX}.
+I plan to submit it to CTAN fairly soon.
+\end{document}

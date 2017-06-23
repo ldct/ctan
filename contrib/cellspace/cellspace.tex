@@ -1,0 +1,539 @@
+% (C) 2006-2009 Josselin Noirel
+% 
+% Package cellspace: Ensuring a minimal spacing of table cells.
+%
+% This material is subject to the LaTeX Project Public License. See
+% http://www.ctan.org/tex-archive/help/Catalogue/licenses.lppl.html .
+%
+\def \tempa $#1 #2 #3 #4 #5 #6 #7 ${%
+  \def \filedate    {#4}%
+  \def \fileversion {v#3}%
+}
+\tempa $Id: cellspace.tex,v 1.6 2009/07/31 09:00:00 noirel Exp $
+\ProvidesFile{cellspace}%
+  [\filedate \space \fileversion \space cellspace documentation (JN)]
+\pdfoutput = 1
+\documentclass[12pt]{ltxdoc}
+
+\usepackage{ifpdf}
+\ifpdf
+  \PassOptionsToPackage{pdftex}{geometry}
+\else
+  \PassOptionsToPackage{dvips}{geometry}
+\fi
+\usepackage[ascii]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper, margin = 1.3in]{geometry}
+\usepackage[math]{cellspace}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{moreverb}
+\usepackage{floatrow}
+  \floatsetup{margins = centering}
+\usepackage{algorithmic}
+\usepackage[british]{babel}
+
+% -----------------------------------------------------------------
+
+\newcommand*{\compare}[2]{%
+  \par \begingroup \trivlist \item \centering
+%%   \parbox[t]{0.5\linewidth}{#1}%
+%%   \parbox[t]{0.5\linewidth}{#2}%
+    \vskip-\baselineskip
+  \makebox[0pt]{%
+    \mbox{#1}%
+    \quad
+    \mbox{#2}%
+  }
+  \endtrivlist \endgroup \par
+}
+\renewcommand*{\meta}[1]{\textnormal{\textlangle \emph{#1}\textrangle}}
+\newcommand*{\pack}{\textsf}
+\newcommand*{\tex}[1]{\texttt{#1}}
+\renewcommand*{\cmd}[1]{\tex{\textbackslash #1}}
+\makeatletter
+\newenvironment*{showexample}{%
+  \par \vskip-\baselineskip
+  \bgroup \obeylines
+  \@showexample
+}{%
+    \endverbatimwrite
+  \endgroup
+  \begingroup
+    \footnotesize
+    \samepage
+    \verbatimtabinput{cellspace.tmp}%
+  \endgroup
+  \nobreak \@nobreaktrue \vskip-\baselineskip \vskip\z@skip
+  \begingroup \@nameuse{\@showexampleenv}%
+    \small
+    \input{cellspace.tmp}%
+  \@nameuse{end\@showexampleenv}\endgroup
+  \par \bigbreak
+  \@endparenv
+}
+\newcommand*{\@showexample}[1][center]{%
+  \egroup
+  \def \@showexampleenv {#1}%
+  \begingroup
+    \verbatimwrite{cellspace.tmp}%
+}
+\makeatother
+
+% -----------------------------------------------------------------
+
+\setlength{\cellspacetoplimit}{2pt}
+\setlength{\cellspacebottomlimit}{2pt}
+\setcounter{secnumdepth}{0}
+\addparagraphcolumntypes{X}
+
+% -----------------------------------------------------------------
+
+\GetFileInfo{cellspace.sty}
+
+\title  {The \pack{cellspace} package}
+\author {Josselin Noirel}
+\date   {\filedate---\fileversion}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  This package is intended to allow automatic spacing out of the lines of
+  an array.  People often complain about text touching the \cmd{hline} of
+  a tabular when it is too high or too deep.  For example (with the
+  \pack{amsmath} package) with \tex{\textbackslash dfrac\{1\}\{2\}}
+  surrounded by \cmd{hline}s.  This package provides a modifier \tex{S} to
+  usual column types (\tex{l}, \tex{c}, \tex{r}, \tex{p}, \tex{m},
+  and~\tex{b}) that ensures a minimal spacing between rules and cells of
+  an array.
+\end{abstract}
+
+\section {Introduction}
+
+The mechanism used by \LaTeX{} to build tables---using struts---has an
+important consequence: the cells of a table that extend too much tend to
+touch horizontal rules.  First example:
+%
+\begin{showexample}
+\begin{tabular}{cc}
+  \hline
+  \itshape Bond &
+  \itshape Distance ($\mathrm{\mathring{A}})$ \\
+  \hline
+  C--C          & $1.53$ \\
+  C--H          & $1.10$ \\
+  \hline
+\end{tabular}
+\end{showexample}
+%
+Second example:
+%
+\begin{showexample}
+\begin{tabular}{c}
+  \hline
+  \itshape Formula \\
+  \hline
+  $\displaystyle
+   e = 1 + \frac{1}{2} + \frac{1}{6}  + \cdots
+                       + \frac{1}{k!} + \cdots $ \\
+  $\displaystyle
+   \pi = 4 \left( 1 - \frac{1}{3} + \frac{1}{5} + \cdots
+                    + \frac{(-1)^k}{2 k + 1}
+                    + \cdots \right)$ \\
+  \hline
+\end{tabular}
+\end{showexample}
+%
+The classical workarounds \cmd{\textbackslash}\oarg{dimen} and
+\cmd{noalign}\tex{\{}\cmd{vspace}\marg{dimen}\tex{\}} are not very powerful
+and need fine tuning.
+
+\section{How to solve this?}
+
+The \pack{cellspace} loads several packages to carry out its job:
+\pack{array}, \pack{ifthen}, and~\pack{calc} (along \tex{amsmath} when
+the option \tex{math} is passed to \tex{cellspace}).  It redefines several
+internals, still not too many (\cmd{@startpbox} and \cmd{@endpbox}).  By
+default, the tables will behave as usual.  To improve the spacing of your
+tables, you must change the table preamble and prepend \tex{S} to the
+column types \tex{l}, \tex{c}, \tex{r}.  The same holds for the paragraph
+columns \tex{p}, \tex{m}, and~\tex{b}, except that they must be surrounded
+by an extra pair of braces.  For instance, the default behaviour of a
+table beginning with
+%
+\begin{verbatim}
+\begin{tabular}{l l l p{3cm}}
+\end{verbatim}
+%
+should be changed into
+%
+\begin{verbatim}
+\begin{tabular}{Sl Sl Sl S{p{3cm}}}
+\end{verbatim}
+
+The \pack{cellspace} has two parameters governing the spacing of the
+cells.  The dimension \cmd{cellspacetoplimit} is the minimal spacing
+required between the actual text the cell is made up of and the top of the
+cell (where \cmd{hline}s may appear), if the spacing is less than this
+threshold, a space of \cmd{cellspacetoplimit} is added, otherwise nothing
+is done. Conversely, at the bottom the dimension
+\cmd{cellspacebottomlimit} is the minimal space required between the
+bottom of the cell and the text itself. This parameters can be changed in
+the document preamble using \cmd{setlength}.  Together with
+\pack{booktabs}, the results look rather good.  \pack{cellspace} may work
+with other column types (defined through \cmd{newcolumntype} for
+instance); it will assume by default that an unknown column is a LR-mode
+column.  Otherwise you have to tell \pack{cellspace} something like
+%
+\begin{verbatim}
+\addparagraphcolumntypes{X}
+\end{verbatim}
+%
+(The previous example is needed to make \pack{tabularx} work with
+\pack{cellspace}.)
+
+The following examples use a setting of $2\,\mathrm{pt}$ for both top and
+bottom space limits.
+%
+\compare{%
+  \begin{tabular}[t]{cc}
+    \hline
+    \itshape Bond &
+    \itshape Distance ($\mathrm{\mathring{A}})$ \\
+    \hline
+    C--C          & $1.53$ \\
+    C--H          & $1.10$ \\
+    \hline
+  \end{tabular}
+}{%
+  \begin{tabular}[t]{Sc Sc}
+    \hline
+    \itshape Bond &
+    \itshape Distance ($\mathrm{\mathring{A}})$ \\
+    \hline
+    C--C          & $1.53$ \\
+    C--H          & $1.10$ \\
+    \hline
+  \end{tabular}
+}
+%
+Some space is added at the top the first row because it doesn't fulfil
+the condition imposed by the package.  Similarly some space is added at
+the bottom of the first row.  It has to be noted, however, that no space
+is added in other rows because they are far enough from the cell
+separations.
+
+\compare{%
+  \begin{tabular}[t]{c}
+    \hline
+    \itshape Formula \\
+    \hline
+    $\displaystyle
+    e = 1 + \frac{1}{2} + \frac{1}{6}  + \cdots
+                         + \frac{1}{k!} + \cdots $ \\
+    $\displaystyle
+     \pi = 4 \left( 1 - \frac{1}{3} + \frac{1}{5} + \cdots
+                      + \frac{(-1)^k}{2 k + 1}
+                      + \cdots \right)$ \\
+    \hline
+  \end{tabular}
+}{%
+  \begin{tabular}[t]{Sc}
+    \hline
+    \itshape Formula \\
+    \hline
+    $\displaystyle
+    e = 1 + \frac{1}{2} + \frac{1}{6}  + \cdots
+                         + \frac{1}{k!} + \cdots $ \\
+    $\displaystyle
+     \pi = 4 \left( 1 - \frac{1}{3} + \frac{1}{5} + \cdots
+                      + \frac{(-1)^k}{2 k + 1}
+                      + \cdots \right)$ \\
+    \hline
+  \end{tabular}
+}
+%
+Here it can be immediately remarked that the `Formula' row has the same
+height in both examples.  Only the formula lines are affected.  The best
+layout is obtained with \pack{booktabs}:
+%
+\compare{%
+  \begin{tabular}[t]{@{} c @{}}
+    \toprule
+    \itshape Formula \\
+    \midrule
+    $\displaystyle
+    e = 1 + \frac{1}{2} + \frac{1}{6}  + \cdots
+                         + \frac{1}{k!} + \cdots $ \\
+    $\displaystyle
+     \pi = 4 \left( 1 - \frac{1}{3} + \frac{1}{5} + \cdots
+                      + \frac{(-1)^k}{2 k + 1}
+                      + \cdots \right)$ \\
+    \bottomrule
+  \end{tabular}
+}{%
+  \begin{tabular}[t]{@{} Sc @{}}
+    \toprule
+    \itshape Formula \\
+    \midrule
+    $\displaystyle
+    e = 1 + \frac{1}{2} + \frac{1}{6}  + \cdots
+                         + \frac{1}{k!} + \cdots $ \\
+    $\displaystyle
+     \pi = 4 \left( 1 - \frac{1}{3} + \frac{1}{5} + \cdots
+                      + \frac{(-1)^k}{2 k + 1}
+                      + \cdots \right)$ \\
+    \bottomrule
+  \end{tabular}
+}
+
+
+The following example shows that how it works with paragraph columns.
+%
+\compare{%
+  \begin{tabular}[t]{p{5cm}}
+    \hline
+    $\displaystyle \frac{1}{2}$
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    $\displaystyle \frac{1}{2}$ \\
+    \hline
+  \end{tabular}
+}{%
+  \begin{tabular}[t]{S{p{5cm}}}
+    \hline
+    $\displaystyle \frac{1}{2}$
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    A A A A A A A A A A A A A A
+    $\displaystyle \frac{1}{2}$ \\
+    \hline
+  \end{tabular}
+}
+
+\section{Matrices}
+
+The package can be loaded with the options \tex{nomath} (default) and
+\tex{math}.  The latter does two things: it first loads the
+\tex{amsmath} package and then redefines
+the command that is invoked when one typesets matrices
+(\tex{\textbackslash env@matrix} --- this improvement was suggested by
+Bastien Roucaries).  The following
+examples illustrate what happens with (left) or without (right)
+\pack{cellspace}'s correction in a \tex{pmatrix} environment.
+%
+\[
+\begingroup
+\makeatletter
+  \def\env@matrix{\hskip -\arraycolsep
+  \let\@ifnextchar\new@ifnextchar
+  \array{*\c@MaxMatrixCols c}}
+\makeatother
+%
+\text{\tex{nomath} option\ }%
+\begin{pmatrix}
++\frac{1}{2} & +\frac{1}{3} \\
+-\frac{1}{3} & +\frac{1}{2} \\
+\end{pmatrix}
+\endgroup
+\qquad
+\text{\tex{math} option\ }%
+\begin{pmatrix}
++\frac{1}{2} & +\frac{1}{3} \\
+-\frac{1}{3} & +\frac{1}{2} \\
+\end{pmatrix}
+\]
+
+As a~consequence, the \tex{amsmath} package can be loaded beforehand
+with other packages (such as \tex{empheq} or \tex{mathtools}), were an
+incompatibility to arise from one's loading it later.
+
+\section{Bugs and limitations}
+
+This package hasn't been heavily tested, so there may be plenty of bugs.
+As usual, bugs will certainly arise in complicated situations because
+tables can become very complicated (for instance, this package hasn't been
+designed with nested tables into mind).  In simple cases however, it should
+work nicely.  The package loads \pack{array} ensuring a peaceful
+collaboration with each other.  Other packages of special interest haven't
+been tested: \pack{tabularx}\footnote{A one minute test seems to indicate
+  that it works provided \pack{tabularx} is loaded after \pack{cellspace}.
+  The example on this page illustrates this.  A thirty second test
+indicates that \pack{cellspace} works correctly with \pack{longtable} as
+long as only LR-mode columns are concerned.} and \pack{longtable} in
+particular.
+%
+\begin{trivlist}\item
+\begin{tabularx}{\linewidth}{l SX}
+  \hline
+  A       & B B B B B B B B \\
+  A A     & B B B B B B B B
+            B B B B B B B B \\
+  A A A A & $\dfrac{1}{2}$B B B B B B B B
+            B B B B B B B B
+            B B B B B B B B
+            B B B B B B B B$\dfrac{1}{2}$ \\
+  \hline
+\end{tabularx}
+\end{trivlist}
+
+\pack{tabls}\footnote{Thanks to Jim Hefferon for pointing this out.} is a
+package that does a similar job than \pack{cellspace}.
+The differences are: \pack{tabls} affects a whole table while
+\pack{cellspace} affects only the columns on which applies the modifier
+\tex{S}.  Each cell affected by \pack{cellspace} is affected in the same
+way: there must be enough space above ($>\cmd{cellspacetoplimit}$) and
+below the text ($>\cmd{cellspacebottomlimit}$), even if no \cmd{hline} is
+present.  In the other hand, \pack{tabls} ensures a minimal distance using
+one threshold parameter \cmd{tablinesep} applying between rows not
+separated by a rule and using a systematic spacer \cmd{arraylinesep} when
+there is a rule (whereas \pack{cellspace} can leave a cell as is if the
+distance to the rule is big enough).  As a last point, \pack{tabls}, as
+far as I can see, cannot work with \pack{array}.
+
+\end{document}
+
+Old documentation:
+
+
+                              DOCUMENTATION
+
+  Abstract - This package is intended to allow automatic spacing out of
+  the lines of an array.  People often complain about text touching the
+  \hline of a tabular when it is too high or too deep.  For example (with
+  the amsmath package) a \dfrac{1}{2} surrounded by \hlines touches the
+  horizontal rules.  Spacing out can be achieved through two mechanims
+
+  1. The optional argument of \\[<dimen>] but <dimen> is not necessarily
+     added it simply ensures that the distance between two rows will be at
+     least the normal depth (\dp\@arstrutbox) plus <dimen>.  It a cell is
+     deeper than this value, no spacing is actually done; furthermore even
+     if some spacing occurs it is not computed according the actual depth,
+     needing a fine tuning by hand by the user.
+
+  2. \noalign{\vspace{<dimen>}} that presents the drawback of breaking out
+     the vertical rules (even though, admittedly, vertical rules are often
+     overused).  Another disadvantage is that it spaces out everytime even
+     when no spacing is needed.  Again, the user has to intervene by hand
+     and check it out before taking any decision.
+
+  We believe a better solution can be easily provided through a modifier
+  of normal column types: S (for spacing of course).  A column l would be
+  now be declared Sl, c becomes Sc, r becomes Sr.  Special care is needed
+  for paragraph columns: p{<dimen>} becomes S{p{<dimen>}}, etc.
+
+  What happens is that if the text inside the column has a height that
+  makes it too close from the top of the cell (more precisely closer than
+  \cellspacetoplimit) then the height of the cell is increased of
+  \cellspacetoplimit.  Conversely, if the depth of a cell makes it too
+  close of the bottom of the cell (more precisely closer than
+  \cellspacebottomlimit), then \cellspacebottomlimit is added to the
+  actual depth to ensure a minimal spacing.  The values of
+  \cellspace{top,bottom}limit can be changed by
+
+    \setlength{\cellspacetoplimit}{<dimen>}
+    \setlength{\cellspacebottomlimit}{<dimen>}
+
+  Actually the modifier S acts very differently depending on if it is
+  working on a LR mode column (l, c, and r) or on a paragraph column
+  (p{<dimen>}, m{<dimen>}, and b{<dimen>}).  If you declare a new column
+  type and use S with it, S will assume that it is a LR mode column.  For
+  a paragraph column type, use in the preamble
+
+    \addparagraphcolumntypes{<paragraph types>}
+
+  Example file
+
+        \documentclass{article}
+
+        \usepackage{cellspace}
+        \usepackage{booktabs}
+
+        \begin{document}
+
+        \begin{tabular}[t]{l}
+          \hline
+          $\displaystyle \frac{1}{2}$ \\
+          \hline
+        \end{tabular}\quad
+        \begin{tabular}[t]{Sl}
+          \hline
+          $\displaystyle \frac{1}{2}$ \\
+          \hline
+        \end{tabular}
+
+        \vspace*{\stretch{1}}
+
+        \begin{tabular}[t]{l}
+          \toprule
+          $\displaystyle \frac{1}{2}$ \\
+          \bottomrule
+        \end{tabular}\quad
+        \begin{tabular}[t]{Sl}
+          \toprule
+          $\displaystyle \frac{1}{2}$ \\
+          \bottomrule
+        \end{tabular}
+
+        \vspace*{\stretch{1}}
+
+        \begin{tabular}[t]{p{5cm}}
+          \hline
+          $\displaystyle \frac{1}{2}$
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          $\displaystyle \frac{1}{2}$ \\
+          \hline
+        \end{tabular}\quad
+        \begin{tabular}[t]{S{p{5cm}}}
+          \hline
+          $\displaystyle \frac{1}{2}$
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          $\displaystyle \frac{1}{2}$ \\
+          \hline
+        \end{tabular}
+
+        \vspace*{\stretch{1}}
+
+        \begin{tabular}[t]{p{5cm}}
+          \toprule
+          $\displaystyle \frac{1}{2}$
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          $\displaystyle \frac{1}{2}$ \\
+          \bottomrule
+        \end{tabular}\quad
+        \begin{tabular}[t]{S{p{5cm}}}
+          \toprule
+          $\displaystyle \frac{1}{2}$
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          A A A A A A A A A A A A A A
+          $\displaystyle \frac{1}{2}$ \\
+          \bottomrule
+        \end{tabular}
+
+        \end{document}

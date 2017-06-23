@@ -1,0 +1,859 @@
+\documentclass[widecs]{nlctdoc}
+
+\usepackage[marginpar=1in]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{metalogo}
+\usepackage{cmap}
+\usepackage{upquote}
+\usepackage{testidx}
+\usepackage[colorlinks,
+            bookmarks,
+            hyperindex=false,
+            pdfauthor={Nicola L.C. Talbot},
+            pdftitle={testidx.sty: dummy text for testing indexes},
+            pdfkeywords={LaTeX,package,dummy text}]{hyperref}
+
+
+\IndexPrologue{\section*{\indexname}
+ \addcontentsline{toc}{section}{\indexname}%
+ \markboth{\indexname}{\indexname}}
+
+\setcounter{IndexColumns}{2}
+
+\renewcommand*{\main}[1]{\hyperpage{#1}}
+\renewcommand*{\usage}[1]{\hyperpage{#1}}
+
+\begin{document}
+
+ \title{testidx.sty v1.0: 
+dummy text for testing indexes}
+ \author{Nicola L.C. Talbot\\[10pt]
+\url{http://www.dickimaw-books.com/}}
+
+ \date{2016-10-17}
+ \maketitle
+ \tableofcontents
+
+ \section{Introduction}
+ \label{sec:intro}
+
+The \styfmt{testidx} package is for testing indexes (\cs{index},
+\env{theindex} and indexing applications, such as \app{makeindex}
+and \app{xindy}).
+As with packages like \sty{lipsum} and \sty{blindtext}, this package
+provides dummy text, but it's interspersed with \cs{index} commands.
+The filler text is English not lorum ipsum, as this makes it
+slightly easier to check the words in the index against the words in
+the document. (For those who don't understand English, it's at least
+no worse than lorum ipsum.)
+
+Example document:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\makeindex
+
+\begin{document}
+\testidx
+\printindex
+\end{document}
+\end{verbatim}
+
+If the document is called, say, \texttt{myDoc.tex}, then
+the PDF can be built using:
+\begin{verbatim}
+pdflatex myDoc
+makeindex myDoc.idx
+pdflatex myDoc
+\end{verbatim}
+
+\begin{important}
+There will be warnings about multiple encaps. This is intentional
+to test how the indexing applications deal with this problem.
+\end{important}
+
+If you want to use \app{xindy}, you'll need to define the 
+attributes (encaps) used in the dummy text. For example:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage{filecontents}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\begin{filecontents*}{\jobname.xdy}
+; list of allowed attributes
+
+(define-attributes ((
+  "tstidxencapi"
+  "tstidxencapii"
+  "tstidxencapiii"
+)))
+
+; define format to use for locations
+
+(markup-locref :open "\tstidxencapi{"
+ :close "}"
+ :attr "tstidxencapi")
+
+(markup-locref :open "\tstidxencapii{"
+ :close "}"
+ :attr "tstidxencapii")
+
+(markup-locref :open "\tstidxencapiii{"
+ :close "}"
+ :attr "tstidxencapiii")
+
+(markup-locref-list :sep ",")
+(markup-range :sep "--")
+\end{filecontents*}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+
+If this document is called, say, \texttt{myDoc.tex} then the 
+build process is:
+\begin{verbatim}
+pdflatex myDoc
+xindy -L english -C utf8 -M myDoc.xdy -M texindy -t myDoc.ilg myDoc.idx
+pdflatex myDoc
+\end{verbatim}
+You can substitute \texttt{english} for another language (for
+example, \texttt{swedish} or \texttt{danish}) to test how the
+extended Latin characters are sorted for a particular language.
+
+\XeLaTeX\ can be used instead:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage{filecontents}
+\usepackage{fontspec}
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\begin{filecontents*}{\jobname.xdy}
+; list of allowed attributes
+
+(define-attributes ((
+  "tstidxencapi"
+  "tstidxencapii"
+  "tstidxencapiii"
+)))
+
+; define format to use for locations
+
+(markup-locref :open "\tstidxencapi{"
+ :close "}"
+ :attr "tstidxencapi")
+
+(markup-locref :open "\tstidxencapii{"
+ :close "}"
+ :attr "tstidxencapii")
+
+(markup-locref :open "\tstidxencapiii{"
+ :close "}"
+ :attr "tstidxencapiii")
+
+(markup-locref-list :sep ",")
+(markup-range :sep "--")
+\end{filecontents*}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+
+\end{verbatim}
+The build process is now:
+\begin{verbatim}
+xelatex myDoc
+xindy -L english -C utf8 -M myDoc.xdy -M texindy -t myDoc.ilg myDoc.idx
+xelatex myDoc
+\end{verbatim}
+(Similarly for \LuaLaTeX.)
+
+If you want to use \app{makeindex}'s \texttt{-g} option (German)
+you can use the package option \pkgopt{german} or \pkgopt{ngerman},
+which will change the \app{makeindex} quote character to 
+\texttt{+} but remember you need to add this to a style file.
+For example:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage{filecontents}
+\usepackage{makeidx}
+\usepackage{ngerman}
+\usepackage[german]{testidx}
+
+\begin{filecontents*}{\jobname.ist}
+quote '+'
+\end{filecontents*}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+This document can be built using:
+\begin{verbatim}
+pdflatex myDoc
+makeindex -g -s myDoc.sty myDoc.idx
+pdflatex myDoc
+\end{verbatim}
+(Note the different position of the \qt{Numbers} group
+in the index.)
+
+Alternatively:
+\begin{verbatim}
+\documentclass[ngerman]{article}
+
+\usepackage{filecontents}
+\usepackage{makeidx}
+\usepackage{babel}
+\usepackage{testidx}
+
+\begin{filecontents*}{\jobname.ist}
+quote '+'
+\end{filecontents*}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+
+\section{Package Options}
+\label{sec:pkgopt}
+
+The following package options are provided:
+\begin{description}
+\item[\pkgopt{german} or \pkgopt{ngerman}]
+This redefines the indexing \qt{quote} character to use \texttt{+}
+instead of the double-quote character. Remember to add this
+to your style file and call \app{makeindex} with the
+\texttt{-g} (German) switch. (See example above in 
+the previous section.) This option may also be implemented
+using
+\begin{definition}[\DescribeMacro\testidxGermanOn]
+\cs{testidxGermanOn}
+\end{definition}
+
+\item[\pkgopt{nogerman}]
+Counteract the effect of the previous option.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxGermanOff]
+\cs{testidxGermanOff}
+\end{definition}
+
+\item[\pkgopt{stripaccents}]
+Strips accent commands from the sort key when using the
+ASCII option (see \sectionref{sec:exlatin}).
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxStripAccents]
+\cs{testidxStripAccents}
+\end{definition}
+Note that the \pkgopt{german} or \pkgopt{ngerman} package option
+won't strip the umlaut accent when used with this option.
+
+\item[\pkgopt{nostripaccents}]
+Doesn't strip accent commands from the sort key when using the
+ASCII option (see \sectionref{sec:exlatin}).
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxNoStripAccents]
+\cs{testidxNoStripAccents}
+\end{definition}
+
+\item[\pkgopt{sanitize}]
+Sanitize the terms before indexing them when using
+the UTF-8 option to prevent the UTF-8 characters from being
+expanded to \sty{inputenc}'s internal macros such as \cs{IeC}.
+This option is the default unless \XeLaTeX\ or \LuaLaTeX\ 
+are in use.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxSanitizeOn]
+\cs{testidxSanitizeOn}
+\end{definition}
+
+\item[\pkgopt{nosanitize}]
+Don't sanitize the terms before indexing them when using
+the UTF-8 option.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxSanitizeOff]
+\cs{testidxSanitizeOff}
+\end{definition}
+
+\item[\pkgopt{showmarks}]
+(Default.) Show the location of the \cs{index} commands
+in the dummy text with markers.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxshowmarkstrue]
+\cs{testidxshowmarkstrue}
+\end{definition}
+
+\item[\pkgopt{hidemarks} or \pkgopt{noshowmarks}]
+Hide the markers.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxshowmarksfalse]
+\cs{testidxshowmarksfalse}
+\end{definition}
+
+\item[\pkgopt{verbose}]
+Show the actual indexing commands within the dummy text.
+This will most likely cause a high number of overfull lines.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxverbosetrue]
+\cs{testidxverbosetrue}
+\end{definition}
+
+\item[\pkgopt{noverbose}]
+(Default.) Cancel the \pkgopt{verbose} option.
+This option may also be implemented using
+\begin{definition}[\DescribeMacro\testidxverbosefalse]
+\cs{testidxverbosefalse}
+\end{definition}
+
+\item[\pkgopt{notestencaps}]
+Suppress the testing of the encaps. Note that this only affects
+the commands used within \ics{testidx}, which have an optional
+argument to specify the encap. Some of these commands have the
+default value of the optional argument set to one of the test
+encaps. This option changes the command definition so that the
+optional argument is blank. Therefore this setting can only
+be used as a package option. However, this doesn't prevent
+you from explicitly testing an encap either directly using
+\ics{index} (e.g.\ \verb"\index{word|emph}") or implicitly
+using one of the helper commands described in the documented
+code (e.g.\ \verb"\tstidxsty[emph]{testidx}").
+
+\item[\pkgopt{testencaps}]
+(Default.) Cancels the \pkgopt{notestencaps} option. 
+This option ensures that \ics{testidx} uses the three test 
+encaps.
+\end{description}
+
+\section{Basic Commands}
+\label{sec:basic}
+
+This section only covers the basic commands provided by 
+\styfmt{testidx}. For more advanced commands, see the documented
+code.
+
+\begin{definition}[\DescribeMacro\testidx]
+\cs{testidx}\oarg{blocks}
+\end{definition}
+This is the principle command provided by this package. It
+generates the predefined dummy text that's interspersed 
+with indexing commands. There are \number\tstidxmaxblocks\ 
+blocks in total. This number can be accessed through the register:
+\begin{definition}[\DescribeMacro\tstidxmaxblocks]
+\cs{tstidxmaxblocks}
+\end{definition}
+
+If the optional argument \oarg{blocks} is omitted, all the blocks
+will be used. Each block starts with a number identifying it.
+This number prefix is formatted using:
+\begin{definition}[\DescribeMacro\tstidxprefixblock]
+\cs{tstidxprefixblock}\marg{n}
+\end{definition}
+where \meta{n} is the block number. If you want to suppress the
+number prefix, just redefine this command to ignore its argument.
+
+By default, the blocks are separated by a paragraph break.
+If the starred form is used, the blocks are separated by a~space.
+Note that some of the blocks contain paragraph breaks for
+displayed material. The starred form won't eliminate
+paragraph breaks \emph{within} the blocks, just those
+used as separators between the blocks.
+
+The intention of the dummy text is to provide an index that should
+typically span at least three pages for A4 or letter paper,
+to allow testing of headers and footers across a double-paged
+spread. Some of the indexing commands intentionally cause
+warnings from \app{makeindex} to test for certain situations.
+Phrases are indexed as well as just individual words to 
+increase the chances of indexed terms spanning a page
+break. However, the page dimensions, fonts and other material in the
+document will obviously alter where the page breaks occur.
+
+You can display only a subset of the blocks using the optional
+argument, which may be a comma-separated list of block identifiers
+or hyphen-separated range. Note that some of the blocks contain the
+start or end of an indexing range. If you only display a subset
+of the blocks that contains any of these, you need to make
+sure that you include the blocks that contain matching open
+and closing ranges (unless you're testing for mis-matched ranges).
+
+The optional argument may be a mixture of individual block
+identifiers and ranges. Examples:
+\begin{enumerate}
+\item Just display block~6:
+\begin{verbatim}
+\testidx[6]
+\end{verbatim}
+\item Display blocks~4 to 6:
+\begin{verbatim}
+\testidx[4-6]
+\end{verbatim}
+\item Display blocks~1, 4 to 6, and the last block:
+\begin{verbatim}
+\testidx[1,4-6,\tstidxmaxblocks]
+\end{verbatim}
+\item Intersperse the blocks with sections:
+\begin{verbatim}
+\section{Sample}
+\testidx[1-6]
+\section{Another Sample}
+\testidx[7-\tstidxmaxblocks]
+\end{verbatim}
+\end{enumerate}
+
+If for some bizarre and wacky reason you want the blocks
+in the reverse order, you can do so. For example:
+\begin{verbatim}
+\testidx[\tstidxmaxblocks-1]
+\end{verbatim}
+However the open and close range formations are likely to
+confuse \app{makeindex}\slash\app{xindy}, but perhaps that's
+your intention. Just remember to stay within the range
+1--\cs{tstidxmaxblocks} as you'll get an error if you
+go out of those bounds.
+
+The actual indexing is performed using:
+\begin{definition}[\DescribeMacro\tstindex]
+\cs{tstindex}\marg{text}
+\end{definition}
+This defaults to just \cs{index}\marg{text} but may be redefined. For
+example, if you are testing multiple indexes, you can
+redefine \cs{tstindex} to use a specific index.
+
+The dummy text includes markers to identify where the instances
+of \cs{tstindex} have been used. To reduce the possibility of
+package conflict, \styfmt{testidx} loads a bare minimum of
+packages\footnote{only \sty{color}, \sty{ifxetex} and
+\sty{ifluatex} are loaded}
+and tries to rely as much as possible on \LaTeX\ kernel
+commands, so the markers are fairly primitive. If you prefer
+fancier markers, you can change them by redefining the
+commands listed below. Multiple markers in the dummy text
+indicate multiple instances of \cs{tstindex} without any
+intervening text.
+
+\begin{definition}[\DescribeMacro\tstidxmarker]
+\cs{tstidxmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a top-level entry that doesn't start or end a range.
+Default: \tstidxmarker
+
+\begin{definition}[\DescribeMacro\tstidxopenmarker]
+\cs{tstidxopenmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a top-level entry that starts a range.
+Default: \tstidxopenmarker
+
+\begin{definition}[\DescribeMacro\tstidxclosemarker]
+\cs{tstidxclosemarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a top-level entry that ends a range.
+Default: \tstidxclosemarker
+
+\begin{definition}[\DescribeMacro\tstidxsubmarker]
+\cs{tstidxsubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-entry that doesn't start or end a range.
+Default: \tstidxsubmarker
+
+\begin{definition}[\DescribeMacro\tstidxopensubmarker]
+\cs{tstidxopensubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-entry that starts a range.
+Default: \tstidxopensubmarker
+
+\begin{definition}[\DescribeMacro\tstidxclosesubmarker]
+\cs{tstidxclosesubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-entry that ends a range.
+Default: \tstidxclosesubmarker
+
+\begin{definition}[\DescribeMacro\tstidxsubsubmarker]
+\cs{tstidxsubsubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-sub-entry that doesn't start or end a range.
+Default: \tstidxsubsubmarker
+
+\begin{definition}[\DescribeMacro\tstidxopensubsubmarker]
+\cs{tstidxopensubsubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-sub-entry that starts a range.
+Default: \tstidxopensubsubmarker
+
+\begin{definition}[\DescribeMacro\tstidxclosesubsubmarker]
+\cs{tstidxclosesubsubmarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+for a sub-sub-entry that ends a range.
+Default: \tstidxclosesubsubmarker
+
+\begin{definition}[\DescribeMacro\tstidxseemarker]
+\cs{tstidxseemarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+that uses a cross-reference. Additionally, the cross-referenced
+information will appear in a marginal note.
+Default: \tstidxseemarker
+
+\begin{definition}[\DescribeMacro\tstidxsubseemarker]
+\cs{tstidxsubseemarker}
+\end{definition}
+This is the marker used to show an instance of \cs{tstindex}
+that uses a cross-reference in a sub-entry.
+Default: \tstidxsubseemarker\ (the sub-level and cross-reference
+markers superimposed, not to be confused with a sub-level marker
+followed by a cross-reference marker, which indicates
+consecutive occurrences of \cs{tstindex}).
+As above the cross-reference information appears in a marginal 
+note. The main term and the sub-entry term are separated with
+the symbol given by
+\begin{definition}[\DescribeMacro\tstidxsubseesep]
+\cs{tstidxsubseesep}
+\end{definition}
+which defaults to \tstidxsubseesep
+
+There are three encap values used:
+\begin{definition}[\DescribeMacro\tstidxencapi]
+\cs{tstidxencapi}\marg{location}
+\end{definition}
+\begin{definition}[\DescribeMacro\tstidxencapii]
+\cs{tstidxencapii}\marg{location}
+\end{definition}
+\begin{definition}[\DescribeMacro\tstidxencapiii]
+\cs{tstidxencapiii}\marg{location}
+\end{definition}
+By default these just set \meta{location} in a different
+text colour.
+
+If you are using \app{xindy}, you'll need to add these
+to a \texttt{.xdy} file that can be loaded using \app{xindy}'s
+\texttt{-M} switch. For example, include the following
+in your \texttt{.xdy} file:
+\begin{verbatim}
+; list of allowed attributes
+
+(define-attributes ((
+  "tstidxencapi"
+  "tstidxencapii"
+  "tstidxencapiii"
+)))
+
+; define format to use for locations
+
+(markup-locref :open "\tstidxencapi{"
+ :close "}"
+ :attr "tstidxencapi")
+
+(markup-locref :open "\tstidxencapii{"
+ :close "}"
+ :attr "tstidxencapii")
+
+(markup-locref :open "\tstidxencapiii{"
+ :close "}"
+ :attr "tstidxencapiii")
+\end{verbatim}
+You may also want to add the list and range separators, if you
+haven't already done so:
+\begin{verbatim}
+(markup-locref-list :sep ",")
+(markup-range :sep "--")
+\end{verbatim}
+
+The \cs{tstindex} command is sometimes placed before the term
+or phrase being indexed and sometimes afterwards. To clarify
+what's being indexed, the adjacent word or phrase is surrounded
+by
+\begin{definition}[\DescribeMacro\tstidxtext]
+\cs{tstidxtext}\marg{text}
+\end{definition}
+This defaults to using a dark grey text colour. If an
+encap has been used, the corresponding encap command (see
+above) is included within the argument of \cs{tstidxtext}:
+\begin{definition}
+\cs{tstidxtext}\{\meta{cs}\marg{text}\}
+\end{definition}
+where \meta{cs} is the encap command. This means that with
+the default definitions, the dark grey text colour will
+only be visible when there's no encap, as the encap command
+will override the colour change.
+
+Note that the marker is included within \meta{text}.
+Some of the examples have consecutive uses of
+\cs{tstindex}, such as a top-level entry followed
+by a sub-entry. For example, a person's name is indexed twice:
+\begin{verbatim}
+Donald Knuth\index{Knuth, Donald}\index{people!Knuth, Donald}
+\end{verbatim}
+(It's actually done using \verb|\tstidxperson{Donald}{Knuth}|
+for better consistency. These markup commands typically
+won't need changing, but if they do, see the documented code
+for further detail.)
+
+Example:
+\begin{verbatim}
+\renewcommand*{\tstindex}[1]{}
+\textsf{\testidx[1,\tstidxmaxblocks]}
+\end{verbatim}
+produces the two paragraphs (first and last blocks) shown below:
+
+\medskip\par
+\renewcommand*{\tstindex}[1]{}
+\textsf{\testidx[1,\tstidxmaxblocks]}
+\par\medskip
+
+Note that I've redefined \cs{tstindex} to ignore its argument
+in this document so those terms won't actually be indexed 
+in this case. The block references (such as \qt{block~1})
+in the dummy text don't use the standard 
+\cs{label}\slash\cs{ref} mechanism as the references must still 
+work even if the referenced block has been omitted. This
+means they won't have hyperlinks even if you include the
+\sty{hyperref} package as the target may not be defined.
+They are provided primarily so you can easily find out which
+blocks need adding if you're only using a subset and need to
+close a range.
+
+\section{Indexing Special Characters}
+\label{sec:idxspchars}
+
+If you need to change the indexing special characters, you
+can redefine the commands listed in this section. Remember
+that you will also need to make the relevant changes to your
+indexing style file.
+
+\begin{definition}[\DescribeMacro\tstidxquote]
+\cs{tstidxquote}
+\end{definition}
+The \qt{quote} character. The default is: \texttt{\tstidxquote}.
+Note that the \pkgopt{german} or \pkgopt{ngerman} package option
+will automatically redefine \cs{tstidxquote} to \texttt{+}
+(plus).
+
+\begin{definition}[\DescribeMacro\tstidxactual]
+\cs{tstidxactual}
+\end{definition}
+The \qt{actual} character. The default is: \texttt{\tstidxactual}.
+
+\begin{definition}[\DescribeMacro\tstidxlevel]
+\cs{tstidxlevel}
+\end{definition}
+The \qt{level} character. The default is: \texttt{\tstidxlevel}.
+
+\begin{definition}[\DescribeMacro\tstidxencap]
+\cs{tstidxencap}
+\end{definition}
+The \qt{encap} character. The default is: \texttt{\tstidxencap}.
+
+\begin{definition}[\DescribeMacro\tstidxopenrange]
+\cs{tstidxopenrange}
+\end{definition}
+The \qt{open range} character. The default is:
+\texttt{\tstidxopenrange}.
+
+\begin{definition}[\DescribeMacro\tstidxcloserange]
+\cs{tstidxcloserange}
+\end{definition}
+The \qt{close range} character. The default is:
+\texttt{\tstidxcloserange}.
+
+\section{Extended Latin Characters}
+\label{sec:exlatin}
+
+The dummy text includes words or phrases that have extended
+Latin characters. There are two modes:
+
+\begin{description}
+\item[ASCII] This mode is on \emph{unless} you are using
+\XeLaTeX\ or \LuaLaTeX, or the document has loaded 
+\sty{inputenc} with the encoding set to \pkgopt{utf8}.
+
+Example that will switch on ASCII mode:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage[latin1]{inputenc}
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+
+\item[UTF-8] This mode is on \emph{if} you are using
+\XeLaTeX\ or \LuaLaTeX, or if the document has loaded 
+\sty{inputenc} with the encoding set to \pkgopt{utf8}.
+
+Example that will switch on UTF-8 mode:
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage{fontspec}
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+Or
+\begin{verbatim}
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{makeidx}
+\usepackage{testidx}
+
+\makeindex
+
+\begin{document}
+\testidx
+
+\printindex
+\end{document}
+\end{verbatim}
+
+\end{description}
+
+When the ASCII mode is on, words or phrases with UTF-8
+characters use the standard \LaTeX\ accent commands, such
+as \cs{'} (acute accent) or \cs{o} (\o). There are two
+package options that determine whether or not to include these
+commands in the sort key: \pkgopt{stripaccents} will remove
+the accent commands (except for the umlaut shortcut \verb|"|
+if the \pkgopt{german} or \pkgopt{ngerman} package option has been
+used), and \pkgopt{nostripaccents} will keep the accent commands
+in the sort key.
+
+For example, with the ASCII mode on with the \pkgopt{stripaccents}
+option, \qt{Anders Jonas \AA ngstr\"om} is indexed as
+\begin{verbatim}
+Angstrom, Anders Jonas@\AA ngstr\""om, Anders Jonas
+\end{verbatim}
+unless the \pkgopt{german} or \pkgopt{ngerman} option is on,
+in which case it's indexed as
+\begin{verbatim}
+Angstr"om, Anders Jonas@\AA ngstr"om, Anders Jonas
+\end{verbatim}
+Whereas with the \pkgopt{nostripaccents} option, this name is
+indexed as
+\begin{verbatim}
+\r Angstr\""om, Anders Jonas@\AA ngstr\""om, Anders Jonas
+\end{verbatim}
+unless the \pkgopt{german} or \pkgopt{ngerman} option is
+on, in which case it's indexed as
+\begin{verbatim}
+\r Angstr"om, Anders Jonas@\AA ngstr"om, Anders Jonas
+\end{verbatim}
+
+When the UTF-8 mode is on, UTF-8 characters are used instead.
+For example, \qt{Anders Jonas \AA ngstr\"om} is indexed
+as
+\begin{flushleft}\ttfamily
+\AA ngstr\"om, Anders Jonas
+\end{flushleft}
+(The \pkgopt{stripaccents} and \pkgopt{nostripaccents} options 
+are ignored.)
+
+\XeLaTeX\ and \LuaLaTeX\ both natively support UTF-8, so
+when either of those engines are in use, the UTF-8 characters 
+will be written to the indexing file as they are. So the above
+example will appear in the \texttt{.idx} file as:
+\begin{flushleft}\ttfamily
+\cs{indexentry}\{\AA ngstr\"om, Anders Jonas\}\marg{location}
+\end{flushleft}
+Regular \LaTeX\ requires the \sty{inputenc} package to support
+UTF-8 characters, but each UTF-8 character is treated as
+two tokens (the first and second octets) where the first token is an
+active character that takes the second token as the argument.
+This means that expansion will occur when writing these
+active characters to an external file. This means that the
+above will appear in the \texttt{.idx} file as:
+\begin{verbatim}
+\indexentry{\IeC {\r A}ngstr\IeC {\"o}m, Anders Jonas}{3}
+\end{verbatim}
+(where 3 is the page number).
+
+Since this can confuse the indexing application,
+\styfmt{testidx} provides a \pkgopt{sanitize} package option
+which will first sanitize the UTF-8 characters before
+indexing them. This option is on by default for regular \LaTeX\ and
+off for \XeLaTeX\ and \LuaLaTeX. You can switch it off
+using the \pkgopt{nosanitize} package option.
+
+Whether it should be on or off really depends on what you want
+to test. For example, if you want to test how an indexing 
+application deals with UTF-8 characters, then switch it on, but
+if you want to test how your indexing command (whatever 
+\cs{tstindex} is defined as) behaves with these characters, then 
+switch it off.
+
+Note that this \pkgopt{sanitize} option isn't adjusting the
+definition of \cs{index} or \cs{tstindex}, but is essentially
+pretending that the user is doing something like:
+\begin{flushleft}\ttfamily\obeylines
+\cs{makeatletter}
+Anders Jonas \AA ngstr\"om\%
+\cs{def}\cs{tmp}\{\AA ngstr\"om, Anders Jonas\}\%
+\cs{@onelevel@sanitize}\cs{tmp}
+\cs{exandafter}\cs{index}\cs{expandafter}\{\cs{tmp}\}\%
+\cs{edef}\cs{tmp}\{people\cs{tstidxlevel}\cs{tmp}\}\%
+\cs{exandafter}\cs{index}\cs{expandafter}\{\cs{tmp}\}\%
+\end{flushleft}
+instead of simulating:
+\begin{flushleft}\ttfamily\obeylines
+Anders Jonas \AA ngstr\"om\%
+\cs{tstindex}\{\AA ngstr\"om, Anders Jonas\}\%
+\cs{tstindex}\{people\tstidxlevel\AA ngstr\"om, Anders Jonas\}\%
+\end{flushleft}
+
+Note that the sanitization isn't applied to the entire argument
+of \cs{tstindex}, but only selected parts of it.
+
+\PrintIndex
+
+\end{document}

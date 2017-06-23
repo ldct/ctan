@@ -1,0 +1,642 @@
+%%
+%% This is file 'bxnewfont.sty'.
+%% 
+%% Copyright (c) 2017 Takayuki YATO (aka. "ZR")
+%%   GitHub:   https://github.com/zr-tex8r
+%%   Twitter:  @zr_tex8r
+%%
+%% This package is distributed under the MIT License.
+%%
+
+%% package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bxnewfont}[2017/05/01 v0.2b]
+
+%% preparation
+\def\bxnf@pkgname{bxnewfont}
+\def\bxnf@error{\PackageError\bxnf@pkgname}
+\providecommand\bxDebug[1]{}
+
+%--------------------------------------- options
+
+%% variables
+\newif\ifbxnf@newfont
+
+%% options
+\DeclareOption{newfont}{%
+  \bxnf@newfonttrue
+}
+\ProcessOptions\relax
+
+%---------------------------------------  general
+
+%% load packages
+\RequirePackage{etoolbox}
+\ifx\newrobustcmd\@undefined % non-e-TeX
+\expandafter\endinput\fi\relax
+
+%% unique tokens
+\def\bxnf@mk{\bxnf@mk@}
+\def\bxnf@end{\bxnf@end@}
+
+%% variables
+\newbool{bxnf@ok}
+
+%% constants
+\def\bxnf@@star{*}
+
+%% \bxnf@cond\if...\fi{<true>}{<false>}
+\@gobbletwo\if\if \def\bxnf@cond#1\fi{%
+  #1\expandafter\@firstoftwo
+  \else \expandafter\@secondoftwo \fi
+}
+
+%% \ifbxnf@ptex : engine is pTeX?
+\newbool{bxnf@ptex}
+\begingroup
+  \edef\bxnf@tmpa{\string\tfont}\edef\bxnf@tmpb{\meaning\tfont}
+  \ifx\bxnf@tmpa\bxnf@tmpb \global\bxnf@ptextrue \fi
+\endgroup
+
+%--------------------------------------- main
+
+%% variables
+\newbool{bxnf@fixed}  % fixed size?
+\let\bxnf@font\relax  % font-spec string
+\let\bxnf@tfm\relax   % tfm name
+\let\bxnf@atcl\relax  % at-clause
+\let\bxnf@enc\relax   % encoding
+\let\bxnf@fam\relax   % family
+\let\bxnf@type\relax  % 1=normal,2=pTeX-yoko,3=pTeX-tate
+\let\bxnf@size\relax
+
+%%<*> \newfontx*[<encoding>]{<tfm-spec>}
+\newcommand\newfontx{%
+  \@ifstar{%
+    \bxnf@fixedfalse
+    \bxnf@newfontx@a
+  }{%else
+    \bxnf@fixedtrue
+    \bxnf@newfontx@a
+  }%
+}
+\def\bxnf@newfontx@a#1{%
+  \@ifnextchar[{%
+    \bxnf@newfontx@b{#1}%
+  }{%else
+    \bxnf@newfontx@b{#1}[]%
+  }%]
+}
+\def\bxnf@newfontx@b#1[#2]#3{%
+  \bxnf@annihilate@setjascale
+  \edef\bxnf@enc{#2}%
+  \edef\bxnf@font{#3}%
+  \bxnf@split@name
+  \bxnf@check@param
+  \ifbxnf@ok \bxnf@declare \fi
+  \ifbxnf@ok \bxnf@make@cmd#1\fi
+}
+
+%% \bxnf@check@param
+% Sets bxnf@ok.
+\def\bxnf@check@param{%
+  \bxnf@oktrue
+  \bxnf@get@tfm@info
+  \unless\ifnum\bxnf@type=\z@ \unless\ifdim\bxnf@size>\z@
+    \chardef\bxnf@type\z@
+  \fi\fi
+  \ifnum\bxnf@type=\z@
+    \bxnf@error{Failed in getting TFM info}\@eha
+    \let\bxnf@enc\cf@encoding
+    \bxnf@okfalse
+  \else
+    \ifx\bxnf@enc\@empty
+      % resolve encoding when unspecified
+      \ifcase\bxnf@type\or
+        \let\bxnf@enc\cf@encoding
+      \or % pTeX-yoko
+        \let\bxnf@enc\cy@encoding
+      \or % pTeX-tate
+        \let\bxnf@enc\ct@encoding
+      \fi
+    \fi
+  \fi
+  \ifcsundef{T@\bxnf@enc}{%
+    \bxnf@error{Unknown encoding '\bxnf@enc'}\@ehc
+    \bxnf@okfalse
+  }{}%
+  \ifbxnf@ok
+    \bxDebug{type=\number\bxnf@type; enc=\bxnf@enc}%
+  \fi
+  \unless\ifbxnf@fixed \unless\ifx\bxnf@atcl\relax
+    \bxnf@error{You cannot use size spec here}{%
+      The invalid size spec (\bxnf@atcl) is ignored.%
+      \MessageBreak\@ehc}%
+  \fi\fi
+}
+
+%% \bxnf@declare
+\def\bxnf@declare{%
+  \bxnf@get@family@name
+  \unless\ifbxnf@ok
+    \bxnf@set@family@param
+    \bxnf@declare@family
+  \fi
+  \bxnf@oktrue
+}
+
+%% \bxnf@make@cmd\CS
+% Defines \CS to be a protected macro that selects the family
+% which name equals (the current value of) \bxnf@fam.
+% A wierdly-named control sequence is used in the macro body
+% so that \show'ing \CS will display something like:
+% > \CS=\protected macro:
+% \select font FAMILY(ID) .
+\def\bxnf@make@cmd#1{%
+  \expandafter\bxnf@make@cmd@a\bxnf@fam\bxnf@mk#1%
+}
+\begingroup
+\catcode`\ =11\relax\catcode`\_=10\relax
+\gdef\bxnf@make@cmd@a#1\bxnf@mk#2{%
+__\newrobustcmd*#2{\select font#1 }}%
+\endgroup
+
+%% \select_font<family>_
+% (Here '_' means a space with catcode 11.)
+\begingroup
+\catcode`\ =11\relax\catcode`\_=10\relax
+\gdef\select font#1 {%
+__\bxnf@select@family{#1}}%
+\endgroup
+
+%--------------------------------------- parse
+
+%% variables
+\let\bxnf@pre\relax
+\let\bxnf@post\relax
+\let\bxnf@quoted@part\relax
+
+%% \bxnf@split@at{<sep>}{<text>}
+% Splits the text by the given separator.
+% In success, it will set \bxnf@pre and \bxnf@post.
+\def\bxnf@split@at#1#2{%
+  \def\bxnf@next##1#1##2\bxnf@end{%
+    \bxnf@split@at@a{##1}{##2}}%
+  \bxnf@next#2\bxnf@mk#1\bxnf@end
+}
+\def\bxnf@split@at@a#1#2{%
+  \ifstrempty{#2}{%
+    \let\bxnf@pre\relax \let\bxnf@post\relax
+  }{%else
+    \def\bxnf@pre{#1}%
+    \bxnf@split@at@b#2\bxnf@end
+  }%
+}%
+\def\bxnf@split@at@b#1\bxnf@mk#2\bxnf@end{%
+  \def\bxnf@post{#1}%
+}%
+
+%% \bxnf@guard@quote\CS
+% Extract from the string a part enclosed by a pair of quotes,
+% and replaces the part with the cs '\bxnf@quoted@part'.
+% Then the cs is assigned to the content of the part.
+\def\bxnf@guard@quote#1{%
+  \let\bxnf@quoted@part\relax
+  \edef\bxnf@tmpb{{"}{#1}}%
+  \expandafter\bxnf@split@at\bxnf@tmpb
+  \unless\ifx\bxnf@pre\relax
+    \let\bxnf@tmpa\bxnf@pre \edef\bxnf@tmpb{{"}{\bxnf@post}}%
+    \expandafter\bxnf@split@at\bxnf@tmpb
+    \unless\ifx\bxnf@pre\relax
+      \let\bxnf@quoted@part\bxnf@pre
+      \edef#1{\bxnf@tmpa"\noexpand\bxnf@quoted@part"\bxnf@post}%
+    \fi
+  \fi
+}
+
+%% \bxnf@enclose@quote\CS
+% If the string does not contain a quote but does contain
+% a space, then the string will get enclosed by quotes.
+\def\bxnf@enclose@quote#1{%
+  \edef\bxnf@tmpa{#1}%
+  \edef\bxnf@tmpb{{"}{\bxnf@tmpa}}%
+  \expandafter\bxnf@split@at\bxnf@tmpb
+  \ifx\bxnf@pre\relax
+    \edef\bxnf@tmpb{{\bxnf@tmpa}}%
+    \expandafter\bxnf@find@unsafe@char\bxnf@tmpb
+    \unless\ifx\bxnf@pre\relax
+      \edef\bxnf@tmpa{"\bxnf@tmpa"}%
+    \fi
+  \fi
+  \let#1\bxnf@tmpa
+}
+
+%% \bxnf@find@unsafe@char
+\def\bxnf@find@unsafe@char#1{%
+  \bxnf@find@unsafe@char@a#1\bxnf@end
+}
+\def\bxnf@find@unsafe@char@a{%
+  \futurelet\bxnf@tok\bxnf@find@unsafe@char@b
+}
+\def\bxnf@find@unsafe@char@b{%
+  \ifx\bxnf@tok\bxnf@end
+    \let\bxnf@tok\relax
+    \let\bxnf@tmpb\bxnf@find@unsafe@char@c
+  \else\ifcat A\noexpand\bxnf@tok
+    \let\bxnf@tmpb\bxnf@find@unsafe@char@d
+  \else\ifcat 0\noexpand\bxnf@tok
+    \let\bxnf@tmpb\bxnf@find@unsafe@char@e
+  \else\ifcat _\noexpand\bxnf@tok
+    \let\bxnf@tmpb\bxnf@find@unsafe@char@e
+  \else
+    \let\bxnf@tmpb\bxnf@find@unsafe@char@c
+  \fi\fi\fi\fi
+  \bxnf@tmpb
+}
+\def\bxnf@find@unsafe@char@c#1\bxnf@end{%
+  \let\bxnf@pre= \bxnf@tok
+}
+\def\bxnf@find@unsafe@char@d#1{%
+  \bxnf@find@unsafe@char@a
+}
+\def\bxnf@find@unsafe@char@e#1{%
+  \ifcsundef{bxnf@sc/#1}{%
+    \bxnf@find@unsafe@char@c
+  }{%else
+    \bxnf@find@unsafe@char@a
+  }%
+}
+\@tfor\bxnf@tmpa:=0123456789.-_+\do{%
+  \cslet{bxnf@sc/\bxnf@tmpa}{t}%
+}
+
+%% \bxnf@split@name
+% Parses \bxnf@font and sets \bxnf@tfm and \bxnf@atcl.
+\def\bxnf@split@name{%
+  \let\bxnf@tfm\bxnf@font \let\bxnf@atcl\relax
+  \bxnf@guard@quote\bxnf@tfm
+  \expandafter\bxnf@split@name@a\bxnf@tfm\bxnf@end
+  \bxnf@enclose@quote\bxnf@tfm
+}
+\def\bxnf@split@name@a#1\bxnf@end{%
+  \let\bxnf@pre\relax
+  \def\do##1{%
+    \bxnf@split@name@b{##1}{#1}%
+  }%
+  \bxnf@split@sep@list
+}
+\def\bxnf@split@name@b#1#2{%
+  \ifx\bxnf@pre\relax
+    \bxnf@split@at{ #1}{#2}%
+    \unless\ifx\bxnf@pre\relax
+      \let\bxnf@tfm\bxnf@pre
+      \edef\bxnf@atcl{#1\bxnf@post}%
+    \fi
+  \fi
+}
+\let\do\relax
+\edef\bxnf@split@sep@list{%
+  \do{at}\do{scaled}%
+  \do{\detokenize{at}}%
+  \do{\detokenize{scaled}}%
+}
+
+%--------------------------------------- Family name
+
+%% variables
+%\[bxnf@g@varid/<tfm>] % maximum used id number
+%\[bxnf@g@prm/<family>] % font parameter ({<enc>}{<size>})
+%\[bxnf@g@pc/<spec>] % cache
+\let\bxnf@stfm\relax
+
+%% \bxnf@get@family@name
+% Generates a family name and returns to \bxnf@fam.
+% The name is of the form "<tfm-name>(<id>)".
+\def\bxnf@get@family@name{%
+  \def\bxnf@tmpa{bxnf@g@pc/\bxnf@enc:\bxnf@tfm:%
+      \ifbxnf@fixed \the\dimexpr\bxnf@size\relax \fi}%
+  \letcs\bxnf@fam{\bxnf@tmpa}%
+  \ifdef\bxnf@fam{%
+    \bxDebug{\bxnf@tmpa==\bxnf@fam}%
+    \bxnf@oktrue
+  }{%else
+    \bxnf@sanitize@tfmname\bxnf@stfm
+    \csnumgdef{bxnf@g@varid/\bxnf@stfm}{\csuse{bxnf@g@varid/\bxnf@stfm}+1}%
+    \edef\bxnf@fam{\bxnf@stfm*\csuse{bxnf@g@varid/\bxnf@stfm}*}%
+    \global\cslet{\bxnf@tmpa}\bxnf@fam
+    \bxDebug{\bxnf@tmpa:=\bxnf@fam}%
+    \bxnf@okfalse
+  }%
+}
+
+%% \bxnf@sanitize@tfmname\CS
+\def\bxnf@sanitize@tfmname#1{%
+  \begingroup
+    \let\bxnf@pre\relax
+    \let\do\bxnf@sanitize@tfmname@a
+    \bxnf@sanitize@list
+    \ifx\bxnf@pre\relax
+      \global\let\bxnf@g@tmpa\bxnf@tfm
+    \else
+      \global\let\bxnf@g@tmpa\bxnf@@sanitized
+    \fi
+  \endgroup
+  \let#1\bxnf@g@tmpa
+}
+\def\bxnf@sanitize@tfmname@a#1{%
+  \ifx\bxnf@pre\relax
+    \edef\bxnf@tmpa{{#1}{\bxnf@tfm}}%
+    \expandafter\bxnf@split@at\bxnf@tmpa
+  \fi
+}
+\def\bxnf@@sanitized{(OpenType)}
+\def\bxnf@sanitize@list{%
+  \do{ }\do{:}\do{,}\do{;}\do{=}\do{/}%
+}
+
+%% \def\bxnf@set@family@param
+% Sets \[bxnf@g@prm/*].
+\def\bxnf@set@family@param{%
+  \csxdef{bxnf@g@prm/\bxnf@fam}{{\bxnf@enc}%
+      {\ifbxnf@fixed \expandafter\rem@pt\bxnf@size \fi}}%
+  \bxDebug{bxnf@g@prm/\bxnf@fam:=\csuse{bxnf@g@prm/\bxnf@fam}}%
+}
+
+%% \bxnf@declare@family
+\def\bxnf@declare@family{%
+  \DeclareFontFamily{\bxnf@enc}{\bxnf@fam}{}%
+  \let\bxnf@tmpb\@empty
+  \ifcase\bxnf@type\or
+  \or \let\bxnf@tmpb\bxnf@jfscale@spec
+  \or \let\bxnf@tmpb\bxnf@jfscale@spec
+  \fi
+  \DeclareFontShape{\bxnf@enc}{\bxnf@fam}{m}{n}%
+      {<->\bxnf@tmpb\bxnf@tfm}{}%
+  % In pTeX, a dummy entry must be declared for the
+  % encoding counterpart.
+  \let\bxnf@tmpb\relax
+  \ifcase\bxnf@type\or % no-op for normal
+  \or \letcs\bxnf@tmpb{t@enc@\bxnf@enc}% yoko->tate
+  \or \letcs\bxnf@tmpb{y@enc@\bxnf@enc}% tate->yoko
+  \fi
+  \unless\ifx\bxnf@tmpb\relax
+    \DeclareFontFamily{\bxnf@tmpb}{\bxnf@fam}{}%
+    \DeclareFontShape{\bxnf@tmpb}{\bxnf@fam}{m}{n}%
+        {<->ssub*\kanjifamilydefault/m/n}{}%
+  \fi
+}
+
+%% \bxnf@select@family{<family>}
+\def\bxnf@select@family#1{%
+  \edef\bxnf@next{\noexpand\bxnf@select@family@a
+    {#1}\csuse{bxnf@g@prm/#1}}%
+  \bxnf@next
+}
+\def\bxnf@select@family@a#1#2#3{%
+  \bxDebug{select=#2/#1/m/n/#3}%
+  \usefont{#2}{#1}{m}{n}\relax
+  \ifstrempty{#3}{}{%else
+    \fontsize{#3}{#3}\selectfont
+  }%
+}
+
+%--------------------------------------- Inquery on TFM
+
+%% variables
+\let\bxnf@type\relax
+\let\bxnf@size\relax
+
+%% \bxnf@get@tfm@info
+\def\bxnf@get@tfm@info{%
+  \bxDebug{name=\bxnf@tfm}%
+  \begingroup
+    \chardef\bxnf@type=0 \let\bxnf@size\@empty
+    \font\bxnf@tmpa=\bxnf@tfm\space scaled 2000\relax
+    \ifx\bxnf@tmpa\nullfont\else
+      \bxnf@get@tfm@info@a
+      \bxnf@get@tfm@info@b
+    \fi
+    \xdef\bxnf@g@tmpa{%
+      \chardef\bxnf@type=\number\bxnf@type\relax
+      \def\noexpand\bxnf@size{\bxnf@size}}%
+  \endgroup
+  \bxnf@g@tmpa
+  \bxDebug{tfm=\number\bxnf@type/\bxnf@size}%
+}
+\def\bxnf@get@tfm@info@a{%
+  \bxnf@tmpa
+  \bxnf@curr@font\bxnf@g@tmpa\font
+  \chardef\bxnf@type=1 \let\bxnf@xfont\font
+}
+\def\bxnf@get@tfm@info@b{%
+  \unless\ifnum\bxnf@type=0
+    \expandafter\bxnf@read@at\bxnf@g@tmpa\bxnf@end
+    \ifx\bxnf@size\relax \let\bxnf@size\z@ \fi
+    \dimdef\bxnf@size{\bxnf@size/2}%
+    \bxDebug{tfm1=\number\bxnf@type/\bxnf@size}%
+    \unless\ifx\bxnf@atcl\relax
+      \let\bxnf@tmpb\bxnf@size
+      \bxnf@xfont\bxnf@tmpa=\bxnf@tfm\space\bxnf@atcl\relax
+      \bxnf@tmpa
+      \bxnf@curr@font\bxnf@g@tmpa\bxnf@xfont
+      \expandafter\bxnf@read@at\bxnf@g@tmpa\bxnf@end
+      \ifx\bxnf@size\relax \let\bxnf@size\bxnf@tmpb \fi
+    \fi
+  \fi
+}
+
+%% \bxnf@read@at<text>\bxnf@end
+\begingroup
+  \catcode`\A=12 \catcode`\T=12
+  \lowercase{%
+    \gdef\bxnf@read@at#1\bxnf@end{%
+      \bxnf@read@at@a#1\bxnf@mk AT \bxnf@mk\bxnf@end
+    }%
+    \gdef\bxnf@read@at@a#1AT #2\bxnf@mk#3\bxnf@end{%
+      \ifstrempty{#2}{%
+        \let\bxnf@size\relax
+      }{%else
+        \def\bxnf@size{#2}%
+      }%
+    }%
+  }
+\endgroup
+
+%% \bxnf@curr@font\CS\Xfont
+\def\bxnf@curr@font#1#2{%
+  \xdef#1{\fontname#2}%
+}
+
+\ifbxnf@ptex        %----<*pTeX>
+
+%% revision to \bxnf@get@tfm@info
+\def\bxnf@get@tfm@info@a{%
+  \bxnf@get@tfm@info@init
+  \nullfont \bxnf@jnullfont \bxnf@tnullfont
+  \bxnf@tmpa
+  \bxnf@curr@font\bxnf@g@tmpa\font
+  \unless\ifx\bxnf@g@tmpa\bxnf@dsf@null
+    \chardef\bxnf@type=1 \let\bxnf@xfont\font
+  \else
+    \bxnf@curr@font\bxnf@g@tmpa\jfont
+    \unless\ifx\bxnf@g@tmpa\bxnf@dsf@jnull
+      \chardef\bxnf@type=2 \let\bxnf@xfont\jfont
+    \else
+      \bxnf@curr@font\bxnf@g@tmpa\tfont
+      \unless\ifx\bxnf@g@tmpa\bxnf@dsf@tnull
+        \chardef\bxnf@type=3 \let\bxnf@xfont\tfont
+      \fi
+    \fi
+  \fi
+}
+\def\bxnf@get@tfm@info@init{%
+  \bxDebug{\string\bxnf@get@tfm@info@init}%
+  \begingroup
+    \global\jfont\bxnf@jnullfont=rml\relax
+    \global\tfont\bxnf@tnullfont=rmlv\relax
+    \nullfont \bxnf@jnullfont \bxnf@tnullfont
+    \bxnf@curr@font\bxnf@dsf@null\font
+    \bxnf@curr@font\bxnf@dsf@jnull\jfont
+    \bxnf@curr@font\bxnf@dsf@tnull\tfont
+  \endgroup
+  \bxDebug{null=\bxnf@dsf@null}%
+  \bxDebug{jnull=\bxnf@dsf@jnull}%
+  \bxDebug{tnull=\bxnf@dsf@tnull}%
+  \global\let\bxnf@get@tfm@info@init\relax
+}
+
+\fi                 %----</pTeX>
+
+%--------------------------------------- Ja-font scaling
+
+%% variables
+\def\bxnf@jfscale{1}
+
+%% error message
+\def\bxnf@err@ivjsc{%
+  \PackageError\bxnf@pkgname
+   {Invalid argument given to \string\newfontjascale
+    \MessageBreak(\bxnf@tmpa)}%
+   {\@eha}%
+}
+\def\bxnf@err@najsc{%
+  \PackageError\bxnf@pkgname
+   {The command is already invalidated}%
+   {\@eha}%
+}
+
+%% \bxnf@jfscale@spec
+\def\bxnf@jfscale@spec{%
+  \unless\ifdim\p@=\bxnf@jfscale\p@
+    s*[\bxnf@jfscale]%
+  \fi
+}
+
+%%<*>\newfontjascale
+\newrobustcmd*\newfontjascale[1]{%
+  \edef\bxnf@tmpa{#1}%
+  \ifx\bxnf@tmpa\bxnf@@star
+    \edef\bxnf@tmpa{\csuse{mcdefault}}%
+  \fi
+  \expandafter\bxnf@setjascale@a\bxnf@tmpa\bxnf@end
+}
+\def\bxnf@setjascale@a#1\bxnf@end{%
+  \ifblank{#1}{%
+    \bxnf@setjascale@real{1}%
+  }{%else
+    \bxnf@setjascale@b#1\bxnf@end%
+  }%
+}
+\def\bxnf@setjascale@b#1#2\bxnf@end{%
+  \ifcat\noexpand#10%
+    \afterassignment\bxnf@setjascale@c\dimen@ii=#1#2\p@\bxnf@stop
+  \else
+    \bxnf@setjascale@fam\bxnf@tmpa
+  \fi
+}
+\def\bxnf@setjascale@c#1\bxnf@stop{%
+  \ifstrempty{#1}{%
+    \edef\bxnf@tmpa{\strip@pt\dimen@ii}%
+    \bxnf@setjascale@real\bxnf@tmpa
+  }{%else
+    \bxnf@err@ivjsc
+  }%
+}
+
+%% \bxnf@setjascale@real
+\let\bxnf@setjascale@real\@gobble
+%% \bxnf@setjascale@fam
+\let\bxnf@setjascale@fam\@gobble
+
+%% \bxnf@annihilate@setjascale
+\def\bxnf@annihilate@setjascale{%
+  \global\let\bxnf@annihilate@setjascale\relax
+  \gdef\newfontjascale##1{%
+    \bxnf@err@najsc
+  }%
+  \global\let\bxnf@setjascale@a\@undefined
+  \global\let\bxnf@setjascale@b\@undefined
+  \global\let\bxnf@setjascale@c\@undefined
+  \global\let\bxnf@setjascale@real\@undefined
+  \global\let\bxnf@setjascale@fam\@undefined
+}
+
+\ifbxnf@ptex        %----<*pTeX>
+
+%% \bxnf@setjascale@real
+\def\bxnf@setjascale@real#1{%
+  \edef\bxnf@jfscale{#1}%
+  \bxDebug{jfscale:=\bxnf@jfscale}%
+}
+%% \bxnf@setjascale@fam
+\def\bxnf@setjascale@fam#1{%
+  \letcs\bxnf@tmpb{\cy@encoding/#1/m/n}%
+  \ifdef\bxnf@tmpb{%
+    \expandafter\bxnf@setjascale@fam@a\meaning\bxnf@tmpb\bxnf@end
+  }{%else
+    \bxnf@err@ivjsc
+  }%
+}
+\begingroup
+  \catcode`\S=12
+  \lowercase{%
+    \gdef\bxnf@setjascale@fam@a#1\bxnf@end{%
+      \def\bxnf@tmpb{1}%
+      \bxnf@split@at{<->S*[}{#1}%
+      \ifx\bxnf@pre\relax \bxnf@split@at{<->*[}{#1}\fi
+      \unless\ifx\bxnf@pre\relax
+        \edef\bxnf@tmpb{{]}{\bxnf@post}}%
+        \expandafter\bxnf@split@at\bxnf@tmpb
+        \unless\ifx\bxnf@pre\relax
+          \let\bxnf@tmpb\bxnf@pre
+        \fi
+      \fi
+      \bxnf@setjascale@real\bxnf@tmpb
+    }%
+  }%
+\endgroup
+
+\fi                 %----</pTeX>
+
+%--------------------------------------- Switching of \newfont
+
+%% \bxnf@ltx@newfont
+% The original.
+\let\bxnf@ltx@newfont\newfont
+
+%%<*>\enhancenewfont
+\newrobustcmd*\enhancenewfont{%
+  \let\newfont\newfontx}
+
+%%<*>\noenhancenewfont
+\newrobustcmd*\noenhancenewfont{%
+  \let\newfont\bxnf@ltx@newfont}
+
+%% initial
+\ifbxnf@newfont
+  \enhancenewfont
+\fi
+
+%--------------------------------------- all done
+\endinput
+%% EOF

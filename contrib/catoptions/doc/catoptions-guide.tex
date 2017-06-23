@@ -1,0 +1,1108 @@
+\documentclass[
+  use-a4-paper,
+  use-10pt-font,
+  final-version,
+  use-UK-English,
+  fancy-section-headings,
+  frame-section-numbers,
+  para-abstract-style,
+  input-config-file,
+  no-hyperref-messages
+]{amltxdoc}
+
+\hfuzz1pt
+\makeatletter
+\WrapQuotes
+\def\xdecs{\fx{\XDeclareOption}\Redstar\sspace}
+\makeindex
+\let\footnote\ltsfootnote
+
+\begin{document}
+
+\begin{frontmatter}
+\title{The \texttt{\color{blue}catoptions} Package\titleref{t1,t2}}
+\titlenotes[t1,t2]{%
+  The package is available at \url{\titleurltext}.\sep
+  This manual doesn't, as yet, explain all the currently available features and commands of
+  the \pkg'{catoptions}. This manual continues to evolve.
+}
+\version{0.2.7g}
+\titleurl{http://mirror.ctan.org/macros/latex/contrib/catoptions/}
+\author{Ahmed Musa \Email{amusa22@gmail.com}\\Preston, Lancashire, UK}
+
+\def\abstractname{\textsf{Summary}}
+\begin{abstract}
+  \small
+  The \pkg'{catoptions} provides several extensions to the \pkgm'{pcatcode}. Apart from the tools related to setting up, preserving and restoring category codes, it includes many \texorlatex programming tools and even new list and options processing interfaces. It modifies the \latex kernel's options parsing mechanism to forestall premature expansion of options and values (in the manner of the \pkg'{xkvltxp,kvoptions-patch}), so that the \pkg'{catoptions} may be loaded even before \hx{\documentclass}. In fact, the package is meant to be loaded on top of other packages, so as to exploit its catcode preserving scheme. Among other reasons, this necessitated the development of the options parsing scheme of this package. Only the catcode and options parsing facilities are treated in this manual; the application programming interfaces will be covered in the documentation of the \pkg'{ltxtools}. The machinery of the \pkg'{catoptions} adds no cost to the simple syntax of \LaTeX's native options parser. Users who are already familiar with \LaTeX's legacy options processing don't necessarily have to invest the time that is essential in learning the extensive machinery of existing key-value and option parsers. Existing packages don't have to be modified to use the features of the \pkg'{catoptions}. The \pkg'{catoptions}, while maintaining simplicity, does not strip off even one level of outer braces in parsing package options and in list processing. It robustly normalizes key-values and options prior to parsing. The options parsing scheme of the \pkg'{catoptions} has been tried as a replacement parser on the \pkgg{article} class and on many packages, including \pkg'{hyperref, cleveref, natbib} without difficulties. Packages that redefine \latex's native options processing internals may not work properly with \pkg'{catoptions}. I know that \pkg'{xcolor} redefines \hx{\@declareoption} and the \pkg'{catoptions} has taken that fact into account, but there may be other packages that modify \latex's options processing internals that I am not aware of.
+\end{abstract}
+
+\let\licensename\relax
+\begin{license}
+  \small
+\xwmcolorbox[textalign=justified, outerframecolor=blue, innerframecolor=orange,
+  width=.985\hsize]{%
+  This work (\ie, all the files in the \pkg'{catoptions} bundle) may be distributed and/or modified under the conditions of the \lppl, either version~1.3 of this license or any later version.
+  The \lppl maintenance status of this software is \quoted{author-maintained}. This software is provided \quoted{as it is}, without warranty of any kind, either expressed or implied, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose.
+  \endgraf
+  \centerline{\makered{\CopyrightYear}}\vspace{-.8\baselineskip}\relax
+}
+\end{license}
+\end{frontmatter}
+
+\begin{xwmshade}[fillcolor=white,framecolor=orange,framerule=1pt,framesep=2pt,
+  width=1.0\hsize]\tableofcontents
+\end{xwmshade}
+
+
+\docsection(sec:motivation){Motivation}
+
+\lletter{M}{y motivation} for turning to the \pkgg'{pcatcode} was to save myself the trouble of declaring category codes at the beginning of my packages. After spending some time on the \pkgg'{pcatcode}, I discovered I had learnt enough to make changes and additions to some of its macros and functionality. After completing the catcode stuff in the \pkg'{catoptions}, I wanted to pass options to the package. If the package is to be loaded on top of other packages, as intended, then its options parsing scheme should be independent of other packages. But realizing the trouble with passing expandable option values to packages and classes via the \latex kernel's scheme, I decided to implement modifications to the kernel's options parser. Apart from the problem of premature expansion of options and values by the \latex kernel, outer curly braces in option values are lost during parsing. Indeed, the kernel's option parsing scheme doesn't recognize option values indicated with the equality sign.
+
+
+\docsection(sec:packageloading){Loading the package}
+
+\ltsnewfootnote{1}{%
+  The user interfaces of \ffx'{\XDeclareOption, \XExecuteOptions, \XProcessOptions} are similar to those of \hhx'{\DeclareOption, \ExecuteOptions, \ProcessOptions} but they aren't the same. See \sref{sec:options-parse}.
+}
+The \pkg'{catoptions} can be loaded in class and style files and in documents (before or after \hx{\documentclass}) with the options described in \sref{sec:pkg-options}. If the package is loaded before \hx{\documentclass}, it will, by default, use the options parser of the package in place of \latex's options parsing scheme (namely, the more robust commands \ffx'{\XDeclareOption, \XExecuteOptions, \XProcessOptions} in place of \latex's native commands \hhx'{\DeclareOption, \ExecuteOptions, \ProcessOptions})\usefootnote{1}. In that case, the legacy commands \hhx'{\DeclareOption, \ExecuteOptions, \ProcessOptions} are aliased to \ffx'{\XDeclareOption, \XExecuteOptions, \XProcessOptions}, respectively. The latter set of commands do immediately recognize that they have to deal with option functions that are based on the kernel's syntax and semantics. This allows expandable options and option values (together with options with spaces in their names) to be passed via \hx{\documentclass}---if \pkg{catoptions} is loaded before \hx{\documentclass}. This also implies that existing packages can use the options parsing scheme of \pkg'{catoptions} without modifying the packages.
+
+However, if after loading \pkg'{catoptions} before \hx{\documentclass} the user still wants to use the legacy commands \hhx'{\DeclareOption, \ExecuteOptions, \ProcessOptions}, the package option \fx{usepox} (see \sref{sec:pkg-options}) can be toggled to \texttt{false}. In this case, option values can't be passed via \hx{\documentclass}. More precisely, option values passed via \hx{\documentclass} are stripped off internally by \pkg{catoptions} so that they may be processed by \hx{\ProcessOptions}.
+
+
+\docsection(sec:pkg-options)<Package options>{Package options}
+
+\lletter{T}{he} \pkg'{catoptions} has the options shown in \sref{tab:pkgoptions}. The boolean option \fxim{verbose} instructs the package to enter information onto the log file when some events happen  (\eg, when commands are redefined by means of, say, the command \fx{\robust@redef}, which has the same syntax with  \tex's legacy \hx{\def}; and when an option from the same family is multiply submitted to, say, \fx{\XExecuteOptions}). This option may be used in the future to provide debugging features for the package.
+
+\extrarowheight=2pt
+\arrayrulecolor{yellow}
+\begin{tabularx}{\linewidth}{|m{3cm}|m{2.5cm}|X|}
+\caption{Package options\xwmlabel{tab:pkgoptions}}\\\hline
+\rowcolor{pink}
+\bfseries Option&\bfseries Default&\bfseries Meaning\\\hline
+\endfirsthead
+\hline
+\multicolumn{3}{|l|}{\emph{Continued from last page}}\\\hline
+\bfseries Option&\bfseries Default&\bfseries Meaning\\\hline
+\endhead
+\multicolumn{3}{|r|}{\emph{Continued on next page}}\\\hline
+\endfoot
+\hline
+\endlastfoot
+\fx{verbose} & \hx{false} & The global boolean switch that determines if information should be logged for some tasks in the package.\\\hline
+\fx{usepox} & \hx{true} & The boolean switch that determines if the options parser of \pkgg{catoptions} should be used for all options processing of packages loaded after \hx{\documentclass} even if those packages are based on \usecsn{latex2e}'s native options processing scheme.\\\hline
+\end{tabularx}
+
+As noted in \sref{sec:packageloading}, if the \pkg'{catoptions} is loaded before \hx{\documentclass} it will invariably use the options processing mechanism of the package. In that case (of the package being loaded before \hx{\documentclass}), the option \fxim{usepox} directs the package to use the \pkg{catoptions}'s options processing scheme for all the packages loaded after \hx{\documentclass}, instead of \latex's native options parsing procedures. This allows \pkg{catoptions}'s options parsing scheme to be used for existing packages loaded after \hx{\documentclass} without modifying the packages.
+
+Assuming that the options \quotedtt{textstyle} and \quotedtt{name} belong to an existing package (say, \quotedtt{mypackage}) to be loaded later, then the following example demonstrates one feature of the \pkg'{catoptions}, in the case in which the package is loaded before \hx{\documentclass}:
+
+\start{example}[Loading catoptions before \documentclass]
+\RequirePackage[verbose, usepox]{catoptions}
+\documentclass[textstyle=\ttfamily,name={Mr X\"avier Sanchez},a4paper,
+  draft,10pt]{article}
+\usepackage{mypackage}
+\finish{example}
+\fxim*{\RequirePackage,\usepackage,\documentclass}
+
+If the \pkg'{catoptions} wasn't loaded before \hx{\documentclass} then the above example would fail, because \latex's option parser can't handle options with values (much less values with expandable tokens).
+
+
+\docsection(sec:saving-catcodes){Saving and restituting category codes}
+
+There are the following user commands for saving and returning category codes of \quoted{other} characters to their previous states:
+
+\start+{newmacro}[]
+\cptnormalcatcodes
+\cptpushcatcodes
+\cptpopcatcodes
+\UseNormalCatcodes
+\GetCurrentCatcodeSubset
+\cptfutureletsetup
+\finish{newmacro}
+\fxim*{\UseNormalCatcodes,\cptpushcatcodes,\cptpopcatcodes,
+\cptnormalcatcodes,\cptfutureletsetup,\GetCurrentCatcodeSubset}
+
+The command \fx{\cptnormalcatcodes} simply resets the category codes of all \otherchars together with those of the space character and \fx{\^^I} and \fx{\^^J} to their standard values. The \hx{\endlinechar} is also reset to its normal value by this command. The command \fx{\cptpushcatcodes} pushes the current category codes for restitution later with \fx{\cptpopcatcodes}.
+
+The command \fx{\UseNormalCatcodes} works only in packages and does more than one thing: it calls \fx{\cptpushcatcodes} (to save the prevailing category codes) and then \fx{\cptnormalcatcodes} (to enforce the standard category codes). At the end of the class file or package, it automatically issues \fx{\cptpopcatcodes} to recover all the category codes earlier pushed. The command \fx{\UseNormalCatcodes} can conveniently be issued at the start of the package and the developer can be assured of access to the standard category codes of all \otherchars together with those of the space character and \fx{\^^I} and \fx{\^^J}. It should be called only once in a package: subsequent calls within the same package will have no effect.
+
+After issuing the command \fx{\GetCurrentCatcodeSubset}, you can do
+
+\start{example}[\currentcatcodesubset]
+\show\currentcatcodesubset
+\finish{example}
+\fxim*{\currentcatcodesubset}
+
+to see the current catcode setup. The command \fx{\cptfutureletsetup} is described in \sref{sec:future-letting}.
+
+\start{example}[\UseNormalCatcodes]
+\ProvidesPackage{mypackage}[2011/01/16 v0.01]
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\RequirePackage[verbose, usepox]{catoptions}
+\UseNormalCatcodes
+|com(At the end of `mypackage' all the category codes pushed by)
+|com(\UseNormalCatcodes will automatically be popped.)
+\finish{example}
+\dummyfxi*{\UseNormalCatcodes}
+
+
+\docsection(sec:future-letting){Future-letting of \headquoted{other} characters}
+
+The command \fx{\cptfutureletsetup} defines canonical control sequences to represent the  following characters:
+
+$$\vbox{%
+  \def\newvrule{%
+    \ifnum\@tempcnta<\@vpt
+      \global\@tempcnta\numexpr\@tempcnta+1\relax
+      \textcolor{blue}{\vrule}%
+    \fi
+  }%
+  \noindent\everycr{\noalign{\global\@tempcnta\z@}}%
+  \@tempcnta\z@\tabskip=1em
+  \halign{%
+    &\strut#\hfil&\hfil\textcolor{red}{\tt#}\hskip.25em\newvrule\cr
+    space&\textvisiblespace& exclam&!&dblquote&"&hash&\#& dollar&\$&
+      ampersand&\&\cr
+    lquote&`& rquote&'& lparen&(& rparen&)& star&$*$& plus&+\cr
+    comma&,& hyphen&-&period&.&slash&/& colon&:& semicolon&;\cr
+    less&<&greater&>&equal&=& question&?& lbracket&[& rbracket&]\cr
+    hat&\char`\^& underscore&\char`\_& bslash&\char`\\&
+      lbrace&\char`\{& rbrace&\char`\}& vert&|\cr
+    tilde&\char`~\cr
+  }%
+}$$
+
+However, for efficiency reasons, the canonical control sequences will be defined for only the characters (or, indeed, their names) appearing in the user-supplied list \fx{\declarefutureletset}, whose syntax is
+
+\start{newmacro}[\declarefutureletset]
+\declarefutureletset[|nang(stub)]{|nang(set)}
+\finish{newmacro}
+
+Here, \ang{set} is a comma-separated list of names from the \quoted{other} characters listed above. The defined commands are prefixed with an optional \ang{stub}, whose default value is \fx{fl@}. The defined commands have the syntaxes
+
+\start'{newmacro}[futurelet characters]
+\|nang(stub)|nang(char)
+\if|nang(stub)|nang(char)
+\finish{newmacro}
+
+For efficiency gains, a call to \fx{\cptfutureletsetup} automatically undefines all the canonical control sequences previously defined with a call to \fx{\cptfutureletsetup}---before the new canonical control sequences are defined.
+
+For instance, with the choices
+
+\start{example}[\declarefutureletset]
+\declarefutureletset[fl@]{space, star, lbracket}
+\cptfutureletsetup
+\finish{example}
+
+we have the following commands on hand for testing after \fx{\futurelet}:
+
+\start+{example}[futurelet commands]
+\fl@space       \fl@star       \fl@lbracket
+\iffl@space     \iffl@star     \iffl@lbracket
+\finish{example}
+\aidx*{futurelet commands}
+
+If any of the commands emanating from concatenating \ang{stub} with the name of the character is already defined, an error message is flagged. It should be noted that these commands are available only after issuing the command \fx{\cptfutureletsetup}, which isn't called automatically anywhere by the \pkg'{catoptions}. Normally, at \hx{\AtBeginDocument} the \pkg'{catoptions} calls the command \fx{\cptrestorecatcodes}, without calling \fx{\cptfutureletsetup}. Calling \ffx'{\declarefutureletset, \cptfutureletsetup} is the user's duty.
+
+The commands \ffx'{\declarefutureletset, \cptfutureletsetup} are decoupled to allow the user to call \fx{\declarefutureletset} only once, and perhaps much earlier, before calling the command \fx{\cptfutureletsetup} as often as desired.
+
+An inefficient call of the form
+
+\start{example}[\declarefutureletset]
+\declarefutureletset[fl@]{|R(all)}
+\finish{example}
+
+where \quotedtt{all} means that control sequences should be defined for all the available \quoted{other} characters, will define all the following control sequences whenever \fx{\cptfutureletsetup} is called:
+
+\start+{example}[futurelet commands]
+\fl@space         \fl@exclam        \fl@dblquote      \fl@hash
+\fl@dollar        \fl@ampersand     \fl@lrquote       \fl@lparen
+\fl@rparen        \fl@star          \fl@plus          \fl@comma
+\fl@hyphen        \fl@period        \fl@slash         \fl@colon
+\fl@semicolon     \fl@less          \fl@equal         \fl@greater
+\fl@question      \fl@lbracket      \fl@rbracket      \fl@hat
+\fl@underscore    \fl@lquote        \fl@lbrace        \fl@vert
+\fl@rbrace        \fl@tilde         \fl@bslash
+
+\iffl@space       \iffl@exclam      \iffl@dblquote    \iffl@hash
+\iffl@dollar      \iffl@ampersand   \iffl@lrquote     \iffl@lparen
+\iffl@rparen      \iffl@star        \iffl@plus        \iffl@comma
+\iffl@hyphen      \iffl@period      \iffl@slash       \iffl@colon
+\iffl@semicolon   \iffl@less        \iffl@equal       \iffl@greater
+\iffl@question    \iffl@lbracket    \iffl@rbracket    \iffl@hat
+\iffl@underscore  \iffl@lquote      \iffl@lbrace      \iffl@vert
+\iffl@rbrace      \iffl@tilde       \iffl@bslash
+\finish{example}
+\aidxm*{futurelet commands}
+
+This will yield control sequences that may never be needed. While such a facility does exist, using it will be inefficient despite the large capacities of many modern \tex engines.
+
+The use syntaxes for the commands \fnl*'\bs{stub,char} and \fnl*'{\bs if}{stub,char} are as follows:
+
+\start{example}[futurelet characters]
+\futurelet\next\cmd |textbf(|R(*))
+\def\cmd{\ifx\fl@star\next `I saw star'\else `I didn't see star'\fi}
+\def\cmd{\iffl@star\next{`I saw star'}{`I didn't see star'}}
+\finish{example}
+
+Notice that \fx{\ifx\fl@comma\next} is a conventional \tex test, while \fx{\iffl@...} expects two \latex branches (\ffx'{\@firstoftwo,\@secondoftwo}). The commands are meant to be easy to recall and use. If, for example, you are testing for the presence of \fx{\tilde}, you simply do \fx{\iffl@tilde\next{...}{...}}, assuming a \ang{stub} of \fx{fl@}.
+
+After setting up \fx{\futurelet} characters with \fx{\cptfutureletsetup}, you can reset active characters to catcode~13 by \fx{\futureletresetactives}.
+
+
+\docsection(sec:package-prelim){Setting up package preliminaries}
+
+Every package normally requires some preliminary declarations, such as seen below. The commands \ffx'{\StyleFilePurpose, \StyleFileRCSInfo, \StyleFileInfo, \SetStyleFileMessages} are defined by the \pkg'{catoptions}. All of them have intuitive syntaxes, except the command \fx{\SetStyleFileMessages}, whose syntax is explained below.
+
+\start{example}[Package preliminaries]
+\StyleFilePurpose{A collection of useful commands}
+\StyleFileRCSInfo
+$Id: mypackage.sty,v 0.1 2011/01/01 09:00:00 My Name Exp $
+\ProvidesPackage{mypackage}[\StyleFileInfo]
+\NeedsTeXFormat{LaTeX2e}[1996/12/01]
+\SetStyleFileMessages[mypack@]{err}{warn}{info}
+\finish{example}
+
+\start{newmacro}[\SetStyleFileMessages]
+\SetStyleFileMessages[|nang(stub)]{|nang(err)}{|nang(warn)}{|nang(info)}
+\finish{newmacro}
+\fxim*{\SetStyleFileMessages}
+
+Here, \ang{stub} is an optional prefix for the three package messages described below. The default value of \ang{stub} is the first three characters of the package or class name (\hx{\@currname}) concatenated with the \quoted{at} sign \quotedfx{@}. The mandatory arguments \ang{err}, \ang{warn}, and \ang{info} are the suffices for the package error, warning and information messages, respectively.
+
+For instance, with the declaration
+
+\start{example}[\SetStyleFileMessages]
+\SetStyleFileMessages[mypack@]{error}{warning}{info}
+\finish{example}
+
+the following commands are automatically defined by the \pkg'{catoptions}:
+
+\start{example}[\SetStyleFileMessages]
+\mypack@error     |tto    Error message of two parameters
+\mypack@warning   |tto    Warning message of one parameter
+\mypack@info      |tto    Information message of one parameter
+\finish{example}
+
+The commands \ffx'{\mypack@error,\mypack@info} can be used as follows:
+
+\start{example}[\SetStyleFileMessages]
+\ifcptonetokenTF{#1}{%
+  \mypack@info{Correct single argument `\detokenize{#1}': accepted}%
+}{%
+  \mypack@error{Multiple arguments `\detokenize{#1}'}%
+    {Invalid multiple arguments `\detokenize{#1}' rejected}%
+}
+\finish{example}
+
+
+\docsection(sec:options-parse){Options parsing}
+
+The interfaces of the options processing commands are as follows, which, apart from the optional family \ang{fam} and default value \ang{default}, are syntactically similar to the corresponding native \latex commands. The optional family name is useful for defining unique options that stand only a remote chance of being mixed up with options of other families. And the optional default value is handy when the user doesn't supply a value for an option: no errors are produced in this case. Existing packages can be processed with these commands without any modifications to those packages. In fact, we have run many existing packages on the bases of these commands (by letting \latex's \hhx'{\DeclareOption,\ExecuteOptions,\ProcessOptions} to these commands), without encountering difficulties.
+
+
+\docsubsection(sec:ord-options){Ordinary options}
+
+\start{newmacro}[\XDeclareOption]
+\XDeclareOption<|nang(fam)>{|nang(opt)}[|nang(default)]{|nang(fn1)}|label(mac:xdec:a)
+\XDeclareOption|*<|nang(fam)>{|nang(fn2)}|label(mac:xdec:b)
+\finish{newmacro}
+\fxim*{\XDeclareOption}
+
+The \unstform of the macro \fx{\XDeclareOption} declares an option that can be used as a package or class option and executed by \fx{\XExecuteOptions} or \fx{\XProcessOptions}. This macro is similar to the standard \latex macro \hx{\DeclareOption}, but with this command the user can pass a value to the option as well. That value can be accessed by using \fx{#1} or \fx{\cpt@currval} in \ang{fn1}. This will contain \ang{default} when no value has been specified for the option. The default value of the optional argument \ang{default} is empty. This implies that when the user does not assign a value to the option \ang{opt} and when no default value has been defined, no error message will ensue. The optional argument \ang{fam} can be used to specify a unique family for the option. When the argument is not used, the macro will insert the default family name (namely, \fx{\@currname.\@currext}).
+
+\start{example}[\XDeclareOption]
+\ProvidesPackage{mypackage}[\StyleFileInfo]
+\cptnewbool{mybool}
+\XDeclareOption{mybool}[true]{\@nameuse{mybool#1}}
+\XDeclareOption{leftmargin}[.5\hsize]{\setlength\leftmargin{#1}}|xwmlabel(mac:leftmargin)
+\finish{example}
+
+\ltsnewfootnote{2}{%
+  The commands \ffx'{\XDeclareBooleanOption, \XDeclareBooleanOptions, \XDeclareBiBooleanOptions} allow the user to define new boolean options without the need to first initialize the booleans with \hx{\newif} or \fx{\cptnewbool} as seen here.
+}
+
+The user would have noticed the use \fx{\cptnewbool} in the above example\usefootnote{2}. The options \ffx'{mybool,leftmargin} could then be called via any of the following statements:
+
+\start{example}[\XDeclareOption]
+|com(Inside class or package files:)
+\RequirePackage[mybool=true,leftmargin=20pt]{mypackage}
+|com(Inside document file:)
+\usepackage[mybool=false,leftmargin=20pt]{mypackage}
+|com(Via document class:)
+\documentclass[mybool,leftmargin=20pt]{myclass}
+\finish{example}
+
+The \stform of the macro \fx{\XDeclareOption} can be used to process unknown options. It is similar to \latex's \hx{\DeclareOption}\Redstar, but it has additional features. You can deploy \hx{\CurrentOption} within the \ang{fn} of this macro to access the option name and value for which the option is unknown. These values (possibly including an option) could, for example, be passed on to another class or package or could be used as an extra class or package option that, for instance, specifies a style that should be loaded. Moreover, you can use \fx{#1}, \fx{#2} and \fx{#3} within \ang{fn} to refer to the current family, current option (without its value), and current value, respectively.
+
+\ltsnote This note refers to macro lines \ref{mac:xdec:a} and \ref{mac:xdec:b}. In \fx{\XDeclareOption}, the current option value can be accessed by using \fx{#1} in \ang{fn1}. However, in \xdecs the current family name is accessed as \fx{#1}, the option name is available in \fx{#2}, and the current option value can be accessed with \fx{#3} (all in \ang{fn2}). These differences are important.
+
+
+\docsubsection(sec:external-options){External options}
+
+If no default family handler has been provided by the user (through the macro \xdecs or \fx{\XUnknownOptionHandler}) for the family of an undeclared option, and the option doesn't appear in the list \fx{\XExternalOptions}, then that option will be logged (\ie, entered in the transcript file) as undefined at the end of the document. By default, \fx{\XExternalOptions} contains all \hhx'{article,report,memoir} class options. The user can update the \fx{\XExternalOptions} list by means of the following commands:
+
+\start+{newmacro}[\AddToExternalOptions,\RemoveFromExternalOptions]
+\AddToExternalOptions{|nang(opts)}
+\RemoveFromExternalOptions{|nang(opts)}
+\finish{newmacro}
+\fxim*{\XExternalOptions,\AddToExternalOptions,\RemoveFromExternalOptions}
+
+where \ang{opts} are the comma-separated option names to be added to, or removed from, the list.
+
+\ltsnote Unknown options that appear in \fx{\XExternalOptions} list will not have their \ang{fn1}, \ang{fn2} and \ang{callback} of the default family handler (see \sref{mac:handler}) executed unless they contain one of the commands \hhx'{\PassOptionsToClass, \PassOptionsToPackage}.
+
+\start{newmacro}[\XDeclareOptions]
+\XDeclareOptions<|nang(fam)>{|nang(opts)}[|nang(default)]{|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareOptions}
+
+The command \fx{\XDeclareOptions} is similar to \fx{\XDeclareOption} but, instead of declaring just one option, it declares all the options in the comma-separated list \ang{opts}. Each option in the list \ang{opts} is defined with the same family \ang{fam}, default value \ang{default}, and function \ang{fn}. The command \fx{\XDeclareOptions} can be used to save tokens when it is required to declare a set of options with identical attributes.
+
+
+\docsubsection(sec:cmd-options){Command options}
+
+\start{newmacro}[\XDeclareCommandOption]
+\XDeclareCommandOption<|nang(fam)>{|nang(opt)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareCommandOption}
+
+The command \fx{\XDeclareCommandOption} will, apart from declaring the option \ang{opt}, also create a macro \fnl*'\bs{pref,opt} to hold the user-supplied value of the option. The macro so created can be used in \ang{fn} or in any other place. The default value of the optional \ang{pref} is \quotedfx{\@currname @} prefixed with the letters \fx{cmd}.
+
+\start{newmacro}[\XDeclareCommandOptions]
+\XDeclareCommandOptions<|nang(fam)>{|nang(opts)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareCommandOptions}
+
+The command \fx{\XDeclareCommandOptions} is similar to \fx{\XDeclareCommandOption} but, instead of declaring just one option, it declares all the options in the comma-separated list \ang{opts}. Each option in the list \ang{opts} is defined with the same family \ang{fam}, default value \ang{default}, and function \ang{fn}.
+
+
+\docsubsection(sec:bool-options){Boolean options}
+
+\start{newmacro}[\XDeclareBooleanOption]
+\XDeclareBooleanOption<|nang(fam)>{|nang(opt)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareBooleanOption}
+
+The command \fx{\XDeclareBooleanOption} will, apart from declaring the option \ang{opt}, also create a boolean \fnl*'{\bs if}{pref,opt}. It will automatically toggle this boolean (to \hx{true} or \hx{false}) when the option is set and the input is valid, depending on the user-supplied value of the option. The macros so created can be used in \ang{fn} or in any other place. The default value of the optional \ang{pref} is \quotedfx{\@currname @} with no additional prefix. Only \hx{true} or \hx{false} may be submitted as the value of a boolean option.
+
+\start{newmacro}[\XDeclareBooleanOptions]
+\XDeclareBooleanOptions<|nang(fam)>{|nang(opts)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareBooleanOptions}
+
+The command \fx{\XDeclareBooleanOptions} is similar to \fx{\XDeclareBooleanOption} but, instead of declaring just one option, it declares all the options in the comma-separated list \ang{opts}. Again, each option in the list \ang{opts} is defined with the same family \ang{fam}, default value \ang{default}, and function \ang{fn}.
+
+
+\docsubsubsection(sec:bibool-options){Biboolean options}
+
+\start{newmacro}[\XDeclareBiBooleanOptions]
+\XDeclareBiBooleanOptions<|A(fam)>{|A(opt1),|A(opt2)}[|A(default)]|(|A(pref)|){|A(fn1)}{|A(fn2)}
+\finish{newmacro}
+\fxim*{\XDeclareBiBooleanOptions}
+
+The command \fx{\XDeclareBiBooleanOptions} declares the two options \ang{opt1} and \ang{opt2} in the comma-separated list of options. Again, each of the two declared options is defined with the same family \ang{fam} and default value \ang{default}, but separate functions \ang{fn1} and \ang{fn2}. A distinguishing characteristic of bi-boolean options is that when one option is \hx{true}, the partner option is automatically turned \hx{false}, and vice versa.
+
+
+\docsubsection(sec:switch-options){Switch options}
+
+\start{newmacro}[\XDeclareSwitchOption]
+\XDeclareSwitchOption<|nang(fam)>{|nang(opt)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareSwitchOption}
+
+In the parlance of the \pkg'{catoptions,ltxtools}, a switch can assume only one of the two possible states: \fx{\cpttrue} (which is defined as \fx{00}) or \fx{\cptfalse} (which is defined as \fx{01}). A switch \fx{\swa} can be tested with \tex's \hx{\if} conditional. For example, we can do \hx{\if}\unskip\fx{\swa...}\hx{\fi}. The \pkg'{catoptions} also provides the commands \ffx'{\ifswitchTF,\ifswitchFT} for testing switches, which can be used as follows:
+
+\start+{newmacro}[\ifswitchTF,\ifswitchFT]
+\ifswitchTF{|nang(switch)}{|nang(true text)}{|nang(false text)}
+\ifswitchFT{|nang(switch)}{|nang(false text)}{|nang(true text)}
+\finish{newmacro}
+\fxim*{\ifswitchTF,\ifswitchFT}
+
+\ltsnewfootnote{4}{%
+  Because of the need to do, \eg, \fx{\let\swa\cpttrue} and \hx{\if}\unskip\fx{\swa} for any given switch \fx{\swa}, switches, unlike toggles, don't have their own separate namespace and it is all too easy to redefine an existing switch.
+}
+Note that here \ang{switch} has no escape character, unless it evaluates to a switch name. So, after defining \fx{\def\swa{00}} we could then do \fx{\ifswitchTF{swa}{true}{false}}. It is somewhat risky to introduce new switches with \hx{\def} or \hx{\let}\usefootnote{4}. It is advisable to always use \fx{\newswitch} instead. It has the syntax
+
+\start{newmacro}[\newswitch]
+\newswitch{|nang(switch)}[|nang(state)]
+\finish{newmacro}
+\fxim*{\newswitch}
+
+Again, note that here \ang{switch} has no escape character, unless it evaluates to a switch name. \ang{state} can be either \hx{true} or \hx{false}.
+
+Switches are cheaper than native booleans since each switch \fx{swa} has one and only one command \fx{\swa}. Each native boolean \fx{boola}, on the other hand, has up to three commands (namely, \ffx'{\ifboola,\boolatrue,\boolafalse}. If you need to declare a large number of native booleans, it is advisable to consider using switches instead.
+
+It is possible to toggle the state of a switch by simply using the commands:
+
+\start+{newmacro}[\setswitchtrue,\setswitchfalse]
+\setswitchtrue{|nang(switch)}
+  |tto   |C(if switch) |A(switch) |C(exists, do) \let\switch\cpttrue
+\setswitchfalse{|nang(switch)}
+  |tto   |C(if switch) |A(switch) |C(exists, do) \let\switch\cptfalse
+\finish{newmacro}
+\fxim*{\setswitchtrue,\setswitchfalse}
+
+The command \fx{\XDeclareSwitchOption} will, apart from declaring the option \ang{opt}, also create a switch \fnl*'\bs{pref,opt}. It will automatically toggle this switch to \hx{true} (equivalent to \fx{00}) or \hx{false} (equivalent to \fx{01}) when the option is set and the input is valid, depending on the user-supplied value of the option. The macros so created can be used in \ang{fn} or in any other place. The default value of the optional \ang{pref} is again \quotedfx{\@currname @} with no additional prefix. Only \hx{true} or \hx{false} may be submitted as the value of a switch option.
+
+\start{newmacro}[\XDeclareSwitchOptions]
+\XDeclareSwitchOptions<|nang(fam)>{|nang(opts)}[|nang(default)]|(|nang(pref)|){|nang(fn)}
+\finish{newmacro}
+\fxim*{\XDeclareSwitchOptions}
+
+The command \fx{\XDeclareSwitchOptions} is similar to \fx{\XDeclareSwitchOption} but, instead of declaring just one option, it declares all the options in the comma-separated list \ang{opts}. Again, each option in the list \ang{opts} is defined with the same family \ang{fam}, default value \ang{default}, and function \ang{fn}.
+
+
+\docsubsection(sec:unknown-options){Unknown option handler}
+
+\start{newmacro}[\XUnknownOptionHandler]
+\XUnknownOptionHandler<|nang(fams)>[|nang(na)]{|nang(handler)}
+\finish{newmacro}
+\fxim*{\XUnknownOptionHandler}
+
+\ltsnewfootnote{3}{%
+  Declaring a default handler for each unknown option is, of course, inefficient.
+  We have, therefore, provided provisions for declaring such handers for only families of options.
+}
+The command \fx{\XUnknownOptionHandler} can be used in place of \xdecs to specify default action(s) for options undefined in any family in \ang{fams}\usefootnote{3}. \ang{handler} refers to the default function that should be executed if undeclared options are called from families \ang{fams} by the user. \hx{\CurrentOption} can be deployed within \ang{handler} to access the option name (coupled with its current value) for which the option name is unknown. As mentioned above in the case of \xdecs, you can use \fx{#1}, \fx{#2} and \fx{#3} within \ang{handler} to access the current family, current option (uncoupled from its current value), and current value, respectively. \ang{na} is the list of options for which \ang{handler} shouldn't apply; for these options, the kernel's unknown option handler (\ie, \hx{\default@ds}) would apply.
+
+If the \ang{handler} contains the special literal form \fx{define/.code=} as in
+
+\start{example}[Unknown option handler]
+|A(fn1) |R(define/.code=)|nang(callback)|R(/.end) |A(fn2)|label(mac:handler)
+\finish{example}
+\fxim*{define/.code}
+
+then each unknown option in families \ang{fams} will be momentarily defined and executed with the option function \ang{callback}. The family of the new option will be \fx{\cpt@currfam} (the prevailing family name); its default value will be \fx{\cpt@currval} (the value specified by the user for the unknown option); and its macro function will be the above-indicated \ang{callback}. Again, you can use \fx{#1}, \fx{#2} and \fx{#3} in \ang{handler} to refer to the current option family, option name, and option value, respectively.
+
+\ltsnote Functions \ang{fn1} and \ang{fn2} on \sref{mac:handler} will be executed for each unknown function in families \ang{fams}, but (unlike \ang{callback}) will not be used in defining unknown options of \ang{fams}.
+
+If the value given for the unknown option is \hx{true} or \hx{false}, the new (\ie, undeclared) option will be defined as a boolean option with macro prefix \quotedfx{\@currname @}; otherwise it will be defined as a command option with macro prefix \quotedfx{cmd\@currname @}. (See the descriptions of the commands \ffx'{\XDeclareCommandOption,\XDeclareBooleanOption} for the meaning of \quoted{macro prefix}.) It should be noted that the token \quoted{define} in the above syntax is not escaped, and that the token \fx{/.end} is mandatory. If \ang{callback} contains these literal forms, they have to be enclosed in curly braces.
+
+The following example, among other things, produces a warning when the user supplies an option that was not previously declared:
+
+\amvzapname
+\start{example}[\XDeclareOption*]
+\XDeclareOption|*<mypackage>{%
+  |com(Unknown options will not be defined automatically here:)
+  \PackageWarningNoLine{mypackage}{Unknown option `\CurrentOption' ignored}%
+  |com(Current option family:)
+  \def\currfamily{#1}%
+  |com(Current option without the given value:)
+  \def\curroption{#2}%
+  |com(User-supplied value of current option:)
+  \def\currvalue{#3}%
+  |com(User defined function:)
+  \def\mymacro##1{\do@a{#2=#3}\do@b{##1}%
+  |com(`\CurrentOption' isn't equivalent to `#2=#3' because non-active)
+  |com(spaces around `#3' would have been removed.)
+}
+\finish{example}
+
+And the following example passes undeclared options to \hx{article} class:
+
+\amvzapname
+\start{example}[\XDeclareOption*]
+\XDeclareOption|*{\PassOptionsToClass{#2=#3}{article}}
+\finish{example}
+
+The following example instructs \fx{\XProcessOptions} to define all unknown keys on the fly with the callback shown.
+
+\start{example}[\XUnknownOptionHandler]
+\XUnknownOptionHandler<mypackage>{%
+  |com(Unknown options will be defined automatically here with the)
+  |com(indicated code:)
+  |R(define/.code=)
+  \def\x##1{##1\relax `option #2 = value #3' in family `#1'}%
+  |R(/.end)
+  |com(The following will be executed for each unknown option of the)
+  |com(given family, but will not be a `callback' for unknown options:)
+  \PackageWarningNoLine{mypackage}{Unknown option `#2' of family
+    `#1' defined on the fly}%
+}
+\finish{example}
+
+
+\docsubsection(sec:invalid-options){Invalid options}
+
+\start+{newmacro}[\XDeclareInvalidOption,\XDeclareInvalidOptions]
+\XDeclareInvalidOption<|nang(fams)>{|nang(opt)}
+\XDeclareInvalidOptions<|nang(fams)>{|nang(opts)}
+\finish{newmacro}
+\fxim*{\XDeclareInvalidOption,\XDeclareInvalidOptions}
+
+The commands \ffx'{\XDeclareInvalidOption,\XDeclareInvalidOptions} declare the given list \ang{opts} as invalid or inadmissible within the specified families \ang{fams}. A user submitting the invalid option will receive the message the option author has specified for the given family via the command \fx{\XInvalidOptionHandler}. Package and class authors don't necessarily have to provide invalid-option handler for each or any family (of their options) via the macro \fx{\XInvalidOptionHandler}: the package provides a default error message for invoked invalid options when the author of the option hasn't defined an invalid-option handler.
+
+\start{newmacro}[\XInvalidOptionHandler]
+\XInvalidOptionHandler<|nang(fams)>{|nang(handler)}
+\finish{newmacro}
+\fxim*{\XInvalidOptionHandler}
+
+The command \fx{\XInvalidOptionHandler} defines, for each family \ang{fam} in \ang{fams}, a one-parameter function, which, when specified, is used to replace the macros of options in the family \ang{fam} when the options appear in \ang{opts} list of \fx{\XDeclareInvalidOptions}.
+
+\start{example}[\XInvalidOptionHandler]
+\XInvalidOptionHandler<fama,famb>{%
+  \@latex@error{Invalid or null option `\CurrentOption'}%
+    {I have encountered an invalid option `\CurrentOption':
+    Your package author has set this option as inadmissible.}%
+}
+\XDeclareInvalidOptions<fama,famb>{opta,optb}
+\finish{example}
+
+
+\docsubsection(sec:exec-options){Executing options}
+
+\start{newmacro}[\XExecuteOptions]
+\XExecuteOptions<|nang(fams)>{|nang(opts)}[|nang(na)]
+\finish{newmacro}
+\fxim*{\XExecuteOptions}
+
+The re-entrant \fx{\XExecuteOptions} macro sets options created by \fx{\XDeclareOption} and is basically a means of setting up the default values of the options. The optional argument \ang{fams} can be used to specify a list of \emph{families} that define the options. When the argument is not used, the macro will insert the default family name (\fx{\@currname.\@currext}). The set \ang{na} is the list of keys to be ignored (\ie, not executed if they appear in \ang{opts}).
+
+This macro will not use the declaration done by \xdecs when undeclared options appear in its argument. Instead, in this case the macro will issue a warning and ignore the option. This differs from the behavior of \latex's \hx{\ExecuteOptions}.
+
+\start{example}[\XExecuteOptions]
+\XExecuteOptions{leftmargin=0pt}
+\finish{example}
+\dummyfxi*{\XExecuteOptions}
+
+This initializes the option \hx{\leftmargin} of \sref{mac:leftmargin} to 0pt.
+
+
+\docsubsection(sec:process-options){Processing options}
+
+\start{newmacro}[\XProcessOptions]
+\XProcessOptions<|nang(fams)>[|nang(na)]
+\XProcessOptions|*<|nang(fams)>[|nang(na)]
+\finish{newmacro}
+\fxim*{\XProcessOptions}
+
+The re-entrant \fx{\XProcessOptions} macro processes the options and values passed by the user to the class or package. The optional argument \ang{fams} can be used to specify the \emph{families} that have been used to define the options. The optional argument \ang{na} can be used to specify options that should be ignored, \ie, not processed. When used in a class file, this macro will ignore unknown options. This allows the user to use global options in the \hx{\documentclass} command which could be claimed by packages loaded later.
+
+The \stform of \fx{\XProcessOptions} works like the \unstform except that the former also copies user input from the \hx{\documentclass} command and processes the options in the order specified by the \hx{\documentclass}. When the user specifies an option in the \hx{\documentclass} which also exists in the local family (or families) of the package calling \fx{\XProcessOptions}\Redstar, the local option will be set as well. In this case, \fx{#1} in \fx{\XDeclareOption} macro will contain the user-value entered in the \hx{\documentclass} (or \fx{\usepackage} or \fx{\RequirePackage}) command for this option. First the global options from \hx{\documentclass} will set local options and afterwards the local options (specified via \hhx'{\usepackage, \RequirePackage, \LoadClass} or similar commands) will set local options, which could overwrite the global options set earlier, depending on how the options sections are organized. The macro \fx{\XProcessOptions}\Redstar reduces to \fx{\XProcessOptions} only when issued from the class which forms the document class for the file at hand (to avoid setting the same options twice), but not for classes loaded later using, for instance, \hx{\LoadClass}. Global options that do not exist in the local families of the package or class calling \fx{\XProcessOptions}\Redstar will be simply ignored or highlighted.
+
+The implementation here differs significantly from the \latex kernel's scheme of carrying out \hx{\ProcessOptions} and \hx{\ProcessOptions}\Redstar. It also deviates from the implementations by other options processing packages. The differences lie mainly in how the local and global options are distinguished and in the order of processing those options. Among other issues, the family structure introduced by the \pkg'{catoptions} (though lightweight) makes the independence between local and global options possible, even if the options from the two categories share the same namespace and are mixed in, say, \hx{\documentclass} command. Also, document classes loaded by \hx{\LoadClass} don't have the same primacy as the first document class. When using \latex kernel's \hx{\ProcessOptions} or \hx{\ProcessOptions}\Redstar, a class file can't copy document class options, even if the class file is loaded by \hx{\LoadClass}. This is not the case with the \pkg'{catoptions}.
+
+\start+{example}[\XDeclareOption,\XExecuteOptions,\XProcessOptions]
+|com(This is a sample class file. We specify a family for the options,)
+|com(instead of using the default family |(testclass.sty|).)
+\ProvidesClass{testclass}[2011/01/15 v1.0 A test class]
+\NeedsTeXFormat{LaTeX2e}
+|com(The following loading of `catoptions' may need to be commented out)
+|com(to avoid option clash with another loading of the package in the document.)
+|makepurple(% \RequirePackage{catoptions})
+\UseNormalCatcodes
+\newif\ifboola
+\XDeclareOption<testclass>{boola}[true]{%
+  \@nameuse{boola#1}%
+  \ifboola\let\eat\@gobble\fi
+}
+\XDeclareOptions<testclass>{opta,optb}[true]{%
+  \def\alloptsfunc##1{\def\tempa{##1}}%
+}
+|com(No need for \newif when declaring boolean options:)
+\XDeclareBooleanOption<testclass>{boolb}[true]|(test@|){%
+  \iftest@boolb
+    \AtEndOfPackage{\gdef\tex{\TeX\xspace}}%
+  \fi
+}
+\XDeclareBiBooleanOptions{draft,final}[true](test@){}{}
+\XDeclareCommandOption<testclass>{color}[blue]|(test@|){%
+  Load `color' package
+}
+|com(Disable option `color' at \AtBeginDocument:)
+\XDisableOption|*<testclass>{color}
+\XDeclareOption<testclass>{align}[left]{%
+  \ifstrcmpTF{#1}{left}{\let\align\raggedright}{%
+    \ifstrcmpTF{#1}{right}{\let\align\raggedleft}{%
+      \ifstrcmpTF{#1}{center}{\let\align\centering}{%
+        \@latex@error{Invalid value `#1' for align}{%
+          You have issued an illegal value `#1' for the variable `align'.
+        }%
+      }%
+    }%
+  }%
+}
+\XDeclareInvalidOption<testclass>{deadoption}
+\XDeclareOption|*<testclass>{\PassOptionsToClass\CurrentOption{article}}
+\XExecuteOptions<testclass>{boola,boolb}
+\XProcessOptions|*<testclass>\relax
+\LoadClass{article}
+\cptloadpackages{%|label(mac:loadpkg)
+  |nang(pkg name)|rv|nang(pkg opts)|rv|nang(pkg date)|R(;)...|R(;)|nang(more packages)
+}
+\endinput
+
+|com(This is a sample document:)
+\RequirePackage[usepox]{catoptions}
+\documentclass[
+  align     = right,
+  boola     = false,
+  boolb     = true,
+  name      = {Mr J\"avier Claudioos},
+  a4paper,
+  draft,
+  10pt
+]{testclass}
+|com(You can call \usepackage{catoptions}, instead of)
+|com(\RequirePackage{catoptions}, after \documentclass, but then the)
+|com(\documentclass option `name={Mr J\"avier Claudioos}' can't be processed.)
+\usepackage{cleveref}
+
+\begin{document}
+ Blackberry bush ... blackberry-lily.
+\end{document}
+\finish{example}
+\fxim*{\cptloadpackages}
+
+
+\docsubsection(sec:before-proc-options){Hook for before and after processing options}
+
+\start{newmacro}[\BeforeProcessOptions,\AfterProcessOptions]
+\BeforeProcessOptions{|nang(code)}
+\AfterProcessOptions{|nang(code)}
+\finish{newmacro}
+\fxim*{\BeforeProcessOptions,\AfterProcessOptions}
+
+The commands \ffx'{\BeforeProcessOptions,\AfterProcessOptions} can be used to process \ang{code} just before and immediately after \fx{\XProcessOptions} has run its course. The command \fx{\AfterProcessOptions} is particularly useful when it is required to optionally load a package, depending on the state of an option in the current package. For obvious reasons, \latex doesn't allow the loading of packages in the options section. The command \fx{\AfterProcessOptions} can be used to load packages after the current package's options have been processed. Here is an example for optionally loading sub-packages at the end of the options section:
+
+\start{example}[\AfterProcessOptions]
+\newif\ifloadsubpackages
+\robust@def*\inputpackage[#1]#2{%
+  \ifloadsubpackages
+    \AfterProcessOptions{\RequirePackage[#1]{#2}}%
+  \fi
+}
+\robust@def*\loadsub#1{%
+  \cptdocommalist{#1}{%
+    \XDeclareOption{##1}{\inputpackage[####1]{##1}}%
+  }%
+}
+\loadsub{subpkg1,subpkg2,subpkg3}
+\finish{example}
+
+%\enlargethispage{2\baselineskip}
+\bigskip
+\docsubsection(sec:ifoptiondef){Testing if an option is defined}
+
+\start{newmacro}[\ifoptdefTF]
+\ifoptdefTF<|nang(fams)>{|nang(opt)}{|nang(true)}{|nang(false)}
+\ifoptdefFT<|nang(fams)>{|nang(opt)}{|nang(false)}{|nang(true)}
+\finish{newmacro}
+\fxim*{\ifoptdefTF}
+
+The macro \fx{\ifoptdefTF} returns \ang{true} if option \ang{opt} is undefined in one or more members of \ang{fams}, and \ang{false} otherwise. The command \fx{\ifoptdefFT} reverses the logic of \fx{\ifoptdefTF}.
+
+
+\docsubsection(sec:disable-options){Disabling options}
+
+\start{newmacro}[\XDisableOptions]
+\XDisableOptions<|nang(fams)>{|nang(opts)}
+\XDisableOptions|*<|nang(fams)>{|nang(opts)}
+\finish{newmacro}
+\fxim*{\XDisableOptions}
+
+The command \fx{\XDisableOptions} disables all the options in the list \ang{opts} that can be found in the families \ang{fams}, \ie, it makes the options invalid thereafter. If any of the options in the list \ang{opts} can't be found in the families \ang{fams}, it is simply ignored without warning: since families can be mixed in \ang{fams}, it wouldn't be meaningful issuing several warnings in this case.
+
+The \stform of \fx{\XDisableOptions} delays the invalidation of the \ang{opts} until the invocation of \hx{\begin{document}}. This may be used to bar users of the options from committing the options after the start of document, but not before.
+
+
+\docsubsubsection{Logging disabled options}
+
+\start{newmacro}[\XLogDisabledOptions]
+\XLogDisabledOptions<|nang(fams)>
+\finish{newmacro}
+\fxim*{\XLogDisabledOptions}
+
+The command \fx{\XLogDisabledOptions}, which can be called before and after \hx{\begin{document}}, writes in the current transcript file the options of the families \ang{fams} that have been disabled so far. If no options have been disabled from any of the given families or if the given family does not exist, a message is logged to that effect.
+
+
+\docsubsubsection{Testing if an option is disabled}
+
+\start{newmacro}[\ifoptdisabled]
+\ifoptdisabledTF<|nang(fams)>{|nang(opt)}{|nang(true)}{|nang(false)}
+\ifoptdisabledFT<|nang(fams)>{|nang(opt)}{|nang(false)}{|nang(true)}
+\finish{newmacro}
+\fxim*{\ifoptdisabledTF}
+
+The macro \fx{\ifoptdisabledTF} returns \ang{true} if option \ang{opt} has been disabled from one or more members of \ang{fams}, and \ang{false} otherwise. The command \fx{\ifoptdisabledFT} reverses the logic of \fx{\ifoptdisabledTF}.
+
+
+\docsection(sec:normalize)<Normalizing lists>{Normalizing csv and kv lists}
+
+Any arbitrary parser-separated-values (csv) list can be normalized by means of the package command \fx{\csv@@normalize} before processing the list.
+
+\start{newmacro}[\csv@@normalize]
+\csv@@normalize[|nang(parser)]{|nang(list)}
+\csv@@normalize|*[|nang(parser)]|nang(listcmd)
+\finish{newmacro}
+\fxim*{\csv@@normalize}
+
+Here, \ang{list}, which is populated by parser-separated elements, is not expanded before normalization; \ang{listcmd}, on the other hand, is expanded once before normalization. The default value of the optional \ang{parser} is \qcomma. \quoted{Normalization} implies changing the category codes of all the active parsers to their standard values, as well as trimming leading and trailing spaces around the elements of the list and removing consecutive multiple parsers. Thus empty entries that are not enforced by curly braces are removed. The result (\ie, normalized list) is available in the macro \fx{\normalized@list} (in the \unstform case) or \ang{listcmd} (in the \stform case).
+
+\start{example}[\csv@@normalize]
+\begingroup
+\catcode`\;=\active
+\gdef\x{x ;  ;  {y}; ;  z}
+\endgroup
+
+\csv@@normalize*[;]\x
+|com(\show\x)
+\finish{example}
+
+\start{newmacro}[\kv@@normalize]
+\kv@@normalize[|nang(parser)]{|nang(list)}
+\kv@@normalize|*[|nang(parser)]|nang(listcmd)
+\finish{newmacro}
+\fxim*{\kv@@normalize}
+
+The command \fx{\kv@@normalize} normalizes a list of key-value pairs, returning the result in the macro \fx{\normalized@list} (in the \unstform case) or \ang{listcmd} (in the \stform case). Besides dealing with multiple commas and the spaces between entries, in this case the spaces between keys and the equality sign are removed and multiple equality signs are made only one. Moreover, the category codes of the arbitrary parser and the equality sign are made normal/other throughout the list. The command \fx{\kv@@normalize} is meant for options or key-value parsing; it is used in the options processing scheme of \pkg'{catoptions}.
+
+\start{example}[\csv@@normalize]
+\begingroup
+\catcode`\;\string=\active
+\catcode`\=\string=\active
+\gdef\x{x=A ; ;  y=={B} ; ;  z=C}
+\endgroup
+
+\kv@@normalize*[;]\x
+|com(\show\x)
+\finish{example}
+
+
+\docsection(sec:csvkvparse)<Parsing lists>{Parsing csv and kv lists}
+
+\start+{newmacro}[\csv@@loop,\csv@@parse,\kv@@parse]
+\csv@@loop[|nang(parser)][|nang(list)]
+\csv@@loop|*[|nang(parser)][|nang(listcmd)]
+\csv@@parse[|nang(parser)][|nang(list)]
+\csv@@parse|*[|nang(parser)][|nang(listcmd)]
+\kv@@loop[|nang(parser)][|nang(list)]
+\kv@@loop|*[|nang(parser)][|nang(listcmd)]
+\kv@@parse[|nang(parser)][|nang(list)]
+\kv@@parse|*[|nang(parser)][|nang(listcmd)]
+\finish{newmacro}
+\fxim*{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse}
+
+The macros \ffx'{\csv@@parse,\kv@@parse}---and their \stform+---call \ffx'{\csv@@normalize, \kv@@normalize}, respectively. On the other hand, the macros \ffx'{\csv@@loop,\kv@@loop} and their \stform+ don't call \fx{\csv@@normalize} (since not every list will require normalization). This is the only difference between \fx{\csv@@loop} and \fx{\csv@@parse}, and between  \fx{\kv@@loop} and \fx{\kv@@parse}. The macros \ffx'{\csv@@loop,\csv@@parse} are meant for general csv-list processing with an arbitrary parser, while the command \ffx'{\kv@@loop,\kv@@parse} are designed for processing key-value lists. These macros loop over a given \ang{parser}-separated \ang{list} and execute the user-defined, one-parameter, commands \ffx'{\csv@do,\kv@do}, respectively, for every item in the list, passing the item as an argument and preserving outer braces. The default value of \ang{parser} is \qcomma. The \stform+ of these commands expand \ang{listcmd} once before commencing the loop.
+
+Here are some points to note about these list processors:
+\begin{enum}
+\item The commands \ffx'{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse} aren't expandable.
+\item If an item contains \ang{parser}, it must be wrapped in curly braces when using \ffx'{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse}, otherwise the elements may be mixed up during parsing. The braces will persist thereafter, but will of course be removed during printing (if the items are printed).
+\item White spaces before and after the list separator are always ignored by the normalizer called by \ffx'{\csv@@parse,\kv@@parse}. If an item contains \ang{parser} or starts with a space, it must, therefore, be wrapped in curly braces before commencing these loops.
+\item Since \ffx'{\csv@@loop,\kv@@loop} don't call the normalizer, they preserve outer/surrounding spaces in the entries. Empty entries in \ang{list} or \ang{listcmd} will be processed by \ffx'{\csv@@loop,\kv@@loop} if the boolean \fx{cpt@useempty} is true. You may thus issue the command \fx{\UseEmptyEntry} or \fx{\DiscardEmptyEntry}, which are based on the boolean \fx{cpt@useempty}, before commencing the iteration. If empty entries are important to the task at hand, then issuing \fx{\UseEmptyEntry} or \fx{\DiscardEmptyEntry} prior to the commencement of the loop is recommended, because a previous call to either \fx{\csv@@loop} or \fx{\kv@@loop} (perhaps by another package) could have set \fx{cpt@useempty} to a state that is no longer valid or desired.
+\item The commands \ffx'{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse} can be nested to any level and can be mixed.
+\item In the commands \ffx'{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse}, it is always possible to break out of the loop prematurely at any level of nesting, simply by issuing the command \fx{\ltsloopbreak} (see the example below). Breaking an inner loop doesn't affect the continuation of the outer loop, and vice versa; that is, loop breaks are nest-level-dependent.
+\item The user can insert \fx{\csvbreak} as an element in \ang{list} for any of the commands \ffx'{\csv@@loop, \csv@@parse, \kv@@loop, \kv@@parse, \dofunclist} with the aim of automatically breaking out of the list processing prematurely (\ie, before the list is exhausted). The tokens \ffx'{\listbreak, \breaklist} are not defined or used by the \pkg'{catoptions}, to avoid name clashes with other packages. The \pkg'{catoptions} instead uses \fx{\csvbreak}, which is an unexpandable token; if it were to be expandable, then experience has shown that a chaotic infinite loop could arise in an expansion context. Breaking out of the loop prematurely on the current nest level doesn't affect the continuation of the loop on the other levels.
+\end{enum}
+
+\start{example}[\csv@@parse]
+\begingroup
+\catcode`\;=\active
+\gdef\x{a ;  ;  {b}; ;  c}
+\endgroup
+
+\@tempcnta\z@
+\def\csv@do#1{%
+  \advance\@tempcnta\@ne
+  \@namedef{x@\romannumeral\@tempcnta}{#1}%
+}
+\csv@@parse*[;]\x
+|com(\show\x@ii)
+
+\def\xa{a , {b} , c}
+\def\xb{x ; y ; {z}}
+\def\csv@do#1{%
+  \pushnumber\nra
+  \csn@edef{arg@\romannumeral\nra}{#1}%
+  \chardef\nrb\z@
+  \def\csv@do##1{%
+    \pushnumber\nrb
+    |com(Breaking the inner loop here doesn't affect the outer loop:)
+    \ifnum\nrb>\@ne|R(\ltsloopbreak)\fi
+    \csn@def{arg@\romannumeral\nra @\romannumeral\nrb}{#1,##1}%
+  }%
+  \csv@@parse*[;]\xb
+}
+\csv@@parse*\xa
+\finish{example}
+
+\start+{example}[Using \csvbreak]
+\cptnewvariables{count}{m@,n@}
+\def\csv@do#1{%
+  \advance\m@\@ne\n@\z@
+  \def\csv@do##1{%
+    \advance\n@\@ne
+    \csn@def{w@\romannumeral\m@ @\romannumeral\n@}{#1,##1}%
+  }%
+  \csv@@parse[;]{ {x} ; {y} ; |R(\csvbreak) ; z  }%
+}
+\csv@@parse{ a , {b}, {c} }
+\finish{example}
+\fxim*{\csvbreak}
+
+The following is a pseudocode that depicts the use of \fx{\kv@@parse}:
+
+\start{example}[\kv@@parse]
+\def\kv@do#1{%
+  \def\CurrentOption{#1}%
+  |R(if \CurrentOption is not empty then)
+    Split \CurrentOption into option and value;
+    Search if option exists in \@declaredoptions
+    |R(if option is found then)
+      Execute the option's function
+    |R(else)
+      Report option as unknown
+    |R(fi)
+  |R(fi)
+}
+|com(|fx(\kv@@parse) will normalize |hx(\@classoptions) before parsing it:)
+|R(if there are declared options then)
+  \kv@@parse*\@classoptions
+|R(fi)
+\finish{example}
+
+\start{newmacro}[\dofunclist]
+\def\do|nang(params){|nang(fn)}
+\dofunclist[|nang(parser)]{|nang(list)}
+\dofunclist|*[|nang(parser)]{|nang(listcmd)}
+\finish{newmacro}
+\fxim*{\dofunclist,\do}
+
+The \fx{\dofunclist} command can be used to iterate over a \ang{parser}-separated \ang{list} or \ang{listcmd} and execute the auxiliary command \fx{\do} for every item in the list, passing the item as an argument and preserving outer braces. While the user-defined commands \ffx'{\csv@do,\kv@do} (required by \ffx'{\csv@@loop,\csv@@parse,\kv@@loop,\kv@@parse}) must be one-parametered, the command \fx{\do} (required by \fx{\dofunclist}) can be multi-parametered. The command \fx{\dofunclist} isn't expandable. \ang{params} are the parameter texts for the command \fx{\do}. White spaces before and after the list separator are always ignored, because the list is first normalized before parsing by \fx{\dofunclist}. If an item contains \ang{parser} or starts with a space, it must be wrapped in curly braces (to preserve the parser or space). The braces may persist thereafter, but will of course be removed during printing (if the items are printed). The default value of \ang{parser} is \qcomma.
+
+Empty entries in \ang{list} will be ignored by the normalizer called by \fx{\dofunclist}. Such empty entries, if needed later, would need to be enclosed in curly braces before commencing the iteration. The \fx{\dofunclist} command, like all the looping macros of this section, can be nested to any level.
+
+\start+{example}[\dofunclist]
+\def\do#1{\item #1}
+\begin{itemize}
+  |com(The following parser |(,|) is superfluous since the default is comma:)
+  \dofunclist[,]{aaaa, bbbb, {cccc, dddd}, eeee}
+\end{itemize}
+
+|com(Let us load many packages compactly here. This is just a simple example of)
+|com(|fx(\dofunclist); you can instead use the more appropriate command)
+|com(|fx(\cptloadpackages) to load packages (see |sref(mac:loadpkg)):)
+\def\do#1.#2[#3]{%
+  \@ifpackageloaded{#1}{%
+    \@ifpackagelater{#1}{#2}{}{%
+      \cpt@warn{Older version of package `#1' was loaded earlier}%
+    }%
+  }{%
+    \let\elt\cpttrimspaces
+    \cptexpandsecond\usepackage{[\elt{#3}]{\elt{#1}}[\elt{#2}]}%
+  }%
+}
+|com(The default parser |(,|) is implied below:)
+\dofunclist{%
+  yfonts.2003/01/08[],
+  pifont.2005/04/12[],
+  helvet.2005/04/12[scaled=0.9],
+  zref.2008/10/01[|R({)user,lastpage|R(})],
+  xcolor.2007/01/21[|R({)table,hyperref|R(})]
+}
+
+|com(An example of nested loops follows. Here outer braces in the)
+|com(elements are preserved:)
+\chardef\m@\z@
+\def\do#1{%
+  \pushnumber\m@
+  \chardef\n@\z@
+  \def\do##1{%
+    \pushnumber\n@
+    \ifnum\n@>\@ne|R(\ltsloopbreak)\fi
+    \csn@def{w@\romannumeral\m@ @\romannumeral\n@}{#1,##1}%
+  }%
+  \dofunclist[;]{x;{y};z}%
+}
+\dofunclist[,]{a,{b},c,d,e}
+\finish{example}
+
+While \fx{\dofunclist} allows the user to define and call multi-parametered \fx{\do} functions, outer curly braces in the \emph{individual} arguments of \fx{\do} may, in some rare cases, be lost in parsing (but only if the number of arguments exceeds one). This possibility depends on how the parameters and arguments of the user-supplied command \fx{\do} are arranged. If preserving braces is essential to the user's need, then he/she might consider using the more robust commands \ffx'{\csv@@loop, \csv@@parse, \kv@@loop, \kv@@parse}. It is possible to robustly build a multi-parametered callback in the user-defined commands \ffx'{\csv@do,\kv@do} required by \ffx'{\csv@@loop, \csv@@parse, \kv@@loop, \kv@@parse}. In fact, this is what \fx{\dofunclist} does internally.
+
+
+\docsubsection(sec:indris){Looking ahead in csv lists}
+
+Imagine an instance in which, while processing a csv list, you need not only the current item of the list but also the next item. Moreover, you need to know when the last item of the list has been reached, so that, for example, you can do something peculiar with the last item. The \fx{\indrisloop} list processor provides facilities to accomplish these tasks.
+
+\start+{newmacro}[\indrisloop]
+\indrisloop[|nang(parser)]{|nang(list)}|A(fn)
+\indrisloop|*[|nang(parser)]|nang(listcmd)|A(fn)
+\finish{newmacro}
+\fxim*{\indrisloop,\indrisdepth,\currindris,\currindris@i,
+\nextindris,\nextindris@i,\indrisnr,\iflastindris}
+\fxi*{\ifLTS@loopbreak}
+
+The \fx{\indrisloop} command can be used to iterate over a \ang{parser}-separated \ang{list} or \ang{listcmd} and execute the user-supplied one-parameter command \ang{fn} for every item in the list, passing the item as an argument and preserving outer braces.
+
+The \fx{\indrisloop} iterator is of particular interest. The loop provides the macros \ffx'{\indrisdepth, \currindris, \currindris@i, \nextindris, \nextindris@i, \indrisnr, \iflastindris, \ifLTS@loopbreak}, which mean, respectively, the current nested depth/level, the current item on the current level, the current item on an arbitrary level \quotedfx{i}, the next item on the current level, the next item on an arbitrary level \quotedfx{i}, the numerical order of the current item on the current level, the boolean that indicates that the last item of the list has been reached on the current level of nesting, and the boolean that can be used to break the loop prematurely (before the list is exhausted) on any level.
+
+You can do \fx{\iflastindris...\fi} on any level. On any given level, it is possible to break out of the current loop by simply issuing \fx{\ltsloopbreak}. This would not affect the progress of the loops on other levels. When \fx{\iflastindris} is true on a given level \quotedfx{i}, then \ffx'{\nextindris,\nextindris@i} are empty on that level, but not necessarily the macros \ffx'{\currindris,\currindris@i}.
+
+The following provides a simple application of \fx{\indrisloop}, which I posted on \comptexttex in July~2011 in response to a posted question.
+
+\start{example}[\indrisloop]
+\makeatletter
+\robust@def*\andorcomma{%
+  \ifnumcmpTF\indrisnr>\@ne{%
+    \ifboolTF{lastindris}{%
+      \xifstrcmpTF\sav@lastrefsep{and}{ and }{, }%
+    }{, }%
+  }{}%
+}
+\robust@def*\lastrefsep#1{%
+  \ifstrcmpTF{#1}{and}{}{%
+    \ifstrcmpTF{#1}{comma}{}{%
+      \ifstrcmpTF{#1}{,}{}{%
+        \@ltx@err{Invalid argument for \string\lastrefsep}\@ehc
+      }%
+    }%
+  }%
+  \gdef\sav@lastrefsep{#1}%
+}
+\robust@def*\secref{\secref@i{\S}{\S\S}}
+\new@def*\secref@i#1#2#3{%
+  \begingroup
+  \def\reserved{#3}%
+  \csv@@normalize*[,]\reserved
+  \def\do##1{\andorcomma\ref{##1}}%
+  \def\reserved@a##1,##2,##3\@nil{%
+    \ifblankTF{##1}{}{%
+      \ifblankTF{##2}{%
+        #1~\ref{##1}%
+      }{%
+        #2~\indrisloop*\reserved\do
+      }%
+    }%
+  }%
+  \expandafter\reserved@a\reserved,,\@nil
+  \endgroup
+}
+\begin{|R(document)}
+\lastrefsep{and} % or \lastrefsep{comma}
+\section{aaa}\label{sec:aaa}
+\section{bbb}\label{sec:bbb}
+\section{ccc}\label{sec:ccc}
+\section{ddd}
+\noindent\secref{sec:aaa,sec:bbb,sec:ccc}.
+\par\noindent\secref{sec:aaa}
+\end{|R(document)}
+\finish{example}
+
+%\bigskip
+\docsection(sec:tsvparse)<Iterating tokenwise>{Parsing \headquoted{tsv} lists}
+
+\start+{newmacro}[\tsv@@parse,\tsv@@loop]
+\tsv@@loop{|nang(list)}
+\tsv@@loop|*|nang(listcmd)
+\tsv@@parse{|nang(list)}
+\tsv@@parse|*|nang(listcmd)
+\finish{newmacro}
+\fxim*{\tsv@@parse,\tsv@@loop}
+
+The macros \ffx'{\tsv@@loop,\tsv@@parse} loop over \quoted{non-separated} tokens (tsv-list), picking each token as an argument and applying the one-parameter, user-supplied, function \fx{\tsv@do} to it while preserving outer braces in the item. The macros \ffx'{\tsv@@loop, \tsv@@parse} are meant for general tsv-list processing.
+
+The macros \ffx'{\tsv@@loop,\tsv@@parse} (and their \stform+) of course don't call \fx{\csv@@normalize} or \fx{\kv@@normalize}, but instead they trim leading and trailing spaces of individual tokens/entries. The only difference between \fx{\tsv@@loop} and \fx{\tsv@@parse} is that the former calls \fxi{\cpttrimspace}, while the latter calls \fx{\cpttrimspaces}. The expandable function \fxi{\cpttrimspaces} trims all leading and trailing spaces (including chains of implicit spaces) around its argument, while \fx{\cpttrimspace} trims only one leading and one trailing space around its argument. Both \ffx'{\cpttrimspace,\cpttrimspaces} preserve outer braces around their arguments, are expandable, and leave the trimmed token unchanged from its original form. The latter requirement is a condition of Michael Downes.
+
+The starred variants of \ffx'{\tsv@@loop,\tsv@@parse} expand \ang{listcmd} once before commencing the loop.
+
+Empty entries in \ang{list} or \ang{listcmd} will be processed if the boolean \fx{cpt@useempty} is true. You may thus issue the command \fxi{\UseEmptyEntry} or \fxi{\DiscardEmptyEntry} before commencing the iteration. Both commands \ffx'{\tsv@@loop,\tsv@@parse} can be nested to any level and can be mixed.
+
+In the commands \ffx'{\tsv@loop,\tsv@@parse}, it is always possible to break out of the loop prematurely at any level of nesting by issuing the command \fx{\ltsloopbreak}. Again, breaking an inner loop doesn't affect the continuation of the outer loop, and vice versa. The user can insert \fx{\tsvbreak} as an element in \ang{list} for any of the commands \ffx'{\tsv@@loop, \tsv@@parse} so as to automatically break out of the list processing prematurely (\ie, before the list is exhausted).
+
+\start+{example}[\tsv@@loop,\tsv@@parse]
+\newcount\m
+\newcount\n
+\def\tsv@do#1{%
+  \advance\m\@ne\n\z@
+  \def\tsv@do##1{%
+    \advance\n\@ne
+    \csn@edef{w@\romannumeral\m @\romannumeral\n}{#1,##1}%
+  }%
+  \tsv@@loop{ x {y} |R(\tsvbreak) z  }%
+}
+\tsv@@loop{ a {b} {c} }
+\finish{example}
+
+
+\docsection(sec:version-hist){Version history}
+
+The following change history highlights significant changes that affect user utilities and interfaces; mutations of technical nature are not documented in this section. The numbers on the right-hand side of the following lists are section numbers; the \stsign means the subject features in the package but is not reflected anywhere in this user guide.
+
+\begin{versionhist}
+  \begin{version}{0.2.7f}{2012/11/17}
+  \item Bug fix in \fx{\cptonlypreamble}.\vsecref*
+  \end{version}
+  \begin{version}{0.2.7c-e}{2012/10/14}
+  \item Changes in some command names.\vsecref*
+  \end{version}
+  \begin{version}{0.2.7b}{2011/12/17}
+  \item Renamed the user commands \ffx'{\dofunclist, \stripallouterbraces, \stripouterbraces} to \ffx'{\cptdofunclist, \cptstripallouterbraces, \cptstripNouterbraces}, respectively.\vsecref*
+  \end{version}
+  \begin{version}{0.2.7a}{2011/12/07}
+  \item Renamed the user commands \ffx'{\newvariables,\docommalist, \iflacus...\then} to \ffx'{\cptnewvariables,\cptdocommalist, \iflacus...\dolacus}, respectively, to reduce the chances of name clashes with other packages or user code. The old names haven't actually been removed yet, but will disappear in the future.\vsecref*
+  \end{version}
+  \begin{version}{0.2.7}{2011/10/10}
+  \item Introduced the commands \ffx'{\BeforeProcessOptions,\AfterProcessOptions} \vsecref{sec:before-proc-options}
+  \end{version}
+  \begin{version}{0.2.6}{2011/09/10}
+  \item Bug fix in the command \fx{\UseNormalCatcodes} \vsecref{sec:saving-catcodes}
+  \end{version}
+  \begin{version}{0.2.5}{2011/07/20}
+  \item Enlarged the command \fxi{\cptnewvariables} to include \hx{\newwrite} and \fx{\newswitch} \vsecref*
+  \end{version}
+  \begin{version}{0.2.4}{2011/07/04}
+  \item Changes to command \fxi{\cptonlypreamble} \vsecref*
+  \end{version}
+  \begin{version}{0.2c}{2011/06/08}
+  \item Modified syntax for the handler of unknown options \vsecref{sec:options-parse}
+  \end{version}
+
+  \begin{version}{0.2b}{2011/04/02}
+  \item The following commands were introduced \vsecref{sec:options-parse}
+    \start{veritem}
+    \XDeclareInvalidOptions  \XUnknownOptionHandler   \XDisableOptions
+    \XLogDisabledOptions     \ifoptdisabledTF         \ifoptdefTF
+    \finish{veritem}
+  \end{version}
+
+  \begin{version}{0.2a}{2011/02/15}
+  \item For efficiency reasons, canonical control sequences for futurelet characters are no longer defined automatically. The user is now responsible for specifying the canonical control sequences that should be defined \vsecref{sec:future-letting}
+  \item The following plural-form commands were introduced \vsecref{sec:options-parse}
+    \start{veritem}
+    \XDeclareOptions          \XDeclareCommandOptions
+    \XDeclareBooleanOptions   \XDeclareBiBooleanOptions
+    \finish{veritem}
+
+  \end{version}
+  \begin{version}{0.1}{2011/01/25}
+  \item First public release.
+  \end{version}
+
+\end{versionhist}
+
+\newpage
+\ltsindexpreambleformat{\centering}
+\ltsindexpreamble{Index numbers refer to page numbers.}
+\ltsindexcolumns\tw@
+\printindex
+
+\end{document}
+
+\newcount\nr
+\def\alist{a1/b1/c1; a2/b2/c2; a3/b3/c3}
+\trace*
+\cptforeach*[;] \xa/\ya/\za \in \alist \do{%
+  \nr\z@pt
+  \cptforeach[,] \xb|\yb|\zb \in s1|t1|u1, s2|t2|u2, s3|t3|u3 \do{%
+    \advance\nr\@ne
+    \ifnum\nr>\@ne\ltsloopbreak\fi
+    % It is permissible to use #1, #2, #3, ##1, ##2, ##3, etc,
+    % to refer to the elements of each list, but they won't be
+    % despaced as \xa, \ya, \za, etc will be:
+    % \edef\cmda####1{#1#2#3*####1*##1##2##3}%
+    \edef\cmdb####1{\xa\ya\za*####1*\xb\yb\zb}%
+  }%
+}
+

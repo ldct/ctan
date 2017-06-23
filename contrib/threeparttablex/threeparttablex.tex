@@ -1,0 +1,265 @@
+\documentclass[a4paper,article]{memoir}
+\usepackage[T1]{fontenc}
+%\usepackage[garamond]{mathdesign}
+
+\usepackage{bera}
+
+\setsecnumdepth{part}
+\pagestyle{plain}
+
+\usepackage{xspace,listings,xcolor}
+\newcommand\pkg{\jobname\xspace}
+
+\newcommand\env[1]{\texttt{#1}}
+
+\newcommand\tpt{threeparttable\xspace}
+
+\definecolor{felinesrcbgcolor}{rgb}{1,1,0.85}
+\definecolor{austdblue}{cmyk}{1,0.8,0,0.15}
+\definecolor{nicered}{rgb}{.647,.129,.149}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  columns=fixed,
+  backgroundcolor=\color{felinesrcbgcolor},
+  frame=single,
+  extendedchars=true,
+  framexleftmargin=3pt,
+  numbers=none,
+  numberstyle=\tiny\ttfamily,
+  escapeinside={X}{X},
+}
+
+\usepackage[referable]{threeparttablex}
+\usepackage{longtable}
+
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{A small extension to threeparttable \\ -- or bringing
+  threeparttable to longtable}
+
+\author{Lars Madsen\thanks{Email: daleif@imf.au.dk}}
+
+\date{Corresponding to version 0.3, manual updated \today}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+
+Because of the measuring nature of the original \tpt
+environment, one cannot use it in combination with the longtable
+environment. This package makes up for this and brings \tpt
+to longtable, at the small cost of having to do things a little
+different when adding table notes to longtable.
+
+If asked for it, the pacakge will also enable the user to label and
+refer to table notes.
+
+
+\section{Prerequisites}
+\label{sec:prerequisites}
+
+The \pkg package requires the \tpt and environ packages to
+be available on your system.
+
+\section{Basic usage}
+\label{sec:basic-usage}
+
+The interface for the regular \tpt system has not changed. We add the
+following:
+\begin{description}
+\item[ThreePartTable] a very simple wrapper environment that should
+  wrap around the entire longtable. (It actually does nothing else but
+  enable the \cs{tnote} command).
+\item[TableNotes] an environment taking the same options as the normal
+  table\-notes environment, write the table notes in this environment.
+  It needs to be placed \emph{before} the longtable. It \emph{cannot}
+  be added inside longtable.
+\item[\cs{insertTableNotes}] use this macro to insert the table notes
+  inside the longtable. It is inserted via a special
+  \cs{multicolumn}. If you add stuff after the table notes, e.g.\ a
+  caption, you should remember to use \verb+\insertTableNotes\\+.
+\end{description}
+
+\noindent A longtable example could look like this:
+\begin{lstlisting}
+\begin{ThreePartTable}
+  \begin{TableNotes}
+    \item[a] A note
+    \item[b] Another note
+  \end{TableNotes}
+  \begin{longtable}{l l}
+    \toprule
+    Column 1 & Column 2 \\
+    \midrule
+    \endhead
+    \cmidrule{2-2}
+    \multicolumn{2}{r}{\textit{continued}}
+    \endfoot
+    \bottomrule
+    \insertTableNotes
+    \endlastfoot
+
+    % the contents of the table
+    A          & B\tnote{a} \\
+    C\tnote{b} & D          \\ 
+  \end{longtable}
+\end{ThreePartTable}
+\end{lstlisting}
+
+\paragraph{Caveat:} As mentioned on
+\url{http://tex.stackexchange.com/q/149032/3929}, if you use \cs{fill}
+to spread out the columns in the table, the width \env{longtable}
+reports back (which we use to specify the width of the notes) will be
+wrong. It will be the natural width of the table not the actual
+width. The result is that the area for the notes will have the wrong
+width. A remedy is to tell it to use the full width, something similar
+to
+\begin{lstlisting}
+\begin{ThreePartTable}
+  \renewcommand\TPTminimum{\textwidth} %%% we want full width
+  ...
+\end{lstlisting}
+will do.
+
+
+\section{Extending \tpt}
+\label{sec:extending-tpt}
+
+One thing missing in \tpt is the ability to refer to
+individual table notes. And even let \cs{tnote} pickup the note
+marker via a label (reducing the error-40 factor).
+
+By using the package option >>\texttt{referable}<< we will change a
+few \tpt internals such that
+\begin{enumerate}[(a)]
+\item The manually specified note markers issued by \verb+\item[...]+
+  is referable, and
+\item \cs{tnotex}\marg{label} will refer to the table note identified
+  by \meta{label}. (We do not want to change \cs{tnote}). In case you
+  are using hyperref, there is also a \cs{tnotex*} that does not make
+  the tnote into a hyperlink.
+\item \cs{setTableNoteFont}\marg{font commands} can be used to set the
+  font inside tables notes. (default is empty)
+\item inside the \emph{tablenotes} environment, the macros \cs{note}
+  and \cs{source} can be used to specify general notes and a source
+  reference for the table data. These are commonly used within the
+  examples in The Chicago Manual of Style.
+\item The macros \cs{TPTLnotename} \cs{TPTLsourcename} holds the title
+  names for \cs{note} and \cs{source} (default: >>Note<< and
+  >>Source<<). Both are typeset using \cs{TPTLnotesnamefontcommand}
+  which deaults to \cs{textit}.
+\end{enumerate}
+
+\section{Example}
+\label{sec:example}
+
+\begin{lstlisting}
+\begin{ThreePartTable}
+  \begin{TableNotes}
+  \item[a] \label{tn:a} test test test test test test test test
+  \item[b] \label{tn:b} test2
+  \source Made up by daleif
+  \end{TableNotes}
+
+\begin{longtable}{l l l}
+  \caption{A long table}\\
+  \toprule
+  Coloum 1 & & Column 2 \\
+  \midrule
+  \endhead
+  \cmidrule{3-3}
+  \multicolumn{3}{r}{\textit{continued}}
+  \endfoot
+  \bottomrule
+  \insertTableNotes\\
+  \endlastfoot
+  AAAA\tnotex{tn:a} & XXXXXXXX & BBBB \\
+%  \newpage
+  CC   &          & DD\tnotex{tn:b}   \\
+\end{longtable}
+\end{ThreePartTable}
+
+
+\begin{center}
+  \begin{threeparttable}
+    \caption{A regular tabular}
+    \begin{tabular}{l l l}
+      \toprule
+      Coloum 1 & & Column 2 \\
+      \midrule
+      AAAA\tnote{c} & XXXXXXXX & BBBB \\
+      CC   &          & DD\tnotex*{tn:c}   \\
+      \bottomrule
+    \end{tabular}
+    \begin{tablenotes}
+      \footnotesize
+    \item[c] test test test test test test test test 
+    \item[d] \label{tn:c} the reference to this is not a link
+    \note Some general note
+    \end{tablenotes}
+  \end{threeparttable}
+\end{center}
+\end{lstlisting}
+
+\newpage
+
+\noindent Resulting in:
+
+\begin{ThreePartTable}
+  \begin{TableNotes}
+  \item[a] \label{tn:a} test test test test test test test test
+  \item[b] \label{tn:b} test2
+  \source Made up by daleif
+  \end{TableNotes}
+
+\begin{longtable}{l l l}
+  \caption{A long table}\\
+  \toprule
+  Coloum 1 & & Column 2 \\
+  \midrule
+  \endhead
+  \cmidrule{3-3}
+  \multicolumn{3}{r}{\textit{continued}}
+  \endfoot
+  \bottomrule
+  \insertTableNotes\\
+  \endlastfoot
+  AAAA\tnotex{tn:a} & XXXXXXXX & BBBB \\
+%  \newpage
+  CC   &          & DD\tnotex{tn:b}   \\
+\end{longtable}
+\end{ThreePartTable}
+
+
+\begin{center}
+  \begin{threeparttable}
+    \caption{A regular tabular}
+    \begin{tabular}{l l l}
+      \toprule
+      Coloum 1 & & Column 2 \\
+      \midrule
+      AAAA\tnote{c} & XXXXXXXX & BBBB \\
+      CC   &          & DD\tnotex*{tn:c}   \\
+      \bottomrule
+    \end{tabular}
+    \begin{tablenotes}
+      \footnotesize
+    \item[c] test test test test test test test test 
+    \item[d] \label{tn:c} the reference to this is not a link
+    \note Some general note
+    \end{tablenotes}
+  \end{threeparttable}
+\end{center}
+
+
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

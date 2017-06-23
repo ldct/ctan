@@ -1,0 +1,706 @@
+\documentclass{article}
+\def\version{1.8}
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Steven B. Segletes.
+
+% V1.01 Correct typos in documentation
+% V1.1  Corrected usepackage dependencies; Significant doc rewrite.
+% V1.11 Corrected typo in documentation
+% V1.2  Added \scaleleftright and \stretchleftright; revised docs.
+% V1.3  Corrected missing % in stretch routines, added \hstretch and
+%       \vstretch commands; fixed version number in .sty file
+% V1.4 -Auto-detect mathmode and style; use the proper math display
+%       style; Allow \ignoremathstyle and \discernmathstyle to
+%       revert to former approach in rare cases and return to new
+%       approach.
+%      -Added \Isnextbyte as a supplemental routine
+%      -Added \scaleobj (like \scalebox, but defaults to math mode
+%       using current display style).
+% V1.5 -Eliminated mathstyle package because of incompatibilites with
+%       many other packages.  Implemented \mathchoice approach instead.
+% V1.6 -Made available \LMex and \LMpt lengths (Local Math ex and
+%       Local Math pt), usable inside \ThisStyle arguments (1ex/pt in
+%       \textstyle and \displaystyle, 0.7ex/pt in \scriptstyle, and
+%       0.5ex/pt in \scriptscriptstyle).
+%      -Revised/shortened/improved \Isnextbyte.
+%      -Replaced ifthen package calls with etoolbox calls.
+% V1.7 -Note that the V1.5 implementation with \mathchoice seemed to
+%       have made the use of \ignoremathstyle and \discernmathstyle 
+%       vestigial.  Thus, \ignoremathstyle was revised to be used
+%       for the purpose of streamlining package efficiency when 
+%       only textstyle (or displaystyle with \ignoremathstyle[D])
+%       processing is required.
+%      -Fixed use of dot {.} as null argument in \scaleleftright{}{}{} 
+%       and \stretchleftright{}{}{}, which had been causing overflow.
+%      -Made \hstretch and \vstretch routines more efficient, using
+%       optional arguments of \scalebox, instead of \scalerel.
+% V1.8 -Fixed divide by 0 bugs that would arise when object to be
+%       scaled fell completely below the baseline (zero height).
+%       Required revisions to \scalerelplain, \stretchrelplain,
+%       \scaleto, and \stretchto.
+%      -Fixed aspect-ratio bug, that calculated aspect for stretched object
+%       based only upon portion above baseline
+\parskip 1em
+\parindent 0em
+\newcommand\rl{\rule{2em}{0in}}
+\usepackage{scalerel}
+\usepackage{verbatim}
+\usepackage[only,llbracket,rrbracket,llparenthesis,rrparenthesis]{stmaryrd}
+\usepackage{stackengine}
+\usepackage{accsupp} % for ensuring the right Unicode codepoint upon pasting
+\def\sr{\textsf{scalerel}}
+\let\vb\verb
+\reversemarginpar
+\marginparwidth 1.6in
+\newcommand\margtt[1]{\marginpar{\hfill\ttfamily#1}}
+\newcommand\margcmd[1]{\marginpar{\hfill\ttfamily\char'134#1}}
+\newcommand\cmd[1]{\texttt{\char'134#1}}
+\begin{document}
+\begin{center}
+\LARGE The \textsf{scalerel} Package\\
+\rule{0em}{.7em}\small Routines for constrained scaling and stretching
+of objects,\\relative to a reference object or in absolute terms\\
+\rule{0em}{2.7em}\large Steven B. Segletes\\
+steven.b.segletes.civ@mail.mil\\
+\rule{0em}{1.7em}\today\\
+v\version
+\end{center}
+
+\section{Commands and Description}
+
+The \textsf{scalerel} package is used to scale and vertically stretch
+  objects, either relative to other objects, or in absolute terms.  
+Its commands may be invoked in either math mode or text mode (if there 
+  is no math in the objects to manipulate); 
+however, the objects it manipulates will, by default, be processed in 
+  math mode.  
+Nonetheless, one may process the objects in text mode (assuming they 
+  do not contain math-specific characters or commands) by 
+  [non-intuitively] specifying arguments as \vb|{$object$}|, instead
+  of the usual \vb|{object}|.
+
+There are four basic commands with the \textsf{scalerel} package, two
+of which have star variants:
+\begin{verbatim}
+  \scalerel[*][max_width]{object}{reference}
+  \stretchrel[*][narrowest_aspect]{object}{reference}
+  \scaleto[max_width]{object}{height}
+  \stretchto[narrowest_aspect]{object}{height}
+\end{verbatim} 
+In addition, there are a number of added commands that have been
+implemented as composites of the four basic commands, they are
+\begin{verbatim}
+  \scaleleftright[max_width]{left-obj.}{reference}{right-obj.}
+  \stretchleftright[narrowest_aspect]{left-obj.}{reference}{right-obj.}
+  \hstretch{scale}{object}
+  \vstretch{scale}{object}
+  \scaleobj{scale}{object}
+\end{verbatim}
+Unless delimited for text mode, \texttt{object} is assumed to be a math
+  object and will be processed in the \textit{current} math style.%
+\footnote{By \LaTeX{} math styles, we mean \cmd{displaystyle}, \cmd{textstyle},
+  \cmd{scriptstyle}, and \cmd{scriptscriptstyle}.}
+On the other hand, \texttt{reference} will take on the current mode (text
+  or math).  
+If in math mode, \texttt{reference} will likewise be taken in the current
+  math style.
+
+There are also several auxiliary commands, useful in their own
+right:
+\begin{verbatim}
+  \ThisStyle{...\SavedStyle...}
+  \LMex
+  \LMpt
+  \def\scriptstyleScaleFactor{0.7}
+  \def\scriptscriptstyleScaleFactor{0.5}
+  \Isnextbyte[[v] OR q]{test byte}{string}
+  \ignoremathstyle[D]
+  \discernmathstyle
+\end{verbatim}
+
+In the case of all \sr{} macros, \vb|object| is the object to be scaled or 
+stretched.  It can be as simple as a symbol, like a summation sign
+($\sum$), or it can be an object of complex description.  Likewise, in
+cases of \textit{relative} scaling and stretching, \vb|reference| is
+the reference object in relation to which the manipulated
+\vb|object| is scaled or vertically stretched.  The \vb|reference|
+may likewise be of complex description (such as a mathematical
+expression).  When an \vb|object| is scaled or stretched
+\textit{relative} to a \vb|reference| object, it is also vertically
+shifted, if necessary, so that its vertical extent conforms to that of
+the \vb|reference| object.
+
+In cases of scaling or stretching \textit{to} a specified size,
+  \vb|height| will be the \textit{total} vertical height${}+{}$depth of 
+  the \vb|object| following a scale or stretch manipulation.  
+Since scaling or stretching to an
+  absolute size provides no \vb|reference| object, the baseline of
+  the manipulated \vb|object| remains unchanged.
+
+In cases of scaling (relative or absolute), the constraint
+  \vb|max_width| is optionally specified as the maximum width allowable
+  for the manipulated object.  
+If the manipulated width would otherwise exceed this limit, the
+  \vb|object| width is reduced to meet this limit.  
+If the \vb|object| width is reduced, its aspect ratio will change with 
+  respect to its original shape.
+
+By definition, vertical stretching will increase the (height-to-width) 
+  aspect ratio
+  of an object.  
+In the case of stretching (relative or absolute), the constraint
+  \vb|narrowest_aspect| is the narrowest aspect ratio allowed by the
+  stretch.%
+\footnote{Prior to V1.8 of the package, the limiting aspect ratio was
+  erroneously based on that portion of the stretched object 
+  \textit{above} the baseline, rather than the object's full vertical extent.}  
+Its value is given in \%, such that a parameter value of \texttt{100}
+  indicates 100\% or an aspect ratio of 1.  
+If the stretch would otherwise cause the manipulated \vb|object|'s 
+  aspect ratio to become more narrow than (\textit{i.e.}, larger 
+  than) this value, the width of the manipulated \vb|object| is 
+  increased to meet this threshold.  
+The value of \vb|narrowest_aspect| must be an integer.
+
+Because \textit{relative} scaling or stretching is done
+\textit{relative} to a reference object, the \vb|\scalerel| and
+\margcmd{scalerel}\margcmd{stretchrel}%
+\vb|\stretchrel| commands will, by default, print out the
+manipulated \vb|object| followed immediately by the \vb|reference|
+object.  Because this may not always be desired, the star (*) version of
+these commands suppresses the output of the \vb|reference| object, so
+that only the \vb|object| that was manipulated is output.
+
+The \vb|\scaleleftright| and \vb|\stretchleftright| commands
+\margcmd{scaleleftright}\margcmd{stretchleftright}%
+are intended to provide the functional capability of the \vb|\left| and
+\vb|\right| commands in math mode, for delimiting symbols not
+otherwise supported by those commands.
+
+The \vb|\hstretch| and \vb|\vstretch commands| merely take the
+\margcmd{hstretch}\margcmd{vstretch}%
+second argument and either horizontally or vertically stretch it by a
+scale factor given by the first argument.  The scale is not given in
+percent, like some aforementioned commands.  Remember also, that these
+commands are, by default processed in math mode.  In a like manner,
+\margcmd{scaleobj}%
+\vb|\scaleobj| performs a scale of the object.  It is like the
+\vb|\scalebox| command of the \textsf{graphicx} package, except that
+its argument (like others in this package) defaults to math mode, and is
+displayed in the current math display style.
+
+A useful auxiliary command \vb|\ThisStyle{}| has been introduced for
+\margcmd{ThisStyle}%
+remembering the current math style.  When invoked, this command will
+remember the math style present at the time of its invocation and then
+execute its argument.  Within the extent of its argument, an invocation
+\margcmd{SavedStyle}%
+of the macro \vb|\SavedStyle| will reinstate the math style that was
+active upon invocation.  This command is very useful when \LaTeX{} boxes
+are being set within the math environment, since the prevailing math
+style does not carry into the box, without the use of
+\vb|\SavedStyle|.
+
+The lengths \verb|\LMex| and \verb|\LMpt| work in conjunction with 
+\verb|\ThisStyle|
+\margcmd{LMex}%
+\margcmd{LMpt}%
+and are what I am calling the ``local-mathstyle `ex'\,''
+and ``local-mathstyle `pt','' respectively.
+They are lengths, available for use within the argument of \verb|\ThisStyle|,
+ that scale with the current mathstyle, equalling 1ex and 1pt in
+\verb|\displaystyle| and \verb|\textstyle| math, and scaled by a 
+factor of 0.7 in \verb|\scriptstyle| and 0.5 in \verb|\scriptscriptstyle|.
+Such a scalable length is useful when {\sr} is used to place objects 
+\margcmd{scriptstyleScaleFactor}%
+relative to each other across various mathstyles.  The 0.7 and 0.5
+relative height factors apply to the default Computer Modern font.
+\margcmd{\footnotesize scriptscriptstyleScaleFactor}%
+For other fonts, these scale factors may be reset with a \verb|\def|
+on the macros \verb|\scriptstyleScaleFactor| and 
+\verb|\scriptscriptstyleScaleFactor|.
+
+A service routine \vb|\Isnextbyte| was employed by this package.
+\margcmd{Isnextbyte}%
+Because of its more general utility, it is made accessible to the user.
+It is an improved version of the command \vb|\isnextbyte| from the
+\textsf{stringstrings} package.  It will determine if the first
+byte from a passed string argument matches a specified
+\textit{match}-character.  It produces a \vb|T| or \vb|F| result,
+which is printed out by default.  With the use of the \vb|q| optional
+argument, the output can be suppressed, with the result instead being
+stored in a macro \vb|\theresult|.
+
+\subsection{Efficiency of nested \sr{} macros\label{s:nm}}
+
+As of version 1.4, {\sr} commands will autodetect the current math
+display style (so-called display-style, text-style, script-style, and/or
+scriptscript-style) and process its arguments in the same mode.  The
+overhead associated with this capability is an invocation of 
+\vb|\mathchoice|, which must create 4 boxes (one in each math style) 
+before selecting one
+to typeset.  While a small overhead in itself, an efficiency issue
+can arise when \sr{} macros are nested, since if 3 \sr{} macros
+are nested, \vb|\mathchoice| will build $4^3=64$ boxes in order
+to select the proper one to typeset (and a nesting level of 4 yields
+256 boxes).
+
+With the use of \vb|\ignoremathstyle|, the math style of the \sr{}
+\margcmd{ignoremathstyle}%
+processing can be fixed in a single math style, thus eliminating the
+construction of \vb|\mathchoice| boxes.  The increase in processing
+efficiency can be noticeable when operating on deeply nested \sr{}
+macros.
+
+The invocation of \vb|\ignoremathstyle| will force all subsequent 
+\sr{} calls to process its arguments in \vb|\textstyle| math.  
+Alternately, \vb|\ignoremathstyle[D]| will force the processing
+of \sr{} macros in \vb|\displaystyle| math.
+
+\begin{sloppypar}
+This streamlining can be undone, reinstating the more general
+math-style preserving approach, with the invocation of
+\vb|\discernmathstyle|.
+\margcmd{discernmathstyle}%
+These macros can be used anywhere in a document by a user, to turn off 
+and on the \vb|\mathchoice| feature of \sr{}, or they may be
+used within user macro definitions, to fix the math style by which
+\sr{} processes its macros within the confines of the user macro.
+\end{sloppypar}
+
+\section{Usage Examples}
+
+Now for a few examples.  Let us define
+\begin{verbatim}
+    \def\preblob{\displaystyle\sum_{i=0}^3}
+    \def\blob{\displaystyle\frac{\displaystyle\frac{x^3}{z+r^3}}%
+              {\displaystyle\frac{y}{x^2}}%
+    }
+\end{verbatim}
+    \def\preblob{\displaystyle\sum_{i=0}^3}
+    \def\blob{\displaystyle\frac{\displaystyle\frac{x^3}{z+r^3}}%
+              {\displaystyle\frac{y}{x^2}}%
+    }
+Here are the raw definitions of \vb|$\preblob\blob$|, unscaled:
+
+    \rl$\preblob\blob$
+
+\subsection{The $\backslash$\texttt{scalerel} Command}
+
+Now we employ \vb|$\scalerel{\preblob}{\blob}$| to scale the summation 
+  to match the size of the acted-upon term:
+
+    \rl$\scalerel{\preblob}{\blob}$
+
+If we wish constrain the width of the summation to 3ex, we employ\\
+\vb|$\scalerel[3ex]{\preblob}{\blob}$|
+
+    \rl$\scalerel[3ex]{\preblob}{\blob}$
+
+Of course, if the manipulated object contains text symbols (as in
+  this case), a width constraint will change their aspect ratio, 
+  which is generally not desirable.
+
+Now let's say you wanted to introduce notation to bound mathematical
+expressions by triangles. After defining
+\vb|\blob| as before, you could use\\
+\vb|$\scalerel[3ex]{\triangleleft}{\blob}|\\
+\vb|\scalerel*[3ex]{\triangleright}{\blob}$|
+
+\rl%
+$\scalerel[3ex]{\triangleleft}{\blob}\scalerel*[3ex]{\triangleright}{\blob}$
+
+Here, the second call to \vb|\scalerel| was with the star (\vb|*|)
+option, indicating that \vb|\blob| should not be printed out following
+the right-hand delimiter.  A less-tall expression would appear in those
+same delimiters as
+
+\rl%
+$\scalerel[3ex]{\triangleleft}{Q}\scalerel*[3ex]{\triangleright}{Q}$
+
+Because the width limit had not been reached, no horizontal compression
+of the object was required.  Note: see the \vb|\scaleleftright| and
+\vb|\stretchleftright| commands for a more direct way to employ these
+sort of transformations.
+
+\subsection{The $\backslash$\texttt{stretchrel} Command}
+
+In its most simple application \vb|\stretchrel| can be used in the
+fashion of a \vb|\left\{| in math mode.  While there is no reason to
+replace that more efficient usage supplied by \LaTeX{}, it is
+nonetheless instructional to see a comparison of 
+\vb|$\left\{\blob\right.$| and \vb|$\stretchrel[550]{\{}{\blob}$|, to
+see how the aspect-ratio limiting option can be employed to avoid an
+overly stretched (narrow) manipulation:
+
+\rl$\left\{\blob\right.$  ~~~~~ $\stretchrel[550]{\{}{\blob}$
+
+The expression on the right uses a standard \{ character, which has 
+  been vertically stretched, but limited to an aspect ratio no 
+  narrower than 5.5.  
+To use symbols for which the \vb|\left| nomenclature will not work,
+  \vb|\stretchrel| provides a viable alternative, as shown in this
+  stick-figure example:
+
+\vb|3m $\stretchrel[600]{\updownarrow\,}|\\
+\vb|{\fbox{\rule[-1.8em]{0ex}{4em}Work Table}}$|
+
+\rl3m $\stretchrel[600]{\updownarrow\,}
+  {\fbox{\rule[-1.8em]{0ex}{4em}Work Table}}$
+
+or in this use, \vb|$\stretchrel[350]{\int}{\blob} dx$|, of the
+stretched integral sign (aspect limited to 3.5):
+
+\rl$\stretchrel[350]{\int}{\blob} dx$
+
+
+\subsection{Baseline Shifts of \textit{Relative} Scales and Stretches}
+
+It was mentioned that when \vb|\scalerel| and \vb|\stretchrel| are
+employed, the manipulated object gets vertically shifted to match the
+extent of the reference object.  To see how this works, we provide the
+following example, that employs some inline math and scaling.  
+
+\rl\underline{The baseline is the line that runs under this text}
+\fbox{$\scalerel{i}{\blob}$}\underline{\scaleto{i}{35pt}}
+
+The first case of the large letter ``i'' was generated with 
+  \vb|\scalerel|, and so the baseline of the ``i'', normally not a
+  descending letter, was dropped to conform to the descended reference
+  equation.  
+All of this was set in an \vb|\fbox| to show the extent of
+  the objects.  
+For comparison, an ``i'', scaled to 35pt, was then placed
+  using a \vb|\scaleto| command, which does not change the baseline of
+  the original object.
+
+\subsection{The $\backslash$\texttt{scaleto} and
+$\backslash$\texttt{stretchto} Commands}
+
+The \vb|\scaleto| and \vb|\stretchto| commands are comparable to the
+  \vb|\scalerel| and \vb|\stretchrel| commands, except they do not
+  accept a reference object as their second mandatory argument.  
+Rather, they take an absolute height (\textit{i.e.}, height${}+{}$depth),
+  specified with units.  
+These commands use the same optional arguments as \vb|\scalerel| and
+  \vb|\stretchrel| to constrain the width and/or the aspect ratio, 
+  respectively, of the manipulated object.
+
+As was mentioned in the prior section, a difference between these and
+  the \textit{relative} scale/stretch commands is that an object's 
+  baseline is not altered with the use of \vb|\scaleto| and 
+  \vb|\stretchto|.  
+Because there is no reference object employed with these commands, 
+  there is no need for starred (\vb|*|) versions of these commands,
+  which would otherwise suppress the printing of the reference object.
+
+Examples follow the established pattern established in prior sections.
+First, we scale the equation blob used as an example in this
+documentation to a vertical extent of 80pt, preserving the original
+aspect ratio,
+
+\rl\vb|$\scaleto{\blob}{80pt}$      | $\scaleto{\blob}{80pt}$
+
+Below, we stretch the Greek letter, capital phi, to 60pt, but constrain
+the aspect ratio to no less than 1.75.
+
+\rl\vb|$\stretchto[175]{\Phi}{60pt}$      | $\stretchto[175]{\Phi}{80pt}$
+
+\subsection{The $\backslash$\texttt{scaleleftright} and
+ $\backslash$\texttt{stretchleftright}\\Commands}
+
+These commands are composites of several \vb|\scalerel| and
+\vb|\stretchrel| commands, intended to provide the functionality of
+the \vb|\left ...\right| syntax of mathmode, using symbols for which
+the \vb|\left ...\right| syntax does not work.  It uses the same
+optional arguments as \vb|\scalerel| and \vb|\stretchrel| in order
+to limit the width or aspect ratio of the respective manipulated
+objects.  If one of the symbols on the left or right end of the enclosed
+reference block is to be blank, these commands support the use of the
+period argument \vb|{.}| as a blank placeholder, in a fashion
+analogous to the \vb|\left ...\right| syntax of mathmode.
+
+\rl\vb|$\scaleleftright[3ex]{\prod}{\blob}{\coprod}$  |
+$\scaleleftright[3ex]{\prod}{\blob}{\coprod}$
+
+\rl\vb|$\stretchleftright[450]{.}{\blob}{\in}$        |
+$\stretchleftright[450]{.}{\blob}{\in}$
+
+\subsection{The $\backslash$\texttt{hstretch},
+ $\backslash$\texttt{vstretch}, and $\backslash$\texttt{scaleobj}
+ Commands}
+
+These commands simply perform horizontal or vertical stretching,
+respectively.  They use a scale factor, rather than an absolute length.
+If the stretch factor is greater than 1, the stretched length is larger
+than the original.  If less than one, it is compressed with respect to
+the original.
+
+\rl\vb|$\otimes\hstretch{3}{\otimes}\hstretch{0.5}{\otimes}$ |
+$\otimes\hstretch{3}{\otimes}\hstretch{0.5}{\otimes}$
+
+\rl\vb|$\otimes\vstretch{3}{\otimes}\vstretch{0.5}{\otimes}$ |
+$\otimes\vstretch{3}{\otimes}\vstretch{0.5}{\otimes}$
+
+The \vb|\scaleobj| command performs scaling in the fashion of a
+\vb|\scalebox| command, except that its argument is processed in math
+mode of the current math display style, by default.  Thus, the
+difference between the following two invocations:
+\begin{verbatim}
+  \(\scaleobj{2}{\sum_{i=0}^{n}}\)
+  \[\scaleobj{2}{\sum_{i=0}^{n}}\]
+\end{verbatim}
+is given as
+\(\scaleobj{2}{\sum_{i=0}^{n}}\) versus
+\[\scaleobj{2}{\sum_{i=0}^{n}}\]
+
+\subsection{The \textbackslash\texttt{ThisStyle}, \textbackslash\texttt{SavedStyle},
+\textbackslash\texttt{LMex}, and \textbackslash\texttt{LMpt} Commands}
+
+These are very powerful macros that provide the ability to save the current
+math style and to import it to various places (for example, inside boxes and other
+macros) where the math style would otherwise be lost.  These commands are
+part of this package because the various {\sr} macros employ them to
+automatically import the current math style into their arguments.
+
+The easiest way to show how these macros are used is to provide a working 
+example, such as the one given below.
+
+\begin{verbatim}
+\documentclass{article}
+\usepackage{stackengine}
+\usepackage{graphicx}
+\usepackage{scalerel}
+\stackMath
+\def\ccdot{\scalebox{1.15}{$\SavedStyle\cdot$}}
+\def\altdiv{\mathbin{\ThisStyle{%
+  \stackunder[-.6\LMex]{%
+    \stackon[-.45\LMex]{\SavedStyle\sim}{\ccdot}%
+  }{\ccdot}}}}
+\begin{document}
+$A \altdiv B ~~A \div B$\par
+$\scriptstyle A \altdiv B ~~A \div B$\par
+$\scriptscriptstyle A \altdiv B ~~A \div B$\par
+\end{document}
+\end{verbatim}
+
+The output of this example shows a fabricated glyph (\verb|\altdiv|) across the 
+math styles, comparing it to \verb|\div|:
+
+\stackMath
+\def\ccdot{\scalebox{1.15}{$\SavedStyle\cdot$}}
+\def\altdiv{\mathbin{\ThisStyle{%
+  \stackunder[-.6\LMex]{\stackon[-.45\LMex]{\SavedStyle\sim}{\ccdot}}{\ccdot}}}}
+\rl\scalebox{3}{\parbox{2in}{
+$A \altdiv B ~~A \div B$\par
+$\scriptstyle A \altdiv B ~~A \div B$\par
+$\scriptscriptstyle A \altdiv B ~~A \div B$\par
+}}
+
+The difficulties that must be overcome are several:  the composite glyph is created by
+way of a stack, which processes its arguments in either text mode or \verb|\textstyle|
+math mode; and the stacking distances between the components of the composite
+glyph need to vary with the mathstyle.  To overcome the first issue, the \verb|\altdiv|
+macro is wrapped in a \verb|\ThisStyle{...}| wrapper.  Whenever one of the glyph
+components (\textit{e.g.}, \verb|\sim| or \verb|\cdot|) is employed within the 
+\textsf{stackengine} where the mathstyle is
+otherwise lost, it is prepended with a \verb|\SavedStyle| to reinstate the current
+math style.  Thus, the glyph components will present in the proper mathstyle.  
+Likewise, the vertical stacking gaps between the glyph components, 
+given as optional arguments to the stacking commands, are here specified in 
+multiples of \verb|\LMex|.  In this way, the stacking gaps will shrink with the 
+smaller math styles, keeping the spacings on the same relative scale as the size
+of the smaller glyphs.
+
+\section{Real World Application}
+
+\subsection{White Curly Brackets}
+
+Ref: http://tex.stackexchange.com/questions/100966/defining-
+scalable-white- curly-brackets-and-and
+
+\newcommand*{\llbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2983}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char102}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+  \EndAccSupp{}%
+}
+\newcommand*{\rrbrace}{%
+  \BeginAccSupp{method=hex,unicode,ActualText=2984}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char106}%
+    \mathchoice{\mkern-4.05mu}{\mkern-4.05mu}{\mkern-4.3mu}{\mkern-4.8mu}%
+    \textnormal{\usefont{OMS}{lmr}{m}{n}\char103}%
+  \EndAccSupp{}%
+}
+
+A user defined two new symbols made by combining the font glyphs of a
+brace and a vertical strut, calling them \vb|\llbrace| and
+\vb|\rrbrace|, to look as follows around an argument (in this case
+$x$):
+
+\def\wbrace{\scalebox{5}{$\llbrace x\rrbrace$}}
+\rl\wbrace
+
+But they found that when represented in reduced size fonts, the symbol
+glyphs of the brace and the strut separated (note: \vb|\tiny| font has
+been scaled up to match prior figure's height):
+
+\def\tinywbrace{\scalebox{3}{\tiny$\llbrace x\rrbrace$}}
+\rl$\scalerel*{\tinywbrace}{\wbrace}$
+
+This happens because font designers don't merely scale their fonts when
+shrunk down in size, but they do things (like thickening up lines and
+changing aspect ratios) in an attempt to retain legibility.  In this
+case, the font's auto-adjustment at smaller scale caused this composite
+representation to change in unacceptable ways.
+
+The \textsf{scalerel} solution was to use the image from the normal-size
+representation and to shrink it down as needed.  So, in this case, a
+normal-sized copy of the braces were stored in boxes called
+\vb|\lXbrace| and \vb|\rXbrace|, resepctively.  Then the following
+terms were defined:
+\begin{verbatim}
+\def\lxbrace{\scalerel*{\usebox{\lXbrace}}{\llbrace}}
+\def\rxbrace{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}
+\end{verbatim} 
+Now, in lieu of using \vb|\llbrace| directly, the use of
+\vb|\lxbrace| would take a copy of the normal-sized \vb|\lXbrace|
+and scale it down to the vertical height of the malformed tiny
+\vb|\llbrace|, and substitute for it.  Here, we show the result at
+both normal size and tiny size:
+
+\newsavebox{\lXbrace}
+\savebox{\lXbrace}{$\llbrace$}
+\newsavebox{\rXbrace}
+\savebox{\rXbrace}{$\rrbrace$}
+\def\lxbrace{\scalerel*{\usebox{\lXbrace}}{\llbrace}}
+\def\rxbrace{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}
+\rl$\scalerel*{\lxbrace x\rxbrace}{\wbrace}$
+{\tiny$\scalerel*{\lxbrace x\rxbrace}{\wbrace}$}
+
+Note that the brace is the properly formed scale of the normal-sized
+brace in both cases, even as the $x$ adjusts to the fontsize reduction.
+
+If one wanted the default braces narrower (to match the look of the
+comparable symbols in the literature), one could use
+\vb|\hstretch| in the definitions to achieve that quickly as
+\begin{verbatim}
+\def\lxbrace{%
+   \hstretch{0.6}{\scalerel*{\usebox{\lXbrace}}{\llbrace}}}
+\def\rxbrace{%
+   \hstretch{0.6}{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}}
+\end{verbatim}
+
+to give the following
+
+\def\lxbrace{\hstretch{0.6}{\scalerel*{\usebox{\lXbrace}}{\llbrace}}}
+\def\rxbrace{\hstretch{0.6}{\scalerel*{\usebox{\rXbrace}}{\rrbrace}}}
+\rl$\scalerel*{\lxbrace x\rxbrace}{\wbrace}$
+{\tiny$\scalerel*{\lxbrace x\rxbrace}{\wbrace}$}
+
+Likewise, the \vb|\left| and \vb|\right| features of equation mode
+cannot be used with the white braces, 
+
+\rl \(\llbrace \left\llbracket\left\{\left[(a) \cdot
+bc^{2^3}\right]^4\right\}^5\right\rrbracket \rrbrace\)
+
+but \textsf{scalerel} can fix that, too:
+
+\def\core{ \left\llbracket\left\{\left[(a) \cdot
+bc^{2^3}\right]^4\right\}^5\right\rrbracket}%
+\rl
+\(\scaleleftright[1.5ex]{\lxbrace}{\core}{\rxbrace}\)
+
+with 
+\begin{verbatim}
+  \(\scaleleftright[1.5ex]{\lxbrace}{\core}{\rxbrace}\)
+\end{verbatim}
+where \vb|\core| is the core inner equation to which the white braces
+need to be scaled.  In this case, the scaled white braces were
+width-limited to 1.5ex.
+
+\subsection{Extra-Wide Oversymbols}
+
+Ref:\\
+http://tex.stackexchange.com/questions/100574/really-wide-hat-symbol/101136\#101136
+
+There are many oversymbols defined to stand over a single-letter
+variable.  There are a smaller number of extra-wide oversymbols to
+extend over small groups of symbols.  Occasionally, however, a need
+arises for an oversymbol to stretch over a larger group of symbols.
+
+With these definitions,
+\begin{verbatim}
+\usepackage{scalerel,stackengine}
+
+\newcommand\reallywidehat[1]{\ensurestackMath{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}% 
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}}
+
+\newcommand\reallywideparen[1]{\ensurestackMath{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\frown\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG FROWN
+  }{\textheight}% 
+}{0.9ex}}%
+\stackon[-.5pt]{#1}{\tmpbox}%
+}}
+\end{verbatim}
+arbitrarily wide oversymbols may be constructed:
+
+\newcommand\reallywidehat[1]{\ensurestackMath{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}% 
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}}
+
+\newcommand\reallywideparen[1]{\ensurestackMath{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\frown\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG FROWN
+  }{\textheight}% 
+}{0.9ex}}%
+\stackon[-.5pt]{#1}{\tmpbox}%
+}}
+
+\rl
+$\reallywideparen{POQ}$ $+ \reallywidehat{QOR} + \reallywidehat{ROP}=
+2\pi r$
+
+\rl $\reallywidehat{zbcdefghijklm} \ne \reallywideparen{zbcdefghijklm}$
+
+\section{Future Development}
+
+It would be relatively straightforward to extend this approach to
+horizontal scaling problems.  However, it is not exactly clear to the
+author what format is best suited for user needs.  If he gets feedback
+in that regard, it will inform him how best to proceed.
+
+\section{Code Listing}
+
+\small\verbatiminput{scalerel.sty}
+
+\end{document}

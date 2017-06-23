@@ -1,0 +1,521 @@
+%% bibleref-parse.tex
+%% Copyright (c) 2011 Sebastian Kuhnert
+% 
+% This work may be distributed and/or modified under the conditions
+% of the LaTeX Project Public License, either version 1.3c of this
+% license or (at your option) any later version. The latest version
+% of this license is at http://www.latex-project.org/lppl.txt
+% and version 1.3c or later is part of all distributions of LaTeX
+% version 2008/05/04 or later.
+% 
+% This work has the LPPL maintenance status `maintained'.
+% 
+% The Current Maintainer of this work is Sebastian Kuhnert.
+% 
+% This work consists of the files listed in README
+%
+\documentclass[DIV12,BCOR0mm]{scrartcl}
+
+\frenchspacing
+
+\usepackage[T1]{fontenc}
+\usepackage{bera}
+\usepackage[bitstream-charter]{mathdesign}
+
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman,british]{babel}
+
+\addtokomafont{disposition}{\rmfamily}
+\addtokomafont{descriptionlabel}{\rmfamily}
+
+\usepackage{csquotes}
+\usepackage{xspace}
+\usepackage{xcolor}
+\usepackage{calc}
+\usepackage{listings}
+\lstloadlanguages{TeX}
+\lstset{%
+  language=[LaTeX]TeX,
+  basicstyle=\ttfamily\color{blue!50!black},
+  keywordstyle=,%\bfseries,
+  morekeywords={subject},
+  identifierstyle=,
+  texcl,
+  commentstyle=\itshape,
+  showstringspaces=false,
+  breaklines,
+  breakatwhitespace,
+  %columns=flexible,
+  escapeinside={(*}{*)},
+  mathescape,
+}
+\usepackage[raggedrightboxes]{ragged2e}
+\usepackage{booktabs}
+\newcommand{\thead}[1]{\textbf{\small #1}}
+% \usepackage{xtab}
+\usepackage{longtable}
+\usepackage{pgffor}
+
+\usepackage[pdfusetitle]{hyperref}
+
+\newcommand{\ger}[1]{\foreignlanguage{ngerman}{#1}}
+
+\newcommand{\brp}{\texttt{bibleref-parse}\xspace}
+
+\newcommand{\param}[1]{$\langle${\normalfont\itshape #1\/}$\rangle$}
+\newcommand{\opt}[1]{\textcolor{green!50!black}{#1}}
+\newcommand{\option}[1]{{\normalfont\texttt{\color{blue!50!black}#1}}}
+
+\usepackage{bibleref-parse}
+\usepackage[english]{isodate}
+
+\def\bbtGetInfo#1 v#2 #3\relax#4\relax{%
+  \def\bbtdate{#1}%
+  \def\bbtversion{#2}}
+\letcs\bbtver{ver@bibleref-parse.sty}
+\expandafter\bbtGetInfo\bbtver\relax? ? \relax\relax
+
+\title{The \brp Package}
+\author{Sebastian Kuhnert}
+\date{Documentation for version \bbtversion{} (\printdateTeX{\bbtdate})}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+The \brp package parses Bible passages that are given in human readable format.
+It accepts a wide variety of formats. This allows for a simpler and more
+convenient interface to the functionality of the \texttt{bibleref} package,
+which provides a variety of different formatting options.
+
+\begin{center}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \thead{\brp syntax example}&\thead{\texttt{bibleref} syntax example}&\thead{result (using defaults)}\\
+    \midrule
+    \texttt{\textbackslash pbibleverse\{1Cor 13:4-7\}}&
+    \texttt{\textbackslash bibleverse\{ICor\}(13:4-7)}&
+    \pbibleverse{1Cor 13:4-7}\\
+    \texttt{\textbackslash pbibleverse\{Matt 9:35-10:1\}}&
+    \texttt{\textbackslash bibleverse\{Matt\}(9:35)-(10:1)}&
+    \pbibleverse{Matt 9:35-10:1}\\
+    \texttt{\textbackslash pbibleverse\{Rev 21;22\}}&
+    \texttt{\textbackslash bibleverse\{Rev\}(21:)(22:)}&
+    \pbibleverse{Rev 21;22}\\
+    %\texttt{\textbackslash pbibleverse\{Jes53:6;Joh19:30\}}&
+    %\texttt{\textbackslash bibleverse\{Jes\}(53:6); \textbackslash bibleverse\{Joh\}(19:30)}\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\noindent
+Additionally, this package provides an interface for other packages.
+
+
+
+\subsection{Licence}
+Copyright \textcopyright{} 2011 Sebastian Kuhnert. Permission is granted to
+copy, distribute and/or modify this software under the terms of the \LaTeX{}
+Project Public Licence, version 1.3c or later. This package is maintained, the
+Current Maintainer is Sebastian
+Kuhnert\footnote{\href{mailto:mail@sebastian-kuhnert.de}{mail@sebastian-kuhnert.de}}.
+
+%\subsection{Contributions}
+
+\subsection{Dependencies and interaction with other packages}
+
+\begin{itemize}
+ \item This package enhances and requires the \texttt{bibleref} package.
+ \item If the \texttt{babel} package is loaded and one of the languages
+  \texttt{ngerman}, \texttt{german}, \texttt{naustrian}, or \texttt{austrian} is
+  selected, the book name \enquote{Pr} is taken as a shorthand for
+  \emph{\ger{Prediger}} (German for \emph{Ecclesiastes}). Otherwise, \enquote{Pr} is a
+  shorthand for \emph{Proverbs}.
+ \item If you use \texttt{bibleref-german}, you either need at least version 1.0a or
+  must load it before this package.
+ \item The \texttt{etoolbox} package is required. In particular, you need to use
+  an \eTeX{} engine, but that should be no real restriction nowadays.
+ \item The \texttt{scrlfile} package is used to ease the interaction with
+  \texttt{babel} and \texttt{bibleref-german}.
+\end{itemize}
+
+\subsection{Contributions}
+Currently only English and German book names are supported. I would welcome
+contributions of book name prefixes for other languages.
+
+
+\section{User commands}
+
+\begin{lstlisting}
+\usepackage(*\opt{[\param{options}]}*){bibleref-parse}
+\end{lstlisting}
+This loads the \brp package. Currently the only option is
+\option{comma=\param{value}}. It controls how commas in a Bible passage
+specification are handled:
+\bigskip
+\begin{center}
+  \begin{tabular}{@{}p{.18\linewidth}p{.78\linewidth}@{}}
+    \toprule
+    \thead{\param{\bfseries value}}&\thead{meaning of \option{\bfseries
+        comma=\param{\bfseries value}}}\\
+    \midrule
+    \option{list}&The comma is used as a list separator. Behind each
+    comma,
+    a number specifying a chapter or a verse is expected.
+    \hfill\emph{Example:~Mt~5,6,7}
+    \\\addlinespace
+    \option{chvsep}&The comma is used to separate a chapter number from a
+    verse number. This is common in German.
+    \hfill\emph{Example:~Jh~3,16}\\\addlinespace
+    \option{likeBR}&This takes the current setup of the \texttt{bibleref}
+    package into account. If \lstinline|\BRchvsep| contains a comma, this
+    option behaves like \option{chvsep}, otherwise it behaves like
+    \option{list}.\\\addlinespace
+    \option{preferchvsep}&This behaves like \option{chvsep} unless the
+    specified passage contains a colon. In that case, it behaves like
+    \option{list}.\\\addlinespace
+    \option{preferlikeBR}\linebreak\emph{(the default)}&If
+    \lstinline|\BRchvsep| contains a comma, this behaves like
+    \option{preferchvsep}. Otherwise this behaves like
+    \option{list}.\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\begin{lstlisting}
+\biblerefparseset{(*\param{options}*)}
+\end{lstlisting}
+This sets the \param{options}, affecting all following passage specifications in
+the current group.
+
+\begin{lstlisting}
+\pbibleverse(*\opt{[\param{options}]}\{\param{passage}*)}
+\end{lstlisting}
+This parses the given \param{passage} and passes the result to the
+\lstinline|\bibleverse| macro, formatting it according to the rules of the of
+the \texttt{bibleref} package. If any \param{options} are specified, they affect
+this single \param{passage} only.
+
+If a \param{passage} spans more than one book, the different parts are
+separated with \lstinline|\BRbksep|, which you can redefine to suit your needs.
+The \texttt{bibleref} manual describes how you can otherwise influence the
+formatting.
+
+There are variants of \lstinline|\pbibleverse| for the variants of \lstinline|\bibleverse|:
+\begin{lstlisting}
+\pibibleverse(*\opt{[\param{options}]}\{\param{passage}*)}   % uses \textbackslash ibibleverse
+\pibiblechvs(*\opt{[\param{options}]}\{\param{passage}*)}    % uses \textbackslash ibiblechvs
+\pibiblevs(*\opt{[\param{options}]}\{\param{passage}*)}      % uses \textbackslash ibiblevs
+\end{lstlisting}
+
+\newcommand{\bverseex}[2][]{%
+  \ifstrequal{#1}{}{%
+    \texttt{\textbackslash pbibleverse\{#2\}} & \pbibleverse{#2}%
+  }{%
+    \texttt{\textbackslash pbibleverse[#1]\{#2\}} & \pbibleverse[#1]{#2}%
+  }\\
+}
+Examples:
+\begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \thead{\TeX{} source}&\thead{Result}\\
+    \midrule
+    \bverseex{Gen1:27}
+    \bverseex{Exo 20}
+    \bverseex[comma=chvsep]{Lev.5,3-4}
+    \bverseex{Jos 7:3-5;12;Jdg 4:2-4}
+    \bverseex{Ruth 3-4:4+4:6}
+    \bverseex{1Sam 5:3,5;6:3-7:3;8:3,5}
+    \bverseex{Ps 1-3,5,8-9}
+    \bverseex{Obad 1-3,5,8-9}
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+The given \param{passage} will be expanded in a special way before parsing:
+Control sequences are expanded recursively, but active characters are left
+unchanged. Also, \param{passage} should not contain braces; the behaviour is
+undefined in this case.
+
+\subsection{Bible passage specification}
+
+The basic massage is: Just use your intuition. This is what this package was
+created for.\\
+If you want more details, here they are.
+\begin{itemize}
+ \item Depending on the current setting of the \option{comma} option (see
+  above), a single verse can be specified in one of these formats:
+\begin{lstlisting}
+(*{\normalfont\normalcolor Format 1:} \param{book} \param{chapter}:\param{verse}*)
+(*{\normalfont\normalcolor Format 2:} \param{book} \param{chapter},\param{verse}*)
+\end{lstlisting}
+  You can add or remove spaces between the different parts.
+
+  The exact syntax for the book name can be looked up in
+  Section~\ref{sec:books}; but again the basic message is: Just use your
+  intuition.
+
+  Examples:\qquad\option{Mark 16:5}\qquad
+  \option{1 Samuel 13:14}\qquad
+  \option{2Tim3: 16}
+ \item You can reference a \textbf{whole chapter or book} by omitting the verse
+  (and chapter) information.
+
+  Examples:\qquad\option{1 John}\qquad
+  \option{Ps 51}
+ \item You can specify \textbf{ranges} using a single dash. This works for
+  ranges of verses as well as ranges of chapters. The start and the end verse do
+  not have to be in the same chapter. You even can have a chapter as start and a
+  verse as end (but not the other way around).
+
+  Examples:\qquad
+  \option{Mt 28:18-20}\qquad
+  \option{Matthew 5-7}\qquad
+  \option{2Cor 6:10-7:4}\qquad
+  \option{Joshua 4-5:1}
+ \item You can \textbf{list} several passages in one specification. Several
+  options are available. They offer flexibility and differ in how the passage on
+  the right side should be specified: Some allow and some require that a partial
+  specification is used.
+  \begin{description}
+   \item[Semicolon] The next item may be a book or a chapter.
+   \item[Comma] The next item may be a chapter or a verse.\\
+    (For obvious reasons this is only available in format 1.)
+   \item[Plus] The next item may be a book, a chapter or a verse.
+   \item[Dot] The next item must be a verse.
+  \end{description}
+  All of these have in common that you can use ranges on their left and on their
+  right side. Also, you can create lists of more than two single verses or range
+  specifications.
+
+  Examples:\qquad
+  \option{Col 1:15,2:9.10}\qquad
+  \option{Ps 22+23}\qquad
+  \option{Rev 22:3-4.7;Acts 1:6-8}
+\end{itemize}
+
+\subsection{Book name specification}\label{sec:books}
+All names of canonical books given in English or German should be recognised,
+including their abbreviations. The following table specifies the available names
+for all books.
+
+\makeatletter
+\def\checkbook#1#2#3{%
+  \def\brp@range##1##2##3##4##5{\ifstrequal{##1}{#1}{#3 }{%
+      \PackageError{bibleref-parse}{Book name `#2' not recognised as `#1'}{}{}%
+      \textcolor{red}{#3} }}%
+  \brp@parse{#2}%
+  \brp@result%
+}
+\def\checkbooksilent#1#2{%
+  \def\brp@range##1##2##3##4##5{\ifstrequal{##1}{#1}{}{%
+      \PackageError{bibleref-parse}{Book name `#2' not recognised as `#1'}{}{}%
+      \textcolor{red}{#2} }}%
+  \brp@parse{#2}%
+  \brp@result%
+}
+\makeatother
+%\addrow{OSIS-name}{English names}{German names}{silent names}
+\def\addrow#1#2#3#4{%
+  #1&\checkbooksilent{#1}{#1}%
+  \foreach \name in {#4} {%
+    \checkbooksilent{#1}{\name}%
+  }%
+  \foreach \name/\n in {#2} {%
+    \checkbook{#1}{\name}{\n}%
+  }&\ger{\foreach \name/\n in {#3} {%
+    \checkbook{#1}{\name}{\n}%
+  }}\\
+}
+\begin{longtable}{@{}p{3.6em}p{.425\linewidth}p{.425\linewidth}@{}}
+  \toprule\thead{Book}&\thead{English names}&\thead{German names}\\\midrule
+  \endhead
+  \bottomrule
+  \endfoot
+  \addrow{Gen}{Genesis,Gen,Ge,Gn,Ge*,Gn*}{1Mose,1Mos,1Mo,Genesis,Gen,Ge,Gn,1Mo*,Ge*,Gn*}{IMose,IMos,IMo,IMo*}
+  \addrow{Exod}{Exodus,Exod,Ex,Ex*}{2Mose,2Mos,2Mo,Exodus,Ex,2Mo*,Ex*}{IIMose,IIMos,IIMo,IIMo*}
+  \addrow{Lev}{Leviticus,Lev,Lv,Le*,Lv*}{3Mose,3Mos,3Mo,Levitikus,Leviticus,Lev,Lv,3M*,Le*,Lv*}{IIIMose,IIIMos,IIIMo,IIIM*}
+  \addrow{Num}{Numbers,Num,Nb,Nu*,Nb*}{4Mose,4Mos,4Mo,Numeri,Num,4M*,Nu*}{IVMose,IVMos,IVMo,IV*}
+  \addrow{Deut}{Deuteronomy,Deut,Deu,Dt,De*,Dt*}{5Mose,5Mos,5Mo,Deuteronomium,Deut,Dtn,Deu,Dt,5M*,De*,Dt*}{VMose,VMos,VMo,V*}
+  \addrow{Josh}{Joshua,Josh,Jos,Jos*}{Josua,Jos*}{}
+  \addrow{Judg}{Judges,Judg,Jdg,Jg,Jd,Judg*,Jdg*,Jg*}{Richter,Ri,Ri*}{}
+  \addrow{Ruth}{Ruth,Rt,Ru*,Rt*}{Rut,Ruth,Rt,Ru,Ru*,Rt*}{}
+  \addrow{1Sam}{1Samuel,1Sam,1S,1S*}{1Samuel,1Sam,1S,1S*}{ISamuel,ISam,IS,IS*}
+  \addrow{2Sam}{2Samuel,2Sam,2S,2S*}{2Samuel,2Sam,2S,2S*}{IISamuel,IISam,IIS,IIS*}
+  \addrow{1Kgs}{1Kings,1K,1Kg,1Kgs,1Ki*,1Kg*}{1Könige,1Kön,1Kö,1Kö*}{IKings,IK,IKg,IKgs,IKi*,IKg*,IKönige,IKön,IKö,IKö*,IK\"onige,IK"on,IKoe,IK\"o*}
+  \addrow{2Kgs}{2Kings,2K,2Kg,2Kgs,2Ki*,2Kg*}{2Könige,2Kön,2Kö,2Kö*}{IIKings,IIK,IIKg,IIKgs,IIKi*,IIKg*,IIKönige,IIKön,IIKö,IIKö}
+  \addrow{1Chr}{1Chronicles,1Ch,1Chr,1Ch*}{1Chronik,1Chr,1Ch,1Ch*}{IChronicles,ICh,IChr,ICh*,IChronik}
+  \addrow{2Chr}{2Chronicles,2Ch,2Chr,2Ch*}{2Chronik,2Chr,2Ch,2Ch*}{IIChronicles,IICh,IIChr,IICh*,IIChronik}
+  \addrow{Ezra}{Ezra,Ezr,Ezr*}{Esra,Esr,Esr*}{}
+  \addrow{Neh}{Nehemiah,Neh,Ne,Ne*}{Nehemia,Nehemiah,Neh,Ne,Ne*}{}
+  \addrow{Esth}{Esther,Esth,Est,Est*}{Ester,Esther,Est,Est*}{}
+  \addrow{Job}{Job,Jb}{Hiob,Hi,Ijob,Hi*,Ij*}{}
+  \addrow{Ps}{Psalms,Psalm,Ps,Ps*}{Psalmen,Psalm,Psalter,Ps,Ps*}{}
+  \addrow{Prov}{Proverbs,Prov,Pro,Pr/Pr\textsuperscript{(see text)},Pro*}{Sprüche,Sprichwörter,Spr,Sp,Sp*}{}
+  \addrow{Eccl}{Ecclesiastes,Eccl,Ec,Qo,Ecl,Eccl,Eccle,Eccles,Ecclesiaste*,Q*}{Prediger,Pred,Pr/Pr\textsuperscript{(see text)},Kohelet,Koh,Pre*,Koh*}{Ecclesi,Ecclesia,Ecclesias,Ecclesiast}
+  \addrow{Song}{SongofSolomon,SongofSongs,SofS,Sg,So*,Sg*}{Hohelied,Hoheslied,HohesLied,Hld,Hhld,LiedderLieder,Lied,Hoh*,Hh*,Hl*,Li*}{}
+  \addrow{Isa}{Isaiah,Isa,Is,Is*}{Jesaja,Jesajah,Jes,Jesa*}{}
+  \addrow{Jer}{Jeremiah,Jer,Jr,Jer*,Jr*}{Jeremia,Jeremiah,Jer,Jr,Jer*,Jr*}{}
+  \addrow{Lam}{Lamentations,Lam,Lm,La*,Lm*}{Klagelieder,Klgl,Klg,Kl*}{}
+  \addrow{Ezek}{Ezekiel,Ezek,Ezk,Eze*,Ezk*}{Hesekiel,Hes,Ezechiel,Ez,Eze,Hes*,Eze*}{}
+  \addrow{Dan}{Daniel,Dan,Dn,Da*,Dn*}{Daniel,Dan,Dn,Da*,Dn*}{}
+  \addrow{Hos}{Hosea,Hos,Ho,Hos*}{Hosea,Hos,Ho,Hos*}{}
+  \addrow{Joel}{Joel,Jl,Joe*,Jl*}{Joel,Joël,Jl,Joe*,Joë*,Jl*}{Jo\"e*,Jo"e*}
+  \addrow{Amos}{Amos,Am,Am*}{Amos,Am,Am*}{}
+  \addrow{Obad}{Obadiah,Obad,Obd,Ob,Ob*}{Obadja,Obad,Obd,Ob,Ob*}{}
+  \addrow{Jonah}{Jonah,Jon,Jon*}{Jona,Jonah,Jon,Jon*}{}
+  \addrow{Mic}{Micah,Mic,Mi,Mi*}{Micha,Mic,Mi,Mi*}{}
+  \addrow{Nah}{Nahum,Nah,Na,Na*}{Nahum,Nah,Na,Na*}{}
+  \addrow{Hab}{Habakkuk,Hab,Hbk,Hak,Hab*,Hb*,Hak*}{Habakuk,Hab,Hbk,Hak,Hab*,Hb*,Hak*}{}
+  \addrow{Zeph}{Zephaniah,Zeph,Zp,Zep*,Zp*}{Zefanja,Zefanjah,Zef,Zef*}{}
+  \addrow{Hag}{Haggai,Hag,Hg,Hag*,Hg*}{Haggai,Hag,Hg,Hag*,Hg*}{}
+  \addrow{Zech}{Zechariah,Zech,Zc,Zec*,Zc*}{Sacharja,Sacharjah,Sach,Sa,Sa*}{}
+  \addrow{Mal}{Malachi,Mal,Ml,Mal*,Ml*}{Maleachi,Mal,Ml,Mal*,Ml*}{}
+  \midrule
+  \addrow{Matt}{Matthew,Matt,Mt,Mat*,Mt*}{Matthäus,Matt,Mt,Mat*,Mt*}{}
+  \addrow{Mark}{Mark,Mk,Mar*,Mk*}{Markus,Mk,Mar*,Mk*}{}
+  \addrow{Luke}{Luke,Lk,Lu*,Lk*}{Lukas,Lk,Lu*,Lk*}{}
+  \addrow{John}{John,Joh,Jn,Joh*,Jn*}{Johannes,Joh,Jh,Joh*,Jn*}{}
+  \addrow{Acts}{Acts,Ac,Ac*}{Apostelgeschichte,Apo,Apg,Apos*,Apg*}{}
+  \addrow{Rom}{Romans,Rom,Ro,Rm,Ro*,Rm*}{Römer,Röm,Rö}{Roemer,R\"omer,R"omer,Roem,R\"om,R"om,Roe,R\"o,R"o,Roe*,R\"o*,R"o*}
+  \addrow{1Cor}{1Corinthians,1Co,1Cor,1Co*}{1Korinther,1Kor,1Ko,1Kor*}{ICorinthians,ICo,ICor,ICo*,IKorinther,IKor,IKo,IKor*}
+  \addrow{2Cor}{2Corinthians,2Co,2Cor,2Co*}{2Korinther,2Kor,2Ko,2Kor*}{IICorinthians,IICo,IICor,IICo*,IIKorinther,IIKor,IIKo,IIKor*}
+  \addrow{Gal}{Galatians,Gal,Ga,Ga*}{Galater,Gal,Ga,Ga*}{}
+  \addrow{Eph}{Ephesians,Eph,Ep,Eph*}{Epheser,Eph,Eph*}{}
+  \addrow{Phil}{Philippians,Phil,Phi,Ph,Phili*}{Philipper,Phil,Phi,Ph,Phili*}{}
+  \addrow{Col}{Colossians,Col,C*}{Kolosser,Kol,Kol*}{}
+  \addrow{1Thess}{1Thessalonians,1Thess,1Th,1Th*}{1Thessalonicher,1Thessaloniker,1Thess,1Th,1Th*}{IThessalonians,IThess,ITh,ITh*,IThessalonicher,IThessaloniker}
+  \addrow{2Thess}{2Thessalonians,2Thess,2Th,2Th*}{2Thessaloniker,2Thess,2Th,2Th*}{IIThessalonians,IIThess,IITh,IITh*,IIThessaloniker}
+  \addrow{1Tim}{1Timothy,1Tim,1Tm,1Ti*,1Tm*}{1Timotheus,1Tim,1Tm,1Ti*,1Tm*}{ITimothy,ITim,ITm,ITi*,ITm*,ITimotheus}
+  \addrow{2Tim}{2Timothy,2Tim,2Tm,2Ti*,2Tm*}{2Timotheus,2Tim,2Tm,2Ti*,2Tm*}{IITimothy,IITim,IITm,IITi*,IITm*,IITimotheus}
+  \addrow{Titus}{Titus,Tit,Tt,Tit*,Tt*}{Titus,Tit,Tt,Tit*,Tt*}{}
+  \addrow{Phlm}{Philemon,Philem,Phlm,Phm,Phile*,Phl*,Phm*}{Philemon,Philem,Phlm,Phm,Phile*,Phl*,Phm*}{}
+  \addrow{Heb}{Hebrews,Hebr,Heb,He,Heb*}{Hebräer,Hebr,Heb,He,Heb*}{Hebraeer,Hebr\"aer,Hebr"aer}
+  \addrow{Jas}{James,Jas,Js,Jm,Ja*,Js*,Jm*}{Jakobus,Jak,Jk,Ja,Ja*,Jk*}{}
+  \addrow{1Pet}{1Peter,1Pet,1Pt,1P,1P*}{1Petrus,1Petr,1Pet,1Pt,1P*}{IPeter,IPet,IPt,IP,IP*}
+  \addrow{2Pet}{2Peter,2Pet,2Pt,2P,2P*}{2Petrus,2Petr,2Pet,2Pt,2P*}{IIPeter,IIPet,IIPt,IIP,IIP*}
+  \addrow{1John}{1John,1Joh,1Jo,1Jo*,1Jn*}{1Johannes,1Joh,1Jh,1Jo*,1Jh*}{IJohn,IJoh,IJo,IJo*,IJn*,IJohannes,IJh,IJh*}
+  \addrow{2John}{2John,2Joh,2Jo,2Jo*,2Jn*}{2Johannes,2Joh,2Jh,2Jo*,2Jh*}{IIJohn,IIJoh,IIJo,IIJo*,IIJn*,IIJohannes,IIJh,IIJh*}
+  \addrow{3John}{3John,3Joh,3Jo,3Jo*,3Jn*}{3Johannes,3Joh,3Jh,3Jo*,3Jh*}{IIIJohn,IIIJoh,IIIJo,IIIJo*,IIIJn*,IIIJohannes,IIIJh,IIIJh*}
+  \addrow{Jude}{Jude,Jud,Jude*}{Judas,Jud,Juda*}{}
+  \addrow{Rev}{Revelation,Rev,Rv,Rev*,Rv*}{Offenbarung,Offb,Ofb,Apokalypse,Apok,Apk,Of*,Apok*,Apk*}{}
+  \midrule
+  \addrow{Tob}{Tobit,Tob,To*}{Tobit,Tobias,Tob,To*}{}
+  \addrow{Jdt}{Judith,Jdt,Judi*,Jdt*}{Judit,Judith,Jdt,Judi*,Jdt*}{}
+  \addrow{AddEsth}{GreekEsther,GrEst,AddEst,AdditionstoE*,AdditionsE*,AddE*,GreekE*,GrE*}{StückezuEster,StückeEster,StEst,GrEst,StückezuE*,StückeE*,StE*}{StueckezuE*,StueckeE*,St\"uckezuE*,St\"uckeE*,St"uckezuE*,St"uckeE*,AdditionstoEsther}
+  \addrow{Wis}{Wisdom,WisdomofSolomon,W*}{Weisheit,WeisheitSalomos,Weish,W*}{}
+  \addrow{Sir}{Sirach,Ecclesiasticus,Si*,Ecclesiasti*,Ecclu*}{Sirach,JesusSirach,Si*,JesusS*}{}
+  \addrow{Bar}{Baruch,Ba*}{Baruch,Ba*}{}
+  \addrow{EpJer}{EpistleofJeremiah,EpistleJeremiah,EpJer,EpistleofJer*,EpistleJer*,EpJer*}{BriefdesJeremia,BriefJeremias,BrJer,BriefdesJer*,BriefJer*,BrJer*}{}
+    \addrow{AddDan}{AddDan,GreekDaniel,GrDan,AdditionstoD*,AdditionsD*,AddD*,GreekD*,GrD*}{StückezuDaniel,StückeDaniel,StDan,GrDan,StückezuD*,StückeD*,StD*}{StueckezuD*,StueckeD*,St\"uckezuD*,St\"uckeD*,St"uckezuD*,St"uckeD*,AdditionstoDaniel}
+  \addrow{1Macc}{1Maccabees,1Ma*}{1Makkabäer,1Makk,1Ma*}{IMa*}
+  \addrow{2Macc}{2Maccabees,2Ma*}{2Makkabäer,2Makk,2Ma*}{IIMa*}
+\end{longtable}
+\noindent Some remarks regarding the book name table:
+\begin{itemize}
+ \item If an entry ends with a *, you can use any continuation of the given
+  prefix. However, it is recommended that you stick to standard names, as the
+  package might be extended to further languages in the future.
+ \item White space and dots are ignored.
+ \item While the book names are listed by language, they can right now be used
+  in all contexts. There is only one exception: \enquote{Pr} means
+  \emph{Proverbs} in English texts and \emph{\ger{Prediger}=Ecclesiastes}
+  in German texts (the latter requires using the \texttt{babel} package).
+ \item Some German book names include an umlaut (like \enquote{\ger{Römer}}).
+  They can be given in any of the following formats:
+  \begin{description}
+   \item[\texttt{\color{blue!50!black}Römer}] This is the most convenient, but
+    also the most fragile variant. It requires that the input encoding is
+    \texttt{utf8} or \texttt{latin1}.
+   \item[\texttt{\color{blue!50!black}Roemer}] You can use the ASCII version.
+   \item[\texttt{\color{blue!50!black}R\textbackslash"omer}] You can use \TeX{}
+    umlaut notation.
+   \item[\texttt{\color{blue!50!black}R"omer}] You can use the slightly shorter
+    notation provided by the \texttt{babel} package and its relatives for German
+    languages.
+   \item[\texttt{\color{blue!50!black}Romans}] You can switch to a different
+    language or an abbreviation that does not require an umlaut.
+\end{description}
+\end{itemize}
+
+\subsection{Defining book names}
+
+If the standard book names listed above are not enough, you can define your own
+book names.
+\begin{lstlisting}
+\brpDefineBookPrefix{(*\param{new book prefix}*)}{(*\param{book name}*)}
+\brpDefineBook{(*\param{new book name}*)}{(*\param{book name}*)}
+\end{lstlisting}
+Preferably, you define an entire prefix (this is slightly more efficient), and
+use single definitions only if there are several continuations. The \param{book
+  name} should be the one given in the first column of the book name table
+above.
+
+Prefixes always take precedence over single book names. For this reason, you
+might need to undefine them:
+\begin{lstlisting}
+\brpUndefBookPrefix{(*\param{new book prefix}*)}{(*\param{book name}*)}
+\brpUndefBook{(*\param{new book name}*)}{(*\param{book name}*)}
+\end{lstlisting}
+
+If you want to provide different meanings of a book name depending on the
+language, you can append your definitions to \texttt{babel}'s
+\texttt{\textbackslash extras\param{lang}} and \texttt{\textbackslash
+  noextras\param{lang}} hooks. See the package source
+\texttt{bibleref-parse.sty} for an example.
+
+\section{Interface for package authors}
+
+You can use the parser of book names separately.
+\begin{lstlisting}
+\brp@bookname{(*\param{book}*)}
+\end{lstlisting}
+This will set the macro \lstinline|\brp@bk| to the normalised name of the given
+book. The normalised names are listed in the first column in the table above.
+They were chosen according to OSIS naming conventions\footnote{See
+  \url{http://www.bibletechnologies.net/20Manual.dsp}, Section~24.}, which in
+turn are based on the \emph{SBL handbook of style}.
+
+To parse a passage specification, use the following macro.
+\begin{lstlisting}
+\brp@parse{(*\param{passage specification}*)}
+\end{lstlisting}
+This will set the macro \lstinline|\brp@result| to a sequence of range
+specifications. A range specification has the following form:
+\begin{lstlisting}
+\brp@range{(*\param{book}*)}{(*\param{from chapter}*)}{(*\param{from verse}*)}{(*\param{to chapter}*)}{(*\param{to verse}*)}
+\end{lstlisting}
+Typically, you will provide a local definition of \lstinline|\brp@range| that
+takes these five parameters when evaluating \lstinline|\brp@result|. The
+parameters are set according to the following conventions:
+\begin{itemize}
+ \item If a complete book is specified, the numbers are all empty.
+ \item If a complete from- or to-chapter is specified, the corresponding verse
+  is empty.
+ \item For non-ranges, the from- and to- values will be equal.
+ \item For books consisting of a single chapter, the chapter values will be
+  empty. This affects Obadiah, Philemon, 2 John and 3 John.
+\end{itemize}
+
+\appendix
+\section{Revision history}
+
+\subsection*{Version 1.1, 2011-04-10}
+Improve expansion behaviour for \param{passage} arguments. This fixes a bug with
+non-ASCII Bible passage specifications in UTF8 files using \texttt{inputenc}\\
+Remove compatibility hack for \texttt{bibleref-german}\\
+Improve documentation
+
+\subsection*{Version 1.0, 2011-03-29}
+Initial release.
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
+
+%%% Local IspellDict: british

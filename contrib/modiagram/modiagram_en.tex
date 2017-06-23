@@ -1,0 +1,1282 @@
+% arara: pdflatex
+% arara: pdflatex
+% --------------------------------------------------------------------------
+% the MODIAGRAM package
+%
+%   easy creation of molecular orbital diagrams
+%
+% --------------------------------------------------------------------------
+% Clemens Niederberger
+% Web:    https://www.bitbucket.org/cgnieder/modiagram
+% E-Mail: contact@mychemistry.eu
+% --------------------------------------------------------------------------
+% If you have any ideas, questions, suggestions or bugs to report, please
+% feel free to contact me.
+% --------------------------------------------------------------------------
+% Copyright 2011--2015 Clemens Niederberger
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `maintained'.
+%
+% The Current Maintainer of this work is Clemens Niederberger.
+%
+% This work consists of the files modiagram.sty, modiagram_en.tex,
+% README and the derived file modiagram_en.pdf.
+% --------------------------------------------------------------------------
+\documentclass[load-preamble+]{cnltx-doc}
+\usepackage[utf8]{inputenc}
+\usepackage{modiagram}
+
+\setcnltx{
+  package = modiagram ,
+  authors = Clemens Niederberger ,
+  email   = contact@mychemistry.eu ,
+  url     = https://bitbucket.org/cgnieder/modiagram/ ,
+  add-cmds = {
+    AO,
+    atom,
+    connect,    
+    EnergyAxis,    
+    molecule,
+    MOsetup
+  } ,
+  add-envs = { MOdiagram } ,
+  add-silent-cmds = {
+    ch,
+    draw,
+    chlewis,
+    node,
+    textcolor,
+    chemsigma,
+    chemSigma
+  } ,
+  abstract = {%
+    \begin{MOdiagram}[style=fancy,distance=7cm,AO-width=15pt,labels,names]
+      \atom[N]{left}{ 2p = {0;up,up,up} }
+      \atom[O]{right}{ 2p = {2;pair,up,up} }
+      \molecule[NO]{
+        2pMO = {1.8,.4;pair,pair,pair,up},
+        color = { 2piy*=red }
+      }
+     \end{MOdiagram}
+  }
+}
+
+\defbibheading{bibliography}{\addsec{References}}
+
+\usepackage{booktabs}
+
+\usepackage{acro}
+\DeclareAcronym{AO}{
+  short = AO ,
+  long  = atomic orbital
+}
+\DeclareAcronym{MO}{
+  short = MO ,
+  long  = molecular orbital
+}
+
+\expandafter\def\csname libertine@figurestyle\endcsname{LF}
+\usepackage[libertine]{newtxmath}
+\expandafter\def\csname libertine@figurestyle\endcsname{OsF}
+
+\usepackage{chemmacros,chemformula}
+\chemsetup{
+  greek = newtx,
+  modules = units
+}
+\setchemformula{format=\libertineLF}
+
+\NewDocumentCommand \AOinline { o m }
+  {%
+    \begingroup
+      \IfNoValueTF{#1}
+        {\MOsetup{ style=square,AO-width=8pt }}%
+        {\MOsetup{ style=square,AO-width=8pt , #1 }}%
+      \begin{MOdiagram}
+        \AO{s}{0;#2}
+      \end{MOdiagram}%
+    \endgroup
+  }
+
+\newcommand*\TikZ{Ti\textit{k}Z}
+
+\begin{document}
+
+\section{Licence, Requirements}
+\license
+
+\modiagram\ uses \bnd{l3kernel}~\cite{bnd:l3kernel} and
+\bnd{l3packages}~\cite{bnd:l3packages}. It also uses \TikZ~\cite{pkg:pgf} and
+the package \pkg{chemgreek}~\cite{pkg:chemgreek} bundle.  Additionally the
+\TikZ\ libraries \code{calc} and \code{arrows} are loaded.  Knowledge of
+\TikZ\ is helpful.
+
+\section{Motivation}
+This package has been written as a reaction to a question on
+\url{http://tex.stackexchange.com/}. To be more precise: as a reaction to the
+question
+``\href{http://tex.stackexchange.com/questions/13863/molecular-orbital-diagrams-in-latex}%
+{Molecular orbital diagrams in LaTeX}.'' There it says
+\begin{cnltxquote}
+  I'm wondering if anyone has seen a package for drawing (qualitative)
+  molecular orbital splitting diagrams in \LaTeX? Or if there exist any
+  packages that can be easily re-purposed to this task?
+
+  Otherwise, I think I'll have a go at it in \TikZ.
+\end{cnltxquote}
+The problem was solved using \TikZ, since no package existed for that purpose.
+For one thing \modiagram\ is intended to fill this gap. I also found it very
+tedious, to make all this copying and pasting when I needed a second, third,
+\ldots\ diagram. \modiagram\ took care of that.
+
+
+\section{Main Commands}
+All molecular orbital (MO) diagrams are created using the environment
+\env{MOdiagram}{}.
+
+\subsection{The \cs*{atom} Command}
+\begin{commands}
+  \command{atom}[\oarg{name}\Marg{\meta{left}|\meta{right}}\marg{AO-spec}]
+    Place an \acs{AO} in the diagram. \meta{name} is caption of the atom,
+    \meta{left} and \meta{right} determine the placement in the diagram,
+    \meta{AO-spec} is the specification of the \ac{AO}.
+\end{commands}
+
+Let's take a look at an example:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{right}{
+      1s = {  0; pair} ,
+      2s = {  1; pair} ,
+      2p = {1.5; up, down }
+    }
+  \end{MOdiagram}
+\end{example}
+
+As you can see, the argument \meta{AO-spec} is essential to create the actual
+orbitals and the electrons within. You can use these key/value pairs to specify
+what you need:
+\begin{options}
+  \keychoice{1s}{\{\meta{rel-energy}; \meta{el-spec}\}}
+     Energy level and electron specifications for the 1s orbital.
+  \keychoice{2s}{\{\meta{rel-energy}; \meta{el-spec}\}}
+    Energy level and electron specifications for the 2s orbital.
+  \keychoice{2p}{\{\meta{rel-energy}; \meta{x el-spec}{,} \meta{y el-spec}{,}
+    \meta{z el-spec}\}}
+    Energy level and electron specifications for the 2p orbitals.
+\end{options}
+\meta{el-spec} can have the values \code{pair}, \code{up} and \code{down} or
+can be left empty. \meta{rel-energy} actually is the $y$ coordinate and shifts
+the \ac{AO} vertically by \meta{rel-energy} \si{\centi\metre}.
+
+The argument \meta{left}/\meta{right} is important, when p~orbitals are used.
+For instance compare the following example to the one before:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left}{
+      1s = {  0; pair} ,
+      2s = {  1; pair} ,
+      2p = {1.5; up, down }
+    }
+  \end{MOdiagram}
+\end{example}
+
+When both variants are used one can also see, that the right atom is shifted to
+the right (hence the naming). The right atom is shifted by \SI{4}{\centi\metre}
+per default and can be adjusted individually, see page~\pageref{option:distance}.
+\begin{example}
+  \begin{MOdiagram}
+    \atom{left}{
+      1s = {  0; pair} ,
+      2s = {  1; pair} ,
+      2p = {1.5; up, down }
+    }
+    \atom{right}{
+      1s = {  0; pair} ,
+      2s = {  1; pair} ,
+      2p = {1.5; up, down }
+    }
+  \end{MOdiagram}
+\end{example}
+With the command \cs{molecule} (section~\ref{ssec:molecule}) the reason for the
+shift becomes clear.
+
+Any of the arguments for the \ac{AO} can be left empty or be omitted.
+\begin{example}[side-by-side]
+  Without argument: default height, full:\par
+  \begin{MOdiagram}
+    \atom{left}{1s, 2s, 2p}
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  empty argument: default height, empty:\par
+  \begin{MOdiagram}
+    \atom{left}{1s=, 2s=, 2p=}
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  using some values:\par
+  \begin{MOdiagram}
+    \atom{left}{1s, 2s=1, 2p={;,up} }
+  \end{MOdiagram}
+\end{example}
+
+\subsection{The \cs*{molecule} Command}\label{ssec:molecule}
+\begin{commands}
+  \command{molecule}[\oarg{name}\marg{MO-spec}]
+    Place a \acs{MO} in the diagram. \meta{name} is caption of the molecule,
+    \meta{MO-spec} is the specification of the \ac{MO}.
+\end{commands}
+
+An example first:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = {  0; up } }
+    \atom{right}{ 1s = {  0; up } }
+    \molecule { 1sMO = {.75; pair } }
+  \end{MOdiagram}
+\end{example}
+The command \cs{molecule} connects the \acp{AO} with the bonding and
+anti-bondung \acp{MO}.  \cs{molecule} can only be used \emph{after} one has
+set \emph{both} atoms since the orbitals that are to be connected must be
+known.
+
+The argument \meta{MO-spec} accepts a comma separated list of key/value pairs:
+\begin{options}
+  \keychoice{1sMO}{\{\meta{energy gain}/\meta{energy loss}; \meta{s
+      el-spec}{,} \meta{s* el-spec}\}}
+    connects the \acp{AO} specified by \option{1s}.
+  \keychoice{2sMO}{\{\meta{energy gain}/\meta{energy loss}; \meta{s
+      el-spec}{,} \meta{s* el-spec}\}}
+    connects the \acp{AO} specified by \option{2s}
+  \keychoice{2pMO}{\{\meta{s energy gain}/\meta{s energy loss}{,} \meta{p
+      energy gain}/\meta{p energy loss}; \meta{s el-spec}{,} \meta{py
+      el-spec}{,} \meta{pz el- spec}{,} \meta{py* el-spec}{,} \meta{pz*
+      el-spec}{,} \meta{s* el-spec}\}}
+    connects the \acp{AO} specified by \option{2p}.
+\end{options}
+
+Obviously the regarding \acp{AO} must have been set in order to connect them.
+This for example won't work:
+\begin{sourcecode}
+  \begin{MOdiagram} 
+    \atom{left} { 1s = 0 }
+    \atom{right}{ 1s = 0 }
+    \molecule { 2sMO = .75 }
+  \end{MOdiagram}
+\end{sourcecode}
+The value used in \meta{energy gain} determines how many \si{\centi\metre} the
+bonding \ac{MO} lies below the lower \ac{AO} or how many \si{\centi\metre} the
+anti-bondung \ac{MO} lies above the higher \ac{AO}.
+
+\begin{example}[side-by-side]
+  same level:\par
+  \begin{MOdiagram}
+    \atom{left} { 1s = {  0; up } }
+    \atom{right}{ 1s = {  0; up } }
+    \molecule { 1sMO = {.75; pair } }
+  \end{MOdiagram}
+
+  different levels:\par
+  \begin{MOdiagram}
+    \atom{left} { 1s = {  0; up } }
+    \atom{right}{ 1s = {  1; up } }
+    \molecule { 1sMO = {.25; pair } }
+  \end{MOdiagram}
+\end{example}
+
+If you specify \meta{energy loss} you can create non-symmetrical splittings.
+Then, the first value (\meta{energy gain}) is used for the bonding \ac{MO} and
+the second value (\meta{energy loss}) is used for the anti-bonding \ac{MO}.
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = {  0; up } }
+    \atom{right}{ 1s = {  0; up } }
+    \molecule { 1sMO = {.75/.25; pair } }
+  \end{MOdiagram}
+
+  \begin{MOdiagram}
+    \atom{left} { 1s = {  0; up } }
+    \atom{right}{ 1s = {  1; up } }
+    \molecule { 1sMO = {.25/.75; pair } }
+  \end{MOdiagram}
+\end{example}
+
+Please be aware, that you have to specify \emph{two} such values or pairs with
+\option{2pMO}: the splitting of the \chemsigma\ orbitals and the splitting of
+the \chempi\ orbitals.
+\begin{example}
+  \begin{MOdiagram}
+    \atom{left} { 2p = { 0; up, up } }
+    \atom{right}{ 2p = { 1; up, up } }
+    \molecule { 2pMO = { 1.5, .75; pair, up, up } } 
+  \end{MOdiagram}
+\end{example}
+
+The complete \ac{MO} diagram for triplett dioxygen now could look something
+like that:
+\begin{example}
+  \begin{MOdiagram}
+    \atom{left}{
+      1s, 2s, 2p = {;pair,up,up}
+    }
+    \atom{right}{
+      1s, 2s, 2p = {;pair,up,up}
+    }
+    \molecule{
+      1sMO, 2sMO, 2pMO = {;pair,pair,pair,up,up}
+    }
+  \end{MOdiagram}
+\end{example}
+
+\subsection{The Naming Scheme}\label{Namensgebung}
+Since one wants to be able to put labels to the orbitals and since they are
+nodes in a \env*{tikzpicture}, the internal naming scheme is important.  It
+closely follows the function:
+\begin{center}
+  \begin{MOdiagram}[
+    distance = 6cm,
+    AO-width = 20pt,
+    labels-fs = \ttfamily\footnotesize,
+    labels-style = {yshift=10pt}
+  ]
+   \atom{left}{
+     1s = 0 ,
+     2s = 2 ,
+     2p = 5 ,
+     label = {
+       1sleft  = {1sleft} ,
+       2sleft  = {2sleft} ,
+       2pxleft = {2pxleft} ,
+       2pyleft = {2pyleft} ,
+       2pzleft = {2pzleft}
+     }
+   }
+   \atom{right}{
+     1s = 0 ,
+     2s = 2 ,
+     2p = 5 ,
+     label = {
+       1sright  = {1sright} ,
+       2sright  = {2sright} ,
+       2pxright = {2pxright} ,
+       2pyright = {2pyright} ,
+       2pzright = {2pzright}
+     }
+   }
+   \molecule{
+     1sMO = .5 ,
+     2sMO = .5 ,
+     2pMO = {1.5,.5} ,
+     label = {
+       1sigma   = {1sigma} ,
+       1sigma*  = {1sigma*} ,
+       2sigma   = {2sigma} ,
+       2sigma*  = {2sigma*} ,
+       2psigma  = {2psigma} ,
+       2psigma* = {2psigma*} ,
+       2piy     = {2piy} ,
+       2piy*    = {2piy*} ,
+       2piz     = {2piz} ,
+       2piz*    = {2piz*}
+     }
+   }
+  \end{MOdiagram}
+\end{center}
+
+With these names it is possible to reference the orbitals with the known \TikZ
+commands:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = 0 }
+    \atom{right}{ 1s = 0 }
+    \molecule { 1sMO = .75 }
+    \draw[<->,red,semithick]
+      (1sigma.center) -- (1sigma*.center) ;
+    \draw[red]
+      (1sigma*) ++ (2cm,.5cm) node {splitting} ;
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}
+  \begin{MOdiagram}
+    \atom{left} { 1s = 0 }
+    \atom{right}{ 1s = 0 }
+    \molecule { 1sMO = .75 }
+    \draw[draw=blue,very thick,fill=blue!40,opacity=.5]
+      (1sigma*) circle (8pt);
+    \draw[<-,shorten <=8pt,shorten >=15pt,blue]
+      (1sigma*) --++(2,1) node {anti-bonding MO};
+  \end{MOdiagram}
+\end{example}
+
+\subsection{Placing AOs and MOs Arbitrarily}\label{ssec:AO_MO_irgendwo}
+The standard orbitals are not always sufficient in order to draw a correct
+\ac{MO} diagram. For example in the \ac{MO} diagram of \ch{XeF2} one would
+need the part that illustrates the interaction between the bonding and
+anti-bonding combination of two p orbitals of Flourine with one p orbital of
+Xenon:
+
+\begin{center}
+  \begin{MOdiagram}[names]
+    \atom[\chlewis{0.}{F}\hspace*{5mm}\chlewis{180.}{F}]{left}{
+      1s=.2;up,up-el-pos={1sleft=.5}
+    }
+    \atom[Xe]{right}{1s=1.25;pair}
+    \molecule[\ch{XeF2}]{1sMO={1/.25;pair}}
+    \AO(1cm){s}{0;up}
+    \AO(3cm){s}{0;pair}
+    \connect{ AO1 & AO2 }
+    \node[right,xshift=4mm] at (1sigma) {\footnotesize bonding};
+    \node[above] at (AO2.90) {\footnotesize non-bonding};
+    \node[above] at (1sigma*.90) {\footnotesize anti-bonding};
+  \end{MOdiagram}
+\end{center}
+
+To create diagrams like this there is the following command, which draws a single
+\ac{AO}:
+\begin{commands}
+ \command{AO}[\oarg{name}\darg{xshift}\marg{type}\oarg{options}\Marg{\meta{energy};
+   \meta{el-spec}}]
+   Place an \acs{AO} in the diagram. \meta{<name>} (optional) is the name of
+   the node; if not specified, \code{AO\#} is used where \code{\#} is a
+   consecutive number.  \meta{xshift} is the vertical position of the orbital(s),
+   a \TeX\ dimension.  \meta{type} can be \code{s} or \code{p}.
+   \meta{options} is a list of key/value pairs with which the \ac{AO} can be
+   customized, see section~\ref{ssec:AO_anpassen}.  \meta{AO-spec} is the
+   specification of the \ac{AO}.
+\end{commands}
+
+Depending on the \meta{type} one s or three p orbitals are drawn.
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \AO{s}{0;}
+    \AO(-20pt){p}{1;pair,up,down}
+  \end{MOdiagram}
+\end{example}
+
+If one wants to place such an \ac{AO} at the position of an atom, one has to
+know their \meta{xshift}.  They have predefined values (also see
+section~\ref{orbital-positionen}):\label{xshift}
+\begin{itemize}
+  \item atom left: \SI{1}{\centi\metre}
+  \item molecule: \SI{3}{\centi\metre}
+  \item atom right: \SI{5}{\centi\metre}
+\end{itemize}
+
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} {1s=0}
+    \atom{right}{1s=0}
+    \molecule {1sMO=1}
+    \AO(1cm){s}{2}
+    \AO(3cm){s}{2}
+    \AO(5cm){s}{2}
+  \end{MOdiagram}
+\end{example}
+
+Within the p orbitals there is an additional shift by \SI{20}{pt} per orbital.
+This is equivalent to a double shift by the length \code{AO-width} (see
+section~\ref{option:AO-width}):
+\begin{example}
+  \begin{MOdiagram}
+    \atom{left} {2p=0}
+    \atom{right}{2p=0}
+    % above the left atom:
+    \AO(1cm)     {s}{ .5}
+    \AO(1cm-20pt){s}{  1;up}
+    \AO(1cm-40pt){s}{1,5;down}
+    % above the right atom:
+    \AO(1cm)     {s}{ .5}
+    \AO(5cm+20pt){s}{  1;up}
+    \AO(5cm+40pt){s}{1.5;down}
+  \end{MOdiagram}
+\end{example}
+
+The \acp{AO} created with \cs{AO} also can be connected.  For this you can use
+the \TikZ\ command \cs*{draw}, of course.  You can use the predefined node
+names\ldots
+\begin{example}
+  \begin{MOdiagram}
+    \AO{s}{0} \AO(2cm){s}{1}
+    \AO{s}{2} \AO(2cm){s}{1.5}
+    \draw[red] (AO1.0) -- (AO2.180) (AO3.0) -- (AO4.180);
+  \end{MOdiagram}
+\end{example}
+\ldots\ or use own node names
+\begin{example}
+  \begin{MOdiagram}
+    \AO[a]{s}{0} \AO[b](2cm){s}{1}
+    \AO[c]{s}{2} \AO[d](2cm){s}{1.5}
+    \draw[red] (a.0) -- (b.180) (c.0) -- (d.180);
+  \end{MOdiagram}
+\end{example}
+
+The predefined names are \code{AO1}, \code{AO2} \etc for the type \code{s} and
+\code{AO1x}, \code{AO1y}, \code{AO1z}, \code{AO2x} \etc\ for the type
+\code{p}.  Nodes of the type \code{p} get an \code{x}, \code{y} or \code{z} if
+you specify your own name, too.
+\begin{example}
+  \begin{MOdiagram}
+    \AO{p}{0}
+    \draw[<-,shorten >=5pt] (AO1y.-90) -- ++ (.5,-1) node {y};
+   \end{MOdiagram}
+  and
+  \begin{MOdiagram}
+    \AO[A]{p}{0}
+    \draw[<-,shorten >=5pt] (Ay.-90) -- ++ (.5,-1) node {y};
+  \end{MOdiagram}
+\end{example}
+
+However, if you want the lines to be drawn in the same style as the ones
+created by \cs{molecule}\footnote{which can be customized, see
+  page~\pageref{option:lines}}, you should use the command \cs{connect}.
+\begin{commands}
+  \command{connect}[\marg{AO-connect}]
+    Connects the specified \acp{AO}.  \meta{AO-connect} is comma separated
+    list of node name pairs connected with \code{\&}.
+\end{commands}
+This command expects a comma separated list of node name pairs that are to be
+connected. The names have to be connected with a \code{\&}:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \AO{s}{0;} \AO(2cm){s}{1;}
+    \AO{s}{2;} \AO(2cm){s}{1.5;}
+    \connect{ AO1 & AO2, AO3 & AO4 }
+  \end{MOdiagram}
+\end{example}
+
+Some things still need to be said: \cs{connect} adds the anchor \code{east} to
+the first name and the anchor \code{west} to the second one.  This means a
+connection only makes sense from the left to the right.  However, you can add
+own anchors using the usual \TikZ\ way:
+\begin{example}
+  \begin{tikzpicture}
+    \draw (0,0) node (a) {a} ++ (1,0) node (b) {b}
+          ++ (0,1) node (c) {c} ++ (-1,0) node (d) {d} ;
+    \connect{ a.90 & d.-90, c.180 & d.0 }
+  \end{tikzpicture}
+\end{example}
+
+\subsection{The Positioning Scheme}\label{orbital-positionen}
+The figure below shows the values of the $x$ coordinates of the orbitals
+depending on the values of \meta{distance} (\meta{dist}) and \meta{AO-width}
+(\meta{AO}). In sections~\ref{option:distance} and \ref{option:AO-width} these
+lengths and how they can be changed are discussed.
+\begin{center}
+  \begin{MOdiagram}[
+    AO-width = 22pt ,
+    labels-fs = \ttfamily\tiny ,
+    labels-style = {text width=40pt,align=center,yshift=11pt}]
+   \atom{left}{
+     1s = 0 ,
+     2s = 2 ,
+     2p = 5.5 ,
+     label = {
+       1sleft  = {1cm} ,
+       2sleft  = {1cm} ,
+       2pxleft = {1cm - 4*\meta{AO}} ,
+       2pyleft = {1cm - 2*\meta{AO}} ,
+       2pzleft = {1cm}
+     }}
+   \atom{right}{
+     1s = 0 ,
+     2s = 2 ,
+     2p = 5.5 ,
+     label = {
+       1sright  = {1cm + \meta{dist}} ,
+       2sright  = {1cm + \meta{dist}} ,
+       2pxright = {1cm+ \meta{dist}} ,
+       2pyright = {1cm + \meta{dist} + 2*\meta{AO}} ,
+       2pzright = {1cm + \meta{dist} + 4*\meta{AO}}
+     }}
+   \molecule{
+     1sMO = .5 ,
+     2sMO = .5 ,
+     2pMO = {2,.75} ,
+     label = {
+       1sigma   = {.5*\meta{dist} + 1cm} ,
+       1sigma*  = {.5*\meta{dist} + 1cm} ,
+       2sigma   = {.5*\meta{dist} + 1cm} ,
+       2sigma*  = {.5*\meta{dist} + 1cm} ,
+       2psigma  = {.5*\meta{dist} + 1cm} ,
+       2psigma* = {.5*\meta{dist} + 1cm} ,
+       2piy     = {.5*\meta{dist} + 1cm - \meta{AO}} ,
+       2piy*    = {.5*\meta{dist} + 1cm - \meta{AO}} ,
+       2piz     = {.5*\meta{dist} + 1cm + \meta{AO}} ,
+       2piz*    = {.5*\meta{dist} + 1cm + \meta{AO}}
+     }
+   }
+  \end{MOdiagram}
+\end{center}
+
+\subsection{Default Values}
+If you leave the arguments (or better: values) for the specification of the
+\ac{AO} or \ac{MO} empty or omit them, default values are used. The table below
+shows you, which ones.
+\begin{center}
+  \small
+  \begin{tabular}{l>{\ttfamily}l>{\ttfamily}l>{\ttfamily}l}
+    \toprule &
+      \normalfont\bfseries\ac{AO}/\ac{MO} &
+      \normalfont\bfseries omitted &
+      \normalfont\bfseries empty \\
+    \midrule
+      syntax:
+      &      & 1s                                       & 1s= \\
+    \midrule
+      & 1s   & \{0;pair\}                               & \{0;\} \\
+      & 2s   & \{2;pair\}                               & \{2;\} \\
+      & 2p   & \{5;pair,pair,pair\}                     & \{5;,{},\} \\
+    \midrule
+      & 1sMO & \{.5;pair,pair\}                         & \{.5;,\} \\
+      & 2sMO & \{.5;pair,pair\}                         & \{.5;,\} \\
+      & 2pMO & \{1.5,.5;pair,pair,pair,pair,pair,pair\} & \{1.5,.5;{},{},{},{},{},\} \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+This is similar for the \cs{AO} command (page~\pageref{ssec:AO_MO_irgendwo});
+it needs a value for \meta{energy}, though.
+
+\begin{center}
+  \small
+  \begin{tabular}{>{\ttfamily}l>{\ttfamily}l>{\ttfamily}l}
+    \toprule
+      \bfseries\meta{type} & \bfseries \meta{el-spec} \\
+    \midrule
+      s & pair \\
+      p & pair,pair,pair \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+Compare these examples:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s={0;pair} }
+    \atom{right}{ 1s }
+  \end{MOdiagram}
+
+  \hrulefill
+ 
+  \begin{MOdiagram}
+    \atom{left}{ 1s=1 }
+    \atom{right}{ 1s= }
+  \end{MOdiagram}
+\end{example}
+
+\section{Customization}
+The options of the section~\ref{ssec:umgebungs_optionen} can be set global as
+package option, \ie, with \cs*{usepackage}\oarg{options}\Marg{modiagram}, or
+via the setup command \cs{MOsetup}\marg{options}.
+
+\subsection{Environment Options}\label{ssec:umgebungs_optionen}
+There are some options with which the layout of the \ac{MO} diagrams can be
+changed:
+\begin{options}
+  \keyval{style}{type}
+    change the style of the orbitals and the connecting lines,
+    section~\ref{option:style}.
+  \keyval{distance}{dim}
+    distance betwen left and right atom,
+    section~\ref{option:distance}.
+  \keyval{AO-width}{dim}
+    change the width of orbitals,
+    section~\ref{option:AO-width}.
+  \keyval{el-sep}{num}
+    distance between the electron pair arrows,
+    section~\ref{option:electrons}.
+  \keyval{up-el-pos}{num}
+    position of the spin-up arrow,
+    section~\ref{option:electrons}.
+  \keyval{down-el-pos}{num}
+    position of the spin-down arrow,
+    section~\ref{option:electrons}.
+  \keyval{lines}{tikz}
+    change the \TikZ\ style of the connecting lines,
+    section~\ref{option:lines}.
+  \keybool{names}
+    add captions to the atoms and the molecule,
+    section~\ref{option:names}.
+  \keyval{names-style}{tikz}
+    change the \TikZ\ style of the captions,
+    section~\ref{option:names_style}.
+  \keyval{names-style-add}{tikz}
+    change the \TikZ\ style of the captions,
+    section~\ref{option:names_style}.
+  \keybool{labels}
+    add default labels to the orbitals,
+    section~\ref{option:labels}.
+  \keyval{labels-fs}{cs}
+    change the font size of the labels,
+    section~\ref{option:labels-fs}.
+  \keyval{labels-style}{tikz}
+    change the \TikZ\ style of the labels,
+    section~\ref{option:labels-style}.
+\end{options}
+They all are discussed in the following sections.  If they're used as options
+for the environment, they're set locally and only change that environment.
+\begin{sourcecode}
+  \begin{MOdiagram}[options]
+    ...
+  \end{MOdiagram}
+\end{sourcecode}
+
+\subsubsection{Option \option*{style}}\label{option:style}
+There are five different styles which can be chosen.
+\begin{itemize}
+  \item\keyis{style}{plain} \AOinline[style=plain]{pair} (default)
+  \item\keyis{style}{square} \AOinline[style=square]{pair}
+  \item\keyis{style}{circle} \AOinline[style=circle]{pair}
+  \item\keyis{style}{round} \AOinline[style=round]{pair}
+  \item\keyis{style}{fancy} \AOinline[style=fancy]{pair}
+\end{itemize}
+
+Let's take the \ac{MO} diagram of \ch{H2} to illustrate the different styles:
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=plain]% default
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=square]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=circle]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=round]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=fancy]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{distance}}\label{option:distance}
+Depending on labels and captions the \SI{4}{\centi\metre} by which the right
+and left atom are separated can be too small. With \key{distance}{dim} the
+length can be adjusted. This will change the position of the right atom to
+\code{1cm + \meta{dim}} and the position of the molecule is changed to
+\code{0.5*(1cm + \meta{dim})}, also see page~\pageref{xshift} and
+section~\ref{orbital-positionen}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[distance=6cm]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{AO-width}}\label{option:AO-width}
+The length \option{AO-width} sets the length of the horizontal line in a
+orbital displayed with the \code{plain} style. It's default value is
+\SI{10}{pt}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[AO-width=15pt]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[style=fancy,AO-width=15pt]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+By changing the value of \option{AO-width} the positions of the p and the
+\chempi\ orbitals also change, see section~\ref{orbital-positionen}.
+
+\subsubsection{Optionen \option*{el-sep}, \option*{up-el-pos} und
+  \option*{down-el-pos}}
+\label{option:electrons}
+
+These three options change the horizontal positions of the arrows representing
+the electrons in an \ac{AO}/\ac{MO}. The option \key{el-sep}{num} needs a
+value between \code{0} and \code{1}. \code{0} means \emph{no} distance between
+the arrows and \code{1} \emph{full} distance (with respect to the length
+\option{AO-width}, see section~\ref{option:AO-width}).
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[el-sep=.2]% default
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[el-sep=0]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+   \begin{MOdiagram}[el-sep=1]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+The options \key{up-el-pos}{<num>} and \key{down-el-pos}{<num>} can be used
+alternatively to place the spin-up and spin-down electron, respectively.
+Again they need values between \code{0} and \code{1}.  This time \code{0}
+means \emph{on the left} and \code{1} means \emph{on the right}.
+
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[up-el-pos=.4,down-el-pos=.6]% default
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[up-el-pos=.333,down-el-pos=.667]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[up-el-pos=.7,down-el-pos=.3]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{lines}}\label{option:lines}
+The option \option{lines} can be used to modify the \TikZ\ style of the
+connecting lines:
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[lines={gray,thin}]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{names}}\label{option:names}
+If you use the option \option{names} the atoms and the molecule get captions
+provided you have used the optional \meta{name} argument of \cs{atom} and/or
+\cs{molecule}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[names]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Options \option*{names-style} and \option*{names-style-add}}\label{option:names_style}
+These options enable to customize the style of the captions of the atoms and
+of the molecule. By default this setting is used:
+\key{names-style}{anchor=base}\footnote{Please see ``\TikZ\ and PGF -- Manual
+  for Version 2.10'' p.\,183 section 16.4.4 (pgfmanual.pdf) for the meaning}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[names,names-style={draw=blue}]
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+With this the default setting is overwritten. As you can see it destroys the
+vertical alignment of the nodes. In order to avoid that you can for example
+specify \code{text height} and \code{text depth} yourself \ldots
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[names,names-style={text height=1.5ex, text depth=.25ex, draw=blue}]
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\ldots, add the \code{anchor} again \ldots
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[names,names-style={anchor=base, draw=blue}]
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\ldots\ or use the option \key{names-style-add}. It doesn't overwrite the
+current setting but appends the new declaration:
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[names,names-style-add={draw=blue}]
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}
+  % use package `chemmacros'
+  \MOsetup{
+    names,
+    names-style = {
+      text height = 2.5ex,
+      text depth = .5ex,
+      draw = blue!80,
+      rounded corners
+    }
+  }
+  \begin{MOdiagram}
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+  \begin{MOdiagram}[names-style-add={fill=blue!20}]
+    \atom[p]{left} { 1s = {;up} }
+    \atom[b]{right}{ 1s = {;up} }
+    \molecule[\ch{X2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{labels}}\label{option:labels}
+If you use the option \option{labels} predefined labels are written below the
+orbitals.  These labels can be changed, see section~\ref{sec:key:label}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{labels-fs}}\label{option:labels-fs}
+Labels are set with the font size \cs*{small}.  If you want to change that you
+can use the option \option{labels-fs}.
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels,labels-fs=\footnotesize]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+This also allows you to change the font style or font shape of the labels.
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels,labels-fs=\sffamily\footnotesize]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{Option \option*{labels-style}}\label{option:labels-style}
+The option \option{labels-style} changes the \TikZ\ style of the nodes within
+which the labels are written.
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels,labels-style={blue,yshift=4pt}]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{ 1sMO = {.75;pair} }
+  \end{MOdiagram}
+\end{example}
+
+\subsection{\cs*{atom} and \cs*{molecule} Specific Customizations}
+\subsubsection{The \option*{label} Key}\label{sec:key:label}
+If you don't want to use the predefined labels, change single labels or use
+only one or two labels, you can use the key \option{label}.  This option is
+used in the \cs{atom} and \cs{molecule} commands in the \meta{AO-spec} or
+\meta{MO-spec} argument, respectively.  The key awaits a comma separated
+key/value list.  The names mentioned in section~\ref{Namensgebung} are used as
+keys to specify the \ac{AO} that you want to label.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels-fs=\footnotesize]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{
+      1sMO  = {.75;pair},
+      label = { 1sigma = {bonding MO} }
+    }
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  \begin{MOdiagram}[style=square,distance=6cm]
+    \atom{left} { 1s = {;up} }
+    \atom{right}{ 1s = {;up} }
+    \molecule{
+      1sMO  = {.75;pair} ,
+      label = {
+        1sigma  = \chemsigma,
+        1sigma* = \chemsigma$^*$
+      }
+    }
+    \node[right] at (1sigma.-45) {bonding};
+    \node[right] at (1sigma*.45) {anti-bonding};
+  \end{MOdiagram}
+\end{example}
+
+If the option is used together with the \option{labels} option
+(page~\pageref{option:labels}) single labels are overwritten:
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels]
+    \atom[H]{left} { 1s = {;up} }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{
+      1sMO  = {.75;pair},
+      label = { 1sigma = \textcolor{red}{??} }
+    }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{The \option*{color} Key}\label{sec:key:color}
+Analogous to the \option{label} key the \option{color} key can be used to
+display coloured electrons:
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}[labels-fs=\footnotesize]
+    \atom[H]{left}{
+      1s, color = { 1sleft = blue }
+    }
+    \atom[H]{right}{
+      1s, color = { 1sright = red }
+    }
+    \molecule[\ch{H2}]{
+      1sMO,
+      label = { 1sigma = {bonding MO} },
+      color = { 1sigma = green, 1sigma* = cyan }
+    }
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{The \option*{up-el-pos} and \option*{down-el-pos} keys}\label{sec:key:electrons}
+The options \option{up-el-pos} and \option{down-el-pos} allow it to shift the
+arrows representing the electrons in a single \ac{AO} or \ac{MO} individually.
+You need to use values between \code{0} and \code{1}, also see
+section~\ref{option:electrons}.
+\begin{example}[side-by-side]
+  % use package `chemmacros'
+  \begin{MOdiagram}
+    \atom[H]{left}{
+      1s        = {;up},
+      up-el-pos = { 1sleft=.5 }
+    }
+    \atom[H]{right}{ 1s = {;up} }
+    \molecule[\ch{H2}]{
+      1sMO        = {.75;pair} ,
+      up-el-pos   = { 1sigma=.15 } ,
+      down-el-pos = { 1sigma=.85 }
+    }
+  \end{MOdiagram}
+\end{example}
+
+\subsection{\cs*{AO} Specific Customizations}\label{ssec:AO_anpassen}
+These keys enable to customize orbitals created with \cs{AO}.
+
+\subsubsection{The \option*{label} Key}\label{key:AO_label}
+The key \option{label}\Oarg{\meta{x}/\meta{y}/\meta{z}} allows you to put a
+label to the \ac{AO}/\ac{MO}.  If you use the type \code{p} you can specify
+the orbital you want to label in square brackets:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}[style=square]
+    \AO{s}[label={s orbital}]{0}
+    \AO{p}[label[y]=py,label[z]=pz]{1.5}
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{The \option*{color} Key}\label{key:AO_color}
+Analogous to the \option{label} key there is the key
+\option{color}\Oarg{\meta{x}/\meta{y}/\meta{z}} which enables you to choose a
+color for the electrons.  If you use the type \code{p} you can specify the
+orbital in square brackets:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}[style=square]
+    \AO{s}[color=red]{0}
+    \AO{p}[color[y]=green,color[z]=cyan]{1.5}
+  \end{MOdiagram}
+\end{example}
+
+\subsubsection{The \option*{up-el-pos} and \option*{down-el-pos} Keys}\label{key:AO_electrons}
+Then there are the keys \option{up-el-pos}\Oarg{\meta{x}/\meta{y}/\meta{z}}
+and \option{down-el-pos}\Oarg{\meta{x}/\meta{y}/\meta{z}} with which the
+electrons can be shifted horizontally.  You can use values between \code{0}
+and \code{1}, also see section~\ref{option:electrons}.  If you use the type
+\code{p} you can specify the orbital in square brackets:
+\begin{example}[side-by-side]
+  \begin{MOdiagram}[style=square]
+    \AO{s}[up-el-pos=.15]{0}
+    \AO{p}[up-el-pos[y]=.15,down-el-pos[z]=.15]{1.5}
+  \end{MOdiagram}
+\end{example}
+
+\subsection{Energy Axis}
+Last but not least one might want to add an energy axis to the diagram.  For
+this there is the command \cs{EnergyAxis}.
+
+\begin{commands}
+  \command{EnergyAxis}[\oarg{option}]
+    Adds an energy axis to the diagram.  \meta{options} are key/value pairs to
+    modify the axis.
+\end{commands}
+
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = {;up} }
+    \atom{right}{ 1s = {;up} }
+    \molecule{ 1sMO = {.75;pair} }
+    \EnergyAxis
+  \end{MOdiagram}
+\end{example}
+
+For the time being there are two options to modify the axis.
+\begin{options}
+  \keyval{title}{title}\Default{energy}
+    the axis label.  If used without value the default is used.
+  \keyval{head}{tikz arrow head}\Default{>}
+    the arrow head; you can use the arrow heads specified in the \TikZ\ library
+    \code{arrows} (pgfmanual v2.10 pages 256ff.)
+\end{options}
+
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = {;up} }
+    \atom{right}{ 1s = {;up} }
+    \molecule{ 1sMO = {.75;pair} }
+    \EnergyAxis[title]
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[side-by-side]
+  \begin{MOdiagram}
+    \atom{left} { 1s = {;up} }
+    \atom{right}{ 1s = {;up} }
+    \molecule{ 1sMO = {.75;pair} }
+    \EnergyAxis[title=E,head=stealth]
+  \end{MOdiagram}
+\end{example}
+
+\section{Examples}
+The example from the beginning of section \ref{ssec:AO_MO_irgendwo}.
+\begin{example}
+  % use package `chemmacros'
+  \begin{MOdiagram}[names]
+    \atom[\chlewis{0.}{F}\hspace*{5mm}\chlewis{180.}{F}]{left}{
+      1s=.2;up,up-el-pos={1sleft=.5}
+    }
+    \atom[Xe]{right}{1s=1.25;pair}
+    \molecule[\ch{XeF2}]{1sMO={1/.25;pair}}
+    \AO(1cm){s}{0;up}
+    \AO(3cm){s}{0;pair}
+    \connect{ AO1 & AO2 }
+    \node[right,xshift=4mm] at (1sigma) {\footnotesize bonding};
+    \node[above] at (AO2.90) {\footnotesize non-bonding};
+    \node[above] at (1sigma*.90) {\footnotesize anti-bonding};
+  \end{MOdiagram}
+\end{example}
+
+\begin{example}[outside]
+  % use package `chemmacros'
+  \begin{figure}[p]
+    \centering
+    \begin{MOdiagram}[style=square,labels,names,AO-width=8pt,labels-fs=\footnotesize]
+      \atom[\ch{O_a}]{left}{
+        1s, 2s, 2p = {;pair,up,up}
+      }
+      \atom[\ch{O_b}]{right}{
+        1s, 2s, 2p = {;pair,up,up}
+      }
+      \molecule[\ch{O2}]{
+        1sMO, 2sMO, 2pMO = {;pair,pair,pair,up,up},
+        color = { 2piy*=red, 2piz*=red }
+      }
+      \EnergyAxis
+    \end{MOdiagram}
+    \caption{MO diagram of \ch{^3 "\chemSigma-" O2}.}
+  \end{figure}
+\end{example}
+
+\begin{example}[outside]
+  % use package `chemmacros'
+  \begin{figure}[p]
+    \centering
+    \MOsetup{style = fancy, distance = 7cm, AO-width = 15pt, labels}
+    \begin{MOdiagram}
+      \atom[N]{left}{
+        2p = {0;up,up,up}
+      }
+      \atom[O]{right}{
+        2p = {2;pair,up,up}
+      }
+      \molecule[NO]{
+        2pMO = {1.8,.4;pair,pair,pair,up},
+        color = { 2piy*=red }
+      }
+      \EnergyAxis
+    \end{MOdiagram}
+    \caption{Part of the MO diagram of \chlewis{180.}{NO}.}
+  \end{figure}
+\end{example}
+
+\clearpage
+
+\end{document}

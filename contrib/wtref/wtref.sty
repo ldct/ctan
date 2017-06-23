@@ -1,0 +1,179 @@
+%
+% wtref.sty
+%
+
+% Package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{wtref}[2017/01/17 v0.3.2 Extend cross-reference system]
+\def\wtrf@pkgname{WTRef}
+\RequirePackage{xkeyval}
+
+% Messages
+\def\wtrf@info{\PackageInfo\wtrf@pkgname}
+\def\wtrf@warn{\PackageWarningNoLine\wtrf@pkgname}
+\def\wtrf@error{\PackageError\wtrf@pkgname}
+
+% New ifs and counts
+\newif\if@wtrf@use@scope@
+\newif\if@wtrf@use@namespace@
+\newif\if@wtrf@set@namespace@
+\newcount\wtrf@tempcnta
+\newcount\wtrf@tempcntb
+
+% Utilities
+\def\wtrf@name@def#1{\expandafter\def\csname #1\endcsname}
+\def\wtrf@name@edef#1{\expandafter\edef\csname #1\endcsname}
+\def\wtrf@name@use#1{\csname #1\endcsname}
+\def\wtrf@if@option@exists{\@ifnextchar[}
+\def\wtrf@if@reftype@not@exists#1{\@ifundefined{wtrf@#1@namespace}}
+
+% Check commands
+\def\wtrf@check@counter#1{%
+  \@ifundefined{c@#1}{%
+    \wtrf@error
+      {Undefined LaTeX counter '#1'}
+      {Check the spelling or declare new LaTeX counter}%
+  }{}}
+\def\wtrf@check@command#1{%
+  \@ifundefined{#1}{}{% else
+    \wtrf@warn{Redefining \expandafter\string\csname#1\endcsname}}}
+
+% Trimming spaces
+\def\wtrf@inner@setkeys#1{\setkeys[wtrf]{inner}{key=#1}}
+\def\wtrf@trimming@spaces#1{%
+  \define@key[wtrf]{inner}{key}{\def#1{##1}}%
+  \expandafter\wtrf@inner@setkeys\expandafter{#1}%
+  \disable@keys[wtrf]{inner}{key}}
+
+% Define keys for \newref command
+\define@key[wtrf]{ns}{namespace}{%
+  \@wtrf@set@namespace@true
+  \def\wtrf@namespace@temp{#1}}
+\define@key[wtrf]{ns}{nonamespace}[\@empty]{%
+  \@wtrf@use@namespace@false}
+\define@key[wtrf]{ns}{scope}{%
+  \wtrf@check@counter{#1}%
+  \@wtrf@use@scope@true
+  \def\wtrf@scope@temp{#1}}
+
+% Define \newref command
+\newcommand{\newref}{%
+  \let\wtrf@namespace@temp\@empty
+  \@wtrf@use@namespace@true
+  \@wtrf@set@namespace@false
+  \@wtrf@use@scope@false
+  \wtrf@if@option@exists
+    {\wtrf@set@namespace}
+    {\wtrf@@newref}}
+\@onlypreamble\newref
+\def\wtrf@set@namespace[#1]{%
+  \setkeys[wtrf]{ns}{#1}%
+  \wtrf@@newref}
+\def\wtrf@@newref#1{%
+  \@for\wtrf@temp@ref@type:=#1\do{%
+    \wtrf@trimming@spaces\wtrf@temp@ref@type
+    \expandafter\wtrf@newref@pre\expandafter{\wtrf@temp@ref@type}}}
+\def\wtrf@newref@pre#1{%
+  \wtrf@if@reftype@not@exists{#1}{%
+    \wtrf@newref{#1}%
+  }{% else
+    \wtrf@error
+      {ref type '#1' already exists}
+      {You can declare ref type only once}%
+  }}
+\def\wtrf@newref#1{%
+  % define namespace
+  \if@wtrf@use@namespace@
+    \ifx\wtrf@namespace@temp\@empty
+      \@wtrf@set@namespace@false
+      \def\wtrf@namespace@temp{#1}%
+    \fi
+    \wtrf@name@edef{wtrf@#1@namespace}{\wtrf@namespace@temp:}%
+  \else
+    \wtrf@name@def{wtrf@#1@namespace}{}%
+  \fi
+  % define scope
+  \if@wtrf@use@scope@
+    \wtrf@name@edef{wtrf@#1@scope@cmd}{the\wtrf@scope@temp}%
+    \wtrf@name@def{wtrf@#1@scope}{\csname\wtrf@name@use{wtrf@#1@scope@cmd}\endcsname:}%
+  \else
+    \wtrf@name@def{wtrf@#1@scope}{}%
+  \fi
+  % define keys for setting styles
+  \define@key[wtrf]{#1-style}{refcmd}{\wtrf@name@def{wtrf@#1@refcmd}####1{##1}}%
+  \define@key[wtrf]{#1-style}{last sep}[\wtrf@name@use{wtrf@#1@sep}]{%
+    \wtrf@name@def{wtrf@#1@last@sep}{##1}}%
+  \define@cmdkeys[wtrf]{#1-style}[wtrf@#1@]{sep, prefix, suffix}%
+  % default key settings
+  \setkeys[wtrf]{#1-style}{%
+    refcmd=\ref{##1},
+    sep={,\space}, last sep,
+    prefix={}, suffix={}}%
+  % define label command
+  \wtrf@check@command{#1label}%
+  \wtrf@name@def{#1label}{\protect\wtrf@name@use{wtrf@#1label}}
+  \wtrf@name@def{wtrf@#1label}##1{%
+    \label{\wtrf@name@use{wtrf@#1@namespace}\wtrf@name@use{wtrf@#1@scope}##1}}%
+  % define ref command
+  \wtrf@check@command{#1ref}%
+  \wtrf@name@def{#1ref}{\protect\wtrf@name@use{wtrf@#1ref}}
+  \wtrf@name@def{wtrf@#1ref}{%
+    \wtrf@if@option@exists
+      {\wtrf@name@use{wtrf@#1ref@with@option}}
+      {\def\wtrf@scope{\wtrf@name@use{wtrf@#1@scope}}\wtrf@name@use{wtrf@#1@print}}}%
+  % when option exists
+  \if@wtrf@use@scope@
+    \wtrf@name@def{wtrf@#1ref@with@option}[##1]##2{%
+      \def\wtrf@scope{##1:}%
+      \wtrf@name@use{wtrf@#1@print}{##2}}%
+  \else
+    \wtrf@name@def{wtrf@#1ref@with@option}[##1]##2{%
+      \let\wtrf@scope\@empty
+      \wtrf@name@use{wtrf@#1@print}{##2}}%
+  \fi
+  % print refs
+  \wtrf@name@def{wtrf@#1@print}##1{%
+    \wtrf@tempcnta\z@
+    \@for\wtrf@member:=##1\do{\advance\wtrf@tempcnta\@ne}%
+    \ifnum\wtrf@tempcnta<\tw@
+      \wtrf@name@use{wtrf@#1@prefix}%
+      \wtrf@name@use{wtrf@#1@refcmd}{%
+        \wtrf@name@use{wtrf@#1@namespace}\wtrf@scope##1}%
+      \wtrf@name@use{wtrf@#1@suffix}%
+    \else
+      \wtrf@tempcntb\@ne
+      \advance\wtrf@tempcnta\m@ne
+      \wtrf@name@use{wtrf@#1@prefix}%
+      \@for\wtrf@temp@label:=##1\do{%
+        \wtrf@trimming@spaces\wtrf@temp@label
+        \wtrf@name@use{wtrf@#1@refcmd}{%
+          \wtrf@name@use{wtrf@#1@namespace}\wtrf@scope\wtrf@temp@label}%
+        \ifnum\wtrf@tempcnta>\wtrf@tempcntb
+          \wtrf@name@use{wtrf@#1@sep}%
+        \else\ifnum\wtrf@tempcnta=\wtrf@tempcntb
+          \wtrf@name@use{wtrf@#1@last@sep}%
+        \fi\fi
+        \advance\wtrf@tempcntb\@ne}%
+      \wtrf@name@use{wtrf@#1@suffix}%
+    \fi}%
+  % reset \wtrf@namespace@temp
+  \if@wtrf@set@namespace@\else
+    \let\wtrf@namespace@temp\@empty
+  \fi}
+
+% Define \setrefstyle command
+\newcommand{\setrefstyle}[2]{%
+  \@for\wtrf@temp@ref@type:=#1\do{%
+    \wtrf@trimming@spaces\wtrf@temp@ref@type
+    \expandafter\wtrf@setrefstyle\expandafter{\wtrf@temp@ref@type}{#2}}}
+\def\wtrf@setrefstyle#1#2{%
+  \wtrf@if@reftype@not@exists{#1}{%
+    \wtrf@error
+      {ref type '#1' does not exist}
+      {You can declare ref type only once}%
+  }{% else
+    \setkeys[wtrf]{#1-style}{#2}%
+  }}
+
+% EOF
+\endinput

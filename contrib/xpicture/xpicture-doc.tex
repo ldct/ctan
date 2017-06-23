@@ -1,0 +1,3105 @@
+\documentclass{article}
+
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage[T1]{fontenc}
+
+\usepackage{xpicture}
+
+\usepackage{ifthen}
+\usepackage{array}
+\usepackage{fancyvrb}
+\usepackage[colorlinks]{hyperref}
+
+\usepackage{amsmath}
+\usepackage{paralist}
+\usepackage{graphicx}
+\usepackage{makeidx}
+\makeindex
+\renewcommand{\today}{2012/12/17}
+
+\newcommand{\TIT}{\textit}
+\newcommand{\TTT}{\texttt}
+\newcommand{\TTTit}[1]{\TTT{\TIT{#1}}}
+\newcommand{\cs}[1]{\mbox{\textnormal{\TTT{\textbackslash #1}}}}
+\newcommand{\environ}[1]{\textnormal{\TTT{#1}}}
+\newcommand{\package}[1]{\textnormal{\TTT{#1}}}
+\newcommand{\ttindex}[1]{\index{#1@\texttt{#1}}}
+\newcommand{\ttslashindex}[1]{\index{#1@\texttt{\textbackslash #1}}}
+\newcommand{\csdef}[1]{\cs{#1}\ttslashindex{#1}}
+\newcommand{\packagedef}[1]{%
+   \package{#1}\index{#1@\texttt{#1} (package)}}
+\newcommand{\environdef}[1]{%
+   \package{#1}\index{#1@\texttt{#1} (environment)}}
+\newcommand{\optiondef}[1]{%
+   \textnormal{\TTT{#1}}\index{#1@\texttt{#1} (package option)}}
+\newcounter{exem}\stepcounter{exem}
+\newenvironment{exemple}{%
+   \VerbatimEnvironment\begin{VerbatimOut}{./xpicture\theexem.tex}}{%
+   \end{VerbatimOut}
+   \par\medskip\noindent
+   \marginpar{\fbox{Ex. \theexem}}\begin{minipage}{\linewidth}
+      \begin{minipage}{0.45\linewidth}
+         \setlength{\parindent}{2ex}
+         \catcode`\%=14
+         \input{./xpicture\theexem}
+      \end{minipage}\hfill
+      \begin{minipage}{0.45\linewidth}
+         \small
+         \VerbatimInput{./xpicture\theexem.tex}
+      \end{minipage}
+   \end{minipage}
+   \stepcounter{exem}\par\bigskip\noindent}
+\newenvironment{Exemple}{%
+   \VerbatimEnvironment\begin{VerbatimOut}{./xpicture\theexem.tex}}{%
+   \end{VerbatimOut}
+   \par\noindent
+   \marginpar{\fbox{Ex. \theexem}}\fbox{\begin{minipage}{\linewidth}
+      \begin{minipage}{\linewidth}
+         \setlength{\parindent}{2ex}
+         \bigskip\par
+         \catcode`\%=14
+         \input{./xpicture\theexem}
+      \end{minipage}\medskip\par
+      \hspace*{0.125\linewidth}\rule{0.75\linewidth}{0.4pt}\par\medskip
+      \small
+      \VerbatimInput{./xpicture\theexem.tex}
+   \end{minipage}}\stepcounter{exem}\par\bigskip\noindent}
+
+\begin{document}
+\begin{titlepage}
+   \centering
+   \bfseries\Large Robert Fuster
+
+   \rule{\textwidth}{1pt}
+
+   The \textsf{xpicture} package 
+
+   (\Verb+http://www.upv.es/~rfuster/xpicture+)
+
+   Several extensions of the \textsf{picture} standard environment
+
+   User Manual
+   \vspace{\stretch{1}}
+   \begin{Exemple}
+      \setlength{\unitlength}{1cm}
+      \footnotesize
+      \DIVIDE{1}{12}{\invXII}
+      \MULTIPLY{12}{\numberTWOPI}{\phione}
+      \MULTIPLY{12}{64}{\divisions}
+
+      \COMPOSITIONfunction{\EXPfunction}{\COSfunction}{\Afunction}
+      \SCALEVARIABLEfunction{4}{\COSfunction}{\Bfunction}
+      \SCALEVARIABLEfunction{\invXII}{\SINfunction}{\cfunction}
+      \POWERfunction{\cfunction}{5}{\Cfunction}
+      \LINEARCOMBINATIONfunction{1}{\Afunction}{-2}{\Bfunction}{\ABfunction}
+      \SUMfunction{\ABfunction}{\Cfunction}{\ABCfunction}
+      \PRODUCTfunction{\SINfunction}{\ABCfunction}{\Xfunction}
+         % x=(sin t)(exp(cos t)-2 cos 4t + (sin(t/12))^5)
+      \PRODUCTfunction{\COSfunction}{\ABCfunction}{\Yfunction}
+         % y=(cos t)(exp(cos t)-2 cos 4t + (sin(t/12))^5)
+      \PARAMETRICfunction{\Xfunction}{\Yfunction}{\butterfly}
+      \centering
+      \begin{Picture}(-4,-3)(4,4)
+         \PlotParametricFunction[\divisions]\butterfly{0}{\phione}
+      \end{Picture}
+      \begin{gather*}
+         x=\sin t\left(\mathrm e^{\cos t}-2\cos 4t 
+                      +\sin^5\left(\frac t{12}\right)\right) \\
+         y=\cos t\left(\mathrm e^{\cos t}-2\cos 4t 
+                      +\sin^5\left(\frac t{12}\right)\right)
+     \end{gather*}
+   \end{Exemple}
+    \footnotesize\today
+\end{titlepage}
+\stepcounter{page}
+
+\tableofcontents
+\newpage
+
+   The \package{xpicture} package extends the 
+   \environ{picture} standard environment
+   and packages \package{pict2e} and \package{curve2e}, 
+   adding the ability to work with arbitrary 
+   reference systems and with Cartesian or polar coordinates. 
+   In addition to other utilities,
+   the greater interest of \package{xpicture} 
+   lies in its capacity to draw function graphs,
+   conic sections and arcs, and parametrically defined curves.
+    
+   This is the user manual of \package{xpicture}.
+   Technical documentation and reference manual are contained 
+   in file \texttt{xpicture.pdf}, distributed together with the package.
+
+\section{Introduction. New graphical instructions}
+The \package{xpicture} package introduces several new graphical 
+instructions, and some enriched versions of standard
+instructions used inside the \environ{picture} environment.
+All these new instructions can be classified as follows:
+\begin{itemize}
+ \item Reference systems and coordinates:
+\begin{itemize}
+\item Declaration and use of different reference systems,
+with Cartesian or polar coordinates.
+\item Instructions to show Cartesian or polar reference systems.
+\end{itemize}
+ \item  An alternative to the \environ{picture} environment,
+compatible with the new reference systems.
+ \item Alternative instructions or extensions of the standard
+ \environ{picture} commands and those defined by the packages
+ \packagedef{pict2e} and \packagedef{curve2e}:
+\begin{itemize}
+ \item Enriched versions of marks \cs{put} and \cs{multiput},
+ providing an adequate control of the precise position 
+in which objects are composed
+(this functionality is especially useful in the composition
+of not strictly graphical objects, such as formulas or labels).
+\item Instructions for drawing straight segments, vectors
+(in any direction and using any reference system), polygonal lines,
+and regular and arbitrary polygons.
+\end{itemize}
+\item Regular curves:
+\begin{itemize}
+\item Instructions for drawing conic sections (circles, ellipses,
+hyperbolas and parabolas) and arcs of these curves.
+\item Instructions to graph functions and parametrically defined curves
+(this is the most interesting feature of this package).
+\end{itemize}
+\end{itemize}
+
+The only requeriments for \package{xpicture} are packages 
+\packagedef{calculator}, \packagedef{calculus}, 
+\packagedef{curve2e} and \packagedef{xcolor}.
+Therefore, it works with any \TeX{}
+extension compatible with these packages. You can compile a document 
+including \package{xpicture} pictures directly with 
+\TTT{pdflatex},\ttindex{pdflatex}
+\TTT{lualatex},\ttindex{lualatex} 
+\TTT{xelatex}\ttindex{xelatex} 
+or indirectly, via \TTT{latex/dvips}\ttindex{latex},\ttindex{dvips}
+ \TTT{latex/dvips/dvipdfm},\ttindex{dvipdfm} \ldots
+Pure \TTT{dvi} files are not supported, but some \TTT{dvi} previewers
+may show partially \package{xpicture} draws included in \TTT{dvi} files. 
+
+\section{A preliminary observation.
+         Compatibility with text composition in color}
+The \package{xpicture} package automatically loads the
+\packagedef{xcolor} package.
+So, we can compose our
+pictures (and the whole document) in various colors. However,
+when used in the body of the \textsf{picture} environment,
+marks \cs{color} and \cs{colortext}
+often introduce spurious spaces.
+For this reason, the \package{xpicture} package introduces the new command
+\csdef{pictcolor}.
+\begin{Verbatim}[commandchars=\|\[\]]
+\pictcolor{|TIT[color]}
+\end{Verbatim}
+This mark behaves like the \cs{color} command, but does not produces these
+inappropriate spaces.
+To change colors inside a picture, instead of \cs{color} or \cs{colortext},
+use always the \cs{pictcolor} declaration.
+
+\section{Coordinate systems and the \environ{Picture} environment}
+\subsection{Coordinates}
+The standard \environ{picture} environment establishes
+a rectangular coordinate system, so that all
+graphic objects are placed in the picture using the canonical
+coordinates of the plane. From now on, we will call
+this reference system \emph{the standard reference system}.
+Loading the \package{xpicture} package, we can use any other affine
+reference system and combine it with the use of polar coordinates.
+
+\subsubsection{Reference systems}
+The \package{xpicture} package allows us to use other reference systems.
+For the purpose we are interested, a reference system consists
+of an origin of coordinates and a pair of linearly independent vectors.
+Typing\ttslashindex{referencesystem}
+\begin{Verbatim}[commandchars=\|\[\]]
+\referencesystem(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])(|TIT[x2],|TIT[y2])
+\end{Verbatim}
+we declare the new reference system  with origin at point
+$(\TTT{\TIT{x0}},\TTT{\TIT{y0})} $ and coordinate vectors
+$(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$ and
+$(\TTT{\TIT{x2}},\TTT{\TIT{y2}})$.
+If the coordinates of the point $P$ with respect to this reference system
+are $(\bar{\TTT{\TIT{x}}},\bar{\TTT{\TIT{y}}})$, then the
+coordinates of $ P $ with respect to the standard system,
+$(\TTT{\TIT{x}},\TTT{\TIT{y}})$, are calculated with the formula
+\newenvironment{qmatrix}{\left[\begin{matrix}}{\end{matrix}\right]}
+\[
+ \begin{qmatrix}
+          \TTT{\TIT{x}} \\ \TTT{\TIT{y}}
+     \end{qmatrix}=\begin{qmatrix}
+         \TTT{\TIT{x0}} \\ \TTT{\TIT{y0}}
+    \end{qmatrix} +
+    \begin{qmatrix}
+         \TTT{\TIT{x1}} & \TTT{\TIT{x2}} \\
+         \TTT{\TIT{y1}} & \TTT{\TIT{y2}}
+    \end{qmatrix}    \begin{qmatrix}
+         \bar{\TTT{\TIT{x}}} \\ \bar{\TTT{\TIT{y}}}
+    \end{qmatrix}
+\]
+
+For example,
+\begin{Verbatim}[commandchars=\|\[\]]
+\referencesystem(1,2)(1,0)(0.5,0.5)
+\end{Verbatim}
+sets a new reference system that has its origin in the point $O(1,2)$
+and the coordinate vectors $\vec u_1=(1,0)$ and $\vec u_2=(1/2,1/2)$.
+The following pictures show this coordinate system built on the standard
+reference system
+and a Cartesian grid refered to the new reference system.
+
+\noindent
+\setlength\unitlength{1cm}%
+ \renewcommand{\Pictlabelsep}{0.2}
+\begin{Picture}(-3.1,-3.1)(3.1,3.1)
+\put(-1.5,0){\line(1,0){3}}
+\put(0,-1.5){\line(0,1){3}}
+{\makenolabels
+\cartesianaxes(-3,-3)(3,3)}
+\thicklines
+ \xVECTOR(0,0)(1,2)
+\pictcolor{red}
+\referencesystem(1,2)(1,0)(0.5,0.5)
+\Put[-45](0,0){$O$}
+\renewcommand\axescolor{red}
+\renewcommand\axeslabelcolor{red}
+\cartesianaxes(-2.1,-2.1)(2.1,2.1)
+\linethickness{1pt}
+\xVECTOR(0,0)(1,0)
+\xVECTOR(0,0)(0,1)
+\rPut{SE}(1,0){$\vec u_1$}
+\Put[SE](0,1){$\vec u_2$}
+\end{Picture}
+\hfill%
+{\referencesystem(1,2)(1,0)(0.5,0.5)
+\begin{Picture}(-3.6,-3.6)(3.5,3.5)
+\thinlines
+\cartesiangrid(-3,-3)(3,3)
+\pictcolor{red}
+\linethickness{1pt}
+\xVECTOR(0,0)(1,0)
+\xVECTOR(0,0)(0,1)
+\end{Picture}}
+
+Alternatively, you can use the \csdef{changereferencesystem} declaration:
+in the instruction
+\begin{Verbatim}[commandchars=\|\[\]]
+\changereferencesystem(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])(|TIT[x2],|TIT[y2])
+\end{Verbatim}
+point $(\TTT{\TIT{x0}},\TTT{\TIT{y0})}$ and vectors
+$(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$ i $(\TTT{\TIT{x2}},\TTT{\TIT{y2}})$
+are not refered to the standard system,
+but to the \emph{active} reference system.\footnote{%
+In other words, the instruction
+\cs{referencesystem} changes from the standard reference system
+to the new one, while
+\cs{changereferencesystem} changes from the active system.}
+Moreover, as the more interesting (and frequent) reference system changes
+consist of translations of the origin, rotations of the axes
+and symmetries, \package{xpicture}
+introduces three specific commands to these special cases:
+\ttslashindex{translateorigin}
+\begin{Verbatim}[commandchars=\|\[\]]
+\translateorigin(|TIT[x0],|TIT[y0])
+\end{Verbatim}
+moves the origin to the specified coordinates.
+\ttslashindex{rotateaxes}
+\begin{Verbatim}[commandchars=\|\[\]]
+\rotateaxes{|TIT[angle]}
+\end{Verbatim}
+rotates the axes. The \TTT{\TIT{angle}}  parameter is interpreted
+as the rotation angle in radians
+(if the \csdef{radiansangles} declaration is active) or in
+sexagesimal degrees (if the \csdef{degreesangles} declaration is active).
+And\ttslashindex{symmetrize}
+\begin{Verbatim}[commandchars=\|\[\]]
+\symmetrize{|TIT[angle]}
+\end{Verbatim}
+performs a symmetry, being \TTT{\TIT{angle}}
+the angle between the $x$ axis and  the symmetry axis.
+Also here, the \csdef{radiansangles} and \csdef{degreesangles}
+declarations determine if angles are
+interpreted as radians or degrees.
+%
+These three declarations always apply to the active reference system.
+\begin{Exemple}
+\newcommand{\mypicture}{%
+{\thicklines
+\xVECTOR(-1,-1)(1,1)
+\pictcolor{red}\Circle{1}
+\pictcolor{blue}\regularPolygon{1}{4}
+\polarreference\degreesangles
+\pictcolor{green}\Polygon(1,90)(0,0)(1,-30)}}
+\centering
+\setlength{\unitlength}{1cm}
+\fbox{\begin{Picture}[black!5!white](-1.5,-6.5)(14.5,1.5)
+\cartesiangrid(-1,-1)(14,1)
+\mypicture
+{\referencesystem(3,0)(1,1)(1,0)
+\mypicture
+\changereferencesystem(0,4)(-1,1)(1,-2)
+\mypicture}
+\degreesangles
+\translateorigin(10,0)
+{\rotateaxes{45}
+\mypicture}
+\translateorigin(3,0)
+\symmetrize{45}
+\mypicture
+\referencesystem(6.5,-4)(7,0)(0,-2)\mypicture
+\end{Picture}}
+\end{Exemple}
+
+The \csdef{standardreferencesystem} declaration restores the standard 
+reference.
+
+\medskip
+
+Changes of reference system can
+be used inside or outside the \environ{Picture} environment.
+In the next sections we will see what are the effects produced in each case.
+
+\subsubsection{Polar coordinates}
+Instead of Cartesian coordinates, we can refer to a point $P$ using the 
+polar coordinates $(r,\phi)$ of this point: 
+$r$ is the distance from the origin $O$ and $\phi$ is the angle between 
+the first coordinate vector and the $OP$ segment.
+The \csdef{cartesianreference} and \csdef{polarreference} declarations
+establish the coordinates of one or the other type.
+By default, the Cartesian coordinates are used, but in some cases
+is much easier determine polar coordinates.
+Additionally, the \csdef{radiansangles} and \csdef{degreesangles}
+declarations
+sets angle measuring in radians or in degrees, respectively
+(by default, angles are measured in radians).
+
+The following example shows a typical situation in which it is more
+appropriate to use polar coordinates:
+the \emph{natural} way to enter coordinates on a circle is using 
+polar coordinates.
+
+\begin{exemple}
+\setlength{\unitlength}{3cm}
+\fbox{\begin{Picture}(-1.3,-1.3)(1.3,1.3)
+\polarreference
+\degreesangles
+
+\renewcommand{\Pictlabelsep}{0.1}
+
+\multiPut(1,0)(0,30){12}{\circle*{0.05}}
+    % Put twelve dots, one unit apart, 
+    % at 0, 30, 60, ..., 330 degrees
+
+\cPut{90}(1,90){\textsc{xii}}
+\cPut{0}(1,0){\textsc{iii}}
+\cPut{270}(1,270){\textsc{vi}}
+\cPut{180}(1,180){\textsc{ix}}
+
+\pictcolor{blue}\thicklines
+
+\arrowsize{8}{2}
+\xtrivVECTOR(0,0)(0.5,37.5)
+\xtrivVECTOR(0,0)(0.9,180)
+
+\Put(0,0){\circle*{0.1}}
+\linethickness{4pt}
+\Circle{1.3}
+\end{Picture}}
+\end{exemple}
+
+The new commands defined in the \package{xpicture} package and requiring
+some kind of coordinates support polar coordinates,
+except the \environ{Picture} and \environ{xpicture} environments
+and the \cs{cartesianaxes} and \cs{cartesiangrid} environments.
+\subsection{The \environ{Picture} (or \environ{xpicture}) environment}
+The \package{xpicture} package supports all drawing commands
+from standard \LaTeX;
+in particular, you can use the \environ{picture} environment.
+However, in the expression
+\begin{Verbatim}[commandchars=\|\[\]]
+\begin{picture}(|TIT[x],|TIT[y])(|TIT[x0],|TIT[y0])
+\end{Verbatim}
+the pairs of numbers \TTT{(\TIT x,\TIT y)} and
+\TTT{(\TIT{x0},\TIT{y0})} always denote standard coordinates,
+namely,
+the \environ{picture} environment only uses the standard reference,
+thus it defines, as drawing area, the rectangle
+\TTT{[\TIT{x0},\TIT{x-x0}]}$\times$\TTT{[\TIT{y0},\TIT{y-y0}]},
+regardless of whether this is the  active reference.
+If we want draw a picture referring coordinates to an alternative reference
+system, to determine the appropriate drawing area in absolute coordinates
+is not obvious (and often is difficult).
+However, the \environdef{Picture} environment 
+defines a working area on the active reference system: the
+\begin{Verbatim}[commandchars=\|\{\}]
+\begin|{Picture|}[|TIT{color}](|TIT{x0},|TIT{y0})(|TIT{x1},|TIT{y1})
+\end{Verbatim}
+instruction fixes the drawing area
+\TTT{[\TIT{x0},\TIT{x1}]}$\times$\TTT{[\TIT{y0},\TIT{y1}]},
+refered to the active reference system.
+Here, the \TTT{(\TIT{x0},\TIT{y0})} i \TTT{(\TIT{x1},\TIT{y1})}
+coordinates are always rectangular
+(even when reference in polar coordinates is active).
+More precisely, this environment defines a \environ{picture} box
+that circumscribes our drawing area.
+If the optional argument is used, background is colored in the given 
+\textit{color}. 
+
+\emph{Very important: note that the syntax of the 
+\environ{picture} environment is not analogous
+to the new environment \environ{Picture}}:
+Here two pairs of coordinates are required,
+\TTT{(\TIT{x0},\TIT{y0})} and \TTT{(\TIT{x1},\TIT{y1})},
+representing two opposite corners of the drawing area.\footnote{%
+Although it may seem more \emph{logical}
+preserve the syntax of \environ{picture} environment, 
+it is more natural to define the drawing area in that way.}
+Obviously, if the reference sustem is the standard, expression
+\begin{Verbatim}[commandchars=\|\[\]]
+\begin{Picture}(0,0)(|TIT[x],|TIT[y])
+\end{Verbatim}
+is equivalent to
+\begin{Verbatim}[commandchars=\|\[\]]
+\begin{picture}(|TIT[x],|TIT[y])
+\end{Verbatim}
+
+The following example shows the boxes produced by the 
+\environ{picture} and \environ{Picture} environments.
+
+\medskip
+
+\begin{Exemple}
+ \begin{center}
+  \setlength{\unitlength}{0.5cm}
+  \referencesystem(0,0)(1,-1)(1,1)
+
+  \fbox{\begin{picture}(6,6)(-3,-3)
+   \cartesiangrid(-3,-3)(3,3)
+  \end{picture}}\qquad
+  \fbox{\begin{Picture}(-3,-3)(3,3)
+   \cartesiangrid(-3,-3)(3,3)
+  \end{Picture}}
+ \end{center}
+\end{Exemple}
+
+The left picture does not fit the box.
+ In fact, some elementary geometric considerations
+shown that a square box of $ 12\times12$ units of length must be reserved,
+\begin{Verbatim}[commandchars=\|\[\]]
+\begin{picture}(12,12)(-6,-6)
+\end{Verbatim}
+The use of the \environ{Picture} environment frees us to determine the
+actual dimensions of the drawing.
+
+The new environment \environdef{xpicture} is an alias to the
+\environ{Picture} environment.
+Its sintax and its behavior are identical.
+
+On the other hand, the \csdef{draftPictures} declaration 
+disables all the instructions defined in this package, 
+replacing each picture set in a \environ{Picture} environment
+by a parallelogram circumscribed by a white rectangle (the box that shows
+the area reserved for the drawing).\footnote{If you use an instruction 
+not directly defined by \package{xpicture} (inside of a \environ{Picture}
+environment), this instruction may take effect.}
+
+\begin{center}
+\setlength{\unitlength}{1cm}
+\draftPictures
+
+\begin{minipage}{5cm}\centering
+\begin{Picture}(0,0)(5,5)
+\end{Picture}
+
+\verb+\standardreferencesystem+
+\end{minipage}\quad
+\begin{minipage}{7.5cm}\centering
+\referencesystem(0,0)(1,0)(0.5,1)
+\begin{Picture}(0,0)(5,5)
+\end{Picture}
+
+\verb+\referencesystem(0,0)(1,0)(0.5,1)+
+\end{minipage}
+\end{center}
+
+\subsection{Coordinate axes}
+Instruction\ttslashindex{cartesianaxes}
+\begin{Verbatim}[commandchars=\|\[\]]
+\cartesianaxes(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])
+\end{Verbatim}
+draws the coordinate axes corresponding to the
+\TTT{[\TIT{x0},\TIT{x1}]}$\times$\TTT{[\TIT{y0},\TIT{y1}]} rectangle.
+Arguments \TTT{\TIT{x0}}, \TTT{\TIT{y0}},
+\TTT{\TIT{x1}} and \TTT{\TIT{y1}} must satisfy the conditions
+\TTT{\TIT{x0}}$<$\TTT{\TIT{x1}} and \TTT{\TIT{y0}}$<$\TTT{\TIT{y1}}.
+Here, coordinates \TTT{(\TIT{x0},\TIT{y0})} and \TTT{(\TIT{x1},\TIT{y1})}
+are always rectangular (even when reference in polar coordinates is active).
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.75cm}%
+\begin{Picture}[black!10!white](-4,-3)(4,3)
+\renewcommand{\Pictlabelsep}{0.2}
+\cartesianaxes(-3.5,-2.5)(3.5,2.5)
+\Put[r](3.5,0){$x$}
+\Put[t](0,2.5){$y$}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\begin{center}
+\referencesystem(0,0)(1,0)(0.5,1)
+\setlength{\unitlength}{0.75cm}%
+\begin{Picture}[black!10!white](-4,-3)(4,3)
+\renewcommand{\Pictlabelsep}{0.2}
+\cartesianaxes(-3.5,-2.5)(3.5,2.5)
+\Put[r](3.5,0){$x$}
+\Put[t](0,2.5){$y$}
+\end{Picture}
+\end{center}
+\end{exemple}
+The following parameters control the style of the axes, the cut marks
+and labels on the axes:
+
+\subsubsection{The style of the axes}
+\begin{description}
+\item[\csdef{axescolor}] By default, the axes color is \TTT{black}, but
+we can change it by redefining the \cs{axescolor} declaration. For example,
+\begin{Verbatim}[commandchars=\|\[\]]
+\renewcommand{\axescolor}{orange}
+\end{Verbatim}
+
+We must use a color name predefined in the package \textsf{xcolor}
+or defined by the user (for example, using the \cs{definecolor} command).
+\item[\csdef{axesthickness}] Length determining the thickness of axes 
+(default \verb+1 pt+).
+You can modify it using any command that fixes a length (as \cs{setlength}
+or \cs{settowidth}).
+\item[\csdef{xunitdivisions}, \csdef{yunitdivisions}] Number of subdivisions of
+the unit (in each axis). 
+By default, 1. These arguments can also be redefined using
+the \cs{renewcommand} command (they must be positive integers).
+\end{description}
+\begin{exemple}
+\renewcommand{\xunitdivisions}{2}
+\renewcommand{\yunitdivisions}{3}
+
+\begin{center}
+\setlength{\unitlength}{1cm}%
+\begin{Picture}(-4,-4)(4,4)
+\cartesianaxes(-3.5,-3.5)(3.5,3.5)
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsubsection{Axes position}
+The coordinate axes (and also tags and cut marks)
+are placed by default in the traditional way, on the $y = 0$ (the $x$ axis)
+and $x = 0$ (the $y$ axis) lines.
+However, sometimes the fact that labels are inside the graphic can be
+annoying.\footnote{And produces strange effects when the origin $(0.0)$
+is not in the drawing area.}
+Alternatively, we can place axes and tags at the 
+lower and left sides of the coordinate rectangle.
+To choose between these two options we should use the following
+declarations:
+\begin{description}
+\item[\csdef{internalaxes}, \csdef{externalaxes}]
+If the \cs{internalaxes} declaration is active, then axes lies
+on $y=0$ and $x=0$.
+
+However, if we activate the \cs{externalaxes} declaration, the axes
+produced by the instruction
+\begin{Verbatim}[commandchars=\|\[\]]
+\cartesianaxes(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])
+\end{Verbatim}
+lies on $y=\TTT{\TIT{y0}}$ and $x=\TTT{\TIT{x0}}$.
+
+By default, the \cs{internalaxes} declaration is active.
+\end{description}
+\begin{exemple}
+\renewcommand{\xunitdivisions}{2}
+\renewcommand{\yunitdivisions}{2}
+
+\begin{center}
+\externalaxes
+\setlength{\unitlength}{1cm}%
+\begin{Picture}(-4,-4)(4,4)
+\cartesianaxes(-3.5,-3.5)(3.5,3.5)
+\end{Picture}
+\end{center}
+\end{exemple}
+
+\subsubsection{Tags style}
+The numerical tags on the axes are made in math mode.
+If you need textual labels, put them in a \cs{mbox} or,
+using \package{amsmath}, a \cs{text} box.
+We can control the color, attributes and distance to the axes of these tags,
+redefining
+(with \cs{renewcommand}) the following marks:
+\begin{description}
+\item[\csdef{axeslabelcolor}] The color of the numerical tags on the axes.
+By default, this color is identical to the axes color.
+\item[\csdef{axeslabelsize}] Size of numerical tags.
+By default, \cs{small}.
+\item[\csdef{axeslabelmathversion}]
+ Mathversion of numerical tags.
+By default, \TTT{normal}.\footnote{Standard \emph{math versions}
+are \TTT{normal} and \TTT{bold}, but some packages
+define other math versions.}
+\item[\csdef{axeslabelmathalphabet}] Mathalphabet of numerical tags.
+By default, \cs{mathrm}.
+\item[\csdef{axislabelsep}] Distance between tags and cut marks,
+measured in \cs{unitlength} units;\footnote{The distance between axes and
+tags equals \cs{ticssize}$+$\cs{axislabelsep}.}
+by default, \verb+0.1+ (see later the description of \cs{makenotics}).
+\end{description}
+
+\subsubsection{Tags position}
+Position of tags is controlled by two declarations:
+\begin{description}
+\item[\cs{xlabelpos\{\TIT{position}\}}]\ttslashindex{xlabelpos}
+change the relative position of labels in $x$ axis. 
+Admissible values are those allowed in the \TTT{\TIT{position}} 
+argument of command \cs{Put} (see subsection~\ref{subsec:put}).
+Default is \verb+-90+.
+\item[\cs{ylabelpos\{\TIT{position}\}}]\ttslashindex{ylabelpos}
+change the relative position of labels in $y$ axis. 
+Default is \verb+180+.
+\end{description}
+
+\subsubsection{Style of cut marks}
+Units (and, optionally, unit fractions) are marked over axes with small
+segments,
+the style of which is controlled by the following parameters:
+\begin{description}
+\item[\csdef{ticssize}, \csdef{secundaryticssize}]
+These lengths control the size of the tics:
+\cs{ticssize} is half the length of main cuts
+(by default, \verb+4pt+)
+and \cs{secundaryticssize} is half the length of secundary cuts
+(by default, \verb+2pt+).
+\item[\csdef{ticsthickness}] Thickness of the marks on axes 
+(by default, \verb+1pt+).
+\item[\csdef{ticscolor}] Color of the marks on axes (by default, \verb+black+).
+\end{description}
+\begin{exemple}
+\renewcommand{\axescolor}{blue}
+\setlength{\axesthickness}{3pt}
+\renewcommand{\xunitdivisions}{2}
+\renewcommand{\yunitdivisions}{3}
+
+\renewcommand{\axeslabelcolor}{teal}
+\renewcommand{\axeslabelsize}{\footnotesize}
+\renewcommand{\axeslabelmathversion}{bold}
+\renewcommand{\axeslabelmathalphabet}{\mathsf}
+\renewcommand{\axislabelsep}{0.05}
+\xlabelpos{ttl}
+\ylabelpos{r}
+
+\setlength{\ticssize}{0.2cm}
+\setlength{\secundaryticssize}{0.1cm}
+\setlength{\ticsthickness}{2pt}
+\renewcommand{\ticscolor}{blue!50}
+
+\begin{center}
+\degreesangles
+\rotateaxes{-30}
+\setlength{\unitlength}{0.75cm}%
+\begin{Picture}(-5,-4)(5,4)
+\cartesianaxes(-4.5,-3.5)(4.5,3.5)
+\end{Picture}
+\end{center}
+\end{exemple}
+
+\subsubsection{Removing and directly printing cut marks and labels}
+\begin{description}
+ \item [\csdef{maketics}, \csdef{makenotics}]
+ These two declarations determine if
+ divisions on the axes should be marked or not.
+ By default the \cs{maketics} declaration is active.
+
+If divisions are not marked, the \csdef{axislabelsep}
+declaration determines the distance between axes and labels.
+\end{description}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.75cm}%
+\begin{Picture}(-4.5,-2.5)(4.5,2.5)
+\makenotics
+\cartesianaxes(-4,-2)(4,2)
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{description}
+ \item [\csdef{makelabels}, \csdef{makenolabels}] Two declarations
+determining whether numerical labels on the axes must appear or not.
+By default, the \cs{makelabels} declaration is active.
+\end{description}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.75cm}%
+\begin{Picture}(-4.5,-2.5)(4.5,2.5)
+\makenolabels
+\cartesianaxes(-4,-2)(4,2)
+\end{Picture}
+\end{center}
+\end{exemple}
+
+Declarations \cs{makenotics} and \cs{makenolabels}
+can be useful when you want to show only some specific coordinates, 
+when the points to be highlighted on the axes are not integers
+and when you need to print labels in some special format. In  this cases 
+you can plot tics and/or print labels using the following commands.
+\begin{description}
+\item [\cs{plotxtic\{\TIT{x-coor}\}}, \cs{plotytic\{\TIT{y-coor}\}}] 
+\ttslashindex{plotxtic}\ttslashindex{plotytic}
+plot a tic for the given \TIT{x} or \TIT{y} coordinate.
+\item [\cs{printxlabel\{\TIT{x-coor}\}\{\TIT{label}\}}, 
+       \cs{printylabel\{\TIT{y-coor}\}\{\TIT{label}\}}] 
+\ttslashindex{printxlabel}\ttslashindex{printylabel}
+print \TIT{label}
+for the given \TIT{x} or \TIT{y} coordinate. Labels are printed in math mode.
+\item [\cs{printxticlabel\{\TIT{x-coor}\}\{\TIT{label}\}}, 
+       \cs{printyticlabel\{\TIT{y-coor}\}\{\TIT{label}\}}] 
+plot a tic and print \TIT{label} for the given \TIT{x} or \TIT{y} coordinate.
+\end{description}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}%
+\begin{Picture}(-4.5,-0.5)(4.5,3.5)
+\makenolabels
+\makenotics
+\cartesianaxes(-4,0)(4,3)
+
+\plotytic{0.5}
+\printylabel{0.5}{1/2}
+\printxticlabel{2}{2}
+
+\Polyline(2,0)(2,0.5)(0,0,5)
+\thicklines
+\SCALEfunction{0.125}{\SQUAREfunction}{\F}
+\PlotFunction[3]{\F}{-4}{4}
+\end{Picture}
+\end{center}
+\end{exemple}
+
+Multiple equally spaced tics and/or labels can be drawn simultaneously:
+\begin{description}
+\item [\cs{plotxtics\{\TIT{firstcoor}\}\{\TIT{incr}\}\{\TIT{bound}\}},
+       \cs{plotytics\{\TIT{firstcoor}\}\{\TIT{incr}\}\{\TIT{bound}\}}]
+\ttslashindex{plotxtics}\ttslashindex{plotytics}       
+plot several (\TIT{x} or \TIT{y}) tics,
+from the initial coordinate \TIT{firstcoor}; \TIT{incr} is the distance 
+between consecutive tics, and the last tic is not in a position 
+greater than \TIT{bound}.
+\item [\cs{printxlabels[\TIT{digits}]\{\TIT{firstcoor}\}\{\TIT{incr}\}%
+       \{\TIT{bound}\}}, 
+       \cs{printylabels[\TIT{digits}]\{\TIT{firstcoor}\}\{\TIT{incr}\}%
+       \{\TIT{bound}\}}] 
+\ttslashindex{printxlabels}\ttslashindex{printylabels} print several labels,
+from the initial coordinate \TIT{firstcoor}; \TIT{incr} is the distance 
+between consecutive label positions, 
+and the last position is not greater than \TIT{bound}. 
+The optional argument \TIT{digits} is the number of decimal digits to be 
+printed (by default, numbers are printed with its natural number of decimals).
+\item [\cs{printxticslabels[\TIT{digits}]\{\TIT{firstcoor}\}\{\TIT{incr}\}%
+          \{\TIT{bound}\}}]\ttslashindex{printxticslabels} 
+ plot \TIT{x} tics and labels simultaneously.
+\item [\cs{printyticslabels[\TIT{digits}]\{\TIT{firstcoor}\}\{\TIT{incr}\}%
+          \{\TIT{bound}\}}]\ttslashindex{printyticslabels}
+ plot \TIT{y} tics and labels simultaneously.      
+\end{description}
+\begin{exemple}
+\externalaxes
+\setlength{\unitlength}{1cm}
+\renewcommand{\axeslabelsize}{\tiny}
+\referencesystem(0,0)(1.5,0)(0,2)
+\begin{center}
+\begin{Picture}(-2.5,-1.5)(2.5,1.5)
+\makenotics
+\makenolabels
+\cartesianaxes(-2.25,-1.25)(2.25,1.25)
+\printxticslabels[1]{-2}{0.5}{2.25}
+\printyticslabels[4]{-1}{0.25}{1}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{Exemple}
+\setlength{\unitlength}{1cm}
+\begin{center}
+\begin{Picture}(-7,-2.5)(7,2.5)
+{\referencesystem(0,0)(\numberHALFPI,0)(0,1)
+\renewcommand{\xunitdivisions}{2}
+\renewcommand{\yunitdivisions}{2}
+\makenolabels
+\renewcommand{\Pictlabelsep}{0.25}
+\cartesianaxes(-4.2,-2.2)(4.2,2.2)
+
+\printylabels{-2}{0.5}{2}
+
+\highestlabel{$-3\pi/2$}
+\printxlabel{-4}{-2\pi}
+\printxlabel{-3}{-3\pi/2}
+\printxlabel{-2}{-\pi}
+\printxlabel{-1}{-\pi/2}
+\printxlabel{1}{\pi/2}
+\printxlabel{2}{\pi}
+\printxlabel{3}{3\pi/2}
+\printxlabel{4}{2\pi}
+}
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+\subsection{Cartesian grids}
+As an alternative to the \cs{cartesianaxes} command,
+we can use \csdef{cartesiangrid},
+to better visualize the coordinates:
+\begin{Verbatim}[commandchars=\|\[\]]
+\cartesiangrid(|begin[math]x0,y0|end[math])(|begin[math]x1,y1|end[math])
+\end{Verbatim}
+\begin{exemple}
+\definecolor{myblue}{cmyk}{1,1,0,0.5}
+\renewcommand{\gridcolor}{myblue}
+\renewcommand{\secundarygridcolor}{cyan}
+\setlength{\gridthickness}{0.5pt}
+\setlength{\secundarygridthickness}{0.1pt}
+\renewcommand{\xunitdivisions}{5}
+\renewcommand{\yunitdivisions}{5}
+\renewcommand{\axeslabelsize}{\footnotesize}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-3.5,-2.5)(3.5,2.5)
+\cartesiangrid(-3.4,-2.4)(3.4,2.4)
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\definecolor{myblue}{cmyk}{1,1,0,0.5}
+\renewcommand{\gridcolor}{myblue}
+\renewcommand{\secundarygridcolor}{cyan}
+\setlength{\gridthickness}{0.5pt}
+\setlength{\secundarygridthickness}{0.1pt}
+\renewcommand{\xunitdivisions}{5}
+\renewcommand{\yunitdivisions}{5}
+\renewcommand{\axeslabelsize}{\footnotesize}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\referencesystem(0,0)(1,0)(0.25,1)
+\externalaxes
+\begin{Picture}(-4,-3)(4,3)
+\cartesiangrid(-3.4,-2.4)(3.4,2.4)
+\end{Picture}
+\end{center}
+\end{exemple}
+
+\subsubsection{Grid style}
+Note that, in addition to the parameters outlined above, there are the 
+following ones, which control the style of the grid 
+(as in previous cases, these parameters are changed
+by redefining them with the \cs{renewcommand} declaration,
+or using the usual instructions when they are lengths).
+
+\begin{description}
+ \item [\csdef{gridcolor}] determines the color of main divisions in the grid
+(regardless of the axes color). By default, this color is \verb+gray+.
+ \item [\csdef{secundarygridcolor}] determines the color of secundary 
+divisions in the grid.
+By default, \verb+lightgray+).
+\item[\csdef{gridthickness}] thickness of main divisions 
+(by default, \verb+0.4pt+).
+\item[\csdef{secundarygridthickness}] thickness of secundary divisions
+(by default, \verb+0.2pt+).
+\end{description}
+\subsection{Polar grids}
+Finally, instead of Cartesian axes, we can construct a polar grid
+(obviously, this option will be interesting when we use polar coordinates).
+\ttslashindex{polargrid}
+\begin{Verbatim}[commandchars=\|\[\]]
+\polargrid{|TIT[radius]}{|TIT[circledivs]}
+\end{Verbatim}
+(\TTT{\TIT{radius}} and \TTT{\TIT{circledivs}} are, respectively,
+the radius and the number of divisions of the circle
+(\TTT{\TIT{circledivs}}must be a positive integer).
+
+This command supports the same parameters that \cs{cartesianaxes} and
+\cs{cartesiangrid} (when they makes sense), and also the following:
+\begin{description}
+\item[\csdef{runitdivisions}] Number of radial subdivisions of the unit.
+By default, $1$ (it must be a positive integer).
+\end{description}
+\begin{exemple}
+\renewcommand{\runitdivisions}{2}
+\setlength{\unitlength}{0.75cm}
+\renewcommand{\gridcolor}{magenta}
+\begin{center}
+\begin{Picture}(-4,-4)(4,4)
+\polargrid{3.5}{12}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\renewcommand{\runitdivisions}{2}
+\setlength{\unitlength}{0.75cm}
+\renewcommand{\gridcolor}{magenta}
+\referencesystem(0,0)(1,-1)(0.5,0.5)
+\begin{center}
+\begin{Picture}(-3.5,-3.5)(3.5,3.5)
+\polargrid{3.5}{12}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{description}
+\item[\csdef{degreespolarlabels}, \csdef{radianspolarlabels}]
+Arcs are printed, by default, in  radians. 
+If you want angular units mesured in degrees,
+use the  \csdef{degreespolarlabels} declaration (obviously,
+\csdef{radianspolarlabels} recovers tags in radians).
+\end{description}
+\begin{exemple}
+\begin{center}
+\degreespolarlabels
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-4,-4)(4,4)
+\polargrid{3}{24}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{description}
+\item[\csdef{rlabelpos}] Relative position of labels in polar axis.
+Admissible values are those allowed in the \TTT{\TIT{position}} 
+argument of command \cs{Put} (see subsection~\ref{subsec:put}).
+Default is \verb+bbr+.
+\end{description}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-4,-4)(4,4)
+\rlabelpos{b}
+\polargrid{3.5}{10}
+\end{Picture}
+\end{center}
+\end{exemple}
+
+
+To remove tags on the polar axis and angles you can use the 
+\csdef{makenolabels} declaration.
+
+\section[Alternatives to some standard commands]{%
+             Alternatives to standard commands
+             \cs{put},\cs{multiput}, \cs{line}, and \cs{vector}}
+Standard commands used inside the \environ{picture} environment
+are not modified by this package
+(although if we include these commands in the body of a \environ{Picture}
+environment).
+In particular, there does not affect the \cs{referencesystem} declaration.
+This package introduces similar commands to those which are sensitive to the
+active reference system and give us a greater control over their behavior.
+These are the instructions described below.
+
+\subsection{Extensions of the \cs{put} command}\label{subsec:put}
+ \begin{description}
+ \item[\csdef{Put}, \csdef{cPut}, \csdef{rPut}]
+\mbox{}
+
+\begin{Verbatim}[commandchars=\|\{\}]
+\Put[|TIT{position}](|TIT{x},|TIT{y})|{|TIT{object}|}
+\Put*[|TIT{position}](|TIT{x},|TIT{y})|{|TIT{object}|}
+\cPut|{|TIT{position}|}(|TIT{x},|TIT{y})|{|TIT{object}|}
+\rPut|{|TIT{position}|}(|TIT{x},|TIT{y})|{|TIT{object}|}
+\rPut*|{|TIT{position}|}(|TIT{x},|TIT{y})|{|TIT{object}|}
+\end{Verbatim}
+place the drawing pointer in the point
+of  coordinates \verb+(+\TTT{\TIT{x}}\verb+,+\TTT{\TIT{y}}\verb+)+
+with respect to the active reference system (which may coincide or not with
+the standard system).
+These commands differ in the criteria used to determine the precise position
+of the object.
+
+Involved parameters are (see below)
+\ttslashindex{Pictlabelsep}
+\ttslashindex{defaultPut}
+\ttslashindex{highestlabel}
+\begin{Verbatim}[commandchars=\|\[\]]
+\Pictlabelsep|{|TIT[distance]|}
+\defaultPut|{c|}/\defaultPut|{r|}
+\highestlabel|{|TIT[text]|}
+\end{Verbatim}
+\medskip
+
+In the following example, the red circle (included as an argument in the
+\cs{put} command) is at the point
+of standard coordinates $(1,-1)$; however, in the case of the
+blue circle, coordinates $(1,-1)$ refer to the active reference system.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.75cm}
+\referencesystem(0,0)(1,-1)(1,1)
+\begin{Picture}(-2.5,-2.5)(2.5,2.5)
+\cartesiangrid(-2,-2)(2,2)
+\pictcolor{red}
+\put(1,-1){\circle*{0.25}}
+\pictcolor{blue}
+\Put(1,-1){\circle*{0.25}}
+\end{Picture}
+\end{center}
+\end{exemple}
+
+Recall that coordinates can be rectangular or polar, and angles may
+be measured in radians or in degrees.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-2.5,-2.5)(2.5,2.5)
+\cartesiangrid(-2,-2)(2,2)
+\polarreference
+\pictcolor{blue}
+\Put(1,\numberHALFPI){\circle*{0.25}}
+\degreesangles
+\pictcolor{red}
+\Put(1,180){\circle*{0.25}}
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsubsection{Accurate positioning of the graphical object}
+The \TTT{\TIT{position}} argument allows us to fix the relative position of
+\TTT{\TIT{object}} respect to point \TTT{(\TIT{x},\TIT{y})}.
+Note that this argument is optional in \cs{Put} and \cs{Put*},
+but mandatory in the other commands we are describing.
+The purpose of this parameter is to rationalize the disposition of
+objects, especially when they are not strictly graphical objects
+(but labels, text boxes or mathematical formulas). In these cases, 
+the appropriate choice of coordinates seems a problem that is not well
+solved with standard instructions, despite the special syntax of the 
+\cs{makebox} command in the \environ{picture} environment. 
+For example, in this picture (which we made using only the standard 
+\LaTeX{} commands)
+\begin{center}
+\setlength{\unitlength}{2cm}
+
+\begin{picture}(7,3)(-0.5,-1.5)
+
+\put(0,0){\line(1,0){7}}
+\put(0,-1.5){\line(0,1){3}}
+\put(0,-1.5){\line(0,-1){0}}
+\multiput(1.570796,-0.1)(1.570796,0){4}{\line(0,1){0.2}}
+\multiput(-0.1,-1)(0,1){3}{\line(1,0){0.2}}
+
+\qbezier(0,0)(1,1)(1.570796,1)
+\qbezier(1.570796,1)(2.141593,1)(3.141593,0)
+\qbezier(3.141593,0)(4.141593,-1)(4.712389,-1)
+\qbezier(4.712389,-1)(5.283185,-1)(6.283185,0)
+
+\put(-1.570796,0){%
+   \qbezier(1.570796,1)(2.141593,1)(3.141593,0)
+   \qbezier(3.141593,0)(4.141593,-1)(4.712389,-1)
+   \qbezier(4.712389,-1)(5.283185,-1)(6.283185,0)}
+\put(4.712389,0){\qbezier(0,0)(1,1)(1.570796,1)}
+
+\put(2.356194,0.707107){$\sin x$}
+\put(6.283185,1){$\cos x$}
+\put(-0.15,-1){\makebox(0,0)[r]{$-1$}}
+\put(-0.15,0){\makebox(0,0)[r]{$0$}}
+\put(-0.15,1){\makebox(0,0)[r]{$1$}}
+\put(1.570796,-0.15){\makebox(0,0)[t]{$\pi/2$}}
+\put(3.141593,-0.15){\makebox(0,0)[t]{$\pi$}}
+\put(4.712389,-0.15){\makebox(0,0)[t]{$3\pi/2$}}
+\put(6.283185,-0.15){\makebox(0,0)[t]{$2\pi$}}
+\end{picture}
+\end{center}
+we have located numerical labels ($0$, $1$, $\pi$\ldots) at 
+\TTT{0.15\cs{unitlength}} of its \emph{natural} position over the axes,
+while the reference points of tags
+``$\sin x$'' and ``$\cos x$'' are just in points $(3\pi/4,\sin(3\pi/4))$ and 
+$(2\pi,1)$, using these instructions:
+\begin{Verbatim}
+\put(2.356194,0.707107){$\sin x$}
+\put(6.283185,1){$\cos x$}
+\put(-0.15,-1){\makebox(0,0)[r]{$-1$}}
+\put(-0.15,0){\makebox(0,0)[r]{$0$}}
+\put(-0.15,1){\makebox(0,0)[r]{$1$}}
+\put(1.570796,-0.15){\makebox(0,0)[t]{$\pi/2$}}
+\put(3.141593,-0.15){\makebox(0,0)[t]{$\pi$}}
+\put(4.712389,-0.15){\makebox(0,0)[t]{$3\pi/2$}}
+\put(6.283185,-0.15){\makebox(0,0)[t]{$2\pi$}}
+\end{Verbatim}
+
+If we change the value of \cs{unitlength}, then these values become
+inappropriate and we need to change several lines of code.
+\begin{center}
+\setlength{\unitlength}{1cm}
+
+\begin{picture}(7,3)(-0.5,-1.5)
+
+\put(0,0){\line(1,0){7}}
+\put(0,-1.5){\line(0,1){3}}
+\put(0,-1.5){\line(0,-1){0}}
+\multiput(1.570796,-0.1)(1.570796,0){4}{\line(0,1){0.2}}
+\multiput(-0.1,-1)(0,1){3}{\line(1,0){0.2}}
+
+\qbezier(0,0)(1,1)(1.570796,1)
+\qbezier(1.570796,1)(2.141593,1)(3.141593,0)
+\qbezier(3.141593,0)(4.141593,-1)(4.712389,-1)
+\qbezier(4.712389,-1)(5.283185,-1)(6.283185,0)
+
+\put(-1.570796,0){%
+   \qbezier(1.570796,1)(2.141593,1)(3.141593,0)
+   \qbezier(3.141593,0)(4.141593,-1)(4.712389,-1)
+   \qbezier(4.712389,-1)(5.283185,-1)(6.283185,0)}
+\put(4.712389,0){\qbezier(0,0)(1,1)(1.570796,1)}
+
+\put(2.356194,0.707107){$\sin x$}
+\put(6.283185,1){$\cos x$}
+\put(-0.15,-1){\makebox(0,0)[r]{$-1$}}
+\put(-0.15,0){\makebox(0,0)[r]{$0$}}
+\put(-0.15,1){\makebox(0,0)[r]{$1$}}
+\put(1.570796,-0.15){\makebox(0,0)[t]{$\pi/2$}}
+\put(3.141593,-0.15){\makebox(0,0)[t]{$\pi$}}
+\put(4.712389,-0.15){\makebox(0,0)[t]{$3\pi/2$}}
+\put(6.283185,-0.15){\makebox(0,0)[t]{$2\pi$}}
+\end{picture}
+\end{center}
+
+Note that, regarding labels along the $x$ axis, instead of aligning them to a 
+fixed distance of this axis, there would be better to align the baselines
+($\pi$ and $2\pi$ should go down);
+some of these labels should
+move slightly to the right or to the left to avoid that it cut the graph.
+Finally, the tag ``$\cos x$'' should be vertically centered
+(with respect to the curve) and slightly moved to the right.
+\medskip
+
+Using the \package{xpicture} package we construct this picture 
+in the following way:
+\begin{Exemple}
+\MULTIPLY{3}{\numberQUARTERPI}{\numberTQPI}
+\SIN{\numberTQPI}{\sinTQPI}
+
+\begin{center}
+\setlength{\unitlength}{2cm}
+\begin{Picture}(-0.5,-1.5)(6.5,1.5)
+{\referencesystem(0,0)(\numberHALFPI,0)(0,1)
+\makenolabels
+\renewcommand{\Pictlabelsep}{0.1}
+\highestlabel{$-3\pi/2$}
+\cartesianaxes(0,-1.5)(4.25,1.5)
+
+\rPut{l}(0,-1){$-1$}                           % put the y-axis labels at left
+\rPut{l}(0,0){$0$}
+\rPut{l}(0,1){$1$}
+\rPut*{bbl}(1,0){$\pi/2$}                      % put "\pi/2" at bbl
+\rPut*{b}(2,0){$\pi$}                          % put "\pi" at bottom
+\rPut*{bbr}(3,0){$3\pi/2$}                     % put "3\pi/2" at bbr
+\rPut*{b}(4,0){$2\pi$}                         % put "2\pi" at bottom
+
+\rPut*{b}(0,0){\pictcolor{gray}\xLINE(0.75,0)(4.25,0)}} % \baseline of x-labels
+
+\PlotFunction[8]{\COSfunction}{0}{\numberTWOPI}
+\PlotFunction[8]{\SINfunction}{0}{\numberTWOPI}
+
+\Put[NE](\numberTQPI,\sinTQPI){$\sin x$}       % put "\sin x" at NorthEast
+\Put[E](\numberTWOPI,1){$\cos x$}              % put "\cos x" at East
+\end{Picture}
+\end{center}
+\end{Exemple}
+Here we used several tools to draw the graphs of the functions.
+But aside from this, commands \cs{Put}, \cs{rPut} and \cs{rPut*} have allowed 
+we to determine the logical position of objects in a much more 
+reasonable way.\footnote{Regarding to labels on coordinated axes 
+a better choice would be to use other specific commands, 
+as \cs{printxlabels}. Here we have chosen \cs{rPut} because we are
+illustrating this instruction.}
+
+Argument \TTT{\TIT{position}} supports multiple values:
+\begin{description}
+\item[An integer or decimal number,] determining the angle (in degrees)
+where \TTT{\TIT{object}} is placed,
+ with respect to the reference point \TTT{(\TIT{x},\TIT{y})}.
+\end{description}
+
+\begin{Exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(0,-1)(9,1)
+\makenolabels
+\renewcommand{\axescolor}{lightgray}\renewcommand{\ticscolor}{lightgray}
+\cartesiangrid(0,-1)(8,1)
+\pictcolor{blue}
+\Put[0](0,0){0}
+\Put[45](1,0){45}
+\Put[90](2,0){90}
+\Put[135](3,0){135}
+\Put[180](4,0){180}
+\Put[225](5,0){225}
+\Put[270](6,0){270}
+\Put[315](7,0){315}
+\Put[360](8,0){360}
+\end{Picture}
+\end{center}
+\end{Exemple}
+\begin{description}
+\item[Letter \TTT{c}] (from \emph{center}),
+which places the center of \TTT{\TIT{object}} at point
+\verb+(+\TTT{\TIT{x}}\verb+,+\TTT{\TIT{y}}\verb+)+.
+\end{description}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{2cm}
+\begin{Picture}(-1,-1)(1,1)
+\cartesianaxes(-1,-1)(1,1)
+\pictcolor{blue}
+\Put[c](0,0){A CENTERED BOX}
+\end{Picture}
+\end{center}
+\end{exemple}
+Note that this option is not equivalent to the suppression of the optional 
+argument, because in that case
+the reference point of \TTT{\TIT{object}} is located
+in \verb+(+\TTT{\TIT{x}}\verb+,+\TTT{\TIT{y}}\verb+)+.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{2cm}
+\begin{Picture}(-1,-1)(1,1)
+\cartesianaxes(-1,-1)(1,1)
+\pictcolor{blue}
+\Put(0,0){A NONCENTERED BOX}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{description}
+\item[Letters or letter combinations \TTT N, \TTT E, \TTT S, \TTT W,
+\TTT{NE}, \TTT{SE}, \TTT{SW}, \TTT{NW},
+\TTT{NNE}, \TTT{ENE}, \TTT{ESE}, \TTT{SSE}, \TTT{SSW}, \TTT{WSW}, \TTT{WNW},
+\TTT{NNW}]\mbox{}
+
+Abbreviation of \emph{North}, \emph{East}\ldots,  \emph{North-East}\ldots,  
+\emph{North-North-East}\ldots
+
+For example, the
+\begin{Verbatim}
+\Put[NE](0,0){A}
+\end{Verbatim}
+instruction writes ``\verb+A+''  \emph{at north-east} of point \verb+(0,0)+.
+\item[Letters o letter combinations  \TTT t, \TTT  r, \TTT  b, \TTT  l,
+ \TTT{tr}, \TTT{br}, \TTT{bl}, \TTT{tl},
+ \TTT{ttr}, \TTT{rtr}, \TTT{rbr}, \TTT{bbr}, \TTT{bbl}, \TTT{lbl}, \TTT{ltl},
+ \TTT{ttl}]\mbox{}
+ 
+Abbreviation of \emph{top}, \emph{right}\ldots,  \emph{top-right}\ldots,  
+\emph{top-top-right}\ldots
+
+For example,
+\begin{Verbatim}
+\Put[tr](0,0){A}
+\end{Verbatim}
+writes ``\verb+A+''  \emph{at top and right} of point \verb+(0,0)+.
+
+Parameter \cs{Pictlabelsep} determines the distance between the graphical 
+object and the given point.
+In the following examples we have made this argument very big to clearly 
+appreciate the positioning of objects.
+\end{description}
+\begin{exemple}
+\renewcommand{\Pictlabelsep}{1}
+\begin{center}
+\setlength{\unitlength}{2.5cm}%
+
+\begin{Picture}(-1.5,-1.5)(1.5,1.5)
+\Put[N](0,0){N}
+\Put[S](0,0){S}
+\Put[E](0,0){E}
+\Put[W](0,0){W}
+\Put[NE](0,0){NE}
+\Put[SE](0,0){SE}
+\Put[SW](0,0){SW}
+\Put[NW](0,0){NW}
+%
+\Put[NNE](0,0){NNE}
+\Put[ENE](0,0){ENE}
+\Put[ESE](0,0){ESE}
+\Put[SSE](0,0){SSE}
+\Put[SSW](0,0){SSW}
+\Put[WSW](0,0){WSW}
+\Put[WNW](0,0){WNW}
+\Put[NNW](0,0){NNW}
+\Put(0,0){\Circle{1}}
+\xLINE(-1,0)(1,0)
+\xLINE(0,-1)(0,1)
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\renewcommand{\Pictlabelsep}{1}
+\begin{center}
+\setlength{\unitlength}{2.5cm}%
+
+\begin{Picture}(-1.5,-1.5)(1.5,1.5)
+\Put[t](0,0){t}
+\Put[r](0,0){r}
+\Put[b](0,0){b}
+\Put[l](0,0){l}
+\Put[tr](0,0){tr}
+\Put[br](0,0){br}
+\Put[bl](0,0){bl}
+\Put[tl](0,0){tl}
+\Put[ttr](0,0){ttr}
+\Put[rtr](0,0){rtr}
+\Put[rbr](0,0){rbr}
+\Put[bbr](0,0){bbr}
+\Put[bbl](0,0){bbl}
+\Put[lbl](0,0){lbl}
+\Put[ltl](0,0){ltl}
+\Put[ttl](0,0){ttl}
+\Put(0,0){%
+   \regularPolygon[45]{\numberSQRTTWO}{4}}
+\xLINE(-1,0)(1,0)
+\xLINE(0,-1)(0,1)
+\end{Picture}
+\end{center}
+\end{exemple}
+\end{description}
+\paragraph{Rectangular o circular distance?}
+Commands \cs{rPut} and \cs{cPut} differ only in the criterion they use
+to determine the distance between the reference point and the graphical object.
+Command \cs{rPut} places the object (outside of) 
+the square centered at the reference point and side \verb+2\Pictlabelsep+, 
+while \cs{cPut} places it in the cercle of radius \verb+\Pictlabelsep+
+(letters \verb+r+ and \verb+c+ mean, respectively,
+a \emph{rectangular} and \emph{circular} layout).%
+\footnote{For the mathematicians: command \cs{cPut} uses the euclidean norm 
+(or 2-norm), while \cs{rPut} uses the infinite norm.}
+Although, for small values of the \cs{Pictlabelsep} parameter,
+the difference is subtle and usually not very significant, it is generally best
+to use the circular version (because it corresponds to the natural concept of 
+distance) and reserve the rectangular version
+to objects that are placed on horizontal or vertical lines.
+\begin{Exemple}
+\begin{center}
+\setlength{\unitlength}{1.5cm}
+\renewcommand{\Pictlabelsep}{1}
+
+\begin{Picture}(-1.5,-1.5)(2,1.5)
+\regularPolygon[45]{\numberSQRTTWO}{4}
+\Put(0,0){\circle*{0.1}}
+\rPut{45}(0,0){r}
+\xLINE(0,0)(0,-1)
+\thicklines
+\renewcommand{\Pictlabelsep}{0.1}
+\xLINE(0,0)(1,1)
+\xLINE(0,0)(1,0)
+\xtrivVECTOR(0,-1)(1,-1)
+\xtrivVECTOR(1,-1)(0,-1)
+\rPut{b}(0.5,-1){\footnotesize\textbackslash Pictlabelsep}
+\xtrivVECTOR(1,-1)(1,0)
+\xtrivVECTOR(1,0)(1,-1)
+\rPut{r}(1,-0.5){\footnotesize\textbackslash Pictlabelsep}
+\polarreference\degreesangles
+\xArc{0.3}{0}{45}
+\degreesangles
+\Put[22.5](0.3,22.5){$45^{\mathrm o}$}
+\end{Picture}
+\begin{Picture}(-1.5,-1.5)(2,1.5)
+\Put(0,0){\circle*{0.1}}
+\cPut{45}(0,0){c}
+\Circle{1}
+\thicklines
+\xLINE(0,0)(\numberCOSXLV,\numberCOSXLV)
+\xLINE(0,0)(1,0)
+\xtrivVECTOR(0,0)(0,-1)
+\xtrivVECTOR(0,-1)(0,0)
+\renewcommand{\Pictlabelsep}{0.1}
+\rPut{r}(0,-0.5){\footnotesize\textbackslash Pictlabelsep}
+\polarreference\degreesangles
+\xArc{0.3}{0}{45}
+\degreesangles
+\Put[22.5](0.3,22.5){$45^{\mathrm o}$}
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+Note that if the commands we use are \cs{rPut} or \cs{cPut}, then the 
+positioners
+\verb+t, r, tr+\ldots are equivalent to the corresponding \verb+N, E, NE+\ldots
+However, the \cs{Put} command choose between rectangular or circular layout
+following this criteria:
+\begin{itemize}
+ \item Positioners of \emph{compass} type (like \verb+NE+) use the circular
+layout.
+ \item Positioners \verb+t, tr+, et cetera use the rectangular layout.
+ \item If the positioner is an angle (a number), it uses a default position
+which is set using the \cs{defaultPut} declaration:
+\verb+\defaultPut{c}+
+determines a circular distance, while
+\verb+\defaultPut{r}+
+determines the rectangular alternative.
+\end{itemize}
+\begin{exemple}
+\renewcommand{\Pictlabelsep}{1}
+\begin{center}
+\setlength{\unitlength}{2.5cm}%
+
+\begin{Picture}(-1.5,-1.5)(1.5,1.5)
+\defaultPut{c}
+\Put[45](0,0){c}
+\defaultPut{r}
+\Put[45](0,0){r}
+\regularPolygon[45]{\numberSQRTTWO}{4}
+\Put(0,0){\Circle{1}}
+\xLINE(-1,0)(1,0)
+\xLINE(0,-1)(0,1)
+\end{Picture}
+\end{center}
+\end{exemple}
+\paragraph{Alignment by the baseline}
+Starred versions \cs{Put*} and \cs{rPut*} allow us to align by the baseline
+objects positioned below the reference point.
+To use these commands, user must decide which is the higher object to be 
+positioned, and introduce it as an argument of
+the \csdef{highestlabel} declaration. For example, typing
+\begin{Verbatim}
+\highestlabel{\Huge A}
+\end{Verbatim}
+we reserve a sufficient vertical space to write the character {\Huge A}.
+
+It should be noted that starred versions behave differently
+only when the position of the object stands
+under the reference point, with positioners
+\verb+bbl+, \verb+b+ or \verb+bbr+, or with an appropiate angle
+(as \verb+-90+ or \verb+300+); otherwise (including
+\verb$S$, \verb$SSW$, et cetera),
+the \cs{Put*} and \cs{rPut*} commands are equivalent
+to the non-starred commands
+ \cs{Put} and \cs{rPut}.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+
+\begin{Picture}(-3.5,-1.5)(3.5,1.5)
+\xLINE(-3.5,0)(3.5,0)
+\multiPut(-3,-0.1)(1,0){7}{\xLINE(0,0)(0,0.2)}
+\highestlabel{\Huge A}
+\renewcommand{\Pictlabelsep}{0.2}
+\Put*[bbl](-3,0){\small A}
+\Put*[b](-2,0){\normalsize A}
+\Put*[-100](-1,0){\large A}
+\Put*[-90](0,0){\Large A}
+\Put*[270](1,0){\LARGE A}
+\Put*[300](2,0){\huge A}
+\Put*[bbr](3,0){\Huge A}
+\Put*[bbl](-3.5,0){%
+   \pictcolor{gray}\xLINE(0,0)(7,0)}
+\end{Picture}
+\end{center}
+\end{exemple}
+ 
+
+When a \environ{Picture} environment starts,
+highest label is set to \verb+\normalfont\normalsize$1$+
+(i.e., the high of a \emph{normal} $1$).
+\subsection{Alternatives to the \cs{multiput} command}
+The \package{xpicture} package introduces two families of commands
+to generalize the \cs{multiput} command:
+\begin{enumerate}
+ \item The natural generalization, with all versions,
+ \ttslashindex{multiPut}\ttslashindex{multicPut}\ttslashindex{multirPut}
+\begin{Verbatim}[commandchars=\|\{\},commentchar=\%]
+\multiPut[|TIT{position}](|TIT{x0},|TIT{y0})(|TIT{|(|Delta|)x},%
+|TIT{|(|Delta|)y})|{|TIT{n}|}|{|TIT{object}|}
+\multiPut*[|TIT{position}](|TIT{x0},|TIT{y0})(|TIT{|(|Delta|)x}%
+,|TIT{|(|Delta|)y})|{|TIT{n}|}|{|TIT{object}|}
+\multicPut|{|TIT{position}|}(|TIT{x0},|TIT{y0})(|TIT{|(|Delta|)x}%
+,|TIT{|(|Delta|)y})|{|TIT{n}|}|{|TIT{object}|}
+\multirPut|{|TIT{position}|}(|TIT{x0},|TIT{y0})(|TIT{|(|Delta|)x}%
+,|TIT{|(|Delta|)y})|{|TIT{n}|}|{|TIT{object}|}
+\multirPut*|{|TIT{position}|}(|TIT{x0},|TIT{y0})(|TIT{|(|Delta|)x}%
+,|TIT{|(|Delta|)y})|{|TIT{n}|}|{|TIT{object}|}
+\end{Verbatim}
+These commands compose \TIT{n} copies of \TTT{\TIT{object}}
+in $(\TIT{x0},\TIT{y0})$, $(\TIT{x0}+\Delta x,\TIT{y0}+\Delta y)$,
+ $(\TIT{x0}+2\Delta x,\TIT{y0}+2\Delta y)$,\ldots, 
+ $(\TIT{x0}+(\TIT n-1)\Delta x,\TIT{y0}+(\TIT n-1)\Delta y)$.
+\item A new command group,
+\ttslashindex{multiPlot}\ttslashindex{multicPlot}\ttslashindex{multirPlot}
+\begin{Verbatim}[commandchars=\|\{\},commentchar=\%]
+\multiPlot[|TIT{position}]|{|TIT{object}|}(|TIT{x0},|TIT{y0})(|TIT{x1},%
+|TIT{y1})...(|TIT{xn},|TIT{yn})
+\multiPlot*[|TIT{position}]|{|TIT{object}|}(|TIT{x0},|TIT{y0})(|TIT{x1},%
+|TIT{y1})...(|TIT{xn},|TIT{yn})
+\multicPlot|{|TIT{position}|}|{|TIT{object}|}(|TIT{x0},|TIT{y0})(|TIT{x1},%
+|TIT{y1})...(|TIT{xn},|TIT{yn})
+\multirPlot|{|TIT{position}|}|{|TIT{object}|}(|TIT{x0},|TIT{y0})(|TIT{x1},%
+|TIT{y1})...(|TIT{xn},|TIT{yn})
+\multirPlot*|{|TIT{position}|}|{|TIT{object}|}(|TIT{x0},|TIT{y0})(|TIT{x1},%
+|TIT{y1})...(|TIT{xn},|TIT{yn})
+\end{Verbatim}
+These commands compose the done object in several positions, that are freely
+entered as a list of coordinate pairs.
+\end{enumerate}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\referencesystem(0,0)(1,-1)(1,1)
+\begin{Picture}(-2.5,-2.5)(2.5,2.5)
+\cartesiangrid(-2,-2)(2,2)
+\pictcolor{blue}
+\multiPut(-2,-2)(1,1){5}{\circle*{0.25}}
+\pictcolor{red}
+\multiPlot{\circle*{0.25}}(-1,-2)(2,1)(-2,2)
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\referencesystem(0,0)(1,-1)(1,1)
+\begin{Picture}(-2.5,-2.5)(2.5,2.5)
+\cartesiangrid(-2,-2)(2,2)
+\pictcolor{blue}
+\multiPut[b](-2,-2)(1,1){5}{\circle*{0.25}}
+\pictcolor{red}
+\multiPlot[NE]{\circle*{0.25}}(-1,-2)(2,1)(-2,2)
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsection{Alternatives to \cs{line} and \cs{vector}}
+\begin{description}
+\item[\csdef{xLINE}] This command draws line segments:
+\begin{Verbatim}[commandchars=\|\[\]]
+\xLINE(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])
+\end{Verbatim}
+draws the line segment between the two points
+\verb+(+\TIT{x0}\verb+,+\TIT{y0}\verb+)+ and
+\verb+(+\TIT{x1}\verb+,+\TIT{y1}\verb+)+
+(Cartesian or polar coordinates, in the active reference system).
+This allows us to draw any segment in any direction.
+\item[\csdef{xVECTOR}, \csdef{xtrivVECTOR}] plot arrows:
+\begin{Verbatim}[commandchars=\|\[\]]
+\xVECTOR(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])
+\xtrivVECTOR(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])
+\end{Verbatim}
+draw an arrow between points
+\verb+(+\TIT{x0}\verb+,+\TIT{y0}\verb+)+ and
+\verb+(+\TIT{x1}\verb+,+\TIT{y1}\verb+)+.
+The \cs{xtrivVECTOR} command draw an arrow
+the end of which simply consists of a pair of segments
+(\setlength{\unitlength}{1cm}%
+\begin{Picture}(0,-0.1)(0.5,0.1)\xtrivVECTOR(0,0)(0.5,0)\end{Picture}).
+length and aperture of the end of arrow are controled by the instruction
+\ttslashindex{arrowsize}
+\begin{Verbatim}[commandchars=\|\[\]]
+\arrowsize{|TIT[xlen]}{|TIT[ylen]}
+\end{Verbatim}
+where the two parameters are non-negative numbers:
+the first one for the length (in points); second
+for the half of the aperture. Default is
+\begin{Verbatim}
+\arrowsize{5}{2}
+\end{Verbatim}
+\begin{exemple}
+\setlength{\unitlength}{0.75cm}
+\referencesystem(0,0)(1,0)(0.25,0.75)
+\begin{Picture}(-4.5,-4.5)(4.5,4.5)
+\cartesiangrid(-4,-4)(4,4)
+\thicklines
+\pictcolor{blue}
+\xLINE(-4,0)(1,4)
+\Put(1,-3){\xLINE(0,0)(3,2)}
+\pictcolor{red}
+\xtrivVECTOR(0,0)(2,3)
+\xtrivVECTOR(0,0)(2,0)
+\arrowsize{10}{4}
+\xtrivVECTOR(0,0)(-2,-1)
+
+\pictcolor{magenta}
+\xVECTOR(-3,-3)(-3,3)
+\xVECTOR(-3,-3)(-2,-2)
+\end{Picture}
+\end{exemple}
+\item[\csdef{xline}, \csdef{xvector}, \csdef{xtrivvector}]
+draw lines and vectors using the standard \LaTeX{} syntax
+(but without any restriction in allowed parameters,
+that can be integer or decimal numbers, positive, negative or zero).
+\begin{Verbatim}[commandchars=\|\[\]]
+\xline(|TIT[x],|TIT[y]){|TIT[size]}
+\xvector(|TIT[x],|TIT[y]){|TIT[size]}
+\xtrivvector(|TIT[x],|TIT[y]){|TIT[size]}
+\end{Verbatim}
+\begin{exemple}
+\setlength{\unitlength}{0.75cm}
+\referencesystem(0,0)(1,0)(0.25,0.75)
+\begin{Picture}(-4.5,-4.5)(4.5,4.5)
+\cartesiangrid(-4,-4)(4,4)
+\thicklines
+\pictcolor{blue}
+\Put(-4,0){\xline(5,4){5}}
+\Put(1,-3){\xline(3,2){3}}
+\pictcolor{red}
+\Put(0,0){\xtrivvector(2,3){2}}
+\xtrivvector(1,0){2}
+\arrowsize{10}{4}
+\Put(0,0){\xtrivvector(2,1){-2}}
+
+\pictcolor{magenta}
+\Put(-3,-3){\xvector(0,1){6}}
+\Put(-3,-3){\xvector(1,1){1}}
+\end{Picture}
+\end{exemple}
+
+If you want to draw only an arrowhead (without any line)
+you can use either the
+\csdef{zerovector}/\csdef{zerotrivvector}
+or \cs{xvector}/\cs{xtrivvector} commands:
+\begin{Verbatim}[commandchars=\|\[\]]
+\zerovector(|TIT[x],|TIT[y])
+\zerotrivvector(|TIT[x],|TIT[y])
+\xvector(|TIT[x],|TIT[y]){0}
+\xtrivvector(|TIT[x],|TIT[y]){0}
+\end{Verbatim}
+\end{description}
+\subsection{Polygons anf polygonal lines}
+The \package{pict2e} and \package{curve2e} packages include
+specific instructions for drawing polygonal lines and polygons.
+We introduce new versions of these
+commands in order to refer to the active reference system.
+\begin{description}
+\item[\csdef{Polyline}] draws polygonal lines.
+Logically, we must pass the list of vertices:
+\begin{Verbatim}[commandchars=\|\[\]]
+\Polyline(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])...(|TIT[xn],|TIT[yn])
+\end{Verbatim}
+\item[\csdef{Polygon}] plots polygons, ie, closed polygonal lines:
+\begin{Verbatim}[commandchars=\|\[\]]
+\Polygon(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])...(|TIT[xn],|TIT[yn])
+\end{Verbatim}
+is equivalent to
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\Polyline(|TIT[x0],|TIT[y0])(|TIT[x1],|TIT[y1])...(|TIT[xn],|TIT[yn])%
+(|TIT[x0],|TIT[y0])
+\end{Verbatim}
+
+\begin{exemple}
+\setlength{\unitlength}{0.75cm}
+\referencesystem(0,0)(1,0)(0.25,0.75)
+\begin{Picture}(-4.5,-4.5)(4.5,4.5)
+\externalaxes
+\cartesiangrid(-4,-4)(4,4)
+\linethickness{1pt}
+\pictcolor{blue}
+\Polyline(-2,2)(-3,-1)(0,0)(2,3)(2,2)
+\pictcolor{red}
+\Polygon(0,0)(1,1)(3,1)(1,-1)
+\end{Picture}
+\end{exemple}
+\item[\csdef{regularPolygon}] draws regular polygons:
+\begin{Verbatim}[commandchars=\|\(\)]
+\regularPolygon[|TIT(initial angle)]{|TIT(radius)}{|TIT(sides)}
+\end{Verbatim}
+makes the regular polygon with the given radius and sides.
+The optional argument (zero, by default) determines
+the slope of the first vertex, always measured in degrees.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-7.5,-7.5)(7.5,7.5)
+\externalaxes
+\cartesiangrid(-7,-7)(7,7)
+\pictcolor{blue}
+\regularPolygon{1}{5}
+\Put(-4,0){\regularPolygon{2}{6}}
+\Put(3,3){\regularPolygon{2}{4}}
+\Put(-4,-4){\regularPolygon[45]{2}{4}}
+\Put(4,-4){\regularPolygon[90]{2.5}{11}}
+\Put(-4,4){\regularPolygon[90]{3}{3}}
+\end{Picture}
+\end{center}
+\end{exemple}
+
+\end{description}
+\section{Drawing curves}
+This section highlights the true potentiality of the \package{xpicture} 
+package.
+We will describe the instructions that can be used to easily (and effectively) 
+represent
+several interesting curves: Firstly, conic sections and arcs.
+Then, any piecewise regular curve
+(including graphs of real variable functions, in rectangular or polar 
+coordinates,
+and ---in a more general way--- curves defined by parametric equations).
+\subsection{Conic sections}
+The \package{xpicture} package defines new commands to draw conic sections:
+ ellipses, circles, hyperbolas and parabolas.
+\subsubsection{Circles}
+We can draw the circle of implicit equation $x^2+y^2=r^2$ typing
+\ttslashindex{Circle}
+\begin{Verbatim}[commandchars=\|\[\]]
+\Circle{|TIT[r]}
+\end{Verbatim}
+Note than the standard command \cs{circle}
+requeres the diameter as mandatory argument, while here we must insert the 
+radius.
+\subsubsection{Ellipses}
+To draw the ellipse $\displaystyle\frac{x^2}{a^2}+\frac{y^2}{b^2}=1$ enter the
+following instruction:\ttslashindex{Ellipse}
+\begin{Verbatim}[commandchars=\|\[\]]
+\Ellipse{|TIT[a]}{|TIT[b]}
+\end{Verbatim}
+\begin{exemple}
+\setlength{\unitlength}{0.5cm}
+\renewcommand{\axeslabelsize}{\footnotesize}
+\begin{Picture}(-5.5,-4.5)(5.5,4.5)
+\cartesiangrid(-5,-4)(5,4)
+\pictcolor{blue}
+\Ellipse{4}{3}
+\Circle{2}
+\end{Picture}
+
+\referencesystem(0,0)(1,0)(0.5,0.5)
+\begin{Picture}(-5.5,-4.5)(5.5,4.5)
+\cartesiangrid(-5,-4)(5,4)
+\pictcolor{blue}
+\Ellipse{4}{3}
+\Circle{2}
+\end{Picture}
+\end{exemple}
+\subsubsection{Hyperbolas}
+Since the hyperbolas and parabolas are not bounded curves, to define the
+portion of the curve that we want to draw  we need to specify the
+maximum values for the $x$ and $y$ variables.\ttslashindex{Hyperbola}
+\begin{Verbatim}[commandchars=\|\[\]]
+\Hyperbola{|TIT[a]}{|TIT[b]}{|TIT[xmax]}{|TIT[ymax]}
+\end{Verbatim}
+draws the hyperbola
+$\displaystyle\frac{x^2}{a^2}-\frac{y^2}{b^2}=1$,
+where variables $x$ and $y$ are limited, respectively,
+to the $\TTT{[-\TIT{xmax}}, \TTT{\TIT{xmax}]}$ and 
+$\TTT{[-\TIT{ymax}}, \TTT{\TIT{ymax}]}$ intervals.
+This curve is well defined if the parameter \TTT{\TIT{xmax}}
+is greater than \TTT{\TIT{a}}. Otherwise, \package{xpicture} returns an error 
+message and does not draw any curve.
+
+In the following example, we show the hyperbola 
+$\displaystyle\frac{x^2}{5^2}-\frac{y^2}{2^2}=1$
+and its asymptotes,
+using the \cs{xLINE} command (these asymptotes are lines $2x=\pm5y$,
+passing through $(\pm16,\pm6.4)$).
+\begin{Exemple}
+\begin{center}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-17,-9)(17,9)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesiangrid(-16,-8)(16,8)
+\pictcolor{blue}
+\Hyperbola{5}{2}{16}{8}
+\pictcolor{orange}
+\xLINE(16,6.4)(-16,-6.4)
+\xLINE(-16,6.4)(16,-6.4)
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+Instructions \csdef{lHyperbola} and \csdef{rHyperbola} draw, respectively,
+only the \emph{left} or only the \emph{right} branch of the given hyperbola
+(here, is interpreted as \emph{right} branch this one that belongs to positive
+values of variable $x$).
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-5.5,-5.5)(5.5,5.5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesiangrid(-5,-5)(5,5)
+\pictcolor{red}
+\lHyperbola{2}{3}{5}{5}
+\pictcolor{blue}
+\rHyperbola{2}{3}{5}{5}
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsubsection{Parabolas}
+Instruction\ttslashindex{Parabola}
+\begin{Verbatim}[commandchars=\|\[\]]
+\Parabola{|TIT[a]}{|TIT[xmax]}{|TIT[ymax]}
+\end{Verbatim}
+draw the parabola $x=ay^2$, varying $x$, at most, in the interval
+$[0,\TTT{\TIT{xmax}}]$
+(if \TTT{\TIT{a}} is positive) or in $[-\TTT{\TIT{xmax}},0]$
+(for negative values of \TTT{\TIT{a}}),
+and $y$ in $[-\TTT{\TIT{ymax}},\TTT{\TIT{ymax}}]$.
+Parameters \TTT{\TIT{xmax}} and \TTT{\TIT{ymax}}
+must be positive.
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-5.5,-5.5)(5.5,5.5)
+\cartesiangrid(-5,-5)(5,5)
+\pictcolor{blue}
+\Parabola{2}{5}{5}
+\Parabola{0.2}{5}{5}
+\pictcolor{orange}
+\Parabola{-2}{5}{5}
+\Parabola{-0.2}{5}{5}
+\end{Picture}
+\end{center}
+\end{exemple}
+\medskip
+
+All commands drawing conic sections or arcs divide the curve in 
+\csdef{defaultplotdivs} pieces (8, by default). To obtain a greather
+accuracy, you can redefine this parameter.
+
+\medskip
+
+Note that all these commands draw conic sections centered
+at the coordinate origin, so that their
+principal axes coincide with the coordinate axes. If we
+want to move his
+center to any other point, we can do it moving in advance
+the origin of coordinates or simply
+including the command as an argument of the \cs{Put} command.
+\begin{Exemple}
+\begin{center}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-11,-8)(11,8)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesiangrid(-10,-7)(11,7)
+\pictcolor{blue}
+\Put(2,3){\Ellipse{4}{3}}
+\Put(2,3){\Circle{0.25}}
+\pictcolor{orange}
+\Put(2,-3){\Hyperbola{5}{2}{9}{3}}
+\Put(2,-3){\Circle{0.25}}
+\pictcolor{green}
+\translateorigin(-10,2)
+\Parabola{0.5}{21}{5}
+\Circle{0.25}
+\end{Picture}
+\end{center}
+\end{Exemple}
+But, if the symmetry axes of our curve are not parallel to the coordinate
+axes,\footnote{That is, in mathematical terms,
+if the eigenvectors of the underlying quadratic form are not the canonical 
+vectors.}
+then we will need a rotation of axes.
+\begin{Exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-10.5,-7.5)(10.5,7.5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesiangrid(-10,-7)(10,7)
+{%
+\pictcolor{blue}
+\translateorigin(5,3)
+\rotateaxes{\numberSIXTHPI}
+\Ellipse{4}{3}
+\xLINE(-4,0)(4,0)
+\xLINE(0,-3)(0,3)
+}
+\degreesangles
+{%
+\pictcolor{orange}
+\translateorigin(-3,0)
+\rotateaxes{110}
+\Hyperbola{3}{2}{6}{4}
+\xLINE(-6,-4)(6,4)
+\xLINE(6,-4)(-6,4)
+}
+\pictcolor{green}
+\translateorigin(5,-6)
+\rotateaxes{72}
+\Parabola{1}{4}{3}
+\xLINE(0,-2)(0,2)
+\xLINE(0,0)(4,0)
+\end{Picture}
+\end{center}
+\end{Exemple}
+Note that we made a couple of changes of local reference system (one for each
+curve) within the drawing.
+We can use the recourse to the change of coordinates also to
+draw the hyperbola $\displaystyle\frac{y^2}{a^2}-\frac{x^2}{b^2}=1$ and the
+parabola $y=ax^2$.
+Note than \verb+\referencesystem(0,0)(0,1)(1,0)+
+(or \verb+\symmetrize{\numberQUARTERPI}+)
+makes vertical the $x$ axis and horizontal the
+$y$ axis.\footnote{We will use this trick later
+to plot inverse functions.}
+\begin{exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-5.5,-5.5)(5.5,5,5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesiangrid(-5,-5)(5,5)
+\referencesystem(0,0)(0,1)(1,0)
+\pictcolor{blue}
+\Parabola{0.22}{5}{5}
+\pictcolor{red}
+\Hyperbola{2}{3}{5}{5}
+\end{Picture}
+\end{center}
+\end{exemple}
+
+\subsection{Arcs (of conic sections)}
+The instructions described above allow us to draw whole circles, ellipses
+hyperbolas and parabolas. More generally, we can represent any portion of 
+these curves, ie, circular, elliptic, hyperbolic and parabolic arcs.
+\ttslashindex{xArc}\ttslashindex{circularArc}
+\begin{Verbatim}[commandchars=\|\[\]]
+\xArc{|TIT[r]}{|TIT[angle1]}{|TIT[angle2]}
+\circularArc{|TIT[r]}{|TIT[angle1]}{|TIT[angle2]}
+\end{Verbatim}
+These two instructions are equivalent.
+They draw the arc of the circle centered at $(0,0)$
+with radius $\TIT{r}$
+and limited by the $\TTT{\TIT{angle1}}$ and $\TTT{\TIT{angle2}}$
+angles.
+\begin{exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-5.5,-5.5)(5.5,5,5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesianaxes(-5,-5)(5,5)
+\pictcolor{gray}
+\circularArc{3}{\numberPI}{\numberTWOPI}
+\pictcolor{red}
+\xLINE(-2,2)(-2,5)
+\xLINE(-2,2)(-5,2)
+\degreesangles
+\Put(-2,2){\circularArc{1}{90}{180}}
+\pictcolor{blue}
+\polarreference
+\Put(1,30){\xLINE(0,0)(4,30)}
+\Put(1,30){\xLINE(0,0)(4,60)}
+\Put(1,30){\circularArc{2}{30}{60}}
+\end{Picture}
+\end{center}
+\end{exemple}
+\begin{exemple}
+\SUBTRACT{\numberGOLD}{1}{\midaB}
+\COPY{1}{\midaA}
+\ADD{\midaA}{\midaB}{\Mida}
+\setlength{\unitlength}{5cm}
+\newcommand{\espiral}{%
+    \Put(0,0){\begin{Picture}(0,0)(0,0)
+      \translateorigin(\midaA,0)
+      \pictcolor{red}
+      \circularArc{\midaA}{\numberHALFPI}{\numberPI}
+      \pictcolor{blue}
+      \xLINE(0,0)(0,\midaA)
+   \end{Picture}
+   }
+   \COPY{\midaA}{\Mida}
+   \COPY{\midaB}{\midaA}
+   \SUBTRACT{\Mida}{\midaA}{\midaB}
+   \translateorigin(\Mida,\midaB)
+   \changereferencesystem(0,\midaA)(0,-1)(1,0)
+}
+\renewcommand{\defaultplotdivs}{2}
+
+\begin{center}
+\begin{Picture}(0,0)(\numberGOLD,1)
+   \Polygon(0,0)(\Mida,0)(\Mida,1)(0,1)
+   % Plot 8 circular arcs
+   \espiral\espiral\espiral\espiral
+   \espiral\espiral\espiral\espiral
+\end{Picture}
+
+Golden rectangles and spiral
+\end{center}
+\end{exemple}
+\ttslashindex{ellipticArc}
+\begin{Verbatim}[commandchars=\|\[\]]
+\ellipticArc{|TIT[a]}{|TIT[b]}{|TIT[angle1]}{|TIT[angle2]}
+\end{Verbatim}
+This instruction draws the arc of the ellipse centered at
+ $(0,0)$ with semiaxes $\TIT{a}$
+and $\TIT{b}$, $\frac{x^2}{a^2}+\frac{y^2}{b^2}=1$,
+limited by angles $\TTT{\TIT{angle1}}$ and $\TTT{\TIT{angle2}}$.
+\begin{exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-0.5,-3.5)(5.5,3.5)
+\degreesangles
+\ellipticArc{2}{3}{-90}{90}
+\ellipticArc{5}{3}{-90}{90}
+\end{Picture}
+\end{center}
+\end{exemple}
+\ttslashindex{lhyperbolicArc}\ttslashindex{rhyperbolicArc}
+\begin{Verbatim}[commandchars=\|\[\]]
+\rhyperbolicArc{|TIT[a]}{|TIT[b]}{|TIT[y1]}{|TIT[y2]}
+\lhyperbolicArc{|TIT[a]}{|TIT[b]}{|TIT[y1]}{|TIT[y2]}
+\end{Verbatim}
+Draw the arc (of the right or left branch, respectively)
+of the hyperbola
+ $\frac{x^2}{a^2}-\frac{y^2}{b^2}=1$ included between $y=\TTT{\TIT{y1}}$ and 
+ $y=\TTT{\TIT{y2}}$.
+\begin{exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-5.5,-5.5)(5.5,5,5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesianaxes(-5,-5)(5,5)
+\pictcolor{red}
+\lhyperbolicArc{2}{3}{-4}{0}
+\pictcolor{blue}
+\rhyperbolicArc{2}{3}{-2}{5}
+\end{Picture}
+\end{center}
+\end{exemple}
+\ttslashindex{parabolicArc}
+\begin{Verbatim}[commandchars=\|\[\]]
+\parabolicArc{|TIT[a]}{|TIT[y1]}{|TIT[y2]}
+\end{Verbatim}
+Draw the arc of the parabola
+ $x=ay^2$ included between $y=\TTT{\TIT{y1}}$ and $y=\TTT{\TIT{y2}}$.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\begin{center}
+\begin{Picture}(-2.5,-2.5)(2.5,2,5)
+\renewcommand{\axeslabelsize}{\footnotesize}
+\cartesianaxes(-2,-2)(2,2)
+\pictcolor{red}
+\parabolicArc{-2}{-1}{0}
+\pictcolor{blue}
+\parabolicArc{0.5}{0}{2}
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsection{Real variable functions}\label{subsec:real}
+The \package{xpicture} package provides us two commands
+to draw the graph of a function:
+\csdef{PlotFunction} and \csdef{PlotPointsOfFunction}.
+\begin{Verbatim}[commandchars=\|\(\)]
+\PlotFunction[|TIT(n)]{\|TIT(functionname)}{\|TIT(tzero)}{\|TIT(tone)}
+\PlotPointsOfFunction{|TIT(n)}{\|TIT(functionname)}{\|TIT(tzero)}{\|TIT(tone)}
+\end{Verbatim}
+Note that the parameter $\TTT{\TIT{n}}$ is optional in one of these 
+instructions and mandatory in the other one.
+In the case of \csdef{PlotFunction},
+if we do not use this optional parameter,
+a quadratic approximation of the function
+\cs{\TIT{functionname}}
+in the $[\cs{\TIT{tzero}},\cs{\TIT{tone}}]$ interval is drawn.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-2.5,-0.5)(3.5,4.5)
+\cartesianaxes(-2,0)(2,4)
+\pictcolor{blue}
+\PlotFunction{\SQUAREfunction}{-2}{2}
+\Put[E](2,4){$f(t)=t^2$}
+\end{Picture}
+\end{exemple}
+Now, this almost never provides a right graphic.
+To draw curves with a greater accuracy we should use the parameter,
+\TTT{\TIT{n}},
+dividing the interval in \TTT{\TIT{n}} subintervals.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\CUBE{1.5}{\mymax}
+\begin{Picture}(-2,-4)(2,4)
+\cartesianaxes(-1.5,-\mymax)(1.5,\mymax)
+\pictcolor{blue}
+\PlotFunction[8]{\CUBEfunction}{-1.5}{1.5}
+\Put[E](1.5,\mymax){$f(t)=t^3$}
+\end{Picture}
+\end{exemple}
+
+On the other hand, the \csdef{PlotPointsOfFunction} command
+plots $\TTT{\TIT{n}}+1$ \emph{points}, uniformly distributed
+about the $x$-axis.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\CUBE{1.5}{\mymax}
+\begin{Picture}(-2,-4)(2,4)
+\cartesianaxes(-1.5,-\mymax)(1.5,\mymax)
+\pictcolor{blue}
+\PlotPointsOfFunction{24}{\CUBEfunction}{-1.5}{1.5}
+\Put[E](1.5,\mymax){$f(t)=t^3$}
+\end{Picture}
+\end{exemple}
+
+By default, \cs{PlotPointsOfFunction} plot \emph{points} as a filled circle
+of diameter \verb+0.1\unitlength+. But you can modifie this diameter, by 
+redefining the \csdef{pointmarkdiam} parameter.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\CUBE{1.5}{\mymax}
+\renewcommand{\pointmarkdiam}{0.3}
+\begin{Picture}(-2,-4)(2,4)
+\cartesianaxes(-1.5,-\mymax)(1.5,\mymax)
+\pictcolor{blue}
+\PlotPointsOfFunction{24}{\CUBEfunction}{-1.5}{1.5}
+\Put[E](1.5,\mymax){$f(t)=t^3$}
+\end{Picture}
+\end{exemple}
+
+Moreover, you can select another symbol for these points, redefining 
+\csdef{pointmark}.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\CUBE{1.5}{\mymax}
+\renewcommand{\pointmark}{$\diamond$}
+\begin{Picture}(-2,-4)(2,4)
+\cartesianaxes(-1.5,-\mymax)(1.5,\mymax)
+\pictcolor{blue}
+\PlotPointsOfFunction{24}{\CUBEfunction}{-1.5}{1.5}
+\Put[E](1.5,\mymax){$f(t)=t^3$}
+\end{Picture}
+\end{exemple}
+
+Naturally, in order to apply these commands the function must be defined.
+\package{xpicture}
+loads the \packagedef{calculus} package, which
+predefines some of the most common elementary functions
+and includes several tools to build new ones.
+The predefined functions are the following:
+\begin{center}
+\begin{tabular}{l>{$}l<{$}>{\qquad}l>{$}l<{$}}
+ \csdef{ZEROfunction} & f(t)=0 &
+ \csdef{ONEfunction}  & f(t)=1    \\
+ \csdef{IDENTITYfunction}  & f(t)=t &
+ \csdef{RECIPROCALfunction}  & f(t)=1/t \\
+ \csdef{SQUAREfunction}  & f(t)=t^2 &
+ \csdef{CUBEfunction}  & f(t)=t^3 \\
+ \csdef{SQRTfunction}  & f(t)=\sqrt t \\
+ \csdef{EXPfunction}  & f(t)=\exp t &
+ \csdef{LOGfunction} & f(t)=\log t \\
+ \csdef{COSfunction}  & f(t)=\cos t &
+ \csdef{SINfunction}  & f(t)=\sin t \\
+ \csdef{TANfunction}  & f(t)=\tan t &
+ \csdef{COTfunction}  & f(t)=\cot t \\
+ \csdef{COSHfunction}  & f(t)=\cosh t &
+ \csdef{SINHfunction}  & f(t)=\sinh t \\
+ \csdef{TANHfunction}  & f(t)=\tanh t &
+ \csdef{COTHfunction}  & f(t)=\coth t \\
+ \csdef{HEAVISIDEfunction} & f(t)=\begin{cases}
+                              0 & \text{si $t<0$} \\
+                              1 & \text{si $t\geq0$}
+                          \end{cases}
+\end{tabular}
+\end{center}
+
+\begin{Exemple}
+\setlength{\unitlength}{1cm}
+\linethickness{1.5pt}
+\centering
+\begin{Picture}(-5,-5)(6,5)
+\externalaxes\makenotics
+\cartesiangrid(-4.5,-4.5)(4.5,4.5)
+\pictcolor{red}
+\PlotFunction{\IDENTITYfunction}{-4.5}{4.5}
+\Put[tr](4.5,4.5){$y=x$}
+
+\DIVIDE{1}{4.5}{\minx}
+\pictcolor{magenta}
+\PlotFunction[10]{\RECIPROCALfunction}{\minx}{4.5}
+\PlotFunction[10]{\RECIPROCALfunction}{-\minx}{-4.5}
+\Put[r](4.5,\minx){$y=1/x$}
+
+\SQRT{4.5}{\maxx}
+\pictcolor{cyan}
+\PlotFunction[10]{\SQUAREfunction}{-\maxx}{\maxx}
+\Put[tr](\maxx,4.5){$y=x^2$}
+
+\pictcolor{blue}
+\PlotFunction[10]{\CUBEfunction}{-1.6509}{1.6509}
+\Put[t](1.6509,4.5){$y=x^3$}
+\end{Picture}
+\end{Exemple}
+
+\begin{Exemple}
+\setlength{\unitlength}{1cm}
+\linethickness{1.5pt}
+\centering
+\begin{Picture}(-7,-4.5)(7,4.5)
+{\makenolabels
+\changereferencesystem(0,0)(\numberHALFPI,0)(0,1)
+\cartesiangrid(-4,-4)(4,4)
+\highestlabel{$2\pi$}
+\printylabels{-4}{1}{4}
+\printxlabel{-4}{-2\pi}
+\printxlabel{-2}{-\pi}
+\printxlabel{2}{\pi}
+\printxlabel{4}{2\pi}}
+\pictcolor{red}
+\PlotFunction[16]{\COSfunction}{-\numberTWOPI}{\numberTWOPI}
+\pictcolor{blue}
+\PlotFunction[16]{\SINfunction}{-\numberTWOPI}{\numberTWOPI}
+\pictcolor{magenta}
+\PlotFunction[6]{\TANfunction}{-1.3258}{1.3258}
+\end{Picture}
+\end{Exemple}
+
+From these basic functions we can define many others,
+using the following \emph{operations}:
+\newcommand{\functoper}{%
+   \{\cs{\TIT{function1}}\}\{\cs{\TIT{function2}}\}\{\cs{\TIT{newfunction}}\}}
+\begin{description}
+\item[Constant function:]\mbox{}
+
+\csdef{CONSTANTfunction}\{\TIT{k}\}\{\cs{\TIT{newfunction}}\}
+
+ Example: defining the  $F(t)=5$ function:
+
+\cs{CONSTANTfunction}\{5\}\{\cs{F}\}
+
+\item[Sum function:]\mbox{}
+
+\csdef{SUMfunction}\functoper
+
+
+Example: defining the $F(t)=t^2+t^3$ function:
+
+\cs{SUMfunction}\{\cs{SQUAREfunction}\}\{\cs{CUBEfunction}\}\{\cs{F}\}
+
+\item[Difference function:]\mbox{}
+
+\csdef{SUBTRACTfunction}\functoper
+
+Example: defining the $F(t)=t^2-t^3$ function:
+
+\cs{SUBTRACTfunction}\cs{SQUAREfunction}\cs{CUBEfunction}\{\cs{F}\}
+
+\item[Product function:]\mbox{}
+
+\csdef{PRODUCTfunction}\functoper
+
+Example: defining the $F(t)=\mathrm e^t\cos t$ function:
+
+\cs{PRODUCTfunction}\cs{EXPfunction}\cs{COSfunction}\{\cs{F}\}
+
+\item[Quotient function:]\mbox{}
+
+\csdef{QUOTIENTfunction}\functoper
+
+Example: defining the $F(t)=\mathrm e^t/\cos t$ function:
+
+\cs{QUOTIENTfunction}\cs{EXPfunction}\cs{COSfunction}\{\cs{F}\}
+
+\item[Composition of two functions:]\mbox{}
+
+\csdef{COMPOSITIONfunction}\functoper
+
+Example: defining the $F(t)=\mathrm e^{\cos t}$ function:
+
+\cs{COMPOSITIONfunction}\cs{EXPfunction}\cs{COSfunction}\{\cs{F}\}
+
+\item[Scaled function:]\mbox{}
+
+\csdef{SCALEfunction}\{\TIT{k}\}\{\cs{\TIT{function}}\}%
+   \{\cs{\TIT{newfunction}}\}
+
+Example: defining the $F(t)=3{\cos t}$ function:
+
+\cs{SCALEfunction}\{3\}\cs{COSfunction}\{\cs{F}\}
+
+\item[Scaled variable:]\mbox{}
+
+\csdef{SCALEVARIABLEfunction}\{\TIT{k}\}\{\cs{\TIT{function}}\}%
+   \{\cs{\TIT{newfunction}}\}
+
+Example: defining the $F(t)=\cos 3t$ function:
+
+\cs{SCALEVARIABLEfunction}\{3\}\cs{COSfunction}\{\cs{F}\}
+
+\item[Power function:] (exponent enter positiu)\mbox{}
+
+\csdef{POWERfunction}\{\cs{\TIT{function}}\}\{\TIT{n}\}%
+   \{\cs{\TIT{newfunction}}\}
+
+Example: defining the $F(t)=t^5$ function:
+
+\cs{POWERfunction}\cs{IDENTITYfunction}\{5\}\{\cs{F}\}
+
+\item[Linear combination:]\mbox{}
+
+\csdef{LINEARCOMBINATIONfunction}\{\TIT{a}\}\{\cs{\TIT{function1}}\}%
+  \{\TIT{b}\}\{\cs{\TIT{function2}}\}\{\cs{\TIT{newfunction}}\}
+
+Example: defining the $F(t)=2t-3\cos t$ function:
+
+\cs{LINEARCOMBINATIONfunction}\{2\}\cs{IDENTITYfunction}\{-3\}%
+   \cs{COSfunction}\{\cs{F}\}
+\end{description}
+
+By combining properly these operations, we can draw graphs of many functions.
+Some examples are shown in next pages.
+\newpage
+
+First, we will draw the function $f(t)=t^3-2t$,
+dividing the interval $[-2,2]$ in ten subintervals.
+The simplest way to construct this function is as a linear combination of
+$f_1(t)=t^3$ and $f_2(t)=t$.
+
+\begin{exemple}
+\LINEARCOMBINATIONfunction
+               {1}{\CUBEfunction}
+               {-2}{\IDENTITYfunction}
+               {\Ffunction}
+\begin{center}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-2.5,-4.5)(2.5,4.5)
+\cartesianaxes(-2,-4)(2,4)
+\pictcolor{blue}
+\PlotFunction[10]{\Ffunction}{-2}{2}
+\Put[rbr](2,4){$f(t)=t^3-2t$}
+\end{Picture}
+\end{center}
+\end{exemple}
+\newpage
+
+Graph of $g(t)=t\cos t$. We multiply the identity and the cosine functions:
+
+\begin{Exemple}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-11,-11)(11,11)
+\cartesianaxes(-10,-10)(10,10)
+\PRODUCTfunction{\IDENTITYfunction}{\COSfunction}{\Gfunction}
+\pictcolor{red}
+\PlotFunction[30]{\Gfunction}{-10}{10}
+\end{Picture}
+\end{center}
+\end{Exemple}
+\newpage
+
+Graph of $f(t)=(\cos t)^3$.
+
+\begin{Exemple}
+\setlength{\unitlength}{1cm}
+\begin{center}
+\begin{Picture}(-7,-3)(7,3)
+\cartesianaxes(-\numberTWOPI,-2)(\numberTWOPI,2)
+\POWERfunction{\COSfunction}{3}{\Ffunction}
+\pictcolor{blue}
+\PlotFunction[50]{\Ffunction}{-\numberTWOPI}{\numberTWOPI}
+\end{Picture}
+\end{center}
+\end{Exemple}
+\newpage
+
+Graph of $g(t)=t\cos t\sin t$.
+Note that in this case we have two operations:
+First, we define the $f(t)=t \cos t$, multiplying the identity and cosine 
+functions; then, we multiply by the sine function.
+\begin{Exemple}
+\begin{center}
+\setlength{\unitlength}{0.75cm}
+ \begin{Picture}(-11,-6)(11,6)
+\cartesianaxes(-10,-5)(10,5)
+\PRODUCTfunction{\IDENTITYfunction}{\COSfunction}{%
+                            \Ffunction}
+\PRODUCTfunction{\Ffunction}{\SINfunction}{\Gfunction}
+\pictcolor{red}
+\PlotFunction[40]{\Gfunction}{-10}{10}
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+Graph of $g(t)=\arcsin t$. The \package{calculus} package
+not support, for now, the inverse trigonometric functions; but we can plot
+these functions (or any other inverse function)
+swapping coordinated axes.
+
+\begin{exemple}
+\begin{center}
+\setlength{\unitlength}{2cm}
+\begin{Picture}(-1.5,-2)(1.5,2)
+\makenolabels\makenotics
+\cartesianaxes
+     (-1,-\numberHALFPI)(1,\numberHALFPI)
+\printxticslabels{-1}{0.5}{1}
+\printyticlabel{-\numberHALFPI}{-\pi/2}
+\printyticlabel{-\numberQUARTERPI}{-\pi/4}
+\printyticlabel{\numberQUARTERPI}{\pi/4}
+\printyticlabel{\numberHALFPI}{\pi/2}
+\pictcolor{red}
+\symmetrize{\numberQUARTERPI}
+\PlotFunction[4]{\SINfunction}
+     {-\numberHALFPI}{\numberHALFPI}
+\end{Picture}
+\end{center}
+\end{exemple}
+\subsubsection{Polynomial functions}
+Although polynomial functions can be easily defined as
+linear combinations of power functions,
+to facilitate our work, the \package{calculus} package predefines
+polynomials of
+1, 2, and 3 degrees by these commands:
+\cs{newlpoly} (new \emph{linear} polynomial), \cs{newqpoly}
+(new \emph{quadratic} polynomial),
+and \cs{newcpoly} (new \emph{cubic} polynomial):
+\begin{description}
+\item[\csdef{newlpoly}\{\cs{\TIT{newfunction}}\}\{\TIT a\}\{\TIT b\}]
+stores the
+$p(t)=\TTT{\TIT{a}}+\TTT{\TIT{b}}t$
+function in the
+ \cs{\TIT{newfunction}} command.
+\item[\csdef{newqpoly}%
+   \{\cs{\TIT{newfunction}}\}\{\TIT a\}\{\TIT b\}\{\TIT c\}]
+stores the
+$p(t)=\TTT{\TIT{a}}+\TTT{\TIT{b}}t+\TTT{\TIT{c}}t^2$
+function in the
+\cs{\TIT{newfunction}} command.
+\item[\csdef{newcpoly}%
+\{\cs{\TIT{newfunction}}\}\{\TIT a\}\{\TIT b\}\{\TIT c\}\{\TIT d\}]
+stores the
+$p(t)=\TTT{\TIT{a}}+\TTT{\TIT{b}}t+\TTT{\TIT{c}}t^2+\TTT{\TIT{d}}t^3$
+function in the
+\cs{\TIT{newfunction}} command.
+\end{description}
+\begin{exemple}
+% F(t)=-1+2t
+   \newlpoly{\poliF}{-1}{2}
+% G(t)=-1+2t+t^2
+   \newqpoly{\poliG}{-1}{2}{1}
+% H(t)=-1+2t+t^2-0,5t^3
+   \newcpoly{\poliH}{-1}{2}{1}{-0.5}
+
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-4.5,-5.5)(4.5,5.5)
+\cartesianaxes(-4,-5)(4,5)
+\pictcolor{blue}
+\PlotFunction{\poliF}{-2}{3}
+\pictcolor{red}
+\PlotFunction{\poliG}{-3.5}{1.5}
+\pictcolor{orange}
+\PlotFunction[10]{\poliH}{-2}{3.5}
+\end{Picture}
+\end{exemple}
+
+\subsubsection{Possible errors}
+In many cases you get a fairly accurate graph dividing the domain into several 
+subintervals.
+But an indiscriminate use of this method can produce erroneous results.
+For example, if inside a subinterval there is
+a discontinuity or a point where the function is not differentiable.
+Look at the following example.
+\medskip
+
+\begin{exemple}
+\SUBTRACTfunction{\SQUAREfunction}{\ONEfunction}
+                            {\Ffunction}
+\QUOTIENTfunction{\IDENTITYfunction}{\Ffunction}
+                            {\Gfunction}
+
+\setlength{\unitlength}{0.5cm}
+
+\begin{Picture}(-8,-6)(8,6)
+\def\xunitdivisions{2}
+\def\yunitdivisions{2}
+\renewcommand{\axeslabelsize}{\scriptsize}
+\cartesianaxes(-7,-5)(7,5)
+\Put(3,3){%
+   $\boxed{\displaystyle g(t)=\frac{t}{t^ 2-1}}$}
+\pictcolor{red}
+\PlotFunction[10]{\Gfunction}{-7}{7}
+\end{Picture}
+\end{exemple}
+
+Where is the problem?
+Our function is $g(t)=t/(t^2-1)$;
+this function has a pair of vertical asymptotes
+at $t=\pm1$ (the two zeros of denominator).
+
+We made 10 subdivisions of the $[-7,7]$ interval.
+Do, we compute the function in points $-7+(14/10)k=-7+(7/5)k$,
+$0\leq k\leq10$, ie,
+\[
+   -7\quad -\frac{28}{5}\quad -\frac{21}{5}\quad -\frac{14}{5}\quad
+    -\frac{7}{5}\quad  0\quad  \frac{7}{5}\quad  \frac{14}{5}\quad
+     \frac{21}{5}\quad  \frac{28}{5}\quad 7
+\]
+
+Singularities are between $-7/5$ and $0$, and between $0$ and $7/5$,
+So, the graph is not correct in these intervals.
+\medskip
+
+To avoid this problem, we will
+draw the function in three intervals, excluding the points where it is
+undefined:
+\medskip
+\begin{exemple}
+\SUBTRACTfunction{\SQUAREfunction}{\ONEfunction}
+                            {\Ffunction}
+\QUOTIENTfunction{\IDENTITYfunction}{\Ffunction}
+                            {\Gfunction}
+\renewcommand{\axeslabelsize}{\scriptsize}
+\setlength{\unitlength}{0.5cm}
+\begin{Picture}(-8,-6)(8,6)
+\def\xunitdivisions{2}
+\def\yunitdivisions{2}
+\cartesianaxes(-7,-5)(7,5)
+\pictcolor{red}
+\PlotFunction[5]{\Gfunction}{-7}{-1.105}
+\PlotFunction[5]{\Gfunction}{-0.905}{0}
+\PlotFunction[5]{\Gfunction}{0}{0.905}
+\PlotFunction[5]{\Gfunction}{1.105}{7}
+\end{Picture}
+\end{exemple}
+
+(To determine the ends of the ranges of variation
+$\pm1.105$ and $\pm0.905$, we solved the equation
+$g(t)=5$, to ensure that asymtotic branches are interrupted
+at the border of the drawing area).
+
+\subsubsection{Accurate graphs}
+In general, to obtain fairly reliable results we must make
+ a careful analysis of the behavior of the function,
+determining the points where it is undefined or not differentiable,
+ the intervals where it is increasing, its extreme values,
+points where graph cuts the coordinate axes and, in general,
+ all points where the behavior of
+function is significant.
+From this information, we can chose the appropriate
+drawing intervals.
+A careful choice of the partition
+subintervals in the domain ensures us
+that the graph accurately reflects the behavior of the function.
+
+We will see a couple of examples.
+First, we draw the sine function in $[-\pi,\pi]$.
+This function ant its derivative have no discontinuities,
+but it is convenient to choose a number of partitions
+being multiple of $4$, to carefully draw
+function at the
+$k\pi/2$ points.
+In fact, a good choice are 24 subdivisions,
+to ensure also the well known values of this function
+for angles
+multiple of $\pi/6$ and $\pi/4$.
+\begin{Exemple}
+\setlength{\unitlength}{2cm}%
+
+\highestlabel{\normalfont\normalsize$3\pi/2$}
+\begin{center}
+\begin{Picture}(-3.5,-1.5)(3.5,1.5)
+{\referencesystem(0,0)(\numberHALFPI,0)(0,1)
+\makenolabels
+\cartesianaxes(-2.2,-1.2)(2.2,1.2)}
+\printylabels{-1}{1}{1}
+\printxlabel{-\numberPI}{-\pi}
+\printxlabel{-\numberHALFPI}{-\pi/2}
+\printxlabel{\numberHALFPI}{\pi/2}
+\printxlabel{\numberPI}{\pi}
+\pictcolor{red}
+   \PlotFunction[24]{\SINfunction}{-\numberPI}{\numberPI}
+\renewcommand{\axeslabelcolor}{red}
+\printxlabel{\numberSIXTHPI}{\pi/6}
+\printylabel{0.5}{1/2}
+\Polyline(\numberSIXTHPI,0)(\numberSIXTHPI,0.5)(0,0.5)
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+Our second example is more complex. Let's graph the function
+\[
+f(t)=(t^3/3-t^2/2-2t+3)/3
+\]
+
+This function has three roots, at
+$t=3/2$ and $t=\pm\sqrt{6}$.
+Its derivative, $f'(t)=(t^2-t-2)/3$, equals zero at
+$t=-1$ and $t=2$, where the function has, respectively,
+a relative maximum and a relative minimum.
+ The second derivative, $f''(t)=(2t-1)/3$,
+ is zero at $t=1/2$, which is an inflexion point.
+Interesting points are, then, the following:
+\[
+     -\sqrt{6},-1,0,1/2,3/2,2,\sqrt{6}
+\]
+
+We will plot this function in the
+ $[-3,4]$ interval (because it includes all these points),
+ but we divide it as
+\[
+      [-3,-\sqrt{6}]\cup
+      [-\sqrt{6},-1]\cup
+      [-1,0]\cup
+      [0,1/2]\cup
+      [1/2,3/2]\cup
+      [3/2,2]\cup
+      [2,\sqrt{6}]\cup
+      [\sqrt{6},4]
+\]
+\begin{Exemple}
+\SQRT{6}{\SQRTSIX}
+\newcpoly{\functionf}{1}{-0.66667}{-0.16667}{0.11111}
+\setlength{\unitlength}{2cm}
+\begin{center}
+ \begin{Picture}(-3.5,-2.5)(4.5,3.5)
+\renewcommand{\xunitdivisions}{10}
+\renewcommand{\yunitdivisions}{10}
+\cartesiangrid(-3,-2)(4,3)
+\pictcolor{red}
+\PlotFunction{\functionf}{-3}{-\SQRTSIX}
+\PlotFunction[4]{\functionf}{-\SQRTSIX}{-1}
+\PlotFunction[4]{\functionf}{-1}{0}
+\PlotFunction[4]{\functionf}{0}{0.5}
+\PlotFunction[4]{\functionf}{0.5}{1.5}
+\PlotFunction[4]{\functionf}{1.5}{2}
+\PlotFunction[4]{\functionf}{2}{\SQRTSIX}
+\PlotFunction{\functionf}{\SQRTSIX}{4}
+\functionf{-1}{\tempf}{\tempDf}
+\xLINE(-1,0)(-1,\tempf)
+\functionf{2}{\tempf}{\tempDf}
+\xLINE(2,0)(2,\tempf)
+\functionf{0.5}{\tempf}{\tempDf}
+\xLINE(0.5,0)(0.5,\tempf)
+\end{Picture}
+\end{center}
+\end{Exemple}
+
+\subsection{Polar coordinates curves}
+To draw a curve defined in polar form as $\rho =f(t)$, we must
+declare it as a polar curve, using the \csdef{POLARfunction}
+declaration: writing
+\begin{Verbatim}[commandchars=\|\[\]]
+\POLARfunction{\|TIT[functionname]}{\|TIT[polarfunction]}
+\end{Verbatim}
+we declare the new polar curve \cs{\TIT{polarfunction}}
+$\rho=\cs{\TIT{functionname}}(t)$.
+For example, the \emph{cardioide} curve, $\rho=1+\cos t$,
+can be defined in the following way:
+\begin{Verbatim}
+\SUMfunction{\ONEfunction}{\COSfunction}{\ffunction} % (y=1 + cos t)
+\POLARfunction{\ffunction}{\cardioide}
+\end{Verbatim}
+
+Curves defined in such a way can be plotted using the
+\csdef{PlotParametricFunction} command,
+which syntax is analogous to that of \cs{PlotFunction}.
+
+\begin{exemple}
+% Cardioide: r = 1+cos t
+\SUMfunction{\ONEfunction}{\COSfunction}
+            {\ffunction}
+\POLARfunction{\ffunction}{\cardioide}
+\begin{center}
+\def\runitdivisions{2}
+\setlength{\unitlength}{1.5cm}
+\begin{Picture}(-2.5,-2.5)(2.5,2.5)
+\polargrid{2}{24}
+\pictcolor{blue}\linethickness{1pt}
+ \PlotParametricFunction[20]{%
+         \cardioide}{0}{\numberTWOPI}
+\end{Picture}
+$\rho=1+\cos\phi$
+\end{center}
+\end{exemple}
+
+\begin{exemple}
+% Eight petal rose: r = cos(4t)
+\SCALEVARIABLEfunction{4}{\COSfunction}
+                      {\ffunction}
+\POLARfunction{\ffunction}{\rose}
+\begin{center}
+\def\runitdivisions{3}
+\MULTIPLY{2}{\numberTWOPI}{\numberFOURPI}
+\setlength{\unitlength}{2.5cm}
+
+\begin{Picture}(-1.5,-1.5)(1.5,1.5)
+\polargrid{1}{16}
+\pictcolor{red}\linethickness{1pt}
+\PlotParametricFunction[16]\rose{0}{\numberTWOPI}
+\end{Picture}
+$\rho=\cos 4\phi$
+\end{center}
+\end{exemple}
+
+\begin{exemple}
+% Archimedean spiral: r=0,5t
+\SCALEfunction{0.5}{\IDENTITYfunction}{\ffunction}
+\POLARfunction{\ffunction}{\archimedes}
+
+\MULTIPLY{2}{\numberTWOPI}{\numberFOURPI}
+\setlength{\unitlength}{0.5cm}
+\begin{center}
+\begin{Picture}(-7,-7)(7,7)
+\pictcolor{red}
+\PlotParametricFunction[16]{%
+                \archimedes}{0}{\numberFOURPI}
+\end{Picture}
+$2\rho=\phi$
+\end{center}
+\end{exemple}
+
+\begin{exemple}
+\SCALEVARIABLEfunction{3.2}{\SINfunction}{\ffunction}
+\SCALEfunction{0.2}{\ffunction}{\gfunction}
+\SUMfunction{\ONEfunction}{\gfunction}{\myfunction}
+\POLARfunction{\myfunction}{\Rfunction}
+\MULTIPLY{10}{\numberPI}{\numberTENPI}
+\setlength{\unitlength}{3cm}
+\linethickness{2pt}
+\begin{center}
+\begin{Picture}(-1.2,-1.2)(1.2,1.2)
+\pictcolor{orange}
+\PlotParametricFunction[120]\Rfunction{0}{\numberTENPI}
+\end{Picture}
+$\rho=1+2\sin 3.2\phi$
+\end{center}
+\end{exemple}
+\subsection{Parametrically defined curves}\label{subsec:param}
+Polar curves are a particular case of parametrically defined curves,
+$x=f(t), y=g(t)$. These curves are declared by the
+ \csdef{PARAMETRICfunction} command:
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\PARAMETRICfunction{\|TIT[Xfunction]}{\|TIT[Yfunction]}%
+{\|TIT[parametricfunction]}
+\end{Verbatim}
+
+Once we have defined it,
+to draw this curve, we use the \csdef{PlotParametricFunction} as described 
+above.
+\begin{Exemple}
+\POWERfunction{\IDENTITYfunction}{5}{\xfunction}
+\PARAMETRICfunction{\xfunction}{\CUBEfunction}{\myparfunction}
+\centering
+\setlength{\unitlength}{0.75cm}
+\begin{Picture}(-11,-6)(11,6)
+\cartesiangrid(-10,-5)(10,5)
+\pictcolor{blue}
+\PlotParametricFunction[10]{\myparfunction}{-1.5849}{0}
+\PlotParametricFunction[10]{\myparfunction}{0}{1.5849}
+\Put[E](10,4){$\begin{matrix}x=t^5\\y=t^3\end{matrix}$}
+\end{Picture}
+\end{Exemple}
+\begin{exemple}
+% A Lissanjous curve: x=sin 3t, y=sin 4t
+\SCALEVARIABLEfunction{3}{\SINfunction}{\ffunction}
+\SCALEVARIABLEfunction{4}{\SINfunction}{\gfunction}
+\PARAMETRICfunction{\ffunction}{\gfunction}{\myfunction}
+\MULTIPLY{10}{\numberPI}{\numberTENPI}
+\setlength{\unitlength}{3cm}
+\linethickness{2pt}
+\begin{center}
+\begin{Picture}(-1.2,-1.2)(1.2,1.2)
+\pictcolor{red}
+\PlotParametricFunction[24]\myfunction{0}{\numberTWOPI}
+\end{Picture}
+
+$x=\sin 3t,\ y=\sin 4t$
+\end{center}
+\end{exemple}
+
+Here, we should also take into account the characteristics of the curve
+in order to choose appropriate intervals for
+the parameter (typically, the points where the function is not defined,
+singularities, cuts with axes,
+points where some of the derivatives $x',x'',\ldots$ or $y',y''\ldots$) is 
+zero\ldots
+In the following example, to represent the curve $x=t^2-1$, $y=t^3-t$,
+we see that $x$ or $y$ equals zero when $t$ is
+$0$, $1$ or $-1$; the first derivatives $x'=2t$, $y'=3t^2-1$,
+in $t=0$ and $t=\pm\sqrt3/3$, and second derivative of $y$ in $t=0$.
+Thus, we choose an interval containing these values of $t$, such $[-2.2]$,
+and this partition of it:
+\[
+   [-2,2]=[-2,-1]\cup[-1,-\sqrt3/3]\cup[-\sqrt3/3,0]\cup[0,\sqrt3/3]\cup[\sqrt3/3,1]\cup[1,2]
+\]
+
+This same curve was depicted with a single instruction
+\cs{PlotParametricFunction} dividing
+the interval $[-2.2]$ into five subintervals.
+Note that the obtained picture is almost identical, but the fact that
+partition not includes zero
+conceals the fact that the vertical tangent occurs at the point
+ $(-1,0)$.
+So, one of the most significant features of the curve is not correctly 
+displayed.
+\begin{Exemple}
+\SUBTRACTfunction{\SQUAREfunction}{\ONEfunction}{\Xpart}
+\SUBTRACTfunction{\CUBEfunction}{\IDENTITYfunction}{\Ypart}
+\PARAMETRICfunction{\Xpart}{\Ypart}{\myparfunction}
+\centering
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-3.5,-6.5)(3.5,6.5)
+\cartesiangrid(-3,-6)(3,6)
+\pictcolor{blue}
+\PlotParametricFunction\myparfunction{-2}{-1}
+\PlotParametricFunction\myparfunction{-1}{-0.57735}
+\PlotParametricFunction\myparfunction{-0.57735}{0}
+\PlotParametricFunction\myparfunction{0}{0.57735}
+\PlotParametricFunction\myparfunction{0.57735}{1}
+\PlotParametricFunction\myparfunction{1}{2}
+\Put[E](3,6){$\begin{matrix}x=t^2-1\\y=t^3-t\end{matrix}$}
+\end{Picture}
+\qquad
+\begin{Picture}(-3.5,-6.5)(3.5,6.5)
+\cartesiangrid(-3,-6)(3,6)
+\pictcolor{orange}
+\PlotParametricFunction[5]\myparfunction{-2}{2}
+\Put[E](3,6){$\begin{matrix}x=t^2-1\\y=t^3-t\end{matrix}$}
+\end{Picture}
+\end{Exemple}
+\subsubsection{The curve of the front page}
+To conclude this section we will study in detail the example
+of the front page of this manual.
+This example shows the power,
+while the simplicity of the package \package{xpicture}.
+
+It is the transcendent curve named \emph{butterfly},
+\begin{gather*}
+        x=\sin t \left(\mathrm e^{\cos t} - 2 \cos 4t 
+                       + \sin^5\left(\frac t{12}\right)\right) \\
+        y=\cos t \left(\mathrm e^{\cos t} - 2 \cos 4t 
+                       + \sin^5\left(\frac t{12}\right)\right)
+\end{gather*}
+
+We analyze step by step the code we used:
+\begin{itemize}
+\item First, we calculated some numbers we'll use later:
+\begin{inparaenum}[(a)]
+\item $1/12$, that appears in the definition of functions $x$ and $y$;
+\item $12\times2\pi$, to plot the curve in $[0,24\pi]$ (twelve laps); and
+\item$12\times64$, the number of subdivisions we will use
+(64 subintervals for each lap).
+\VerbatimInput[numbers=left,firstline=3,lastline=5]{xpicture1.tex}
+\end{inparaenum}
+\item In the next block we do the important work:
+the curve is defined step by step.
+
+\begin{compactitem}
+\item Define the function $A(t)=\mathrm e^{\cos t}$
+\VerbatimInput[numbers=left,firstline=7,lastline=7]{xpicture1.tex}
+\item Define  $B(t)=\cos 4t$
+\VerbatimInput[numbers=left,firstline=8,lastline=8]{xpicture1.tex}
+\item Define $c(t)=\sin t/12$
+\VerbatimInput[numbers=left,firstline=9,lastline=9]{xpicture1.tex}
+\item Define $C(t)=\sin^5 t/12$
+\VerbatimInput[numbers=left,firstline=10,lastline=10]{xpicture1.tex}
+\item Define  $AB(t)=\mathrm e^{\cos t}-2\cos 4t$
+\VerbatimInput[numbers=left,firstline=11,lastline=11]{xpicture1.tex}
+\item Define $ABC(t)=\mathrm e^{\cos t}-2\cos 4t+\sin^5 t/12$
+\VerbatimInput[numbers=left,firstline=12,lastline=12]{xpicture1.tex}
+\item Define the $x$ and $y$ functions
+\VerbatimInput[numbers=left,firstline=13,lastline=16]{xpicture1.tex}
+\item And, finally, we declare the parametric curve:
+\VerbatimInput[numbers=left,firstline=17,lastline=17]{xpicture1.tex}
+\end{compactitem}
+
+\item Now, the picture composition is trivial
+(note the use of constants
+\cs{divisions} and \cs{phione} we previously calculated):
+\VerbatimInput[numbers=left,firstline=19,lastline=21]{xpicture1.tex}
+\end{itemize}
+
+\subsection{Drawing curves from a table of values}
+All instructions to draw curves described here use the
+\csdef{qCurve} command, which draws quadratic B\'ezier curves:
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\qCurve(|TIT[x0],|TIT[y0])(|TIT[u0],|TIT[v0])(|TIT[x1],|TIT[y1])(|TIT[u1],%
+|TIT[v1])
+\end{Verbatim}
+draw a smooth curve between the points $(\TTT{\TIT{x0}},\TTT{\TIT{y0}})$
+and $(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$, with tangent vectors
+$(\TTT{\TIT{u0}},\TTT{\TIT{v0}})$ and $(\TTT{\TIT{u1}},\TTT{\TIT{v1}})$,
+respectively.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-0.5,-0.5)(5.5,5.5)
+\cartesianaxes(0,0)(5,5)
+\pictcolor{blue}
+\qCurve(1,2)(1,2)(4,3)(-1,1)
+\pictcolor{gray}
+\Put(1,2){\xtrivVECTOR(0,0)(1,2)}
+\Put(4,3){\xtrivVECTOR(0,0)(-1,1)}
+\Polyline(1,0)(1,2)(0,2)
+\Polyline(4,0)(4,3)(0,3)
+\end{Picture}
+\end{exemple}
+
+The \csdef{PlotQuadraticCurve} command generalizes \cs{qCurve}
+to an arbitrary number of points. 
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-0.5,-0.5)(5.5,3.5)
+\cartesianaxes(0,0)(5,3)
+\pictcolor{blue}
+\PlotQuadraticCurve(0,0)(1,0)%
+                   (1,1)(1,2)%
+                   (3,2)(-1,1)%
+                   (5,2)(0,-1)
+\end{Picture}
+\end{exemple}
+This command supports two alternative syntaxes:
+\begin{enumerate}[(a)]
+\item
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\PlotQuadraticCurve(|TIT[x0],|TIT[y0])(|TIT[u0],|TIT[v0])(|TIT[x1],|TIT[y1])%
+(|TIT[u1],|TIT[v1])...(|TIT[xn],|TIT[yn])(|TIT[un],|TIT[vn])
+\end{Verbatim}
+draws a curve through the points
+$(\TTT{\TIT{x0}},\TTT{\TIT{y0}})$,
+ $(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$\ldots
+ $(\TTT{\TIT{xn}},\TTT{\TIT{yn}})$
+with tangent vectors
+$(\TTT{\TIT{u0}},\TTT{\TIT{v0}})$, $(\TTT{\TIT{u1}},\TTT{\TIT{v1}})$\dots
+$(\TTT{\TIT{un}},\TTT{\TIT{vn}})$.%
+\footnote{This command draws a
+quadratic curve between each pair of adjacent points.
+
+The \cs{Curve} command, introduced by the
+\package{curve2e} package, does a similar job,
+but using cubic approximations, instead of quadratic.}
+
+\begin{exemple}
+\setlength{\unitlength}{2cm}
+\begin{center}
+\begin{Picture}(1,1)(-1,-1)
+\pictcolor{red}
+\PlotQuadraticCurve(1,0)(1,0)(0,1)(0,1)%
+                   (-1,0)(-1,0)(0,-1)(0,-1)%
+                   (1,0)(1,0)
+\pictcolor{blue}
+\referencesystem(0,0)%
+                (\numberCOSXLV,\numberCOSXLV)%
+                (-\numberCOSXLV,\numberCOSXLV)
+\PlotQuadraticCurve(1,0)(1,0)(0,1)(0,1)%
+                   (-1,0)(-1,0)(0,-1)(0,-1)%
+                   (1,0)(1,0)
+\end{Picture}
+\end{center}
+\end{exemple}
+\item
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\PlotQuadraticCurve(|TIT[x0],|TIT[y0]){|TIT[angle0]}(|TIT[x1],|TIT[y1])%
+{|TIT[angle1]}...(|TIT[xn],|TIT[yn]){|TIT[anglen]}
+\end{Verbatim}
+draws a curve through the points
+$(\TTT{\TIT{x0}},\TTT{\TIT{y0}})$,
+ $(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$\ldots
+ $(\TTT{\TIT{xn}},\TTT{\TIT{yn}})$
+the inclination angles of which, with respect to the $x$ axis,
+are \TTT{\TIT{angle0}}, \TTT{\TIT{angle1}}\dots,
+  \TTT{\TIT{angle0}} (always measured in degrees).
+\begin{exemple}
+\setlength{\unitlength}{2cm}
+\begin{center}
+\begin{Picture}(1,1)(-1,-1)
+\pictcolor{red}
+\PlotQuadraticCurve(1,0){0}(0,1){90}
+                   (-1,0){180}(0,-1){270}
+                   (1,0){360}
+\pictcolor{blue}
+\referencesystem(0,0)%
+                (\numberCOSXLV,\numberCOSXLV)%
+                (-\numberCOSXLV,\numberCOSXLV)
+\PlotQuadraticCurve(1,0){0}(0,1){90}
+                   (-1,0){180}(0,-1){270}
+                   (1,0){360}
+\end{Picture}
+\end{center}
+\end{exemple}
+\end{enumerate}
+With the \cs{PlotQuadraticCurve} command you can approximate any smooth curve
+passing through a list of points when you know the tangent vectors.
+A particular case, particularly interesting (at least in a calculus course)
+is the drawing of the graph a function of real variable knowing a table of 
+values of the function and its derivative.
+To facilitate this work \package{xpicture}
+includes the \csdef{PlotxyDyData} command:
+\begin{Verbatim}[commandchars=\|\[\],commentchar=\%]
+\PlotxyDyData(|TIT[x0],|TIT[y0],|TIT[Dy0])(|TIT[x1],|TIT[y1],|TIT[Dy1])...%
+(|TIT[xn],|TIT[yn],|TIT[Dyn])
+\end{Verbatim}
+plots the graph of a function $y=f(x)$  passing through points
+$(\TTT{\TIT{x0}},\TTT{\TIT{y0}})$,
+$(\TTT{\TIT{x1}},\TTT{\TIT{y1}})$\ldots
+$(\TTT{\TIT{xn}},\TTT{\TIT{yn}})$
+with derivatives $\TTT{\TIT{Dy0}}$, $\TTT{\TIT{Dy1}}$\ldots
+$\TTT{\TIT{Dyn}}$.
+\begin{exemple}
+\setlength{\unitlength}{1cm}
+\begin{Picture}(-1,-1)(5.5,5.5)
+\cartesianaxes(0,0)(5,5)
+\pictcolor{blue}
+\PlotxyDyData(0,0,2)(1,1,0)(2,2,3)
+                          (3,4,0)(5,1,-2)
+\pictcolor{gray}
+\Put(0,0){\xtrivVECTOR(0,0)(1,2)}
+\Put(1,1){\xtrivVECTOR(0,0)(1,0)}
+\Put(2,2){\xtrivVECTOR(0,0)(1,3)}
+\Put(3,4){\xtrivVECTOR(0,0)(1,0)}
+\Put(5,1){\xtrivVECTOR(0,0)(1,-2)}
+\end{Picture}
+\end{exemple}
+\section{Package options and configuration file}
+This package is loaded as usual, using the instruction
+\cs{usepackage\{\TIT{list of options}\}\{xpicture\}}.
+Then, packages \packagedef{pict2e}, \packagedef{curve2e}, \packagedef{xcolor},
+\packagedef{calculator}, and \packagedef{calculus} are automatically loaded.
+This package is compatible with any system that supports 
+\packagedef{xcolor} and \packagedef{pict2e} packages.
+
+The only specific option for this package is \optiondef{draft},
+which disables all the instructions defined in this package, 
+replacing each picture set in a \environ{Picture} environment
+by a parallelogram circumscribed by a white rectangle (the box that shows
+the area reserved for the picture).\footnote{This option is equivalent to
+a global use of
+the \texttt{\textbackslash draftPictures} declaration.}
+This option is very useful throughout the production 
+of the document, 
+since the composition of the drawings slows considerably
+the compilation time. 
+
+All other options are passed directly to packages 
+\packagedef{pict2e}, \packagedef{curve2e}, and \packagedef{xcolor}.
+The most interesting option (from package \package{pict2e})
+is \optiondef{pstarrows}; 
+if used, arrowheads in vectors are drawn in PSTricks style (instead of the
+standard \LaTeX{} style). 
+Do not use the \optiondef{hide} or \optiondef{original}
+options (from package \package{pict2e}).
+
+You can include your preferred values for configurable \package{xpicture}
+parameters 
+(like axes or labels style, radians or degrees measure for angles,
+radians or degrees labels in polar grids, et cetera)
+using the file \texttt{xpicture.cfg}\ttindex{xpicture.cfg}, because,
+if exists, this local configuration file is loaded.
+If you want to use it, copy the file 
+\texttt{xpicture.cfgxmpl}\ttindex{xpicture.cfgxmpl}
+(which is distributed along with package \package{xpicture}),
+call your copy as \texttt{xpicture.cfg} and put it in your local
+\texttt{texmf} tree.
+Initially, this file contains the default values for all parameters, but
+you edit it to modify everything agreed.
+\section{Compatibility with related packages}
+As mentioned earlier, this package loads packages 
+\packagedef{pict2e}, \packagedef{curve2e}, \packagedef{xcolor},
+\packagedef{calculator}, and \packagedef{calculus}. Every command defined in
+these packages works fine within a \environ{Picture} environment. The only
+restriction to take in account is that colors must be selected with the
+\cs{pictcolor} command, because commands \cs{color} and \cs{textcolor}
+may cause the appearance of unwanted spaces. Picture commands defined 
+in \packagedef{pict2e} and \packagedef{curve2e} can be freely used 
+(had in mind, however, that in this case coordinates 
+are interpreted as standard), 
+and you can use all the techniques for defining and manipulating colors
+from \packagedef{color} and \packagedef{xcolor} packages.
+
+Although guidelines for defining and operating with functions
+explained in subsections~\ref{subsec:real}--\ref{subsec:param} 
+may be enough to compose a lot of graphics, 
+in order to take full advantage of this package you must known
+packages \packagedef{calculator} and \packagedef{calculus}
+with certain depth. Package \package{calculator} 
+will set you free of many tedious calculations.
+\medskip
+
+On the other hand, \package{xpicture} is widely compatible with other packages
+related to the graphics inclusion, composition or modification.
+This fact gives us a lot of flexibility when using them together. 
+
+For example, a picture drawn by \package{xpicture} can include external images 
+loaded with packages \packagedef{graphics}/\packagedef{graphicx}, 
+and you can also manipulate the whole picture with the aid of these packages.
+In a similar way, \texttt{pgf/tikz}\ttindex{pgf}\ttindex{tikz} 
+pictures can be included inside a 
+\package{xpicture} draw. If you use \LaTeX{} and \TTT{dvips} to compile your 
+document, you can combine \package{xpicture} with \packagedef{pstricks}.
+
+\printindex
+\end{document}

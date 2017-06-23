@@ -1,0 +1,152 @@
+#!/bin/bash
+    dtxname=ctable
+    dtxtype=package
+        ext=sty
+     delete=($dtxname.$ext README.tex doc/\*.tex)
+ dtxversion=$(grep " v[0-9.]\+[a-z]\{0,1\} $dtxname $dtxtype" $dtxname.dtx |sed 's/.* v\([0-9.]\+[a-z]\{,1\}\) .*/\1/')
+executables=(mk texlog_extract zip getopt pdfseparate pdflatex)
+
+    version=1.00
+     myname=$(basename $0)
+
+<<'DOC'
+= inst - install ctable
+
+= Synopsis
+inst [options]	
+
+Without any options, inst installs ctable in the first writable
+TEXMFMAIN, TEXMFLOCAL or TEXMFHOME tree.
+
+Options:
+-h,--help	print this help and exit
+-H,--Help	print full documentation via less and exit
+-V,--version	print version and exit
+
+
+= Description
+inst must be run in its own directory (|./inst|) and then does the following:
+- generates the documentation for isodoc,
+- installs ctable in one of your TeX trees: TEXMFMAIN, TEXMFLOCAL or TEXMFHOME. 
+  The first one writable by you will chosen.
+- creates a zip file named |ctable-x.yy.zip| for upload to CTAN
+- cleans up
+
+= Author and copyright
+Author	Wybo Dekker
+Email	U{wybo@dekkerdocumenten.nl}{wybo@dekkerdocumenten.nl}
+License	Released under the U{www.gnu.org/copyleft/gpl.html}{GNU General Public License}
+DOC
+
+    die() { echo -e "$myname: $Err$@$Nor" 1>&2; exit 1; }
+   help() { sed -n '/^= Synopsis/,/^= /p' $0|sed '1s/.*/Usage:/;/^= /d'; exit; }
+helpall() { sed -n '/^<<.DOC.$/,/^DOC$/p' $0|sed -n '1d;$d;p'|less; exit; }
+version() { echo $version; exit; }
+
+Nor='\e[0m'    # reset color	]
+Err='\e[31;1m' # light red	]
+
+setdir() { # create installation directory
+   for i in MAIN LOCAL HOME; do
+      tree=$(kpsewhich --expand-var \$TEXMF$i)
+      test -w $tree && break
+      tree=
+   done
+   [[ -n $tree ]] || die "Could not find a writable TeX tree"
+   insttex=${tree}/tex/latex/$dtxname
+   instsrc=$tree/source/latex/$dtxname
+   instdoc=$tree/doc/latex/$dtxname
+   mkdir -p $insttex || die could not create $insttex
+   mkdir -p $instsrc || die could not create $instsrc
+   mkdir -p $instdoc || die could not create $instdoc
+}
+
+testexecs() { # test presence of executables
+   for i in ${executables[*]}; do
+      type $i &> /dev/null || die executable $i not found
+   done
+}
+
+readme() { # generate the README file
+sed -n '/^%<\*readme>/,/^%<\/readme>/p
+	/\\changes{v'$dtxversion'}/,/^% }/p' $dtxname.dtx  |
+sed    's/^%//;s/\\\\$//
+	/ Author:/i\
+Version:| '$dtxversion'
+	/<.readme>/d
+	/^ }/d
+	s/ \\changes.*/Changes in version '$dtxversion':/
+	s/$\\Rightarrow\$/=>/g
+	s/\\textbackslash/\\/g
+	s/\\text\(sl\|it\){\([^}]\+\)}/\/\2\//g		# \textsl{...} -> /.../
+	s/{\([^}]*\)}/\1/g 				# keep last, removes all {...}
+       ' >README
+  grep "Changes in version" README >/dev/null || die changes not detected
+}
+
+makeall() {
+   grep '%<\*install>' $dtxname.dtx >/dev/null && # for self-extracting dtx files
+      delete+=($dtxname.ins) ||
+      echo y |tex $dtxname.ins >/dev/null
+
+   # install any .ttf files
+   mkdir -p ~/.fonts
+   find doc -name '*.ttf' -exec cp {} ~/.fonts \;
+   fc-cache ~/.fonts
+
+   readme # create the README file
+
+   # compile all examples
+   cd doc
+   ln -sf ../$dtxname.sty || exit 1 # use the version to be installed
+   for i in [0-9][0-9]?; do 
+      if [ ! -f $i.pdf -o ! -f s$i.pdf ]; then
+         ./doit || exit 1
+         break
+      fi
+   done
+   cd ..
+  
+   mk --noprint --noview $dtxname.dtx && mk -c $dtxname.dtx # make $dtxname.pdf
+}
+
+installall() {
+   # install and cleanup
+   echo installing in $tree
+
+   rm -rf $insttex/* $instsrc/* $instdoc/*
+   find doc \( -type l -o -name '*.pdf' \) -delete
+   cp -f $dtxname.$ext $insttex
+   cp -a $dtxname.{ins,dtx} $instsrc
+   cp -a README inst $dtxname.pdf $instdoc
+   mktexlsr $tree 2>/dev/null
+   for i in ${delete[@]}; do rm -f $i; done 
+   cd ..
+   zipfile=$dtxname/$dtxname-$dtxversion.zip
+   rm -f $zipfile
+   zip -rq $zipfile $dtxname/* -x $dtxname/test\*
+   cd $dtxname
+}
+
+options=$(getopt \
+   -n $myname \
+   -o hHV \
+   -l help,Help,version \
+   -- "$@"
+) || exit 1
+eval set -- "$options"
+while [ $# -gt 0 ]; do
+   case $1 in
+   (-h|--help)	  help;;
+   (-H|--Help)	  helpall;;
+   (-V|--version) version;;
+   (--)		  shift;  break;;
+   (*)			  break;;
+   esac
+done
+[[ -z $1 ]] || die No arguments expected
+
+testexecs
+setdir
+makeall
+installall

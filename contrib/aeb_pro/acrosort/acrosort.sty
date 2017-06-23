@@ -1,0 +1,273 @@
+%%
+%% This is file `acrosort.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% acrosort.dtx  (with options: `copyright,package')
+%% 
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% acrosort package,                2011-12-22          %%
+%% Copyright (C) 2006--2011  D. P. Story                %%
+%%   dpstory@acrotex.net                                %%
+%%   storyd@nwfsc.edu                                   %%
+%%                                                      %%
+%% This program can redistributed and/or modified under %%
+%% the terms of the LaTeX Project Public License        %%
+%% Distributed from CTAN archives in directory          %%
+%% macros/latex/base/lppl.txt; either version 1 of the  %%
+%% License, or (at your option) any later version.      %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{acrosort}
+ [2011/12/22 v1.5 AcroSort (dps)]
+\RequirePackage[execJS]{eforms}
+\RequirePackage{graphicx}
+\def\theTotalTiles#1{\def\nTotalTiles{#1}}
+\let\nTotalTiles\@empty
+\def\theNumRows#1{%
+    \def\nRows{#1}%
+    \ifx\nCols\@empty\else
+        \ifx\nTotalTiles\@empty
+        {\count0=#1\relax\multiply\count0by\nCols
+            \xdef\nTotalTiles{\the\count0}}%
+        \fi
+    \fi
+    }
+\let\nRows\@empty
+\def\theNumCols#1{%
+    \def\nCols{#1}%
+    \ifx\nRows\@empty\else
+        \ifx\nTotalTiles\@empty
+        {\count0=#1\relax\multiply\count0by\nRows
+            \xdef\nTotalTiles{\the\count0}}%
+        \fi
+    \fi
+}
+\let\nCols\@empty
+\def\theImportPath#1{\def\importpath{#1}}
+\def\theIconExt#1{\def\iconsExt{#1}}
+\def\iconsExt{pdf}
+\def\theTeXImageWidth#1{\def\texImageWidth{#1}%
+    {\dimen0=\texImageWidth \xdef\imageWidth{\strip@pt\dimen0 }}%
+}
+\def\isPackage{\def\bIsPackage{true}}
+\def\bIsPackage{false}
+\def\ulCornerHere{\makebox[0pt][l]%
+    {\pushButton[\autoCenter{n}]{ulcorner}{0pt}{0pt}}}
+\def\reserveSpaceByDimension#1#2{%
+    \hbox{\ifpreview\setlength\fboxrule{0.4pt}\setlength\fboxsep{0pt}%
+    \@tempdima=#1\advance\@tempdima by-\fboxrule
+    \@tempdimb=#2\advance\@tempdimb by-\fboxrule
+    \fbox{\parbox[t][\@tempdimb][t]{\@tempdima}{\kern0pt\hfill\vfill}}%
+    \else\parbox[t][#2][t]{#1}{\kern0pt\hfill\vfill}\fi}%
+}
+\newcommand{\reserveSpaceByFile}[1][\importpath]%
+    {{\setbox0=\hbox{\includegraphics[draft,width=\texImageWidth]{#1}}%
+    \reserveSpaceByDimension{\wd0}{\ht0}}}
+\newcommand{\StartSort}[1][]{{\small\pushButton[\CA{Press Me}#1
+    \A{\JS{%
+    ok2Continue = true;\r
+    mixupDPS();\r
+    showDPS();\r
+    sortoutDPS();
+    }}]{StartButton}{}{12bp}}%
+}
+\newcommand{\ClearSort}[1][]%
+    {\small{\pushButton[\CA{Clear}#1\A{\JS{%
+        clearDPS();\sortCustomStartJS}}%
+    ]{StartButton}{}{12bp}}%
+}
+\newcommand{\StopSort}[1][]%
+    {\small{\pushButton[\CA{Stop}#1\A{\JS{ok2Continue = false;}}%
+    ]{StartButton}{}{12bp}}%
+}
+\def\bDebug{\def\memDebug{true}}
+\def\memDebug{false}
+\newcommand{\customStartJS}[1]{\def\sortCustomStartJS{#1}}
+\let\sortCustomStartJS\@empty
+\newcommand{\customFinishJS}[1]{\def\sortCustomFinishJS{#1}}
+\def\sortCustomFinishJS{;}
+\begin{insDLJS}[randomDPS]{sort}{JS for bubble sort}
+// Global Data:
+var randomDPS = new Array(\nTotalTiles+1);
+var ldps = randomDPS.length;
+var timeout = 10;
+var shutdown;
+var debug = \memDebug;
+var ok2Continue = true;
+for (i=1; i<=\nTotalTiles; i++) randomDPS[i]=i;
+
+// Clear DPS:
+try {this.addIcon("nullIcon", this.createIcon("", 0, 0));} catch(e) {}
+
+function clearDPS()
+{
+    for ( var i=1; i<=\nTotalTiles; i++ )
+    {
+        var oIcon = this.getIcon("nullIcon");
+        var f = this.getField("button."+i);
+        f.buttonSetIcon(oIcon);
+    }
+}
+
+// Mixup DPS:
+function mixupDPS()
+{
+    var i, rand, temp;
+    for (i=1; i<= \nTotalTiles; i++)
+    {
+        var rand = Math.random();
+        rand *= ldps*ldps;
+        rand = Math.ceil(rand);
+        rand = rand \% ldps;
+        if (rand == 0 ) rand = 1;
+        temp = randomDPS[i];
+        randomDPS[i]=randomDPS[rand];
+        randomDPS[rand]=temp;
+    }
+}
+
+// Show DPS:
+function showDPS()
+{
+    \sortCustomStartJS
+    for ( var i=1; i<=\nTotalTiles; i++ )
+    {
+        var oIcon = this.getIcon("pic."+randomDPS[i]);
+        var f = this.getField("button."+i);
+        f.buttonSetIcon(oIcon);
+    }
+}
+
+// Sortout DPS:
+function sortoutDPS()
+{
+    outerLoop(randomDPS.length-1);
+}
+function outerLoop(i)
+{
+     if ( ok2Continue && (i >= 0) ) shutdown = app.setTimeOut("app.clearTimeOut(shutdown); innerLoop("+i+",1);", timeout);
+     else {
+        \sortCustomFinishJS
+     }
+}
+function innerLoop(i,j)
+{
+    if ( j <= i )
+    {
+       if (randomDPS[j-1] > randomDPS[j])
+       {
+            var temp = randomDPS[j-1];
+            randomDPS[j-1] = randomDPS[j];
+            randomDPS[j] = temp;
+            var oIcon = this.getIcon("pic."+randomDPS[j-1]);
+            var f = this.getField("button."+(j-1));
+            f.buttonSetIcon(oIcon);
+            var oIcon = this.getIcon("pic."+randomDPS[j]);
+            var f = this.getField("button."+j);
+            f.buttonSetIcon(oIcon);
+        }
+        j++
+        if ( ok2Continue ) shutdown = app.setTimeOut("app.clearTimeOut(shutdown); innerLoop("+i+","+j+");", timeout);
+        else {
+            \sortCustomFinishJS
+        }
+    }
+    else
+    {
+        i--;
+        outerLoop(i);
+    }
+}
+\end{insDLJS}
+
+\begin{execJS}{acrosortjs}
+var index, ip="\importpath";
+var re=/_package$/;
+var isPackage=\bIsPackage;
+if (debug) console.println("isPackage: " + isPackage);
+if (debug) console.println("nTotalTiles = " + \nTotalTiles)
+if (isPackage) {
+    ip = ip+"_package";
+    for ( var i = 1; i <= \nTotalTiles; i++)
+    {
+        try { aebTrustedFunctions(this, aebImportIcon, {cName: "pic."+i,
+        nPage: (i-1), cDIPath: ip+".\iconsExt"}, this);
+        } catch(e) {console.println("exception: " + e.toSource())}
+
+    }
+} else {
+    for ( var i = 1; i <= \nTotalTiles; i++)
+    {
+        index = ( i < 10 ) ? "0"+i : ""+i;
+        if (debug) console.println(ip+"_"+index+".\iconsExt")
+        try { aebTrustedFunctions(this, aebImportIcon, {cName: "pic."+i, cDIPath: ip+"_"+index+".\iconsExt"}, this);
+        } catch(e) {console.println("exception: " + e.toSource())}
+    }
+}
+// Now lay out the icon fields.
+var f = this.getField("ulcorner");
+var nPage = f.page;
+var ulCorner = f.rect;
+this.removeField("ulcorner");
+
+ip = ip.replace(re,"");
+ip=ip+".pdf";
+var doc = aebTrustedFunctions( this, aebAppOpenDoc, { cPath: ip, oDoc: this, bHidden: true });
+var aRect = doc.getPageBox({cBox:"Crop"})
+doc.closeDoc(true);
+
+if (debug) console.println("aRect: " + aRect.toSource());
+
+var nRows = \nRows;
+var nCols = \nCols;
+
+var width = aRect[2]-aRect[0];
+var height = aRect[1]-aRect[3];
+
+var scaleFactor = \imageWidth/width;
+
+if (debug) console.println("scaleFactor = " + scaleFactor);
+
+var scaledWidth = width*scaleFactor;
+var scaledHeight = height*scaleFactor;
+
+if (debug) console.println("scaledWidth = " + scaledWidth);
+if (debug) console.println("scaledHeight = " + scaledHeight);
+
+var mWidth = scaledWidth/nCols
+var mHeight = scaledHeight/nRows
+
+if (debug) console.println("mWidth = " + mWidth);
+if (debug) console.println("mHeight = " + mHeight);
+
+var nCnt = 0;
+
+for ( var i=0; i<nRows; i++) {
+    for ( var j=0; j<nCols; j++ ) {
+        nCnt++;
+        try {
+        var g = this.addField({
+            cName: "button."+nCnt,
+            cFieldType: "button",
+            nPageNum: nPage,
+            oCoords: [ ulCorner[0]+j*mWidth, ulCorner[1]-i*mHeight, ulCorner[0]+(j+1)*mWidth, ulCorner[1]-(i+1)*mHeight ]
+        });
+        } catch(e) { console.println( e.toSource()); }
+        try {
+        g.highlight=highlight.p
+        g.buttonPosition = position.iconOnly;
+        g.lineWidth = 0;
+        g.readonly = true;
+        } catch(e) { console.println("set properties: " + e.toSource()) }
+        var oIcon = this.getIcon("pic."+nCnt);
+        g.buttonSetIcon(oIcon,1);
+    }
+}
+// aebTrustedFunctions(this, aebSaveAs, "Save")
+\end{execJS}
+\endinput
+%%
+%% End of file `acrosort.sty'.

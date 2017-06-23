@@ -1,0 +1,304 @@
+% $Id: note.tex,v 1.2 1999/06/10 05:51:53 loreti Exp $
+
+\documentclass[a4paper]{article}
+\usepackage{verbatim}
+
+\newdimen\boxfigwidth
+\newenvironment{bigbox}
+{\begingroup\boxfigwidth=\hsize%
+  \advance\boxfigwidth by -2\fboxrule%
+  \advance\boxfigwidth by -2\fboxsep%
+  \setbox4=\vbox\bgroup\hsize\boxfigwidth%
+  \hrule height0pt width\boxfigwidth\par\bigskip%
+  \linewidth=\boxfigwidth%
+}{\smallskip\egroup\fbox{\box4}\endgroup}
+
+\makeatletter
+\renewcommand{\fnum@figure}{\textsc{\figurename~\thefigure}}
+\renewcommand{\section}{\@startsection {section}{1}{\z@}%
+  {-3.5ex \@plus -1ex \@minus -.2ex}%
+  {2.3ex \@plus.2ex}%
+  {\normalfont\Large\sffamily\bfseries}}
+\makeatother
+
+\begin{document}
+\title{\scshape How to use ``Old-Style Digits''\\
+  with the Lucida fonts}
+\author{\textsc{Maurizio Loreti}\thanks{
+  EMail: \texttt{loreti@pd.infn.it}}}
+\date{Rev.\ 1.2\quad--\quad 1999-06-10}
+\maketitle
+\noindent As a system administrator and local \TeX pert, I
+have been asked by an user to build a style file to
+automagically switch all the occurrences of a digit in the
+printed text to the so-called \emph{old-style digits}.
+
+Although I do not share the aesthetic preferences of this
+user, I have solved the problem satisfactorily; the main
+difficulty has been to understand how to define a
+\emph{virtual font}, because guidelines and examples were
+difficult to find.
+Here follows a short description of what I have done, hoping
+that other people wishing to define a virtual font will find
+it useful; I want to excuse myself for my bad english, and
+to thank Mr.\ Allin Cottrell, whose examples for Computer
+Modern have been an important starting point\/\footnote{They
+  may be found under his web page in
+  \texttt{http://www.wfu.edu/\textasciitilde cottrell}.}.
+
+A couple of notes: the old-style digits are in the
+LucidaNewMath-AltItalic font (normal weight) and in the
+LucidaNewMath-AltDemiItalic font (DemiBold weight); the
+latter is in the ``Lucida Expert'' font package, that is
+\emph{required} in order to obtain \emph{bold} old-style
+digits.
+
+All the \verb|.fd|, \verb|.tfm| and \verb|.vf| auxilliary
+files are built with Unix command procedures for the
+\verb|bash| shell, freely available from the Free Software
+Foundation\/\footnote{By anonymous ftp from
+  \texttt{prep.ai.mit.edu} (and its mirrors) in
+  \texttt{/pub/gnu}; download \texttt{/pub/gnu/GNUinfo/FTP}
+  for a list of the mirror sites.}; the only used features
+missing from the usual Bourne shell environment
+(\verb|/bin/sh|) are:
+\begin{itemize}
+\item The parameter expansion commands like
+  \texttt{\$\{par\%word\}} and \texttt{\$\{par\#word\}}:
+  they first expand ``word'' to a pattern, and then remove
+  from the end (the former) or from the beginning (the
+  latter) of the expansion of the environment variable
+  ``par'' the substring matching that pattern (in a Bourne
+  shell environment they may be easily simulated with
+  \verb|sed| pipes).
+\item The command substitution syntax: \verb|$(command)| is
+  the \verb|bash| equivalent of the Bourne shell construct
+  \verb|`command`|.
+\end{itemize}
+
+All the file manipulation is done with \verb|awk| programs;
+in our installation, the \verb|GNU| version of \verb|awk|
+comes first in the path: but the \verb|GNU| extensions to
+the language are not used, and any \verb|awk| flavour should
+understand these programs.
+
+\section{The style file}
+\verb|lucold.sty| is the style file; it has two options,
+\verb|text| (or \verb|notext|) and \verb|math| (or
+\verb|nomath|), to select (or, respectively, deselect)
+old-style digits in the text mode and in the math mode.
+The default options are \verb|[text,nomath]|; when
+\verb|notext| and \verb|math| are both explicitely selected,
+a warning is printed and \verb|notext| changed to
+\verb|text|: since having old-style digits in the
+mathematics and not in the text has poor meaning (in my
+opinion, of course).
+
+\verb|lucold.sty| is straightforward, being just a wrapper
+around the single command that remaps the text default font
+family to \verb|hlos| (in the current encoding), and the
+additional commands that remap the math-mode digits to the
+text font; the style file for Lucida, \verb|lucidabr.sty|,
+normally uses \verb|hlh| as default text font family.
+
+\section{The font definition files}
+The second step is the creation of the \verb|.fd| files for
+\verb|hlos| in the needed encodings; the \verb|OT1| (or
+Knuth) encoding is the default, but here in Italy we mainly
+use the \verb|T1| (or Cork) encoding.
+
+\begin{figure}[htbp]
+  \begin{bigbox}
+\begin{verbatim}
+  #! /bin/bash
+
+  cp $TETEXDIR/texmf/tex/latex/lucidabr/*t1hlh.fd .
+
+  for infile in *.fd
+    do outfile="${infile%h.fd}os.fd"
+    awk >$outfile -f makefd.awk -v infile=$infile
+  done
+
+  rm *t1hlh.fd
+\end{verbatim}
+  \end{bigbox}
+  \caption{the \texttt{makefd} shell procedure.}
+  \label{fig:fd}
+\end{figure}
+
+The two font definition files \verb|ot1hlos.fd| and
+\verb|t1hlos.fd| are easily obtained using
+\verb|[o]t1hlh.fd| as a template; the shell procedure in
+figure \ref{fig:fd} does exactly that.
+The \verb|awk| program \verb|makefd.awk| remaps all the
+upright fonts of the \verb|hlos| family to a new set of
+(virtual) fonts, called
+\begin{center}
+  \begin{tabular}{|c|c||c|c|}
+    \hline
+    & & New & Original \\
+    Encoding & Weight & Font & Font \\
+    \hline \hline
+    \verb|OT1| & Normal & \verb|hlor7t| & \verb|hlhr7t| \\
+    \verb|OT1| & Bold   & \verb|hlob7t| & \verb|hlhb7t| \\
+    \verb|T1|  & Normal & \verb|hlor8t| & \verb|hlhr8t| \\
+    \verb|T1|  & Bold   & \verb|hlob8t| & \verb|hlhb8t| \\
+    \hline
+  \end{tabular}
+\end{center}
+using as a template the input file given as a parameter in
+the \verb|-v| command option.
+All the other variants (italic, slanted, \ldots) of the
+\verb|hlos| family are left mapped to the same fonts used in
+the original \verb|.fd| files.
+
+\section{The \TeX\ font metric files}
+The third step is the creation of the \verb|.tfm| files:
+essentially, the shell procedure of figure \ref{fig:tfm}
+copies some of the metric files of the original fonts of the
+\verb|hlh| family to the current directory; then converts
+them to an human-readable form (\verb|.pl| files) using
+\verb|tftopl|; then, using \verb|maketfm.awk|, substitutes
+the section describing the digits with the corresponding
+section taken from the \verb|.tfm| files of the fonts with
+the old-style digits, i.e.\ \verb|hlcrima| (normal weight)
+and \verb|hlcdima| (boldface).
+
+\begin{figure}[htbp]
+  \begin{bigbox}
+\begin{verbatim}
+  #! /bin/bash
+
+  cp $TETEXDIR/texmf/fonts/tfm/bh/lubright/hlh??t.tfm .
+  cp $TETEXDIR/texmf/fonts/tfm/bh/lumath/hlc?im*.tfm .
+
+  for file in *.tfm
+    do tftopl $file ${file%tfm}pl
+  done
+
+  awk >hlor7t.pl -f maketfm.awk \
+      -v infile1=hlhr7t.pl -v infile2=hlcrima.pl
+  awk >hlob7t.pl -f maketfm.awk \
+      -v infile1=hlhb7t.pl -v infile2=hlcdima.pl
+  awk >hlor8t.pl -f maketfm.awk \
+      -v infile1=hlhr8t.pl -v infile2=hlcrima.pl
+  awk >hlob8t.pl -f maketfm.awk \
+      -v infile1=hlhb8t.pl -v infile2=hlcdima.pl
+
+  pltotf hlor7t.pl hlor7t.tfm
+  pltotf hlob7t.pl hlob7t.tfm
+  pltotf hlor8t.pl hlor8t.tfm
+  pltotf hlob8t.pl hlob8t.tfm
+
+  rm hl???t.pl hlc?im*.tfm
+\end{verbatim}
+  \end{bigbox}
+  \caption{the \texttt{maketfm} shell procedure.}
+  \label{fig:tfm}
+\end{figure}
+
+Next, the merged \verb|.pl| files are converted to binary
+\verb|.tfm| files with \verb|pltotf|; and, finally, the few
+files that are no more needed are removed.
+
+\section{The virtual font files}
+\begin{figure}[htbp]
+  \begin{bigbox}
+\begin{verbatim}
+  #! /bin/bash
+
+  cp $TETEXDIR/texmf/fonts/vf/bh/lubright/hlh??t.vf .
+
+  for file in hlh??t.vf
+    do base="${file%vf}"
+    vftovp ${base}vf ${base}tfm ${base}vpl
+  done
+
+  to="hlor7t"; from="hlhr7t.vpl"; mft="hlcrima"
+  ck="$(grep CHECKSUM ${mft}.pl | cut -d" " -f3 | sed 's/)//')"
+  awk >tmp -f maketfm.awk -v infile1=$from -v infile2=${mft}.pl
+  awk >${to}.vpl -f makevf.awk -v infile=tmp \
+      -v mft=$mft -v ck=$ck
+  vptovf ${to}.vpl ${to}.vf ${to}.tfm
+  rm tmp
+
+  to="hlob7t"; from="hlhb7t.vpl"; mft="hlcdima"
+  ck="$(grep CHECKSUM ${mft}.pl | cut -d" " -f3 | sed 's/)//')"
+  awk >tmp -f maketfm.awk -v infile1=$from -v infile2=${mft}.pl
+  awk >${to}.vpl -f makevf.awk -v infile=tmp \
+      -v mft=$mft -v ck=$ck
+  vptovf ${to}.vpl ${to}.vf ${to}.tfm
+  rm tmp
+
+  to="hlor8t"; from="hlhr8t.vpl"; mft="hlcrima"
+  ck="$(grep CHECKSUM ${mft}.pl | cut -d" " -f3 | sed 's/)//')"
+  awk >tmp -f maketfm.awk -v infile1=$from -v infile2=${mft}.pl
+  awk >${to}.vpl -f makevf.awk -v infile=tmp \
+      -v mft=$mft -v ck=$ck
+  vptovf ${to}.vpl ${to}.vf ${to}.tfm
+  rm tmp
+
+  to="hlob8t"; from="hlhb8t.vpl"; mft="hlcdima"
+  ck="$(grep CHECKSUM ${mft}.pl | cut -d" " -f3 | sed 's/)//')"
+  awk >tmp -f maketfm.awk -v infile1=$from -v infile2=${mft}.pl
+  awk >${to}.vpl -f makevf.awk -v infile=tmp \
+      -v mft=$mft -v ck=$ck
+  vptovf ${to}.vpl ${to}.vf ${to}.tfm
+  rm tmp *.pl *.vpl hlh*.tfm hlh*.vf
+\end{verbatim}
+  \end{bigbox}
+  \caption{the \texttt{makevf} shell procedure.}
+  \label{fig:vf}
+\end{figure}
+
+The last step is the generation of the \verb|.vf| files;
+their human-readable form (the \verb|.vpl| files) are
+essentially \verb|.pl| files, with the addition of some
+sections: a \verb|VTITLE|, one or more \verb|MAPFONT| records
+describing the real fonts, and a \verb|MAP| entry in the
+record of every character describing how to obtain it from
+a real font.
+In the figure \ref{fig:vf}, the shell procedure that
+builds the \verb|.vf| files is listed; it performs the
+following steps:
+\begin{itemize}
+\item The \verb|.vf| files for the original fonts are copied
+  to the current directory, and converted to \verb|.vpl|
+  files using \verb|vftovp|;
+\item The checksum of the \verb|.tfm| file from which the
+  old-style digits are taken is extracted from the
+  corresponding \verb|.pl| file, and stored in the \verb|ck|
+  environment variable;
+\item The program \verb|maketfm.awk| is executed, to
+  substitute the section of every \verb|.vpl| file
+  describing digits with the corresponding section for the
+  old-style digits (taken from the relevant \verb|.pl|
+  file): note that in that step the \verb|MAP| entry for
+  every digit is lost;
+\item The program \verb|makevf.awk|, that adds
+  to the \verb|.vpl| file a valid \verb|MAPFONT| record and
+  valid \verb|MAP| entries for every digit, is executed;
+\item The \verb|.vpl| files are converted to binary using
+  \verb|vptovf|, and a final cleanup is performed.
+\end{itemize}
+
+What is left is simply to move the \verb|*.sty|,
+\verb|*.fd|, \verb|*.tfm| and \verb|*.vf| files to the right
+directory of the \TeX\ tree.
+
+\section{History and Copyright}
+The first version of this package (1.0) has been updated
+because the font names in the default Lucida files
+distributed with the \LaTeX\ PSNFSS package have changed;
+the second version (1.1) stated in an improper way the
+license conditions.
+
+This package is free software; you can redistribute it
+and/or modify it under the terms of the GNU General Public
+License (GPL) as published by the Free Software Foundation;
+either version 2, or (at your option) any later version. The
+text of the GNU GPL\footnote{Version 2, June 1991.
+  Copyright \copyright\ 1989--1991 Free Software Foundation,
+  Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
+  USA.} is included in the file README of this distribution.
+\end{document}
